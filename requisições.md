@@ -2,14 +2,14 @@
 
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
-**Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Paschoa
+**Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
 **Versão:** 1.0
 
 ---
 
 ## 1. Visão geral
 
-Aplicativo que permite ao usuário montar carteiras de investimento fictícias com ativos reais do mercado brasileiro — ações da B3 e renda fixa — e acompanhar a rentabilidade dessas carteiras usando cotações e indexadores verdadeiros, sem que exista dinheiro real envolvido.
+Aplicativo de Desktop que permite ao usuário montar carteiras de investimento fictícias com ativos reais do mercado brasileiro — ações da B3 e renda fixa — e acompanhar a rentabilidade dessas carteiras usando cotações e indexadores verdadeiros, sem que exista dinheiro real envolvido.
 
 O sistema também coleta notícias econômicas e avalia se o sentimento extraído delas guarda relação mensurável com a variação de preço dos ativos.
 
@@ -160,7 +160,7 @@ Restrições do domínio, independentes de tecnologia.
 | RB03 | O usuário acessa apenas as próprias carteiras |
 | RB04 | Dados do usuário são removidos em até 30 dias após pedido de exclusão |
 
-### 4.2 Transações
+### 4.2 Transações (Simulação)
 
 | ID | Regra |
 |---|---|
@@ -183,16 +183,8 @@ Restrições do domínio, independentes de tecnologia.
 | RB16 | Resgate sofre incidência de IR conforme tabela regressiva por prazo |
 | RB17 | Aplicação em período de carência não pode ser resgatada antecipadamente |
 
-### 4.4 Assinatura
 
-| ID | Regra |
-|---|---|
-| RB18 | Projeções são exclusivas de usuários com assinatura ativa |
-| RB19 | O plano gratuito permite no máximo duas carteiras |
-| RB20 | O cancelamento mantém o acesso até o fim do período pago |
-| RB21 | Simulações já geradas permanecem acessíveis após o fim da assinatura |
-
-### 4.5 Conformidade
+### 4.4 Conformidade
 
 | ID | Regra |
 |---|---|
