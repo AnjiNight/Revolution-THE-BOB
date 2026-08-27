@@ -8,7 +8,7 @@ Aplicativo para simulação de carteiras de investimento em ações e renda fixa
 ## Integrantes
 
 - Luís Gustavo Sampaio Coêlho
-- Nicoly Paschoa
+- Nicoly Araujo de Paschoa
 
 ## Sobre
 
