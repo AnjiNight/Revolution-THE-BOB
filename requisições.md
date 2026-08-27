@@ -9,7 +9,7 @@
 
 ## 1. Visão geral
 
-Aplicativo mobile que permite ao usuário montar carteiras de investimento fictícias com ativos reais do mercado brasileiro — ações da B3 e renda fixa — e acompanhar a rentabilidade dessas carteiras usando cotações e indexadores verdadeiros, sem que exista dinheiro real envolvido.
+Aplicativo que permite ao usuário montar carteiras de investimento fictícias com ativos reais do mercado brasileiro — ações da B3 e renda fixa — e acompanhar a rentabilidade dessas carteiras usando cotações e indexadores verdadeiros, sem que exista dinheiro real envolvido.
 
 O sistema também coleta notícias econômicas e avalia se o sentimento extraído delas guarda relação mensurável com a variação de preço dos ativos.
 
