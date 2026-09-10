@@ -6,63 +6,6 @@ Modelo conceitual (MER) das entidades do aplicativo: carteiras de usuários, ati
 
 <img width="3387" height="2301" alt="image" src="https://github.com/user-attachments/assets/915e0ed7-edbb-4613-815d-74aa8b6bb1d4" />
 
-```mermaid
-erDiagram
-    USUARIO ||--o{ CARTEIRA : possui
-    CARTEIRA ||--o{ TRANSACAO : registra
-    CARTEIRA ||--o{ SIMULACAO : origina
-    ATIVO ||--o{ TRANSACAO : movimenta
-    ATIVO ||--o{ COTACAO : possui
-    ATIVO ||--o{ NOTICIA_ATIVO : mencionado_em
-    NOTICIA ||--o{ NOTICIA_ATIVO : cita
-    ATIVO }o--|| INDEXADOR : indexado_por
-    INDEXADOR ||--o{ TAXA_DIARIA : registra
-
-    USUARIO {
-        string nome
-        string email
-    }
-    CARTEIRA {
-        string nome
-        decimal saldo_inicial
-        date criada_em
-    }
-    TRANSACAO {
-        string tipo
-        decimal quantidade
-        decimal preco_unitario
-        date data
-    }
-    SIMULACAO {
-        date gerada_em
-        string horizonte
-    }
-    ATIVO {
-        string ticker
-        string nome
-        string classe
-        date vencimento
-    }
-    COTACAO {
-        date data
-        decimal fechamento
-    }
-    NOTICIA {
-        string titulo
-        string fonte
-        date publicada_em
-        string sentimento
-    }
-    NOTICIA_ATIVO {
-    }
-    INDEXADOR {
-        string sigla
-    }
-    TAXA_DIARIA {
-        date data
-        decimal valor
-    }
-```
 
 ## Entidades
 
