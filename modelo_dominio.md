@@ -1,8 +1,10 @@
-# Modelo de Dados — Simulador de Investimentos
 
+# Modelo de Dados — Simulador de Investimentos
 Modelo conceitual (MER) das entidades do aplicativo: carteiras de usuários, ativos de renda variável e renda fixa, cotações, notícias e simulações.
 
 ## Diagrama
+
+<img width="3387" height="2301" alt="image" src="https://github.com/user-attachments/assets/915e0ed7-edbb-4613-815d-74aa8b6bb1d4" />
 
 ```mermaid
 erDiagram
