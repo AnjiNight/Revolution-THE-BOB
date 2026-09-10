@@ -52,9 +52,7 @@ erDiagram
         string sentimento
     }
     NOTICIA_ATIVO {
-    int ativo_id
-    int noticia_id
-}
+    }
     INDEXADOR {
         string sigla
     }
