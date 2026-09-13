@@ -9,7 +9,7 @@
 
 ## 1. Visão geral
 
-Aplicativo de Desktop que permite ao usuário montar carteiras de investimento fictícias com ativos reais do mercado brasileiro — ações da B3 e renda fixa — e acompanhar a rentabilidade dessas carteiras usando cotações e indexadores verdadeiros, sem que exista dinheiro real envolvido.
+Aplicação desktop que permite ao usuário montar carteiras de investimento fictícias com ativos reais do mercado brasileiro — ações da B3 e renda fixa — e acompanhar a rentabilidade dessas carteiras usando cotações e indexadores verdadeiros, sem que exista dinheiro real envolvido.
 
 O sistema também coleta notícias econômicas e avalia se o sentimento extraído delas guarda relação mensurável com a variação de preço dos ativos.
 
@@ -42,7 +42,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 | RF01 | Permitir cadastro de usuário com e-mail e senha | Visitante | Must |
 | RF02 | Autenticar usuário e manter sessão com renovação automática de token | Visitante | Must |
 | RF03 | Permitir recuperação de senha por e-mail | Visitante | Should |
-| RF04 | Permitir desbloqueio do aplicativo por biometria | Usuário | Could |
+| RF04 | Permitir desbloqueio da aplicação por biometria do sistema operacional | Usuário | Could |
 | RF05 | Permitir edição dos dados de perfil | Usuário | Should |
 | RF06 | Permitir exportação e exclusão dos dados pessoais | Usuário | Must |
 
@@ -98,7 +98,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 | RF32 | Gerenciar planos e assinaturas do usuário | Usuário | Should |
 | RF33 | Bloquear recursos premium para usuários sem assinatura ativa | Sistema | Should |
 
-### 2.7 Aplicativo e notificações
+### 2.7 Aplicação e notificações
 
 | ID | Requisito | Ator | Prioridade |
 |---|---|---|---|
@@ -123,11 +123,11 @@ Descrevem com que qualidade o sistema opera.
 
 | ID | Requisito | Categoria |
 |---|---|---|
-| RNF01 | Aplicativo desenvolvido em React Native (Expo); API em Node.js com Fastify e TypeScript | Tecnologia |
+| RNF01 | Aplicação desktop desenvolvida em Electron com React e TypeScript; API em Node.js com Fastify e TypeScript | Tecnologia |
 | RNF02 | Persistência em PostgreSQL com rotina de backup diário | Tecnologia |
 | RNF03 | Cache de cotações em Redis, na camada de API | Desempenho |
-| RNF04 | Interface adaptável a diferentes tamanhos de tela e orientações | Usabilidade |
-| RNF05 | Suporte a Android 8 ou superior e iOS 14 ou superior | Compatibilidade |
+| RNF04 | Interface adaptável a diferentes resoluções e ao redimensionamento da janela | Usabilidade |
+| RNF05 | Suporte a Windows 10 ou superior, macOS 12 ou superior e Linux | Compatibilidade |
 | RNF06 | Tempo de resposta do painel inferior a 2 segundos com até 50 ativos | Desempenho |
 | RNF07 | Senhas armazenadas com função de hash (argon2 ou bcrypt) | Segurança |
 | RNF08 | Tokens de autenticação em armazenamento seguro do sistema operacional | Segurança |
@@ -136,12 +136,12 @@ Descrevem com que qualidade o sistema opera.
 | RNF11 | Conformidade com a LGPD: consentimento registrado e direito de exclusão | Legal |
 | RNF12 | Valores monetários em tipo decimal no banco e na aplicação, nunca ponto flutuante | Confiabilidade |
 | RNF13 | Falha de fonte externa não interrompe a aplicação; degradação com dados em cache | Confiabilidade |
-| RNF14 | Aplicativo funcional em modo leitura sem conexão | Confiabilidade |
+| RNF14 | Aplicação funcional em modo leitura sem conexão | Confiabilidade |
 | RNF15 | Registro de auditoria das operações de transação | Auditoria |
 | RNF16 | Cobertura de testes automatizados nos módulos de cálculo financeiro | Manutenibilidade |
 | RNF17 | Migrations de banco versionadas e reversíveis | Manutenibilidade |
 | RNF18 | Contraste e navegação conforme WCAG nível AA básico | Acessibilidade |
-| RNF19 | Sincronização incremental para consumo controlado de dados móveis | Desempenho |
+| RNF19 | Sincronização incremental para reduzir o volume de dados trafegados | Desempenho |
 | RNF20 | Suporte a múltiplos idiomas na interface | Internacionalização |
 | RNF21 | Disponibilidade alvo de 95% | Disponibilidade |
 
@@ -188,8 +188,8 @@ Restrições do domínio, independentes de tecnologia.
 
 | ID | Regra |
 |---|---|
-| RB22 | O sistema não emite recomendação de investimento — apenas cenários estatísticos |
-| RB23 | Toda tela de projeção exibe aviso de caráter educacional |
+| RB18 | O sistema não emite recomendação de investimento — apenas cenários estatísticos |
+| RB19 | Toda tela de projeção exibe aviso de caráter educacional |
 
 ---
 
@@ -208,7 +208,6 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | RB11 | Tabela `CalendarioPregao` com dias úteis e feriados da B3 |
 | RB13 | Colunas monetárias em tipo `Decimal(15,2)` |
 | RB14 | `TaxaDiaria` indexada por data útil, com contagem sobre `CalendarioPregao` |
-| RB19 | Contagem de `Carteira` validada contra `Plano.limite_carteiras` |
 
 ---
 
