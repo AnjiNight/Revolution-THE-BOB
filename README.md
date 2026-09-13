@@ -1,6 +1,6 @@
 # Simulador de Investimentos
 
-Aplicativo para simulação de carteiras de investimento em ações e renda fixa do mercado brasileiro. Projeto acadêmico, sem execução de ordens reais.
+Aplicação desktop para simulação de carteiras de investimento em ações e renda fixa do mercado brasileiro. Projeto acadêmico, sem execução de ordens reais.
 
 **Disciplina:** Modelagem de Dados
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
@@ -31,7 +31,7 @@ O projeto também investiga se o sentimento extraído de notícias econômicas g
 
 | Camada | Tecnologia |
 |---|---|
-| Aplicativo | React Native (Expo) |
+| Aplicação desktop | Electron + React + TypeScript |
 | API | Node.js + Fastify + TypeScript |
 | Banco de dados | PostgreSQL |
 | ORM | Prisma |
@@ -42,7 +42,7 @@ O projeto também investiga se o sentimento extraído de notícias econômicas g
 ## Estrutura
 
 ```
-app/         Aplicativo React Native
+app/         Aplicação desktop (Electron)
 api/         API Node + Fastify
 packages/    Tipos compartilhados
 docs/        Requisitos e modelagem
