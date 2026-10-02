@@ -5,6 +5,11 @@
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
 **Status:** ⏳ **Aguardando aprovação humana** — este documento contém apenas a análise da baseline e o índice ordenado das Specs. O conteúdo completo de cada Spec será gerado depois, uma por vez ("Gerar SPEC-XXX").
 
+| Versão | Alteração |
+|---|---|
+| 1.0 | Primeira versão do mapa |
+| 1.1 | OPEN-13 resolvida: custos de operação fora do escopo, com aviso na compra, na venda e na aplicação no Tesouro Direto (RB20, RB21) |
+
 ---
 
 ## 0. Como ler este documento
@@ -129,6 +134,8 @@ Pontos de dependência que definem a ordem:
 | RB17 | Sem resgate antecipado durante a carência | 018 |
 | RB18 | Nenhuma saída do tipo "compre"/"venda" | 031 |
 | RB19 | Toda tela de cenário exibe aviso educacional | 031 |
+| RB20 | Preço médio, caixa e rentabilidade não incluem custos de operação | 014, 016, 019, 024 |
+| RB21 | Toda tela de compra, venda e aplicação no Tesouro Direto exibe o aviso de custos não considerados | 014, 016, 024 |
 
 Invariantes vindos das ADRs (não estão em `requisições.md`, ver OPEN-09 e OPEN-32):
 
@@ -223,7 +230,7 @@ Nenhuma delas foi resolvida neste mapa. Cada uma aponta para uma decisão em abe
 | INC-16 | O caso de uso "Projetar renda fixa" não tem RF correspondente | Casos de uso × Requisitos | OPEN-19 |
 | INC-17 | RF11 permite **excluir** carteira; RB08 e RNF15 exigem imutabilidade e auditoria dos lançamentos | Requisitos | OPEN-15 |
 | INC-18 | RB13 trata dinheiro, mas o modelo usa `quantidade` decimal sem dizer se ações aceitam frações | Modelo × Requisitos | OPEN-12 |
-| INC-19 | Custos de operação (corretagem, emolumentos, custódia) não aparecem em nenhum documento, mas afetam preço médio e rentabilidade | Lacuna | OPEN-13 |
+| INC-19 | ~~Custos de operação (corretagem, emolumentos, custódia) não aparecem em nenhum documento, mas afetam preço médio e rentabilidade~~ **Resolvida** em `requisições.md` v1.1 (RB20, RB21) | Lacuna | OPEN-13 |
 
 ### 1.8 Decisões em aberto
 
@@ -243,7 +250,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-10 | RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
 | OPEN-11 | Relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
 | OPEN-12 | Quantidade fracionária de ações e regras de lote | INC-18 | 014, 016 |
-| OPEN-13 | Custos de operação: incluir na simulação ou declarar fora do escopo | INC-19 | 014, 016, 019 |
+| OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra, na venda e na aplicação no Tesouro Direto (RB20, RB21) | INC-19 | 014, 016, 019, 024 |
 | OPEN-14 | Regras do estorno: o que pode ser estornado, efeito em lançamentos posteriores, estorno de estorno, estorno na carteira histórica | RB08 | 015, 016 |
 | OPEN-15 | Exclusão de carteira: exclusão definitiva ou arquivamento, preservando auditoria | INC-17 | 012, 034 |
 | OPEN-16 | Tipos de remuneração da renda fixa (prefixado, % do CDI, IPCA + taxa) e atributos da aplicação (taxa contratada, carência) | Modelo, arquitetura §9 | 017 |
@@ -552,7 +559,7 @@ Visão geral por fase:
 | Objetivo | Registrar compra e venda na carteira ao vivo usando a última cotação disponível para o plano do usuário, validando caixa e posição, e calcular posição consolidada e preço médio |
 | Valor | **Usuário:** simula uma decisão de investimento com preço real |
 | RF | RF12, RF14 |
-| RB | RB05, RB06, RB07 (em conflito, OPEN-09), RB08, RB09, RB10, RB11, RB13 |
+| RB | RB05, RB06, RB07 (em conflito, OPEN-09), RB08, RB09, RB10, RB11, RB13, RB20, RB21 |
 | RNF | RNF12, RNF15, RNF16 |
 | Caso de uso / fluxo | UC: Registrar compra ou venda (inclui Consultar cotação); UC: Consultar posição e saldo; fluxo 7.1 (ramo ao vivo) |
 | Entidades | CARTEIRA, TRANSACAO (horário e nível da cotação†), ATIVO, COTACAO |
@@ -560,7 +567,7 @@ Visão geral por fase:
 | ADRs | DA09, DA10, DA12, DA16, DA17 |
 | Depende de | SPEC-009, SPEC-013 |
 | Posição | Comportamento central do produto; precisa de caixa (013) e cotação (009). Até a SPEC-026, só existe o nível gratuito de cotação |
-| Em aberto | OPEN-06, OPEN-08, OPEN-09, OPEN-12, OPEN-13, OPEN-24 |
+| Em aberto | OPEN-06, OPEN-08, OPEN-09, OPEN-12, OPEN-24 |
 | Prioridade derivada | Must |
 
 #### SPEC-015 — Estorno de lançamento
@@ -588,7 +595,7 @@ Visão geral por fase:
 | Objetivo | Na carteira histórica, o usuário registra aportes, compras e vendas com data passada escolhida; o preço é o fechamento do pregão da data; os lançamentos seguem ordem cronológica; a interface rotula o resultado como calculado com dados já conhecidos |
 | Valor | **Usuário:** responde "e se eu tivesse investido?" (P01, Visão §12) |
 | RF | RF12, RF13 (no contexto da carteira histórica) |
-| RB | RB05, RB06, RB07, RB11, RB12, RB13 |
+| RB | RB05, RB06, RB07, RB11, RB12, RB13, RB20, RB21 |
 | RNF | RNF12, RNF16 |
 | Caso de uso / fluxo | UC: Registrar compra ou venda (variante histórica, não representada no diagrama); fluxo 7.1 (ramo histórico); cenário da P01 |
 | Entidades | CARTEIRA (tipo†), TRANSACAO, LANCAMENTO_CAIXA†, COTACAO |
@@ -650,7 +657,7 @@ Visão geral por fase:
 | Objetivo | Calcular a rentabilidade da carteira em período selecionado e exibir a evolução patrimonial em gráfico, reconstruindo caixa e posições a partir do histórico; o painel abre em menos de 2 s |
 | Valor | **Usuário:** responde "teria ganho ou perdido?" (Visão §12) |
 | RF | RF14, RF15, RF17 |
-| RB | RB09, RB13 |
+| RB | RB09, RB13, RB20 |
 | RNF | RNF03, RNF06, RNF12, RNF16 |
 | Caso de uso / fluxo | UC: Acompanhar rentabilidade (inclui Consultar cotação); UC: Consultar posição e saldo; P01 passo 6 |
 | Entidades | CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA†, APLICACAO_RENDA_FIXA†, COTACAO, TAXA_DIARIA |
@@ -658,7 +665,7 @@ Visão geral por fase:
 | ADRs | DA08, DA09, DA10, DA17 (carteira histórica valorizada até hoje) |
 | Depende de | SPEC-014, SPEC-016, SPEC-017, SPEC-018 |
 | Posição | Precisa de todos os tipos de lançamento existentes (ações nas duas carteiras e renda fixa). O Tesouro Direto (024) integra-se depois, ver SPEC-024 |
-| Em aberto | OPEN-06, OPEN-13 |
+| Em aberto | OPEN-06 |
 | Prioridade derivada | Must |
 
 #### SPEC-020 — Comparação com benchmarks (CDI e Ibovespa)
@@ -740,7 +747,7 @@ Visão geral por fase:
 | Objetivo | Coletar diariamente preços e taxas do Tesouro Direto e permitir aplicação e resgate de títulos públicos na carteira, integrando o título à rentabilidade (019) e à distribuição (021) |
 | Valor | **Usuário:** simula o investimento em renda fixa mais acessível ao iniciante |
 | RF | RF23, RF24, RF25 (para Tesouro) |
-| RB | RB05, RB13, RB14, RB15, RB16 |
+| RB | RB05, RB13, RB14, RB15, RB16, RB20, RB21 |
 | RNF | RNF12, RNF13, RNF16 |
 | Caso de uso / fluxo | UC: Projetar renda fixa (OPEN-19) |
 | Entidades | ATIVO (título), APLICACAO_RENDA_FIXA†; preços do Tesouro (entidade não definida, OPEN-44) |

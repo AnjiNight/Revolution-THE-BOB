@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.0
+**Versão:** 1.1 (custos de operação fora do escopo — RB20, RB21)
 
 ---
 
@@ -17,7 +17,7 @@ O sistema também coleta notícias econômicas e avalia se o sentimento extraíd
 
 **Dentro do escopo:** ações da B3, renda fixa (CDB, LCI/LCA, Tesouro Direto), simulação de carteira, comparação com benchmarks, ingestão de cotações e indexadores, coleta e classificação de notícias, projeção de cenários, assinatura com pagamento simulado.
 
-**Fora do escopo:** execução de ordens reais, integração com corretora, pagamento real, mercados internacionais, recomendação personalizada de investimento.
+**Fora do escopo:** execução de ordens reais, integração com corretora, pagamento real, mercados internacionais, recomendação personalizada de investimento, custos de operação (corretagem, emolumentos da B3 e taxa de custódia).
 
 ### 1.2 Atores
 
@@ -173,6 +173,8 @@ Restrições do domínio, independentes de tecnologia.
 | RB11 | Não há movimentação em dias sem pregão |
 | RB12 | Não é permitido lançamento com data futura |
 | RB13 | Valores monetários usam duas casas decimais com arredondamento meio para cima |
+| RB20 | Custos de operação (corretagem, emolumentos da B3 e taxa de custódia) não são considerados no preço médio, no caixa nem na rentabilidade |
+| RB21 | Ao registrar uma compra ou venda de ações, ou uma aplicação no Tesouro Direto, o sistema exibe aviso de que os custos de operação não são considerados na simulação |
 
 ### 4.3 Renda fixa
 
