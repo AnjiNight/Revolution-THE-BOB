@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.0
+**Versão:** 1.1 (01/10/2026 — PRE01 revogada; rastreabilidade das decisões DA16–DA21)
 
 ---
 
@@ -11,7 +11,7 @@
 
 Drivers arquiteturais são os requisitos, objetivos e restrições que **moldam a arquitetura** do sistema. Nem todo requisito é um driver: um requisito só se torna driver quando, se fosse diferente, a estrutura do sistema também seria diferente.
 
-Este documento seleciona, a partir de [Visão de produto](Visão%20de%20produto.md), [Especificação de Requisitos](requisições.md), [Personas](personas.md) e [Modelo de Domínio](modelo_dominio.md), aquilo que orienta as decisões registradas no [Documento de Arquitetura](arquitetura.md).
+Este documento seleciona, a partir de [Visão de produto](Visão%20de%20produto.md), [Especificação de Requisitos](requisições.md), [Personas](personas.md) e [Modelo de Domínio](modelo_dominio.md), aquilo que orienta as decisões registradas nos [ADRs](adr/README.md) e consolidadas no [Documento de Arquitetura](arquitetura.md).
 
 Os drivers estão organizados em cinco grupos:
 
@@ -264,10 +264,10 @@ Decisões que já chegam tomadas e não estão abertas a negociação.
 
 | ID | Premissa | Impacto se for falsa |
 |---|---|---|
-| PRE01 | Cotações **diárias** (fechamento) são suficientes; não há necessidade de tempo real | Seria necessária arquitetura de streaming, fora do escopo |
+| PRE01 | ~~Cotações **diárias** (fechamento) são suficientes; não há necessidade de tempo real~~ **Revogada em 01/10/2026** por [DA16](adr/DA16-cotacoes-por-plano.md): ações são exibidas durante o pregão, com atraso conforme o plano (~30 min no gratuito); renda fixa continua diária. Tempo real verdadeiro (streaming) segue fora do escopo | Seria necessária arquitetura de streaming, fora do escopo |
 | PRE02 | Volume pequeno de usuários (contexto acadêmico: dezenas, não milhares) | Um único servidor deixaria de ser suficiente |
 | PRE03 | As APIs de cotações e indexadores continuam gratuitas e disponíveis | Troca de provedor (mitigada por QA08) |
-| PRE04 | Notícias em português, obtidas de feeds públicos | Classificação de sentimento precisaria de outros modelos/idiomas |
+| PRE04 | Notícias em português, obtidas de feeds públicos ou de fontes com autorização de uso (fonte pai, curadas e do usuário — [DA19](adr/DA19-fontes-de-noticias.md)) | Classificação de sentimento precisaria de outros modelos/idiomas |
 | PRE05 | Todos os horários seguem o fuso de Brasília e o calendário da B3 | Cálculos de dias úteis e pregão ficariam incorretos |
 | PRE06 | Uso predominante com conexão; o modo offline é de **consulta** | Edição offline exigiria resolução de conflitos |
 
@@ -300,11 +300,20 @@ Durante a análise foram encontradas divergências entre os documentos do projet
 | 3 | A Visão fala em *IA conversacional* e *probabilidades de alta/queda*; os Requisitos só tratam de *classificação de sentimento* e *projeção* | IA entra como módulo isolado atrás de uma interface, fora do caminho crítico |
 | 4 | O modelo de domínio ainda não tem entidades citadas nas regras: `CalendarioPregao`, lançamento de caixa (aporte/retirada), estorno, assinatura/plano, fonte de notícia, execução de ingestão | Listadas na visão de dados do documento de arquitetura como entidades a incluir |
 
+Decisões tomadas pela equipe em 01/10/2026, registradas como ADRs:
+
+| Tema | Decisão | ADR |
+|---|---|---|
+| Cotações | Exibidas durante o pregão: ~30 min de atraso no plano gratuito; provedor pago no plano assinante | [DA16](adr/DA16-cotacoes-por-plano.md) |
+| Carteiras no passado | Permitidas, em um tipo próprio de carteira (histórica), separado da carteira ao vivo | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md) |
+| Fontes de notícias | Fonte pai fixa (Investidor10, pendente de autorização), fontes curadas e fontes do usuário com prioridade | [DA19](adr/DA19-fontes-de-noticias.md) |
+| IA | Modelo para analisar e gerenciar notícias, aperfeiçoado com janela histórica (6 anos, a definir) | [DA20](adr/DA20-modelo-ia-noticias.md) |
+
 ---
 
 ## 9. Rastreabilidade: drivers → decisões
 
-Resumo de quais decisões do [Documento de Arquitetura](arquitetura.md) respondem a quais drivers.
+Resumo de quais decisões ([ADRs](adr/README.md)) respondem a quais drivers.
 
 | Driver | Decisões que respondem |
 |---|---|
@@ -321,4 +330,9 @@ Resumo de quais decisões do [Documento de Arquitetura](arquitetura.md) responde
 | QA10 | DA10 |
 | QA12, FAS10 | DA07, DA14 (registro de execuções) |
 | QA14, RES06 | DA03 (cliente desktop multiplataforma) |
-| OBJ07, RES04 | DA15 (aviso educacional nas projeções) |
+| OBJ07, RES04 | DA15 (aviso educacional nas projeções), DA21 |
+| FAS03, QA02, PA03, OBJ06 | DA16 (cotações por plano) |
+| OBJ01, FAS01 | DA17 (carteira ao vivo e histórica) |
+| QA04, RES03, RES07 | DA18 (histórico pelos arquivos da B3) |
+| OBJ02, FAS04, QA08 | DA19 (fontes de notícias) |
+| OBJ03, FAS04, FAS11 | DA20 (modelo de IA), DA21 (cenários por sentimento) |
