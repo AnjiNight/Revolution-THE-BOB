@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Aceita, com pontos em aberto |
+| Status | Aceita, com pontos em aberto — **trechos de renda fixa adiados por [DA22](DA22-escopo-acoes-fiis-renda-fixa-adiada.md)**; FIIs seguem as mesmas regras das ações (02/10/2026) |
 | Data | 01/10/2026 |
 | Drivers | OBJ06, FAS03, FAS08, QA02, QA04, PA03, RES03, RES07 |
 | Substitui | Premissa PRE01 ("cotações diárias de fechamento são suficientes") |

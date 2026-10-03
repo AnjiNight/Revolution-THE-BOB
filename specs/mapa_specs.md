@@ -9,6 +9,7 @@
 |---|---|
 | 1.0 | Primeira versão do mapa |
 | 1.1 | OPEN-13 resolvida: custos de operação fora do escopo, com aviso na compra, na venda e na aplicação no Tesouro Direto (RB20, RB21) |
+| 1.2 | Escopo inicial em ações e FIIs; renda fixa adiada ([DA22](../adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)): SPEC-017, SPEC-018 e SPEC-024 movidas para a fase futura; RB14–RB17 e OPEN-16 a OPEN-20 adiadas; novas OPEN-46 a OPEN-48 |
 
 ---
 
@@ -53,17 +54,17 @@ Convenções:
 |---|---|---|
 | C01 | Criar conta, autenticar e manter sessão; perfis de acesso | RF01–RF05, DA05, DA12 |
 | C02 | Manter catálogo de ativos e buscar ativos | RF07, RF39, DA16 |
-| C03 | Coletar dados de mercado: indexadores, histórico diário, cotações do pregão, Tesouro | RF09, RF10, DA07, DA16, DA18 |
+| C03 | Coletar dados de mercado de ações e FIIs (histórico diário, cotações do pregão) e a série do CDI | RF09, RF10, DA07, DA16, DA18, DA22 |
 | C04 | Consultar ativo: ficha, cotação com horário, histórico | RF08, DA16 |
 | C05 | Gerir carteiras ao vivo e históricas | RF11, DA17 |
 | C06 | Registrar lançamentos imutáveis (aporte, retirada, compra, venda, estorno) e derivar caixa, posição e preço médio | RF12–RF14, RB05–RB13, DA09 |
-| C07 | Aplicar e resgatar renda fixa com IR e IOF | RF23–RF25, RB14–RB17 |
+| C07 | ⏸ ~~Aplicar e resgatar renda fixa com IR e IOF~~ **Adiado (DA22)** | RF23–RF25, RB14–RB17 |
 | C08 | Acompanhar a carteira: rentabilidade, evolução, benchmarks, distribuição, comparação | RF15–RF20 |
 | C09 | Coletar, vincular e classificar notícias; exibir notícias com o preço | RF26–RF29, DA19, DA20, Visão §19 |
 | C10 | Gerar cenários por sentimento, com caráter educacional | RF30, RF31, DA15, DA21 |
 | C11 | Assinatura com pagamento simulado e recursos por plano | RF32, RF33, DA12, DA16 |
 | C12 | Operar sem conexão e sincronizar | RF36, RF37, DA08 |
-| C13 | Notificar vencimentos e variações | RF34, RF35 |
+| C13 | Notificar variações relevantes (vencimentos adiados com a renda fixa) | RF35 |
 | C14 | Exportar e excluir dados pessoais (LGPD) | RF06, RB04, DA13 |
 | C15 | Administrar e monitorar a ingestão | RF39, RF40, DA14 |
 | C16 | Recursos complementares: idioma, biometria, importação, relatório PDF | RF04, RF21, RF22, RF38 |
@@ -74,7 +75,7 @@ Convenções:
 flowchart LR
     F["Fundação<br/>cliente, servidor, processador"] --> C01
     C01["C01 Conta e acesso"] --> C02["C02 Catálogo"]
-    C01 --> CAL["Calendário de pregão<br/>e dias úteis"]
+    C01 --> CAL["Calendário de pregão"]
     CAL --> C03["C03 Dados de mercado"]
     C02 --> C03
     C03 --> C04["C04 Ficha do ativo"]
@@ -82,9 +83,7 @@ flowchart LR
     C01 --> C05["C05 Carteiras"]
     C05 --> C06["C06 Lançamentos"]
     C03 --> C06
-    C06 --> C07["C07 Renda fixa"]
     C06 --> C08["C08 Acompanhamento"]
-    C07 --> C08
     C01 --> C11["C11 Assinatura"]
     C02 --> C09["C09 Notícias"]
     C04 --> C09
@@ -94,7 +93,6 @@ flowchart LR
     C08 --> C12["C12 Offline"]
     C09 --> C12
     C06 --> C13["C13 Notificações"]
-    C07 --> C13
     C06 --> C14["C14 LGPD"]
     C09 --> C14
     C11 --> C14
@@ -104,7 +102,7 @@ flowchart LR
 Pontos de dependência que definem a ordem:
 
 1. **Identidade e perfil** (C01) vêm antes de tudo que é pessoal ou administrativo (DA12).
-2. **Calendário de pregão e dias úteis** é usado por ingestão (RB11), lançamentos (RB11, RB12) e renda fixa (RB14). Por isso precede C03 e C06.
+2. **Calendário de pregão** é usado por ingestão e lançamentos (RB11). Por isso precede C03 e C06.
 3. **Caixa** (aportes) precede compras, porque RB05 exige saldo.
 4. **Histórico diário** precede a carteira histórica (DA17), a evolução patrimonial (RF17) e os cenários (DA21).
 5. **Classificação de notícias** precede cenários por sentimento (DA21).
@@ -119,23 +117,23 @@ Pontos de dependência que definem a ordem:
 | RB02 | Toda carteira tem exatamente um dono | 012 |
 | RB03 | Nenhuma operação acessa carteira de outro usuário | 002, 012 e todas as Specs de carteira |
 | RB04 | Pedido de exclusão concluído em até 30 dias | 034 |
-| RB05 | Caixa após uma compra nunca fica negativo | 014, 016, 017, 024 |
+| RB05 | Caixa após uma compra nunca fica negativo | 014, 016 |
 | RB06 | Posição de um ativo nunca fica negativa | 014, 015, 016 |
 | RB07 | Preço do lançamento vem da cotação de referência (**regra em conflito com DA16/DA17**, ver OPEN-09) | 014, 016 |
 | RB08 | Lançamentos nunca são alterados nem apagados; correção só por estorno | 013, 014, 015 |
 | RB09 | Posição sempre derivada do histórico; não existe posição persistida como fonte da verdade | 013, 014, 019 |
 | RB10 | Preço médio muda só em compras | 014 |
 | RB11 | Nenhum lançamento em dia sem pregão | 005, 013, 014, 016 |
-| RB12 | Nenhum lançamento com data futura | 013, 016, 017 |
-| RB13 | Valores monetários com 2 casas, arredondamento meio para cima | 013–024 |
-| RB14 | Renda fixa calculada em base 252 dias úteis | 005, 017, 024 |
-| RB15 | IOF regressivo em resgates com menos de 30 dias | 018, 024 |
-| RB16 | IR pela tabela regressiva no resgate (ver OPEN-17) | 018, 024 |
-| RB17 | Sem resgate antecipado durante a carência | 018 |
+| RB12 | Nenhum lançamento com data futura | 013, 016 |
+| RB13 | Valores monetários com 2 casas, arredondamento meio para cima | 013–023 |
+| RB14 | ⏸ Adiada (DA22) — renda fixa calculada em base 252 dias úteis | Fase futura |
+| RB15 | ⏸ Adiada (DA22) — IOF regressivo em resgates com menos de 30 dias | Fase futura |
+| RB16 | ⏸ Adiada (DA22) — IR pela tabela regressiva no resgate (ver OPEN-17) | Fase futura |
+| RB17 | ⏸ Adiada (DA22) — sem resgate antecipado durante a carência | Fase futura |
 | RB18 | Nenhuma saída do tipo "compre"/"venda" | 031 |
 | RB19 | Toda tela de cenário exibe aviso educacional | 031 |
-| RB20 | Preço médio, caixa e rentabilidade não incluem custos de operação | 014, 016, 019, 024 |
-| RB21 | Toda tela de compra, venda e aplicação no Tesouro Direto exibe o aviso de custos não considerados | 014, 016, 024 |
+| RB20 | Preço médio, caixa e rentabilidade não incluem custos de operação | 014, 016, 019 |
+| RB21 | Toda tela de compra e venda de ações e FIIs exibe o aviso de custos não considerados | 014, 016 |
 
 Invariantes vindos das ADRs (não estão em `requisições.md`, ver OPEN-09 e OPEN-32):
 
@@ -167,11 +165,11 @@ RNFs transversais **não** viram Specs próprias; cada um é associado às Specs
 | RNF09 | Somente HTTPS | 001, 030 |
 | RNF10 | Limite de tentativas nas rotas de autenticação | 002, 004 |
 | RNF11 | LGPD: consentimento e exclusão | 002, 003, 034 |
-| RNF12 | Dinheiro em tipo decimal | Transversal — 013 a 024 |
+| RNF12 | Dinheiro em tipo decimal | Transversal — 013 a 023 |
 | RNF13 | Falha de fonte externa não interrompe o app | 007, 008, 009, 010, 027, 028, 029, 032 |
 | RNF14 | Modo leitura sem conexão | 032 |
 | RNF15 | Auditoria das transações | 006 (ações administrativas), 013, 014, 015 |
-| RNF16 | Testes automatizados no cálculo financeiro | 005, 014, 017, 018, 019, 020, 024 |
+| RNF16 | Testes automatizados no cálculo financeiro | 005, 014, 019, 020 |
 | RNF17 | Migrações versionadas e reversíveis | 001 e toda Spec que altere o esquema |
 | RNF18 | Acessibilidade WCAG AA básico | Transversal — todas as Specs com tela |
 | RNF19 | Sincronização incremental | 032 |
@@ -203,6 +201,7 @@ RNFs transversais **não** viram Specs próprias; cada um é associado às Specs
 | Fontes de notícias | Pai + curadas + do usuário | DA19 | Aceita, com ponto crítico |
 | Modelo de IA | Versionado, treinado fora do servidor | DA20 | Aceita, com pontos em aberto |
 | Cenários | Probabilidade condicional ao sentimento | DA21 | **Proposta** |
+| Escopo | Ações e FIIs; renda fixa adiada | DA22 | Aceita, com pontos em aberto |
 
 Restrições: prazo de um semestre, dois integrantes, custo zero, CVM, LGPD, desktop multiplataforma, APIs gratuitas com limite, sem ordens nem pagamento reais (RES01–RES09).
 
@@ -213,7 +212,7 @@ Nenhuma delas foi resolvida neste mapa. Cada uma aponta para uma decisão em abe
 | ID | Inconsistência / lacuna | Documentos | OPEN |
 |---|---|---|---|
 | INC-01 | O diagrama de casos de uso tem o ator **"Gateway de pagamento"**, mas os requisitos dizem que o pagamento é **simulado** e que pagamento real está fora do escopo | Casos de uso × Requisitos §1.1 | OPEN-25 |
-| INC-02 | O diagrama não tem os atores **Administrador** e **Sistema**, nem casos de uso de aporte/retirada, aplicação/resgate de renda fixa, LGPD, administração, offline, notificações, fontes de notícias e carteira histórica | Casos de uso × Requisitos × ADRs | OPEN-43 |
+| INC-02 | O diagrama não tem os atores **Administrador** e **Sistema**, nem casos de uso de aporte/retirada, LGPD, administração, offline, notificações, fontes de notícias e carteira histórica | Casos de uso × Requisitos × ADRs | OPEN-43 |
 | INC-03 | **RB07** ("cotação da data do lançamento") não foi reescrita após DA16/DA17, que definem preço diferente para carteira ao vivo e histórica | Requisitos × DA16, DA17 | OPEN-09 |
 | INC-04 | **RF37** (sincronizar dados pendentes) pressupõe escrita offline; **RNF14** e **DA08** definem offline somente leitura | Requisitos × DA08 | OPEN-10 |
 | INC-05 | O **modelo conceitual** não tem entidades citadas pelas regras e pela arquitetura (calendário, lançamento de caixa, estorno, plano, assinatura, fonte de notícia, execução de tarefa, auditoria, tipo de carteira etc.) | Modelo × Requisitos §5 × Arquitetura §9 | OPEN-44 |
@@ -224,10 +223,10 @@ Nenhuma delas foi resolvida neste mapa. Cada uma aponta para uma decisão em abe
 | INC-10 | Fontes do usuário (DA19) e cotações por plano (DA16) não têm RFs em `requisições.md` | ADRs × Requisitos | OPEN-09, OPEN-32 |
 | INC-11 | RNF17 exige migrações reversíveis; o ORM definido não gera reversão automaticamente | Requisitos × Decisões técnicas | OPEN-39 |
 | INC-12 | RF04 (biometria) é multiplataforma nos requisitos, mas só é simples no macOS | Requisitos × Decisões técnicas | OPEN-36 |
-| INC-13 | RB16 aplica IR a todo resgate, sem tratar produtos que podem ter tratamento fiscal diferente (LCI/LCA) | Requisitos | OPEN-17 |
+| INC-13 | ⏸ *(adiada com a renda fixa — DA22)* RB16 aplica IR a todo resgate, sem tratar produtos que podem ter tratamento fiscal diferente (LCI/LCA) | Requisitos | OPEN-17 |
 | INC-14 | CARTEIRA tem `saldo_inicial`; RF13 tem aportes. Não está definido como um se relaciona com o outro, nem se uma retirada pode deixar o caixa negativo (RB05 só trata compra) | Modelo × RF13 | OPEN-11 |
 | INC-15 | O cenário da P01 distribui o valor **por percentual** ("50% em PETR4"); RF12 registra compra **por quantidade** | Personas × RF12 | OPEN-24 |
-| INC-16 | O caso de uso "Projetar renda fixa" não tem RF correspondente | Casos de uso × Requisitos | OPEN-19 |
+| INC-16 | ⏸ *(adiada com a renda fixa — DA22)* O caso de uso "Projetar renda fixa" não tem RF correspondente | Casos de uso × Requisitos | OPEN-19 |
 | INC-17 | RF11 permite **excluir** carteira; RB08 e RNF15 exigem imutabilidade e auditoria dos lançamentos | Requisitos | OPEN-15 |
 | INC-18 | RB13 trata dinheiro, mas o modelo usa `quantidade` decimal sem dizer se ações aceitam frações | Modelo × Requisitos | OPEN-12 |
 | INC-19 | ~~Custos de operação (corretagem, emolumentos, custódia) não aparecem em nenhum documento, mas afetam preço médio e rentabilidade~~ **Resolvida** em `requisições.md` v1.1 (RB20, RB21) | Lacuna | OPEN-13 |
@@ -238,12 +237,12 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 
 | ID | Decisão necessária | Origem | Specs afetadas |
 |---|---|---|---|
-| OPEN-01 | Fonte e responsável pela manutenção do calendário de pregão e dos feriados bancários (hoje "Sugerida") | Decisões técnicas §3 | 005 |
+| OPEN-01 | Fonte e responsável pela manutenção do calendário de pregão (hoje "Sugerida") | Decisões técnicas §3 | 005 |
 | OPEN-02 | Hospedagem (servidor, processador, banco com backup diário, cache) e serviço de e-mail | PE13 | 001, 004 |
 | OPEN-03 | Como uma conta de administrador é criada ou promovida | Lacuna | 002, 006, 011 |
 | OPEN-04 | Formato, conteúdo e forma de entrega da exportação de dados pessoais | RF06 | 034 |
 | OPEN-05 | Aprovação de DA18 (histórico pelos arquivos da B3, hoje **Proposta**) e tamanho da janela histórica carregada | DA18, PE04 | 008, 016 |
-| OPEN-06 | Fonte e tratamento de proventos e eventos corporativos (vale para carteira histórica e também para posições mantidas na carteira ao vivo) | PE05 | 008, 014, 016, 019 |
+| OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo) | PE05, DA22 | 008, 014, 016, 019 |
 | OPEN-07 | Termos da brapi para redistribuir cotações | PE02 | 009, 026 |
 | OPEN-08 | Compra/venda na carteira ao vivo com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
 | OPEN-09 | Reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
@@ -253,11 +252,11 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra, na venda e na aplicação no Tesouro Direto (RB20, RB21) | INC-19 | 014, 016, 019, 024 |
 | OPEN-14 | Regras do estorno: o que pode ser estornado, efeito em lançamentos posteriores, estorno de estorno, estorno na carteira histórica | RB08 | 015, 016 |
 | OPEN-15 | Exclusão de carteira: exclusão definitiva ou arquivamento, preservando auditoria | INC-17 | 012, 034 |
-| OPEN-16 | Tipos de remuneração da renda fixa (prefixado, % do CDI, IPCA + taxa) e atributos da aplicação (taxa contratada, carência) | Modelo, arquitetura §9 | 017 |
-| OPEN-17 | Tratamento fiscal por produto (ex.: LCI/LCA) | INC-13 | 018, 024 |
-| OPEN-18 | Valorização e resgate do Tesouro Direto (preço publicado × curva); confirmar a fonte (hoje "Sugerida") | Decisões técnicas §3 | 024 |
-| OPEN-19 | Significado do caso de uso "Projetar renda fixa" | INC-16 | 017 |
-| OPEN-20 | Renda fixa na carteira histórica | DA17 PO4 | 016, 017 |
+| OPEN-16 | ⏸ **Adiada com a renda fixa (DA22).** Tipos de remuneração da renda fixa (prefixado, % do CDI, IPCA + taxa) e atributos da aplicação (taxa contratada, carência) | Modelo, arquitetura §9 | 017 |
+| OPEN-17 | ⏸ **Adiada com a renda fixa (DA22).** Tratamento fiscal por produto (ex.: LCI/LCA) | INC-13 | 018, 024 |
+| OPEN-18 | ⏸ **Adiada com a renda fixa (DA22).** Valorização e resgate do Tesouro Direto (preço publicado × curva); confirmar a fonte (hoje "Sugerida") | Decisões técnicas §3 | 024 |
+| OPEN-19 | ⏸ **Adiada com a renda fixa (DA22).** Significado do caso de uso "Projetar renda fixa" | INC-16 | 017 |
+| OPEN-20 | ⏸ **Adiada com a renda fixa (DA22).** Renda fixa na carteira histórica | DA17 PO4 | 016, 017 |
 | OPEN-21 | Fonte do histórico do Ibovespa | PE06 | 020 |
 | OPEN-22 | Significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
 | OPEN-23 | Comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
@@ -283,6 +282,9 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
 | OPEN-44 | Aprovar no modelo conceitual as entidades previstas na arquitetura §9 | INC-05 | Várias (marcadas com `†`) |
 | OPEN-45 | Com interface em inglês, notícias (em português, PRE04) e textos gerados continuam em português? | RF38 × PRE04 | 035 |
+| OPEN-46 | Benchmark específico para FIIs (a baseline define só CDI e Ibovespa) | DA22 | 020 |
+| OPEN-47 | Classificação setorial (segmentos) dos FIIs para busca e distribuição por setor | DA22 | 006, 021 |
+| OPEN-48 | Confirmar que as fontes de cotação (atual e histórica) cobrem os FIIs do catálogo | DA22 | 008, 009 |
 
 ---
 
@@ -296,11 +298,12 @@ Visão geral por fase:
 | 1 — Conta e acesso | 002–004 | Usuário identificado e seguro |
 | 2 — Dados de mercado | 005–011 | Calendário, catálogo, indexadores, cotações, ficha do ativo, monitoramento |
 | 3 — Núcleo da carteira | 012–016 | Carteiras e lançamentos (ao vivo e histórica) |
-| 4 — Renda fixa | 017–018 | Aplicação e resgate com tributos |
-| 5 — Acompanhamento | 019–024 | Rentabilidade, benchmarks, distribuição, comparação, simulações, Tesouro |
+| 4 — Renda fixa | ⏸ Adiada (DA22) | Ver "Fase futura — Renda fixa" ao fim desta seção |
+| 5 — Acompanhamento | 019–023 | Rentabilidade, benchmarks, distribuição, comparação, simulações |
 | 6 — Assinatura | 025–026 | Planos e cotações do assinante |
 | 7 — Notícias e cenários | 027–031 | Fontes, classificação, gráfico, preferências, cenários |
 | 8 — Experiência e conformidade | 032–038 | Offline, notificações, LGPD, idioma, biometria, importação, PDF |
+| Futura — Renda fixa | 017, 018, 024 | ⏸ Adiada (DA22) |
 
 ---
 
@@ -386,21 +389,21 @@ Visão geral por fase:
 
 ### Fase 2 — Dados de mercado
 
-#### SPEC-005 — Calendário de pregão e de dias úteis bancários
+#### SPEC-005 — Calendário de pregão
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O sistema responde se uma data é dia de pregão da B3 e se é dia útil bancário, e conta dias úteis entre duas datas; o administrador carrega e revisa o calendário anualmente |
-| Valor | **Sistema:** base única para ingestão (RB11), lançamentos (RB11) e base 252 (RB14) |
-| RF | Nenhum diretamente (suporta RF09, RF12, RF13, RF24) |
-| RB | RB11, RB14 |
-| RNF | RNF16 (contagem de dias úteis no núcleo de cálculo) |
-| Caso de uso / fluxo | — (Requisitos §5: rastreabilidade de RB11 e RB14) |
-| Entidades | CALENDARIO_PREGAO†, FERIADO_BANCARIO† |
-| Drivers | PRE05, FAS02, QA01 |
+| Objetivo | O sistema responde se uma data é dia de pregão da B3 e conta pregões entre duas datas; o administrador carrega e revisa o calendário anualmente |
+| Valor | **Sistema:** base única para ingestão e lançamentos (RB11); na fase de renda fixa, também para a base 252 |
+| RF | Nenhum diretamente (suporta RF09, RF12, RF13) |
+| RB | RB11 |
+| RNF | RNF16 (contagem de pregões no núcleo de cálculo) |
+| Caso de uso / fluxo | — (Requisitos §5: rastreabilidade de RB11) |
+| Entidades | CALENDARIO_PREGAO† |
+| Drivers | PRE05, QA01 |
 | ADRs | DA07 (tarefa anual com revisão manual), DA10 |
 | Depende de | SPEC-002 (perfil administrador) |
-| Posição | Usada por 007, 008, 009 e por todas as Specs de lançamento e renda fixa |
+| Posição | Usada por 007, 008, 009, pelas Specs de lançamento e pelos cenários (031) |
 | Em aberto | OPEN-01 |
 | Prioridade derivada | Técnica de regra (habilita os Must) |
 
@@ -408,35 +411,35 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O administrador cadastra, edita e ativa/desativa ativos (ticker, nome, classe, setor, indexador, vencimento); o usuário busca ativos por ticker, nome ou setor |
+| Objetivo | O administrador cadastra, edita e ativa/desativa ativos — ações e FIIs (ticker, nome, classe, setor); o usuário busca ativos por ticker, nome ou setor |
 | Valor | **Usuário:** encontra ativos para estudar e simular. **Sistema:** conjunto curado que define o que é coletado (DA16) |
 | RF | RF07, RF39 |
 | RB | — |
 | RNF | RNF15 (auditoria de ações administrativas), RNF04, RNF18 |
 | Caso de uso / fluxo | UC: Buscar ativo; P01 passo 1; P03 "cadastrar ou atualizar ativos" |
-| Entidades | ATIVO, INDEXADOR, SETOR† |
+| Entidades | ATIVO (classe ação ou FII), SETOR† |
 | Drivers | OBJ02, FAS10, PA03 |
-| ADRs | DA12, DA16 (catálogo curado de ~40–50 ativos) |
+| ADRs | DA12, DA16 (catálogo curado de ~40–50 ativos, divididos entre ações e FIIs), DA22 |
 | Depende de | SPEC-002 |
 | Posição | O ativo é referenciado por cotações, lançamentos e notícias; precisa existir antes da ingestão |
-| Em aberto | OPEN-03, OPEN-41 |
+| Em aberto | OPEN-03, OPEN-41, OPEN-47 |
 | Prioridade derivada | Must (RF07); Should (RF39) |
 
-#### SPEC-007 — Ingestão das taxas de indexadores
+#### SPEC-007 — Ingestão da série do CDI
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O processador coleta CDI e Selic (diários) e IPCA (mensal) da fonte do Banco Central, de forma idempotente, com novas tentativas e registro de cada execução |
-| Valor | **Sistema:** séries para renda fixa e benchmark; estabelece o padrão de adaptador + execução registrada reutilizado nas demais ingestões |
+| Objetivo | O processador coleta a série diária do CDI da fonte do Banco Central, de forma idempotente, com novas tentativas e registro de cada execução (Selic e IPCA entram na fase de renda fixa) |
+| Valor | **Sistema:** série do benchmark CDI; estabelece o padrão de adaptador + execução registrada reutilizado nas demais ingestões |
 | RF | RF10 |
-| RB | RB14 (série indexada por dia útil) |
+| RB | — |
 | RNF | RNF13 |
 | Caso de uso / fluxo | UC: Consultar taxa do indexador (lado do sistema); fluxo 7.2 (mesmo padrão) |
-| Entidades | INDEXADOR, TAXA_DIARIA, série mensal do IPCA†, EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
+| Entidades | INDEXADOR (CDI), TAXA_DIARIA, EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
 | Drivers | FAS03, QA02, QA08, QA12, PA03 |
-| ADRs | DA06, DA07, DA14 |
+| ADRs | DA06, DA07, DA14, DA22 |
 | Depende de | SPEC-001, SPEC-005 |
-| Posição | Fonte definida e mais simples; valida o padrão de ingestão antes das cotações; exigida por renda fixa e benchmark |
+| Posição | Fonte definida e mais simples; valida o padrão de ingestão antes das cotações; exigida pelo benchmark (020) |
 | Em aberto | OPEN-40 |
 | Prioridade derivada | Must |
 
@@ -444,7 +447,7 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Carregar o histórico de fechamento diário dos ativos do catálogo, inclusive a carga retroativa quando um ativo é cadastrado, com regra de precedência entre fontes |
+| Objetivo | Carregar o histórico de fechamento diário dos ativos do catálogo (ações e FIIs), inclusive a carga retroativa quando um ativo é cadastrado, com regra de precedência entre fontes |
 | Valor | **Sistema:** base para carteira histórica, gráficos, evolução patrimonial e cenários |
 | RF | RF09 (parte histórica) |
 | RB | RB11 |
@@ -455,14 +458,14 @@ Visão geral por fase:
 | ADRs | DA06, DA07, DA14, DA18 (Proposta) |
 | Depende de | SPEC-005, SPEC-006, SPEC-007 |
 | Posição | Precede tudo que olha para o passado (010, 016, 019, 031) |
-| Em aberto | **OPEN-05 (bloqueante: DA18 não aprovado)**, OPEN-06, OPEN-40 |
+| Em aberto | **OPEN-05 (bloqueante: DA18 não aprovado)**, OPEN-06, OPEN-40, OPEN-48 |
 | Prioridade derivada | Must |
 
 #### SPEC-009 — Cotações do pregão (nível gratuito) e fechamento diário
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Coletar cotações a cada ~30 min apenas em horário de pregão e para ativos do catálogo, e o fechamento após o pregão; cada cotação guarda data, hora, fonte e nível; em caso de falha, mantém o último dado válido |
+| Objetivo | Coletar cotações de ações e FIIs a cada ~30 min apenas em horário de pregão e para ativos do catálogo, e o fechamento após o pregão; cada cotação guarda data, hora, fonte e nível; em caso de falha, mantém o último dado válido |
 | Valor | **Usuário:** preço do dia com horário de referência. **Sistema:** preço para a carteira ao vivo |
 | RF | RF09 |
 | RB | RB11 |
@@ -473,7 +476,7 @@ Visão geral por fase:
 | ADRs | DA06, DA07, DA08, DA14, DA16 |
 | Depende de | SPEC-005, SPEC-006, SPEC-007 |
 | Posição | Pré-condição da compra e venda ao vivo (014) |
-| Em aberto | OPEN-07, OPEN-40 |
+| Em aberto | OPEN-07, OPEN-40, OPEN-48 |
 | Prioridade derivada | Must |
 
 #### SPEC-010 — Ficha do ativo com histórico de cotações
@@ -548,7 +551,7 @@ Visão geral por fase:
 | Drivers | FAS01, QA01, QA11 |
 | ADRs | DA09, DA10, DA17 (na carteira ao vivo, data = momento atual) |
 | Depende de | SPEC-005, SPEC-012 |
-| Posição | O caixa é pré-condição de RB05 para qualquer compra ou aplicação |
+| Posição | O caixa é pré-condição de RB05 para qualquer compra |
 | Em aberto | OPEN-08, OPEN-11 |
 | Prioridade derivada | Must |
 
@@ -603,48 +606,14 @@ Visão geral por fase:
 | ADRs | DA09, DA17, DA18 (Proposta) |
 | Depende de | SPEC-008, SPEC-013, SPEC-014 |
 | Posição | Reaproveita as regras de 013/014 e exige o histórico de 008 |
-| Em aberto | OPEN-05, OPEN-06, OPEN-09, OPEN-14, OPEN-20, OPEN-24 |
+| Em aberto | OPEN-05, OPEN-06, OPEN-09, OPEN-14, OPEN-24 |
 | Prioridade derivada | Sem MoSCoW nos requisitos (decisão DA17) |
 
 ---
 
 ### Fase 4 — Renda fixa
 
-#### SPEC-017 — Aplicação em renda fixa (CDB, LCI, LCA) e rendimento bruto
-
-| Campo | Conteúdo |
-|---|---|
-| Objetivo | O usuário aplica em CDB, LCI ou LCA informando indexador, taxa contratada e vencimento, com débito do caixa, e acompanha o rendimento bruto diário em base 252 |
-| Valor | **Usuário:** compara renda fixa com ações (P01, P02) |
-| RF | RF23, RF24 (rendimento bruto) |
-| RB | RB05, RB12, RB13, RB14 |
-| RNF | RNF12, RNF16 |
-| Caso de uso / fluxo | UC: Projetar renda fixa (inclui Consultar taxa do indexador), com significado em aberto (OPEN-19) |
-| Entidades | ATIVO (classe renda fixa, vencimento), INDEXADOR, TAXA_DIARIA, APLICACAO_RENDA_FIXA† |
-| Drivers | FAS02, QA01, QA10 |
-| ADRs | DA09, DA10 |
-| Depende de | SPEC-005, SPEC-007, SPEC-013 |
-| Posição | Exige indexadores (007), dias úteis (005) e caixa (013) |
-| Em aberto | OPEN-16, OPEN-19, OPEN-20 |
-| Prioridade derivada | Must |
-
-#### SPEC-018 — Resgate de renda fixa com IR e IOF
-
-| Campo | Conteúdo |
-|---|---|
-| Objetivo | O usuário resgata no vencimento ou antecipadamente (respeitando a carência) e vê o valor líquido com IOF regressivo e IR pela tabela regressiva |
-| Valor | **Usuário:** entende o efeito dos tributos sobre o resultado |
-| RF | RF24 (rendimento líquido), RF25 |
-| RB | RB13, RB15, RB16, RB17 |
-| RNF | RNF12, RNF16 (comparação com calculadora de referência — Requisitos §7) |
-| Caso de uso / fluxo | — (ver OPEN-43) |
-| Entidades | APLICACAO_RENDA_FIXA†, LANCAMENTO_CAIXA† |
-| Drivers | FAS02, QA01, QA10 |
-| ADRs | DA09, DA10 |
-| Depende de | SPEC-017 |
-| Posição | Separada da 017 porque concentra as regras fiscais, com testes próprios |
-| Em aberto | OPEN-17 |
-| Prioridade derivada | Must |
+⏸ **Adiada ([DA22](../adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)).** As Specs 017 e 018 estão em "Fase futura — Renda fixa", ao fim desta seção.
 
 ---
 
@@ -660,11 +629,11 @@ Visão geral por fase:
 | RB | RB09, RB13, RB20 |
 | RNF | RNF03, RNF06, RNF12, RNF16 |
 | Caso de uso / fluxo | UC: Acompanhar rentabilidade (inclui Consultar cotação); UC: Consultar posição e saldo; P01 passo 6 |
-| Entidades | CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA†, APLICACAO_RENDA_FIXA†, COTACAO, TAXA_DIARIA |
+| Entidades | CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA†, COTACAO |
 | Drivers | OBJ01, QA01, QA04, PA05 |
 | ADRs | DA08, DA09, DA10, DA17 (carteira histórica valorizada até hoje) |
-| Depende de | SPEC-014, SPEC-016, SPEC-017, SPEC-018 |
-| Posição | Precisa de todos os tipos de lançamento existentes (ações nas duas carteiras e renda fixa). O Tesouro Direto (024) integra-se depois, ver SPEC-024 |
+| Depende de | SPEC-014, SPEC-016 |
+| Posição | Precisa de todos os tipos de lançamento existentes (ações e FIIs, nas carteiras ao vivo e histórica) |
 | Em aberto | OPEN-06 |
 | Prioridade derivada | Must |
 
@@ -683,7 +652,7 @@ Visão geral por fase:
 | ADRs | DA06, DA10, DA18 (Proposta) |
 | Depende de | SPEC-007, SPEC-019 |
 | Posição | Compara com a rentabilidade já estabelecida em 019 |
-| Em aberto | OPEN-21 |
+| Em aberto | OPEN-21, OPEN-46 |
 | Prioridade derivada | Should |
 
 #### SPEC-021 — Distribuição da carteira por classe e setor
@@ -701,7 +670,7 @@ Visão geral por fase:
 | ADRs | DA09, DA10 |
 | Depende de | SPEC-006, SPEC-019 |
 | Posição | Usa as posições valorizadas de 019 |
-| Em aberto | — |
+| Em aberto | OPEN-47 |
 | Prioridade derivada | Should |
 
 #### SPEC-022 — Comparação de carteiras
@@ -739,24 +708,6 @@ Visão geral por fase:
 | Posição | Depende do que for "simulação". **Não pode ser detalhada antes de OPEN-22** |
 | Em aberto | **OPEN-22 (bloqueante)** |
 | Prioridade derivada | Should |
-
-#### SPEC-024 — Tesouro Direto
-
-| Campo | Conteúdo |
-|---|---|
-| Objetivo | Coletar diariamente preços e taxas do Tesouro Direto e permitir aplicação e resgate de títulos públicos na carteira, integrando o título à rentabilidade (019) e à distribuição (021) |
-| Valor | **Usuário:** simula o investimento em renda fixa mais acessível ao iniciante |
-| RF | RF23, RF24, RF25 (para Tesouro) |
-| RB | RB05, RB13, RB14, RB15, RB16, RB20, RB21 |
-| RNF | RNF12, RNF13, RNF16 |
-| Caso de uso / fluxo | UC: Projetar renda fixa (OPEN-19) |
-| Entidades | ATIVO (título), APLICACAO_RENDA_FIXA†; preços do Tesouro (entidade não definida, OPEN-44) |
-| Drivers | FAS02, FAS03, QA01 |
-| ADRs | DA06, DA07, DA10, DA18 (fonte do Tesouro, Proposta) |
-| Depende de | SPEC-007, SPEC-013, SPEC-017, SPEC-018, SPEC-019, SPEC-021 |
-| Posição | Separada da 017/018 porque tem fonte, valorização e regras próprias ainda em aberto. Fica depois de 019/021 para não bloqueá-las e porque inclui a própria integração nelas |
-| Em aberto | **OPEN-18 (bloqueante)**, OPEN-17 |
-| Prioridade derivada | Must (escopo, Requisitos §1.1) |
 
 ---
 
@@ -914,21 +865,21 @@ Visão geral por fase:
 | Em aberto | OPEN-10 |
 | Prioridade derivada | Should |
 
-#### SPEC-033 — Notificações de vencimento e de variação relevante
+#### SPEC-033 — Notificações de variação relevante
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Notificar o usuário do vencimento de aplicações em renda fixa e de variações relevantes em ativos das suas carteiras |
+| Objetivo | Notificar o usuário de variações relevantes em ativos das suas carteiras (o aviso de vencimento de renda fixa, RF34, entra na fase de renda fixa) |
 | Valor | **Usuário:** acompanha sem abrir o app |
-| RF | RF34, RF35 |
+| RF | RF35 (RF34 adiado — DA22) |
 | RB | — |
 | RNF | RNF20 |
 | Caso de uso / fluxo | — (ver OPEN-43) |
-| Entidades | APLICACAO_RENDA_FIXA†, CARTEIRA, COTACAO |
+| Entidades | CARTEIRA, COTACAO |
 | Drivers | OBJ02 |
 | ADRs | DA03 (notificações do SO), DA07 |
-| Depende de | SPEC-009, SPEC-014, SPEC-017 |
-| Posição | Depende de posições e aplicações existentes |
+| Depende de | SPEC-009, SPEC-014 |
+| Posição | Depende de posições existentes |
 | Em aberto | OPEN-35 |
 | Prioridade derivada | Could |
 
@@ -942,10 +893,10 @@ Visão geral por fase:
 | RB | RB04 |
 | RNF | RNF11 |
 | Caso de uso / fluxo | UC: Gerenciar perfil e consentimento |
-| Entidades | USUARIO, CONSENTIMENTO†, CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA†, APLICACAO_RENDA_FIXA†, SIMULACAO, ASSINATURA†, PREFERENCIA_FONTE†, FONTE_NOTICIA† (do usuário), REGISTRO_AUDITORIA† |
+| Entidades | USUARIO, CONSENTIMENTO†, CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA†, SIMULACAO, ASSINATURA†, PREFERENCIA_FONTE†, FONTE_NOTICIA† (do usuário), REGISTRO_AUDITORIA† |
 | Drivers | FAS09, QA07, PA06, RES05 |
 | ADRs | DA08, DA13, DA19 |
-| Depende de | SPEC-003, SPEC-012 a SPEC-018, SPEC-023, SPEC-024, SPEC-025, SPEC-030, SPEC-032 |
+| Depende de | SPEC-003, SPEC-012 a SPEC-016, SPEC-023, SPEC-025, SPEC-030, SPEC-032 |
 | Posição | **Must**, mas posicionada depois de todas as Specs que guardam dados do usuário, para não exigir comportamento futuro. **Alternativa para a equipe decidir:** antecipar esta Spec e exigir que cada Spec posterior que crie dado pessoal inclua a sua parte na exportação e na exclusão |
 | Em aberto | OPEN-04, OPEN-15, OPEN-40 |
 | Prioridade derivada | Must |
@@ -996,10 +947,10 @@ Visão geral por fase:
 | RB | RB05, RB06, RB08, RB11, RB12, RB13 |
 | RNF | RNF12, RNF15 |
 | Caso de uso / fluxo | — |
-| Entidades | CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA†, APLICACAO_RENDA_FIXA† |
+| Entidades | CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA† |
 | Drivers | FAS01 |
 | ADRs | DA09 |
-| Depende de | SPEC-013, SPEC-014, SPEC-016, SPEC-017 |
+| Depende de | SPEC-013, SPEC-014, SPEC-016 |
 | Posição | Reusa todas as validações de lançamento já existentes |
 | Em aberto | **OPEN-37 (bloqueante)** |
 | Prioridade derivada | Could |
@@ -1024,6 +975,66 @@ Visão geral por fase:
 
 ---
 
+### Fase futura — Renda fixa (adiada por [DA22](../adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md))
+
+Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora. Ficam registradas, com os mesmos IDs, para a fase em que a renda fixa voltar. Nessa fase precisam ser revistas: as decisões OPEN-16 a OPEN-20, a inclusão do aviso de vencimento (RF34) na SPEC-033 e a integração com a rentabilidade (SPEC-019), a distribuição (SPEC-021), a importação (SPEC-037) e a exclusão de dados (SPEC-034), que já terão sido entregues.
+
+#### ⏸ SPEC-017 — Aplicação em renda fixa (CDB, LCI, LCA) e rendimento bruto
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O usuário aplica em CDB, LCI ou LCA informando indexador, taxa contratada e vencimento, com débito do caixa, e acompanha o rendimento bruto diário em base 252 |
+| Valor | **Usuário:** compara renda fixa com ações (P01, P02) |
+| RF | RF23, RF24 (rendimento bruto) |
+| RB | RB05, RB12, RB13, RB14 |
+| RNF | RNF12, RNF16 |
+| Caso de uso / fluxo | UC: Projetar renda fixa (inclui Consultar taxa do indexador), com significado em aberto (OPEN-19) |
+| Entidades | ATIVO (classe renda fixa, vencimento), INDEXADOR, TAXA_DIARIA, APLICACAO_RENDA_FIXA† |
+| Drivers | FAS02, QA01, QA10 |
+| ADRs | DA09, DA10 |
+| Depende de | SPEC-005, SPEC-007, SPEC-013 |
+| Posição | Exige indexadores (007), dias úteis (005) e caixa (013) |
+| Em aberto | OPEN-16, OPEN-19, OPEN-20 |
+| Prioridade derivada | Must |
+
+#### ⏸ SPEC-018 — Resgate de renda fixa com IR e IOF
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O usuário resgata no vencimento ou antecipadamente (respeitando a carência) e vê o valor líquido com IOF regressivo e IR pela tabela regressiva |
+| Valor | **Usuário:** entende o efeito dos tributos sobre o resultado |
+| RF | RF24 (rendimento líquido), RF25 |
+| RB | RB13, RB15, RB16, RB17 |
+| RNF | RNF12, RNF16 (comparação com calculadora de referência — Requisitos §7) |
+| Caso de uso / fluxo | — (ver OPEN-43) |
+| Entidades | APLICACAO_RENDA_FIXA†, LANCAMENTO_CAIXA† |
+| Drivers | FAS02, QA01, QA10 |
+| ADRs | DA09, DA10 |
+| Depende de | SPEC-017 |
+| Posição | Separada da 017 porque concentra as regras fiscais, com testes próprios |
+| Em aberto | OPEN-17 |
+| Prioridade derivada | Must |
+
+#### ⏸ SPEC-024 — Tesouro Direto
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Coletar diariamente preços e taxas do Tesouro Direto e permitir aplicação e resgate de títulos públicos na carteira, integrando o título à rentabilidade (019) e à distribuição (021) |
+| Valor | **Usuário:** simula o investimento em renda fixa mais acessível ao iniciante |
+| RF | RF23, RF24, RF25 (para Tesouro) |
+| RB | RB05, RB13, RB14, RB15, RB16, RB20, RB21 |
+| RNF | RNF12, RNF13, RNF16 |
+| Caso de uso / fluxo | UC: Projetar renda fixa (OPEN-19) |
+| Entidades | ATIVO (título), APLICACAO_RENDA_FIXA†; preços do Tesouro (entidade não definida, OPEN-44) |
+| Drivers | FAS02, FAS03, QA01 |
+| ADRs | DA06, DA07, DA10, DA18 (fonte do Tesouro, Proposta) |
+| Depende de | SPEC-007, SPEC-013, SPEC-017, SPEC-018, SPEC-019, SPEC-021 |
+| Posição | Separada da 017/018 porque tem fonte, valorização e regras próprias ainda em aberto. Fica depois de 019/021 para não bloqueá-las e porque inclui a própria integração nelas |
+| Em aberto | **OPEN-18 (bloqueante)**, OPEN-17 |
+| Prioridade derivada | Must (escopo, Requisitos §1.1) |
+
+---
+
 ## 3. Resumos
 
 ### 3.1 Cobertura dos requisitos funcionais
@@ -1032,24 +1043,24 @@ Visão geral por fase:
 |---|---|---|---|---|---|---|---|
 | RF01 | 002 | RF11 | 012 | RF21 | 037 | RF31 | 031 |
 | RF02 | 002 | RF12 | 014, 015, 016 | RF22 | 038 | RF32 | 025 |
-| RF03 | 004 | RF13 | 013, 015, 016 | RF23 | 017, 024 | RF33 | 025, 026 |
-| RF04 | 036 | RF14 | 014, 019 | RF24 | 017, 018, 024 | RF34 | 033 |
-| RF05 | 003 | RF15 | 019 | RF25 | 018, 024 | RF35 | 033 |
+| RF03 | 004 | RF13 | 013, 015, 016 | RF23 | ⏸ adiado | RF33 | 025, 026 |
+| RF04 | 036 | RF14 | 014, 019 | RF24 | ⏸ adiado | RF34 | ⏸ adiado |
+| RF05 | 003 | RF15 | 019 | RF25 | ⏸ adiado | RF35 | 033 |
 | RF06 | 034 | RF16 | 020 | RF26 | 027 | RF36 | 032 |
 | RF07 | 006 | RF17 | 019 | RF27 | 028 | RF37 | 032 |
 | RF08 | 010 | RF18 | 021 | RF28 | 028 | RF38 | 035 |
 | RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
 
-Os 40 RFs estão cobertos. As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
+Os 36 RFs do escopo atual estão cobertos. RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
 
 ### 3.2 Caminho mínimo (requisitos Must)
 
 Sequência que entrega todos os RFs *Must* (Requisitos §7: "entrega mínima limitada aos requisitos Must"):
 
-`001 → 002 → 005 → 006 → 007 → 008 → 009 → 010 → 012 → 013 → 014 → 015 → 017 → 018 → 019 → 024 → 034`
+`001 → 002 → 005 → 006 → 007 → 008 → 009 → 010 → 012 → 013 → 014 → 015 → 019 → 034`
 
-Dentro desse caminho, **008** (OPEN-05) e **024** (OPEN-18) dependem de decisões em aberto.
+Dentro desse caminho, **008** (OPEN-05) depende de decisão em aberto.
 
 ### 3.3 Specs bloqueadas por decisão
 
@@ -1059,7 +1070,6 @@ Estas Specs **não devem ser detalhadas** antes de a equipe decidir os itens ind
 |---|---|
 | SPEC-008 | OPEN-05 — aprovar DA18 (fonte do histórico) |
 | SPEC-023 | OPEN-22 — significado de "simulação" |
-| SPEC-024 | OPEN-18 — valorização do Tesouro Direto |
 | SPEC-027 | OPEN-28 — autorização da fonte pai |
 | SPEC-030 | OPEN-32 — RFs das fontes do usuário |
 | SPEC-031 | OPEN-33, OPEN-34 — aprovar DA21 e escopo do cenário |

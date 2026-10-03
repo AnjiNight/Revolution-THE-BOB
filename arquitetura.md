@@ -3,12 +3,13 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 2.0 — consolidada
+**Versão:** 2.1
 
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 24/09/2026 | Primeira versão, com as decisões DA01–DA15 no corpo do documento |
 | 2.0 | 01/10/2026 | Decisões movidas para [ADRs](adr/README.md); novas decisões DA16–DA21 (cotações por plano, carteira histórica, histórico da B3, fontes de notícias, modelo de IA, cenários por sentimento); ligação com [Decisões Técnicas](decisoes_tecnicas.md) |
+| 2.1 | 02/10/2026 | Escopo inicial restrito a ações e FIIs; renda fixa adiada e movida para pontos de extensão ([DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) |
 
 ---
 
@@ -54,9 +55,11 @@ O sistema é uma aplicação **cliente-servidor**:
 
 - Um **cliente desktop** instalado na máquina do usuário, responsável pelas telas, pela experiência de uso e por um cache local para consulta sem conexão.
 - Um **servidor central**, que é a **fonte da verdade**: guarda os dados, aplica todas as regras de negócio e é o único que conversa com as fontes externas.
-- Um **processador de tarefas em segundo plano**, que coleta cotações (inclusive durante o pregão), indexadores e notícias, e classifica as notícias com o modelo de IA, sem depender de o usuário estar usando o app.
+- Um **processador de tarefas em segundo plano**, que coleta cotações de ações e FIIs (inclusive durante o pregão), a série do CDI e notícias, e classifica as notícias com o modelo de IA, sem depender de o usuário estar usando o app.
 
 O servidor é um **monólito modular**: uma única aplicação implantável, dividida internamente em módulos com fronteiras claras, cada um organizado em **camadas**.
+
+O escopo atual cobre **ações e fundos imobiliários (FIIs)** negociados na B3; a renda fixa foi adiada para uma fase futura ([DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md), seção 11).
 
 O usuário simula investimentos em dois tipos de carteira:
 
@@ -94,6 +97,7 @@ Cada decisão está registrada como ADR, com contexto, alternativas, decisão, c
 | [DA19](adr/DA19-fontes-de-noticias.md) | Fontes de notícias | Fonte pai fixa + curadas + do usuário, com prioridade | Só fontes da equipe; livre escolha | Aceita, com ponto crítico |
 | [DA20](adr/DA20-modelo-ia-noticias.md) | Modelo de IA | Modelo versionado, treinado fora do servidor com janela histórica | Regras de palavras; só API externa | Aceita, com pontos em aberto |
 | [DA21](adr/DA21-cenarios-por-sentimento.md) | Cenários | Probabilidade condicional ao sentimento, com taxa-base e n | Peso fixo; modelo preditivo caixa-preta | Proposta |
+| [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Escopo inicial | Ações e FIIs; renda fixa adiada | Renda fixa no escopo inicial; só ações | Aceita, com pontos em aberto |
 
 ---
 
@@ -109,8 +113,7 @@ flowchart LR
     COT[("Provedor de cotações<br/>gratuito (~30 min)")]
     COTP[("Provedor de cotações<br/>pago (assinante)")]
     B3[("Arquivos históricos<br/>da B3")]
-    BC[("Banco Central — SGS<br/>CDI, Selic, IPCA")]
-    TES[("Tesouro Transparente<br/>preços e taxas")]
+    BC[("Banco Central — SGS<br/>CDI")]
     PAI[("Fonte pai<br/>de notícias")]
     NOT[("Fontes curadas e<br/>fontes do usuário (feeds)")]
     IA[("Serviço de IA<br/>(opcional, DA20)")]
@@ -121,8 +124,7 @@ flowchart LR
     SIS -- "cotações do dia" --> COT
     SIS -. "cotações do dia" .-> COTP
     SIS -- "histórico diário" --> B3
-    SIS -- "taxas" --> BC
-    SIS -- "Tesouro Direto" --> TES
+    SIS -- "CDI (benchmark)" --> BC
     SIS -- "coleta notícias" --> PAI
     SIS -- "coleta notícias" --> NOT
     SIS -. "classifica notícias" .-> IA
@@ -190,12 +192,13 @@ O servidor de aplicação e o processador de tarefas usam **o mesmo código** (m
 | Cotações durante o pregão — nível assinante | Conforme o provedor pago (5–15 min) | DA16 |
 | Fechamento do dia | Após o fechamento do pregão | DA07 |
 | Carga retroativa de ativo novo | Sob demanda, a partir dos arquivos da B3 | DA18 |
-| CDI e Selic / IPCA | Diária / mensal | DA07 |
-| Tesouro Direto | Diária | DA07 |
-| Calendário de pregão e feriados bancários | Anual, com revisão manual | DA07 |
+| CDI | Diária | DA07 |
+| Calendário de pregão | Anual, com revisão manual | DA07 |
 | Coleta de notícias | Algumas vezes ao dia, por fonte (pai, curadas, do usuário) | DA19 |
 | Classificação e vínculo das notícias | Logo após cada coleta | DA20 |
 | Sentimento diário por ativo | Após o fechamento do pregão | DA21 |
+
+*Fase de renda fixa (DA22):* Selic e IPCA, preços do Tesouro Direto e feriados bancários entram como novas tarefas.
 
 ---
 
@@ -206,7 +209,7 @@ O servidor de aplicação e o processador de tarefas usam **o mesmo código** (m
 ```mermaid
 flowchart TB
     subgraph Nucleo["Núcleo da simulação"]
-        CART["Carteiras<br/>ao vivo e histórica,<br/>lançamentos, renda fixa"]
+        CART["Carteiras<br/>ao vivo e histórica,<br/>lançamentos"]
         CALC["Cálculo Financeiro<br/>(puro)"]
     end
 
@@ -254,14 +257,14 @@ flowchart TB
 |---|---|---|---|
 | Identidade e Conta | Cadastro, login, sessão, recuperação de senha, perfil, consentimento, exportação e exclusão de dados | RF01–RF06 | DA05, DA13 |
 | Assinaturas e Planos | Planos, assinatura com pagamento simulado, verificação de acesso a recursos premium e ao nível de cotação | RF32, RF33 | DA12, DA16 |
-| Catálogo de Ativos | Ativos, setores, classe, indexador associado, busca | RF07, RF39 | — |
-| Dados de Mercado | Cotações durante o pregão (por nível) e de fechamento, histórico, taxas de indexadores, calendários; consultas de séries | RF08–RF10 | DA16, DA18 |
+| Catálogo de Ativos | Ativos (ações e FIIs), setores, classe, busca | RF07, RF39 | DA22 |
+| Dados de Mercado | Cotações durante o pregão (por nível) e de fechamento, histórico, série do CDI, calendário de pregão; consultas de séries | RF08–RF10 | DA16, DA18 |
 | Ingestão | Agendamento, execução e registro das tarefas; adaptadores das fontes externas | RF09, RF10, RF26, RF40 | DA06, DA07, DA14 |
-| Carteiras | Carteiras ao vivo e históricas, lançamentos (compra, venda, aporte, retirada, renda fixa, estorno), validação das regras de lançamento, comparação e simulações salvas | RF11–RF13, RF17–RF23, RF25 | DA09, DA17 |
-| Cálculo Financeiro | Posição, preço médio, rentabilidade, benchmarks, IR, IOF, base 252 | RF14–RF16, RF24 | DA10 |
+| Carteiras | Carteiras ao vivo e históricas, lançamentos (compra, venda, aporte, retirada, estorno), validação das regras de lançamento, comparação e simulações salvas | RF11–RF13, RF17–RF22 | DA09, DA17 |
+| Cálculo Financeiro | Posição, preço médio, rentabilidade, benchmarks | RF14–RF16 | DA10 |
 | Notícias e Sentimento | Fontes (pai, curadas, do usuário) e preferências; coleta; vínculo notícia–ativo; classificação pelo modelo de IA; sentimento diário por ativo | RF26–RF29 | DA11, DA19, DA20 |
 | Projeção de Cenários | Cenários por probabilidade condicional ao sentimento, com taxa-base e n; registro dos cenários exibidos | RF30, RF31 | DA15, DA21 |
-| Notificações | Vencimento de renda fixa, variação relevante | RF34, RF35 | — |
+| Notificações | Variação relevante | RF35 | — |
 | Administração | Manutenção de ativos e fontes curadas, painel de execuções, reexecução de tarefas | RF39, RF40 | DA14 |
 | Auditoria | Registro de operações sobre transações e ações administrativas | RNF15 | DA09 |
 
@@ -271,7 +274,7 @@ flowchart TB
 
 | Módulo | Responsabilidade |
 |---|---|
-| Telas | Painel, carteiras (ao vivo e histórica), ficha do ativo, gráfico Notícias × Preço, renda fixa, fontes de notícias, cenários, conta, administração |
+| Telas | Painel, carteiras (ao vivo e histórica), ficha do ativo, gráfico Notícias × Preço, fontes de notícias, cenários, conta, administração |
 | Controle de estado | Estado de cada tela, tratamento de ações do usuário |
 | Comunicação | Chamadas ao servidor, renovação automática de token, consulta periódica das cotações, detecção de modo offline |
 | Sincronização e cache local | Armazenamento local, sincronização incremental, limpeza no logout |
@@ -459,9 +462,9 @@ A visão conceitual está no [Modelo de Domínio](modelo_dominio.md). Esta seç�
 |---|---|---|
 | Identidade e Conta | USUARIO | CONSENTIMENTO, TOKEN_RENOVACAO, PERFIL_ACESSO |
 | Assinaturas e Planos | — | PLANO (inclui nível de cotação), ASSINATURA |
-| Catálogo de Ativos | ATIVO, INDEXADOR | SETOR; ativo ativo/inativo |
-| Dados de Mercado | COTACAO, TAXA_DIARIA | COTACAO com **data e hora, fonte e nível** (DA16); CALENDARIO_PREGAO; FERIADO_BANCARIO; EVENTO_CORPORATIVO e PROVENTO (DA17, DA18); série mensal do IPCA (não cabe em TAXA_DIARIA) |
-| Carteiras | CARTEIRA, TRANSACAO | **tipo** (ao vivo/histórica) em CARTEIRA (DA17); horário e nível da cotação usada em TRANSACAO; LANCAMENTO_CAIXA (aporte/retirada); APLICACAO_RENDA_FIXA (taxa contratada, vencimento, carência); tipo **estorno** em TRANSACAO; tipo **real** em CARTEIRA (evolução) |
+| Catálogo de Ativos | ATIVO, INDEXADOR (só CDI) | SETOR (inclui segmentos de FIIs, ver DA22); ativo ativo/inativo |
+| Dados de Mercado | COTACAO, TAXA_DIARIA | COTACAO com **data e hora, fonte e nível** (DA16); CALENDARIO_PREGAO; EVENTO_CORPORATIVO e PROVENTO, incluindo rendimentos de FIIs (DA17, DA18, DA22) |
+| Carteiras | CARTEIRA, TRANSACAO | **tipo** (ao vivo/histórica) em CARTEIRA (DA17); horário e nível da cotação usada em TRANSACAO; LANCAMENTO_CAIXA (aporte/retirada); tipo **estorno** em TRANSACAO; tipo **real** em CARTEIRA (evolução) |
 | Projeção de Cenários | SIMULACAO | CENARIO (ativo, horizonte, faixa de sentimento, probabilidades, taxa-base, n) (DA21) |
 | Notícias e Sentimento | NOTICIA, NOTICIA_ATIVO | FONTE_NOTICIA (tipo pai/curada/usuário, categoria, confiabilidade, URL, ativa); PREFERENCIA_FONTE (usuário, fonte, ativa, prioridade) (DA19); `publicada_em` com hora; VERSAO_MODELO e versão usada em cada classificação (DA20); SENTIMENTO_DIARIO por ativo (DA21) |
 | Ingestão / Administração | — | EXECUCAO_TAREFA, ERRO_EXECUCAO |
@@ -472,7 +475,8 @@ Regras gerais de dados:
 - Valores monetários sempre em tipo **decimal** (RNF12).
 - **Não existe** tabela de posição: ela é calculada (DA09).
 - Séries temporais com **unicidade** em (ativo, data/hora, nível) e (indexador, data).
-- Datas de pregão vêm de CALENDARIO_PREGAO (RB11); a contagem de dias úteis da base 252 usa os feriados bancários (RB14).
+- Datas de pregão vêm de CALENDARIO_PREGAO (RB11).
+- *Fase de renda fixa (DA22):* APLICACAO_RENDA_FIXA (taxa contratada, vencimento, carência), FERIADO_BANCARIO para a base 252 (RB14), série mensal do IPCA, preços do Tesouro Direto, `vencimento` em ATIVO e a relação ATIVO–INDEXADOR.
 - Mudanças de esquema apenas por **migrações versionadas e reversíveis** (RNF17).
 
 ---
@@ -483,7 +487,7 @@ Regras gerais de dados:
 |---|---|
 | Tratamento de erros | Erros de regra de negócio viram mensagens compreensíveis ao usuário; erros técnicos são registrados e nunca exibidos crus |
 | Degradação | Falha de fonte externa → dados da última atualização + horário visível; falha da fonte pai → fontes curadas continuam; falha de notícias/IA → tela sem essa seção |
-| Datas e fuso | Tudo em fuso de Brasília; "dia" significa dia de pregão para cotações e dia útil bancário para renda fixa |
+| Datas e fuso | Tudo em fuso de Brasília; "dia" significa dia de pregão (na fase de renda fixa, dia útil bancário para a base 252) |
 | Atualidade dos dados | Toda cotação exibida mostra o horário de referência; a interface nunca usa "tempo real" (DA16) |
 | Dinheiro | Tipo decimal em todas as camadas; arredondamento só no resultado final |
 | Segurança | Canal cifrado, senhas com hash, tokens no cofre do SO, limite de tentativas, verificação de propriedade e plano em toda operação; feeds do usuário validados e tratados como texto (DA19) |
@@ -512,6 +516,7 @@ Como as funcionalidades futuras da [Visão de produto](Visão%20de%20produto.md)
 | Lançamentos offline | Fila local de comandos no cliente, validados no servidor ao reconectar (DA08) |
 | Integração com corretoras | Novo adaptador que gera lançamentos na carteira real |
 | Envio ativo de cotações ao cliente (push) | Substitui a consulta periódica do cliente, sem mudar os módulos (DA16) |
+| **Renda fixa** (CDB, LCI/LCA, Tesouro Direto) — adiada por [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Novos tipos de lançamento (aplicação e resgate) no livro-razão (DA09); regras de IR, IOF e base 252 no núcleo de cálculo (DA10); novos adaptadores para Selic, IPCA e Tesouro (DA06); notificação de vencimento (RF34). Requisitos preservados em [Requisitos §9](requisições.md) |
 
 ---
 
@@ -543,7 +548,7 @@ Consolidação do que ainda depende de decisão da equipe. O detalhe de cada ite
 | PE02 | Termos da brapi para redistribuição das cotações | DA16 |
 | PE03 | Compra com a bolsa fechada: último fechamento ou ordem na abertura | DA16 |
 | PE04 | Limite de data inicial da carteira histórica | DA17 |
-| PE05 | Fonte de proventos e eventos corporativos | DA17, DA18 |
+| PE05 | Fonte de proventos e eventos corporativos (**prioritário para FIIs**, cujos rendimentos mensais são parte importante do retorno) | DA17, DA18, DA22 |
 | PE06 | Fonte do histórico do Ibovespa | DA18 |
 | PE07 | **Autorização do Investidor10 ou troca da fonte pai** | DA19 |
 | PE08 | Limite de fontes por usuário e conversão da prioridade em peso | DA19 |
@@ -552,5 +557,8 @@ Consolidação do que ainda depende de decisão da equipe. O detalhe de cada ite
 | PE11 | Fonte do histórico de notícias para treino | DA20 |
 | PE12 | Horizontes, limite de estabilidade e n mínimo dos cenários | DA21 |
 | PE13 | Hospedagem e serviço de e-mail em camada gratuita | [Decisões Técnicas](decisoes_tecnicas.md) |
+| PE14 | Benchmark específico para FIIs (a baseline só define CDI e Ibovespa) | DA22 |
+| PE15 | Classificação setorial (segmentos) dos FIIs para a distribuição por setor | DA22 |
+| PE16 | Confirmar cobertura dos FIIs nas fontes de cotação | DA22 |
 
 Os documentos de requisitos, modelo de domínio e visão de produto ainda precisam ser atualizados com as decisões DA16–DA21 (ver a seção "Impacto nos outros documentos" de cada ADR).

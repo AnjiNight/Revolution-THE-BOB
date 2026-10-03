@@ -1,6 +1,6 @@
 # Simulador de Investimentos
 
-Aplicação desktop para simulação de carteiras de investimento em ações e renda fixa do mercado brasileiro. Projeto acadêmico, sem execução de ordens reais.
+Aplicação desktop para simulação de carteiras de investimento em ações e fundos imobiliários (FIIs) do mercado brasileiro. Projeto acadêmico, sem execução de ordens reais. A renda fixa está prevista para uma fase futura.
 
 **Disciplina:** Modelagem de Dados
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
@@ -12,7 +12,7 @@ Aplicação desktop para simulação de carteiras de investimento em ações e r
 
 ## Sobre
 
-O usuário monta carteiras fictícias com ativos reais e acompanha a rentabilidade ao longo do tempo, usando cotações e indexadores verdadeiros — sem dinheiro real envolvido. O objetivo é permitir testar hipóteses de investimento antes de aplicar de verdade.
+O usuário monta carteiras fictícias com ativos reais e acompanha a rentabilidade ao longo do tempo, usando cotações verdadeiras — sem dinheiro real envolvido. O objetivo é permitir testar hipóteses de investimento antes de aplicar de verdade.
 
 O projeto também investiga se o sentimento extraído de notícias econômicas guarda relação com a variação de preço dos ativos.
 
@@ -23,7 +23,6 @@ O projeto também investiga se o sentimento extraído de notícias econômicas g
 - Registro de compras, vendas, aportes e retiradas
 - Cálculo de posição, preço médio e rentabilidade
 - Comparação com benchmarks (CDI e IBOV)
-- Aplicação e resgate em renda fixa, com IR e IOF
 - Coleta de notícias econômicas e análise de sentimento
 - Projeção de cenários futuros
 
@@ -37,7 +36,9 @@ O projeto também investiga se o sentimento extraído de notícias econômicas g
 | ORM | Prisma |
 | Cache | Redis |
 
-**Fontes de dados:** brapi.dev (cotações da B3), API SGS do Banco Central (CDI, Selic, IPCA), feeds RSS de portais econômicos.
+**Fontes de dados:** brapi.dev (cotações de ações e FIIs da B3), API SGS do Banco Central (CDI), feeds RSS de portais econômicos.
+
+**Fase futura:** aplicação e resgate em renda fixa (CDB, LCI/LCA, Tesouro Direto), com IR e IOF — ver [Requisitos §9](requisições.md) e [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md).
 
 ## Estrutura
 

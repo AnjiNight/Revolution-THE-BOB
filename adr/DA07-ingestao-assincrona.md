@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Aceita — **frequência das cotações alterada por [DA16](DA16-cotacoes-por-plano.md)** e **histórico por [DA18](DA18-historico-cotacoes-arquivos-b3.md)** (01/10/2026) |
+| Status | Aceita — **frequência das cotações alterada por [DA16](DA16-cotacoes-por-plano.md)** e **histórico por [DA18](DA18-historico-cotacoes-arquivos-b3.md)** (01/10/2026); **tarefas de Selic, IPCA, Tesouro Direto e feriados bancários adiadas por [DA22](DA22-escopo-acoes-fiis-renda-fixa-adiada.md)** (02/10/2026) |
 | Data | 24/09/2026 |
 | Drivers | FAS03, FAS04, QA02, QA04, PA03, PA04 |
 | Relacionadas | [DA06](DA06-adaptadores-fontes-externas.md), [DA14](DA14-registro-execucoes-logs.md) |

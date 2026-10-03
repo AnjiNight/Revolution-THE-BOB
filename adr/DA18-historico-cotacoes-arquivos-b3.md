@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Proposta |
+| Status | Proposta — **fontes do Tesouro Direto e de Selic/IPCA adiadas por [DA22](DA22-escopo-acoes-fiis-renda-fixa-adiada.md)** (02/10/2026) |
 | Data | 01/10/2026 |
 | Drivers | QA04, QA08, RES03, RES07, PRE03 |
 | Relacionadas | [DA06](DA06-adaptadores-fontes-externas.md), [DA07](DA07-ingestao-assincrona.md), [DA17](DA17-carteira-ao-vivo-e-historica.md), [DA20](DA20-modelo-ia-noticias.md) |

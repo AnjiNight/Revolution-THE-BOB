@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Aceita |
+| Status | Aceita — **IR, IOF e base 252 adiados com a renda fixa por [DA22](DA22-escopo-acoes-fiis-renda-fixa-adiada.md)** (02/10/2026) |
 | Data | 24/09/2026 |
 | Drivers | QA01, QA10, FAS01, FAS02, RNF12, RNF16, RB13–RB17 |
 | Relacionadas | [DA02](DA02-camadas-mvc.md), [DA09](DA09-lancamentos-imutaveis.md) |

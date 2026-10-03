@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.1 (01/10/2026 — PRE01 revogada; rastreabilidade das decisões DA16–DA21)
+**Versão:** 1.2 (02/10/2026 — escopo inicial em ações e FIIs; FAS02 adiada por DA22)
 
 ---
 
@@ -44,7 +44,7 @@ Funcionalidades que, pela sua natureza, exigem decisões estruturais — não ap
 | ID | Funcionalidade | Requisitos | Por que afeta a arquitetura |
 |---|---|---|---|
 | FAS01 | Registrar transações e derivar posição, preço médio e rentabilidade | RF12–RF15, RB05–RB10, RB13 | Exige lançamentos imutáveis, posição sempre **calculada** (nunca editada) e aritmética decimal exata |
-| FAS02 | Renda fixa com IR, IOF, carência e base 252 | RF23–RF25, RB14–RB17 | Depende de calendário de pregão e de séries diárias de indexadores; regras fiscais precisam estar isoladas e testáveis |
+| FAS02 | ~~Renda fixa com IR, IOF, carência e base 252~~ **Adiada para a fase de renda fixa** ([DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) | RF23–RF25, RB14–RB17 | Depende de calendário de pregão e de séries diárias de indexadores; regras fiscais precisam estar isoladas e testáveis |
 | FAS03 | Ingestão de cotações e indexadores | RF09, RF10 | Depende de fontes externas instáveis e com limite de requisições; precisa rodar de forma agendada, independente do uso do app |
 | FAS04 | Coleta, vínculo a ativos e classificação de sentimento de notícias | RF26–RF29, Visão §6 | Processamento pesado e incerto (pesquisa); não pode comprometer o núcleo do sistema se falhar |
 | FAS05 | Gráfico Notícias × Preço do ativo | Visão §19, §24 | Cruza duas bases diferentes (séries de preço e eventos de notícia) no mesmo eixo temporal |
@@ -94,11 +94,11 @@ Formato: **Fonte → Estímulo → Artefato → Ambiente → Resposta → Medida
 | Parte | Descrição |
 |---|---|
 | Fonte | Usuário |
-| Estímulo | Registra uma sequência de compras, vendas e um resgate de renda fixa com 20 dias de aplicação |
+| Estímulo | Registra uma sequência de aportes, compras e vendas de ações e FIIs |
 | Artefato | Módulo de cálculo financeiro |
 | Ambiente | Operação normal |
-| Resposta | Sistema calcula posição, preço médio, rendimento bruto, IOF e IR |
-| Medida | Resultados idênticos, centavo a centavo, a uma calculadora de referência (ex.: Tesouro Direto); nenhum erro de arredondamento por ponto flutuante |
+| Resposta | Sistema calcula caixa, posição, preço médio e rentabilidade |
+| Medida | Resultados idênticos, centavo a centavo, a casos de referência calculados manualmente; nenhum erro de arredondamento por ponto flutuante. *Na fase de renda fixa, o cenário volta a incluir resgate com IOF e IR, comparado à calculadora do Tesouro Direto* |
 
 #### QA02 — Falha de fonte externa de dados
 | Parte | Descrição |
@@ -184,11 +184,11 @@ Formato: **Fonte → Estímulo → Artefato → Ambiente → Resposta → Medida
 | Parte | Descrição |
 |---|---|
 | Fonte | Equipe de desenvolvimento |
-| Estímulo | Alteração em uma regra de IR ou de preço médio |
+| Estímulo | Alteração em uma regra de preço médio ou de rentabilidade |
 | Artefato | Módulo de cálculo financeiro |
 | Ambiente | Tempo de desenvolvimento |
 | Resposta | Regras verificadas por testes automatizados sem banco de dados, rede ou interface |
-| Medida | Suíte do módulo executa em menos de 10 s; cobertura das regras RB05–RB17 (RNF16) |
+| Medida | Suíte do módulo executa em menos de 10 s; cobertura das regras RB05–RB13, RB20 (RNF16); RB14–RB17 na fase de renda fixa |
 
 #### QA11 — Rastreio das transações
 | Parte | Descrição |
@@ -308,6 +308,7 @@ Decisões tomadas pela equipe em 01/10/2026, registradas como ADRs:
 | Carteiras no passado | Permitidas, em um tipo próprio de carteira (histórica), separado da carteira ao vivo | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md) |
 | Fontes de notícias | Fonte pai fixa (Investidor10, pendente de autorização), fontes curadas e fontes do usuário com prioridade | [DA19](adr/DA19-fontes-de-noticias.md) |
 | IA | Modelo para analisar e gerenciar notícias, aperfeiçoado com janela histórica (6 anos, a definir) | [DA20](adr/DA20-modelo-ia-noticias.md) |
+| Escopo (02/10/2026) | Primeira fase com ações e FIIs; renda fixa adiada | [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) |
 
 ---
 
@@ -336,3 +337,4 @@ Resumo de quais decisões ([ADRs](adr/README.md)) respondem a quais drivers.
 | QA04, RES03, RES07 | DA18 (histórico pelos arquivos da B3) |
 | OBJ02, FAS04, QA08 | DA19 (fontes de notícias) |
 | OBJ03, FAS04, FAS11 | DA20 (modelo de IA), DA21 (cenários por sentimento) |
+| OBJ01, OBJ04, RES01, RES02, FAS02 | DA22 (escopo inicial: ações e FIIs; renda fixa adiada) |

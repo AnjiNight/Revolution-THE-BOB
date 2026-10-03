@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.0
+**Versão:** 1.1 (02/10/2026 — escopo inicial em ações e FIIs; fontes de renda fixa adiadas por [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md))
 
 ---
 
@@ -38,18 +38,24 @@ Cada item tem um status:
 
 | Dado | Fonte | Usado em | Status | Limitações |
 |---|---|---|---|---|
-| Cotações de ações durante o pregão (plano gratuito) | **brapi**, plano gratuito | [DA16](adr/DA16-cotacoes-por-plano.md) | Definida | Atraso de ~30 min; 15.000 requisições/mês; 1 ticker por chamada; 3 meses de histórico |
+| Cotações de ações e FIIs durante o pregão (plano gratuito) | **brapi**, plano gratuito | [DA16](adr/DA16-cotacoes-por-plano.md) | Definida | Atraso de ~30 min; 15.000 requisições/mês; 1 ticker por chamada; 3 meses de histórico; confirmar a cobertura dos FIIs do catálogo |
 | Cotações de ações (plano assinante) | **brapi** Startup ou Pro, ou outro provedor pago | DA16 | Em aberto | Pago; atraso de 15 ou 5 min; quem paga? |
-| Histórico diário de ações | **Séries históricas da B3 (COTAHIST)** | [DA18](adr/DA18-historico-cotacoes-arquivos-b3.md) | Sugerida | Arquivos grandes, formato posicional; preços não ajustados |
-| Proventos e eventos corporativos | — | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md) | Em aberto | Necessário para a carteira histórica |
+| Histórico diário de ações e FIIs | **Séries históricas da B3 (COTAHIST)** | [DA18](adr/DA18-historico-cotacoes-arquivos-b3.md) | Sugerida | Arquivos grandes, formato posicional; preços não ajustados |
+| Proventos e eventos corporativos | — | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md), [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Em aberto | Necessário para a carteira histórica e, principalmente, para os rendimentos mensais dos FIIs |
 | Ibovespa (benchmark, RF16) | brapi para o recente; histórico a definir | RF16 | Em aberto | Verificar a disponibilidade do índice no plano gratuito |
-| CDI, Selic (diários), IPCA (mensal) | **API SGS do Banco Central** | RF10 | Definida | IPCA é mensal, não diário |
-| Tesouro Direto | **Tesouro Transparente** (preços e taxas históricos) | RF23–RF25 | Sugerida | Atualização diária |
+| CDI (diário, benchmark) | **API SGS do Banco Central** | RF10 | Definida | — |
 | Calendário de pregão | Calendário publicado pela B3 | RB11 | Sugerida | Revisão manual anual |
-| Feriados bancários (base 252) | Calendário de feriados nacionais da ANBIMA | RB14 | Sugerida | Difere do calendário de pregão em alguns dias |
 | Notícias — fonte pai | **Investidor10** | [DA19](adr/DA19-fontes-de-noticias.md) | **Bloqueada** | Sem API ou feed público identificado; termos de uso restringem a uso pessoal e não comercial. Exige autorização ou troca de fonte |
 | Notícias — fontes curadas | Feeds RSS de portais econômicos | DA19 | Em aberto | Lista a definir |
 | Notícias — histórico para treino | GDELT, dados abertos da CVM ou arquivo da fonte pai | [DA20](adr/DA20-modelo-ia-noticias.md) | Em aberto | RSS não guarda histórico |
+
+### 3.1 Fontes adiadas (fase de renda fixa — [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md))
+
+| Dado | Fonte | Usado em | Status | Limitações |
+|---|---|---|---|---|
+| Selic (diária), IPCA (mensal) | API SGS do Banco Central | RF10 original | Adiada | IPCA é mensal, não diário |
+| Tesouro Direto | Tesouro Transparente (preços e taxas históricos) | RF23–RF25 | Adiada | Atualização diária |
+| Feriados bancários (base 252) | Calendário de feriados nacionais da ANBIMA | RB14 | Adiada | Difere do calendário de pregão em alguns dias |
 
 ---
 

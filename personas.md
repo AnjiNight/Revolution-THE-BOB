@@ -29,7 +29,7 @@ Lucas procura uma ferramenta que permita experimentar situações de investiment
 - Simular investimentos sem utilizar dinheiro real.
 - Criar uma carteira fictícia de investimentos.
 - Acompanhar a evolução do patrimônio simulado.
-- Comparar ações e investimentos de renda fixa.
+- Comparar ações e fundos imobiliários (FIIs).
 - Compreender como acontecimentos e notícias podem estar relacionados às variações dos ativos.
 - Visualizar possíveis cenários para seus investimentos.
 
@@ -76,7 +76,7 @@ Ele deseja descobrir o que aconteceria caso distribuísse o valor da seguinte ma
 
 - 50% em PETR4;
 - 20% em VALE3;
-- 30% em renda fixa indexada ao CDI.
+- 30% em um fundo imobiliário (FII).
 
 Lucas cria a carteira e o aplicativo apresenta a evolução histórica, rentabilidade e composição do patrimônio.
 
@@ -166,7 +166,7 @@ Mariana consulta as notícias relacionadas a PETR4, observa o histórico do ativ
 
 **Cenário B**
 - reduz a exposição ao setor de petróleo;
-- aumenta a participação em renda fixa.
+- aumenta a participação em fundos imobiliários (FIIs).
 
 O aplicativo apresenta os resultados das duas estratégias para que Mariana possa compará-las.
 

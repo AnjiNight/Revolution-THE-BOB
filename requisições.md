@@ -3,21 +3,29 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.1 (custos de operação fora do escopo — RB20, RB21)
+**Versão:** 1.2
+
+| Versão | Alteração |
+|---|---|
+| 1.0 | Primeira versão |
+| 1.1 | Custos de operação fora do escopo (RB20, RB21) |
+| 1.2 | Escopo inicial restrito a **ações e fundos imobiliários (FIIs)**; renda fixa adiada para uma fase futura (seção 9, [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) |
 
 ---
 
 ## 1. Visão geral
 
-Aplicação desktop que permite ao usuário montar carteiras de investimento fictícias com ativos reais do mercado brasileiro — ações da B3 e renda fixa — e acompanhar a rentabilidade dessas carteiras usando cotações e indexadores verdadeiros, sem que exista dinheiro real envolvido.
+Aplicação desktop que permite ao usuário montar carteiras de investimento fictícias com ativos reais do mercado brasileiro — ações e fundos imobiliários (FIIs) negociados na B3 — e acompanhar a rentabilidade dessas carteiras usando cotações verdadeiras, sem que exista dinheiro real envolvido.
 
 O sistema também coleta notícias econômicas e avalia se o sentimento extraído delas guarda relação mensurável com a variação de preço dos ativos.
 
 ### 1.1 Escopo
 
-**Dentro do escopo:** ações da B3, renda fixa (CDB, LCI/LCA, Tesouro Direto), simulação de carteira, comparação com benchmarks, ingestão de cotações e indexadores, coleta e classificação de notícias, projeção de cenários, assinatura com pagamento simulado.
+**Dentro do escopo:** ações e fundos imobiliários (FIIs) da B3, simulação de carteira, comparação com benchmarks, ingestão de cotações e do CDI, coleta e classificação de notícias, projeção de cenários, assinatura com pagamento simulado.
 
 **Fora do escopo:** execução de ordens reais, integração com corretora, pagamento real, mercados internacionais, recomendação personalizada de investimento, custos de operação (corretagem, emolumentos da B3 e taxa de custódia).
+
+**Adiado para fase futura:** renda fixa (CDB, LCI/LCA, Tesouro Direto). Os requisitos e regras correspondentes estão preservados na seção 9.
 
 ### 1.2 Atores
 
@@ -53,7 +61,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 | RF07 | Consultar ativos por ticker, nome ou setor | Usuário | Must |
 | RF08 | Exibir ficha do ativo com histórico de cotações | Usuário | Must |
 | RF09 | Importar cotações diárias e históricas de fonte externa | Sistema | Must |
-| RF10 | Importar taxas de indexadores (CDI, Selic, IPCA) | Sistema | Must |
+| RF10 | Importar a série diária do CDI, usada como benchmark | Sistema | Must |
 
 ### 2.3 Carteira e simulação
 
@@ -74,11 +82,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 
 ### 2.4 Renda fixa
 
-| ID | Requisito | Ator | Prioridade |
-|---|---|---|---|
-| RF23 | Cadastrar aplicação em renda fixa com indexador e vencimento | Usuário | Must |
-| RF24 | Calcular rendimento bruto e líquido considerando IR e IOF | Sistema | Must |
-| RF25 | Registrar resgate no vencimento ou antecipado | Usuário | Must |
+Adiada para fase futura. RF23, RF24 e RF25 estão preservados na seção 9.
 
 ### 2.5 Notícias
 
@@ -102,7 +106,6 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 
 | ID | Requisito | Ator | Prioridade |
 |---|---|---|---|
-| RF34 | Enviar notificação de vencimento de aplicação em renda fixa | Sistema | Could |
 | RF35 | Enviar notificação de variação relevante em ativo da carteira | Sistema | Could |
 | RF36 | Permitir consulta da carteira sem conexão, com dados em cache local | Usuário | Should |
 | RF37 | Sincronizar dados pendentes ao restabelecer conexão | Sistema | Should |
@@ -174,17 +177,11 @@ Restrições do domínio, independentes de tecnologia.
 | RB12 | Não é permitido lançamento com data futura |
 | RB13 | Valores monetários usam duas casas decimais com arredondamento meio para cima |
 | RB20 | Custos de operação (corretagem, emolumentos da B3 e taxa de custódia) não são considerados no preço médio, no caixa nem na rentabilidade |
-| RB21 | Ao registrar uma compra ou venda de ações, ou uma aplicação no Tesouro Direto, o sistema exibe aviso de que os custos de operação não são considerados na simulação |
+| RB21 | Ao registrar uma compra ou venda de ações ou de FIIs, o sistema exibe aviso de que os custos de operação não são considerados na simulação |
 
 ### 4.3 Renda fixa
 
-| ID | Regra |
-|---|---|
-| RB14 | A rentabilidade de renda fixa usa base de 252 dias úteis |
-| RB15 | Resgate antes de 30 dias aplica IOF regressivo |
-| RB16 | Resgate sofre incidência de IR conforme tabela regressiva por prazo |
-| RB17 | Aplicação em período de carência não pode ser resgatada antecipadamente |
-
+Adiada para fase futura. RB14 a RB17 estão preservadas na seção 9.
 
 ### 4.4 Conformidade
 
@@ -209,7 +206,6 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | RB09 | Inexistência de tabela `Posicao` persistida; cálculo derivado de `Transacao` |
 | RB11 | Tabela `CalendarioPregao` com dias úteis e feriados da B3 |
 | RB13 | Colunas monetárias em tipo `Decimal(15,2)` |
-| RB14 | `TaxaDiaria` indexada por data útil, com contagem sobre `CalendarioPregao` |
 
 ---
 
@@ -229,10 +225,10 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 
 | Item | Descrição | Mitigação |
 |---|---|---|
-| Premissa | As APIs de cotação e indexadores permanecem gratuitas e disponíveis | Cache local e persistência do histórico |
+| Premissa | As APIs de cotação e do CDI permanecem gratuitas e disponíveis | Cache local e persistência do histórico |
 | Risco | A relação entre sentimento de notícias e preço pode não ser estatisticamente significativa | Requisitos de notícias classificados como Could; resultado negativo é conclusão válida |
 | Risco | Escopo amplo para equipe de dois integrantes | Priorização MoSCoW; entrega mínima limitada aos requisitos Must |
-| Risco | Divergência entre cálculo próprio e referência de mercado | Bateria de testes comparando com calculadora do Tesouro Direto |
+| Risco | Divergência entre cálculo próprio e referência de mercado | Bateria de testes com casos de referência calculados manualmente (na fase de renda fixa, também com a calculadora do Tesouro Direto) |
 
 ---
 
@@ -244,7 +240,39 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | Posição | Quantidade de um ativo detida em uma carteira |
 | Preço médio | Custo médio ponderado de aquisição de um ativo |
 | Benchmark | Índice de referência para comparação de rentabilidade |
-| Base 252 | Convenção brasileira de contagem de dias úteis por ano |
-| IOF | Imposto sobre Operações Financeiras, regressivo nos primeiros 30 dias |
-| Carência | Período mínimo antes do qual não há resgate permitido |
+| FII | Fundo de investimento imobiliário; suas cotas são negociadas na B3 como ações |
 | Backfill | Carga retroativa de dados históricos |
+| Base 252 | *(renda fixa — fase futura)* Convenção brasileira de contagem de dias úteis por ano |
+| IOF | *(renda fixa — fase futura)* Imposto sobre Operações Financeiras, regressivo nos primeiros 30 dias |
+| Carência | *(renda fixa — fase futura)* Período mínimo antes do qual não há resgate permitido |
+
+---
+
+## 9. Evolução futura — renda fixa (adiada)
+
+A equipe decidiu, em 02/10/2026, concentrar a primeira fase em ações e FIIs ([DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)). Os itens abaixo **não fazem parte do escopo atual**, mas ficam preservados com os mesmos IDs para quando a renda fixa for incluída. Nessa fase, precisam ser revistos (ver pontos em aberto de DA22).
+
+### 9.1 Requisitos funcionais adiados
+
+| ID | Requisito | Ator | Prioridade original |
+|---|---|---|---|
+| RF23 | Cadastrar aplicação em renda fixa com indexador e vencimento | Usuário | Must |
+| RF24 | Calcular rendimento bruto e líquido considerando IR e IOF | Sistema | Must |
+| RF25 | Registrar resgate no vencimento ou antecipado | Usuário | Must |
+| RF34 | Enviar notificação de vencimento de aplicação em renda fixa | Sistema | Could |
+| — | Importar Selic e IPCA (parte original de RF10) | Sistema | Must |
+
+### 9.2 Regras de negócio adiadas
+
+| ID | Regra |
+|---|---|
+| RB14 | A rentabilidade de renda fixa usa base de 252 dias úteis |
+| RB15 | Resgate antes de 30 dias aplica IOF regressivo |
+| RB16 | Resgate sofre incidência de IR conforme tabela regressiva por prazo |
+| RB17 | Aplicação em período de carência não pode ser resgatada antecipadamente |
+
+### 9.3 Rastreabilidade adiada
+
+| Regra | Implementação no modelo |
+|---|---|
+| RB14 | `TaxaDiaria` indexada por data útil, com contagem sobre `CalendarioPregao` |

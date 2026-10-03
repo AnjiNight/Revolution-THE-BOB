@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Aceita, com pontos em aberto |
+| Status | Aceita, com pontos em aberto — **trechos de renda fixa adiados por [DA22](DA22-escopo-acoes-fiis-renda-fixa-adiada.md)**; FIIs seguem as mesmas regras das ações (02/10/2026) |
 | Data | 01/10/2026 |
 | Drivers | OBJ01, FAS01, QA01, QA11, RB05–RB13, P01, P02 |
 | Relacionadas | [DA09](DA09-lancamentos-imutaveis.md), [DA16](DA16-cotacoes-por-plano.md), [DA18](DA18-historico-cotacoes-arquivos-b3.md) |
