@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Aceita, com pontos em aberto |
+| Status | Aceita, com pontos em aberto — **pontos 2 e 3 resolvidos por [DA23](DA23-classes-de-ativo-acoes-e-fiis.md)** (08/10/2026) |
 | Data | 02/10/2026 |
 | Drivers | OBJ01, OBJ04, RES01, RES02, FAS02 |
 | Altera | [DA07](DA07-ingestao-assincrona.md), [DA10](DA10-nucleo-calculo-puro.md), [DA16](DA16-cotacoes-por-plano.md), [DA17](DA17-carteira-ao-vivo-e-historica.md), [DA18](DA18-historico-cotacoes-arquivos-b3.md) |
