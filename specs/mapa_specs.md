@@ -14,6 +14,7 @@
 | 1.4 | Padrão de ingestão passa a ser estabelecido pela SPEC-008; SPEC-008, SPEC-009 e SPEC-027 deixam de depender da SPEC-007; SPEC-011 deixa de depender da SPEC-007; SPEC-007 movida para depois da SPEC-009 e retirada do caminho mínimo |
 | 1.5 | Referências desatualizadas corrigidas: OPEN-13 sem o aviso do Tesouro Direto no escopo atual; artefatos lidos incluem DA22; DA07 alterada também por DA22 |
 | 1.6 | Classes de ativo Ação e FII ([DA23](../adr/DA23-classes-de-ativo-acoes-e-fiis.md)): OPEN-46 e OPEN-47 resolvidas; SPEC-006, SPEC-020 e SPEC-021 ajustadas; nova RB22 |
+| 1.7 | SPEC-001 detalhada ([SPEC-001.md](SPEC-001.md)); OPEN-39 resolvida pela convenção de `down.sql` |
 
 ---
 
@@ -228,7 +229,7 @@ Nenhuma delas foi resolvida neste mapa. Cada uma aponta para uma decisão em abe
 | INC-08 | A **Visão** põe a carteira real no MVP; os **requisitos** não têm nenhum RF de carteira real | Visão §9, §24 × Requisitos | OPEN-42 |
 | INC-09 | O diagrama liga "Buscar ativo" e "Consultar cotação" diretamente à API de mercado; DA07 diz que as telas só leem banco e cache. DA16 limita o catálogo a ~40–50 ativos | Casos de uso × DA07, DA16 | OPEN-41 |
 | INC-10 | Fontes do usuário (DA19) e cotações por plano (DA16) não têm RFs em `requisições.md` | ADRs × Requisitos | OPEN-09, OPEN-32 |
-| INC-11 | RNF17 exige migrações reversíveis; o ORM definido não gera reversão automaticamente | Requisitos × Decisões técnicas | OPEN-39 |
+| INC-11 | RNF17 exige migrações reversíveis; o ORM definido não gera reversão automaticamente | Requisitos × Decisões técnicas | OPEN-39 ✅ |
 | INC-12 | RF04 (biometria) é multiplataforma nos requisitos, mas só é simples no macOS | Requisitos × Decisões técnicas | OPEN-36 |
 | INC-13 | ⏸ *(adiada com a renda fixa — DA22)* RB16 aplica IR a todo resgate, sem tratar produtos que podem ter tratamento fiscal diferente (LCI/LCA) | Requisitos | OPEN-17 |
 | INC-14 | CARTEIRA tem `saldo_inicial`; RF13 tem aportes. Não está definido como um se relaciona com o outro, nem se uma retirada pode deixar o caixa negativo (RB05 só trata compra) | Modelo × RF13 | OPEN-11 |
@@ -282,7 +283,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-36 | Escopo de RF04 por sistema operacional | INC-12 | 036 |
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
 | OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
-| OPEN-39 | Migrações reversíveis × ORM definido | INC-11 | 001 |
+| OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
 | OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
 | OPEN-41 | Busca de ativos: só no catálogo curado ou em qualquer ticker da B3 | INC-09 | 006 |
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
@@ -318,6 +319,8 @@ Visão geral por fase:
 
 #### SPEC-001 — Esqueleto executável cliente–servidor–processador
 
+📄 Detalhada em [SPEC-001.md](SPEC-001.md) — em implementação.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Estabelecer a estrutura executável definida pela arquitetura: aplicação desktop que se comunica com o servidor por canal cifrado; servidor como monólito modular em camadas; processador de tarefas iniciado como segundo modo do mesmo código; banco relacional com migrações versionadas; logs estruturados |
@@ -331,7 +334,7 @@ Visão geral por fase:
 | ADRs | DA01, DA02, DA03, DA04, DA07 (processador separado), DA14 (logs estruturados) |
 | Depende de | — |
 | Posição | Spec técnica cuja necessidade está demonstrada em DA01–DA03 e DA07: toda capacidade pressupõe cliente, servidor, processador e banco. Primeira por não ter dependências |
-| Em aberto | OPEN-02, OPEN-39, OPEN-40 |
+| Em aberto | OPEN-02, OPEN-40 (OPEN-39 resolvida) |
 | Prioridade derivada | Técnica (habilita os Must) |
 
 ---

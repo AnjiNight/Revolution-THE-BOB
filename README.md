@@ -52,13 +52,39 @@ Hoje o repositório contém apenas a documentação, na raiz:
 | [Drivers arquiteturais](drivers_arquiteturais.md), [ADRs](adr/README.md), [Decisões técnicas](decisoes_tecnicas.md) e [Arquitetura](arquitetura.md) | Arquitetura e decisões |
 | [Mapa de specs](specs/mapa_specs.md) | Ordem de desenvolvimento (Spec-Driven Development) |
 
-Estrutura prevista para o código, criada na SPEC-001:
+Código (criado na [SPEC-001](specs/SPEC-001.md)):
 
 ```
-app/         Aplicação desktop (Electron)
-api/         API Node + Fastify (servidor e processador de tarefas)
-packages/    Tipos compartilhados
+app/              Aplicação desktop (Electron + React)
+api/              Servidor e processador de tarefas (Fastify + Prisma)
+packages/shared/  Tipos e contratos compartilhados
 ```
+
+## Como rodar
+
+Pré-requisitos: **Node.js 22** e **Docker** (para o PostgreSQL local).
+
+```bash
+npm install                     # instala os três pacotes
+cp .env.example api/.env        # configuração do servidor
+npm run db:up                   # sobe o PostgreSQL 16 (docker compose)
+npm run db:migrate              # aplica as migrações
+
+npm run dev:api                 # servidor em http://localhost:3333
+npm run dev:worker              # processador de tarefas (outro terminal)
+npm run dev:app                 # aplicação desktop (outro terminal)
+```
+
+Verificações (as mesmas do GitHub Actions):
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+Migrações: toda pasta em `api/prisma/migrations/` tem um `down.sql` escrito à mão; `npm run db:rollback` desfaz a última migração aplicada.
 
 ## Aviso legal
 

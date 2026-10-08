@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.1 (02/10/2026 — escopo inicial em ações e FIIs; fontes de renda fixa adiadas por [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md))
+**Versão:** 1.2 (08/10/2026 — ferramentas de desenvolvimento definidas na [SPEC-001](specs/SPEC-001.md), seção 6)
 
 ---
 
@@ -93,3 +93,28 @@ Todos com status **Sugerida**.
 | Implementação do modelo de IA | API de modelo de linguagem (custo por notícia) × modelo aberto em português ajustado localmente × combinação | Custo zero, qualidade em português financeiro, hardware disponível para treino | [DA20](adr/DA20-modelo-ia-noticias.md) |
 | Provedor de cotações do assinante e quem paga | brapi Startup/Pro; chave gratuita na versão acadêmica | Custo, termos de redistribuição | [DA16](adr/DA16-cotacoes-por-plano.md) |
 | Fonte pai de notícias | Investidor10 com autorização × fatos relevantes da CVM (dados abertos) | Licença de uso, histórico disponível | [DA19](adr/DA19-fontes-de-noticias.md) |
+
+---
+
+## 6. Ferramentas de desenvolvimento (definidas na [SPEC-001](specs/SPEC-001.md))
+
+| Tema | Escolha | Status | Motivo |
+|---|---|---|---|
+| Versão do Node.js | 22 LTS (`.nvmrc`) | Definida | Versão LTS compatível com todas as bibliotecas escolhidas |
+| Organização do repositório | npm workspaces: `app/`, `api/`, `packages/shared/` | Definida | Sem ferramenta extra; evita incompatibilidades do pnpm com o empacotamento do Electron |
+| Build do app | electron-vite 5 + Vite 7 | Definida | Separa processo principal, *preload* e interface |
+| Linguagem | TypeScript 6.0, modo estrito, ESM | Definida | O TypeScript 7 ainda não é suportado pelo typescript-eslint |
+| Lint e formatação | ESLint 10 + typescript-eslint + Prettier | Definida | Configuração única na raiz |
+| Testes | Vitest 5, um projeto por pacote | Definida | Mesma ferramenta nos três pacotes |
+| Banco local | Docker Compose com PostgreSQL 16 | Definida | Mesmo ambiente para os dois integrantes |
+| ORM | Prisma 7 com adaptador `pg` | Definida | Já era a escolha da equipe; a versão 7 exige o adaptador |
+| Migrações reversíveis | `down.sql` escrito à mão + `npm run db:rollback` | Definida | O Prisma não gera reversão (RNF17, OPEN-39) |
+| Configuração do servidor | Variáveis de ambiente validadas com `zod` | Definida | O servidor não inicia com configuração inválida |
+| Logs | `pino` (integrado ao Fastify), JSON, com campos sensíveis ocultos | Definida | DA14 |
+| Textos da interface | `i18next` + `react-i18next`, português e inglês | Definida | RNF20 desde o início |
+| Empacotamento | `electron-builder` (Windows, macOS, Linux) | Definida | RNF05; geração manual por sistema operacional |
+| Integração contínua | GitHub Actions: formatação, lint, tipos, testes, build e ciclo de migração | Definida | Roda em todo Pull Request |
+| Idioma do código | Identificadores e rotas em inglês; tabelas e colunas do banco em português (`snake_case`) | Definida | O banco segue a documentação de Modelagem de Dados |
+| Comunicação app ↔ servidor | Feita pelo processo principal do Electron; a interface só acessa `window.api` | Definida | A interface não tem acesso à rede nem ao Node; dispensa CORS no servidor |
+
+**Alertas de segurança conhecidos (08/10/2026):** o `npm audit` aponta vulnerabilidades em dependências das ferramentas `prisma` (CLI) e `electron-builder`, usadas só no desenvolvimento e no empacotamento; nenhuma está no código que roda no servidor ou no app. Reavaliar ao atualizar essas ferramentas.
