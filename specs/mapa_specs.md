@@ -11,6 +11,7 @@
 | 1.1 | OPEN-13 resolvida: custos de operação fora do escopo, com aviso na compra, na venda e na aplicação no Tesouro Direto (RB20, RB21) |
 | 1.2 | Escopo inicial em ações e FIIs; renda fixa adiada ([DA22](../adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)): SPEC-017, SPEC-018 e SPEC-024 movidas para a fase futura; RB14–RB17 e OPEN-16 a OPEN-20 adiadas; novas OPEN-46 a OPEN-48 |
 | 1.3 | Caminho mínimo corrigido: SPEC-019 deixa de depender da SPEC-016; SPEC-034 antecipada para a Fase 1, e cada Spec que cria dado do usuário entrega a sua parte da exportação e da exclusão; RF10 passa a *Should* (Requisitos v1.3), e a SPEC-007 fica no caminho mínimo apenas como dependência técnica |
+| 1.4 | Padrão de ingestão passa a ser estabelecido pela SPEC-008; SPEC-008, SPEC-009 e SPEC-027 deixam de depender da SPEC-007; SPEC-011 deixa de depender da SPEC-007; SPEC-007 movida para depois da SPEC-009 e retirada do caminho mínimo |
 
 ---
 
@@ -445,39 +446,21 @@ Visão geral por fase:
 | Em aberto | OPEN-03, OPEN-41, OPEN-47 |
 | Prioridade derivada | Must (RF07); Should (RF39) |
 
-#### SPEC-007 — Ingestão da série do CDI
-
-| Campo | Conteúdo |
-|---|---|
-| Objetivo | O processador coleta a série diária do CDI da fonte do Banco Central, de forma idempotente, com novas tentativas e registro de cada execução (Selic e IPCA entram na fase de renda fixa) |
-| Valor | **Sistema:** série do benchmark CDI; estabelece o padrão de adaptador + execução registrada reutilizado nas demais ingestões |
-| RF | RF10 |
-| RB | — |
-| RNF | RNF13 |
-| Caso de uso / fluxo | UC: Consultar taxa do indexador (lado do sistema); fluxo 7.2 (mesmo padrão) |
-| Entidades | INDEXADOR (CDI), TAXA_DIARIA, EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
-| Drivers | FAS03, QA02, QA08, QA12, PA03 |
-| ADRs | DA06, DA07, DA14, DA22 |
-| Depende de | SPEC-001, SPEC-005 |
-| Posição | Fonte definida e mais simples; valida o padrão de ingestão antes das cotações; exigida pelo benchmark (020) |
-| Em aberto | OPEN-40 |
-| Prioridade derivada | Should (RF10, Requisitos v1.3); **técnica** enquanto SPEC-008, SPEC-009 e SPEC-027 dependerem dela para o padrão de ingestão |
-
 #### SPEC-008 — Carga do histórico diário de cotações
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Carregar o histórico de fechamento diário dos ativos do catálogo (ações e FIIs), inclusive a carga retroativa quando um ativo é cadastrado, com regra de precedência entre fontes |
-| Valor | **Sistema:** base para carteira histórica, gráficos, evolução patrimonial e cenários |
+| Objetivo | Carregar o histórico de fechamento diário dos ativos do catálogo (ações e FIIs), inclusive a carga retroativa quando um ativo é cadastrado, com regra de precedência entre fontes. **Estabelece o padrão de ingestão** (adaptador, idempotência, novas tentativas e execução registrada) reutilizado pelas demais ingestões (007, 009, 027) |
+| Valor | **Sistema:** base para carteira histórica, gráficos, evolução patrimonial e cenários; primeiro uso do padrão de ingestão |
 | RF | RF09 (parte histórica) |
 | RB | RB11 |
 | RNF | RNF12, RNF13 |
 | Caso de uso / fluxo | UC: Consultar cotação (lado do sistema) |
-| Entidades | COTACAO, ATIVO, EXECUCAO_TAREFA† |
-| Drivers | FAS03, QA02, QA08, RES03, RES07, PRE03 |
+| Entidades | COTACAO, ATIVO, EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
+| Drivers | FAS03, QA02, QA08, QA12, PA03, RES03, RES07, PRE03 |
 | ADRs | DA06, DA07, DA14, DA18 (Proposta) |
-| Depende de | SPEC-005, SPEC-006, SPEC-007 |
-| Posição | Precede tudo que olha para o passado (010, 016, 019, 031) |
+| Depende de | SPEC-001, SPEC-005, SPEC-006 |
+| Posição | Primeira ingestão: define o padrão usado pelas outras. Precede tudo que olha para o passado (010, 016, 019, 031) |
 | Em aberto | **OPEN-05 (bloqueante: DA18 não aprovado)**, OPEN-06, OPEN-40, OPEN-48 |
 | Prioridade derivada | Must |
 
@@ -494,10 +477,28 @@ Visão geral por fase:
 | Entidades | COTACAO (data e hora, fonte, nível†), ATIVO |
 | Drivers | FAS03, QA02, QA04, PA03, RES07 |
 | ADRs | DA06, DA07, DA08, DA14, DA16 |
-| Depende de | SPEC-005, SPEC-006, SPEC-007 |
+| Depende de | SPEC-005, SPEC-006, SPEC-008 (padrão de ingestão) |
 | Posição | Pré-condição da compra e venda ao vivo (014) |
 | Em aberto | OPEN-07, OPEN-40, OPEN-48 |
 | Prioridade derivada | Must |
+
+#### SPEC-007 — Ingestão da série do CDI
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O processador coleta a série diária do CDI da fonte do Banco Central, de forma idempotente, com novas tentativas e registro de cada execução, reutilizando o padrão de ingestão criado na SPEC-008 (Selic e IPCA entram na fase de renda fixa) |
+| Valor | **Sistema:** série do benchmark CDI |
+| RF | RF10 |
+| RB | — |
+| RNF | RNF13 |
+| Caso de uso / fluxo | UC: Consultar taxa do indexador (lado do sistema); fluxo 7.2 (mesmo padrão) |
+| Entidades | INDEXADOR (CDI), TAXA_DIARIA, EXECUCAO_TAREFA† |
+| Drivers | FAS03, QA02, QA08, QA12 |
+| ADRs | DA06, DA07, DA14, DA22 |
+| Depende de | SPEC-005, SPEC-008 |
+| Posição | Depois das cotações (008, 009), porque só atende o benchmark (020). Reaproveita o padrão de adaptador + execução registrada da SPEC-008 |
+| Em aberto | OPEN-40 |
+| Prioridade derivada | Should (RF10, Requisitos v1.3) |
 
 #### SPEC-010 — Ficha do ativo com histórico de cotações
 
@@ -530,7 +531,7 @@ Visão geral por fase:
 | Entidades | EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
 | Drivers | QA12, FAS10 |
 | ADRs | DA12, DA14 |
-| Depende de | SPEC-002, SPEC-007, SPEC-008, SPEC-009 |
+| Depende de | SPEC-002, SPEC-008, SPEC-009 |
 | Posição | Só faz sentido depois que há tarefas. Fica antes das carteiras porque ajuda a operar a ingestão enquanto as demais Specs são desenvolvidas |
 | Em aberto | OPEN-03, OPEN-40 |
 | Prioridade derivada | Could |
@@ -786,7 +787,7 @@ Visão geral por fase:
 | Entidades | NOTICIA, FONTE_NOTICIA† |
 | Drivers | OBJ02, OBJ03, FAS04, QA02, QA08, PA04 |
 | ADRs | DA06, DA07, DA11, DA14, DA19 |
-| Depende de | SPEC-002, SPEC-007 (padrão de ingestão) |
+| Depende de | SPEC-002, SPEC-008 (padrão de ingestão) |
 | Posição | Primeira Spec de notícias; a classificação (028) precisa de notícias coletadas |
 | Em aberto | **OPEN-28 (crítico)**, OPEN-29 |
 | Prioridade derivada | Could |
@@ -1060,13 +1061,13 @@ Os 36 RFs do escopo atual estão cobertos. RF23, RF24, RF25 e RF34 foram adiados
 
 Sequência que entrega todos os RFs *Must* (Requisitos §7: "entrega mínima limitada aos requisitos Must"):
 
-`001 → 002 → 034 → 005 → 006 → 007 → 008 → 009 → 010 → 012 → 013 → 014 → 015 → 019`
+`001 → 002 → 034 → 005 → 006 → 008 → 009 → 010 → 012 → 013 → 014 → 015 → 019`
 
 Observações:
 
 - Todas as dependências de cada Spec do caminho estão dentro do próprio caminho.
 - **034** vem logo após a identidade; as Specs seguintes do caminho que criam dados do usuário (012–015) entregam a sua parte da exportação e da exclusão.
-- **007** não é *Must* (RF10 é *Should*, Requisitos v1.3); está no caminho só porque 008 e 009 dependem dela para o padrão de ingestão.
+- **008** estabelece o padrão de ingestão; **007** (CDI, *Should*) fica fora do caminho e é feita junto com o benchmark (020).
 - **019** cobre a carteira ao vivo; a carteira histórica (016) fica fora do caminho mínimo.
 - Dentro desse caminho, **008** (OPEN-05) depende de decisão em aberto.
 
