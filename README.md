@@ -42,11 +42,22 @@ O projeto também investiga se o sentimento extraído de notícias econômicas g
 
 ## Estrutura
 
+Hoje o repositório contém apenas a documentação, na raiz:
+
+| Documento | Conteúdo |
+|---|---|
+| [Visão de produto](Visão%20de%20produto.md) e [Personas](personas.md) | Visão, problema, público e perfis de usuário |
+| [Requisitos](requisições.md) | Requisitos funcionais, não funcionais e regras de negócio |
+| [Modelo de domínio](modelo_dominio.md) e [Casos de uso](modelo_casos_de_uso.md) | Modelo conceitual e diagrama de casos de uso |
+| [Drivers arquiteturais](drivers_arquiteturais.md), [ADRs](adr/README.md), [Decisões técnicas](decisoes_tecnicas.md) e [Arquitetura](arquitetura.md) | Arquitetura e decisões |
+| [Mapa de specs](specs/mapa_specs.md) | Ordem de desenvolvimento (Spec-Driven Development) |
+
+Estrutura prevista para o código, criada na SPEC-001:
+
 ```
 app/         Aplicação desktop (Electron)
-api/         API Node + Fastify
+api/         API Node + Fastify (servidor e processador de tarefas)
 packages/    Tipos compartilhados
-docs/        Requisitos e modelagem
 ```
 
 ## Aviso legal

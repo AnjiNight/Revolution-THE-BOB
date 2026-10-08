@@ -53,7 +53,7 @@ Papel negociável na B3 — ação ou cota de fundo imobiliário (FII). Títulos
 |---|---|---|
 | ticker | string | Código de negociação |
 | nome | string | Nome do ativo |
-| classe | string | Ação ou FII (renda fixa na fase futura) |
+| classe | enum | **Ação** (inclui units) ou **FII** — lista fechada, definida no cadastro e imutável (RB22, [DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); renda fixa na fase futura |
 | vencimento | date | *(fase de renda fixa)* Data de vencimento |
 
 ### COTACAO
@@ -114,4 +114,5 @@ O par ATIVO → NOTICIA_ATIVO ← NOTICIA representa o N:N entre ativos e notíc
 - `NOTICIA_ATIVO` pode ter chave primária composta (`ativo_id`, `noticia_id`).
 - `COTACAO` e `TAXA_DIARIA` são séries temporais: a combinação (ativo/indexador + data) tende a ser única, o que justifica um índice único nesses pares.
 - *(Fase de renda fixa)* `vencimento` só se aplica a ativos de renda fixa, então aceita nulo — alternativa é especializar `ATIVO` em subtipos por `classe`.
+- Ações são classificadas por **setor** e FIIs por **segmento** ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); as duas classificações entram junto com SETOR, prevista na arquitetura §9.
 - `sentimento` está como string; se os valores forem fechados (positivo/neutro/negativo), vale usar um enum ou uma tabela de domínio.

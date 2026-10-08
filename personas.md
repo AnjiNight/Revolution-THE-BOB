@@ -1,4 +1,3 @@
-[Uploading personas.md…]()
 # Especificação do Sistema
 
 ## Personas

@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.4
+**Versão:** 1.5
 
 | Versão | Alteração |
 |---|---|
@@ -12,6 +12,7 @@
 | 1.2 | Escopo inicial restrito a **ações e fundos imobiliários (FIIs)**; renda fixa adiada para uma fase futura (seção 9, [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) |
 | 1.3 | RF10 (série do CDI) passa de *Must* para *Should*: desde a DA22 o CDI só é usado pelo benchmark (RF16, *Should*) |
 | 1.4 | Rastreabilidade adiada da RB14 (seção 9.3) passa a usar o calendário de feriados bancários |
+| 1.5 | Classes de ativo separadas como nas corretoras: Ação (inclui units) e FII; ETFs, BDRs e opções fora do escopo; RF07, RF18 e nova RB22 ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)) |
 
 ---
 
@@ -23,9 +24,9 @@ O sistema também coleta notícias econômicas e avalia se o sentimento extraíd
 
 ### 1.1 Escopo
 
-**Dentro do escopo:** ações e fundos imobiliários (FIIs) da B3, simulação de carteira, comparação com benchmarks, ingestão de cotações e do CDI, coleta e classificação de notícias, projeção de cenários, assinatura com pagamento simulado.
+**Dentro do escopo:** ações (incluindo units) e fundos imobiliários (FIIs) da B3, tratados como classes separadas ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)), simulação de carteira, comparação com benchmarks, ingestão de cotações e do CDI, coleta e classificação de notícias, projeção de cenários, assinatura com pagamento simulado.
 
-**Fora do escopo:** execução de ordens reais, integração com corretora, pagamento real, mercados internacionais, recomendação personalizada de investimento, custos de operação (corretagem, emolumentos da B3 e taxa de custódia).
+**Fora do escopo:** execução de ordens reais, integração com corretora, pagamento real, mercados internacionais, recomendação personalizada de investimento, custos de operação (corretagem, emolumentos da B3 e taxa de custódia), ETFs, BDRs, opções e demais derivativos.
 
 **Adiado para fase futura:** renda fixa (CDB, LCI/LCA, Tesouro Direto). Os requisitos e regras correspondentes estão preservados na seção 9.
 
@@ -60,7 +61,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 
 | ID | Requisito | Ator | Prioridade |
 |---|---|---|---|
-| RF07 | Consultar ativos por ticker, nome ou setor | Usuário | Must |
+| RF07 | Consultar ativos por ticker, nome, classe (Ação ou FII), setor (ações) ou segmento (FIIs) | Usuário | Must |
 | RF08 | Exibir ficha do ativo com histórico de cotações | Usuário | Must |
 | RF09 | Importar cotações diárias e históricas de fonte externa | Sistema | Must |
 | RF10 | Importar a série diária do CDI, usada como benchmark | Sistema | Should |
@@ -76,7 +77,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 | RF15 | Calcular rentabilidade da carteira em período selecionado | Sistema | Must |
 | RF16 | Comparar rentabilidade da carteira com benchmarks (CDI, IBOV) | Sistema | Should |
 | RF17 | Exibir evolução patrimonial em gráfico | Usuário | Must |
-| RF18 | Exibir distribuição da carteira por classe e setor | Usuário | Should |
+| RF18 | Exibir distribuição da carteira por classe (Ações e FIIs) e por setor (ações) ou segmento (FIIs) | Usuário | Should |
 | RF19 | Comparar duas ou mais carteiras lado a lado | Usuário | Could |
 | RF20 | Salvar e recuperar simulações anteriores | Usuário | Should |
 | RF21 | Importar dados financeiros de arquivo externo | Usuário | Could |
@@ -192,6 +193,12 @@ Adiada para fase futura. RB14 a RB17 estão preservadas na seção 9.
 | RB18 | O sistema não emite recomendação de investimento — apenas cenários estatísticos |
 | RB19 | Toda tela de projeção exibe aviso de caráter educacional |
 
+### 4.5 Ativos
+
+| ID | Regra |
+|---|---|
+| RB22 | Todo ativo pertence a exatamente uma classe — Ação (incluindo units) ou FII —, definida pelo administrador no cadastro e não alterada depois; a classe nunca é deduzida do ticker |
+
 ---
 
 ## 5. Rastreabilidade
@@ -208,6 +215,7 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | RB09 | Inexistência de tabela `Posicao` persistida; cálculo derivado de `Transacao` |
 | RB11 | Tabela `CalendarioPregao` com dias úteis e feriados da B3 |
 | RB13 | Colunas monetárias em tipo `Decimal(15,2)` |
+| RB22 | `Ativo.classe` com domínio fechado (Ação, FII), preenchido no cadastro e sem operação de alteração |
 
 ---
 
@@ -243,6 +251,9 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | Preço médio | Custo médio ponderado de aquisição de um ativo |
 | Benchmark | Índice de referência para comparação de rentabilidade |
 | FII | Fundo de investimento imobiliário; suas cotas são negociadas na B3 como ações |
+| Classe | Grupo ao qual o ativo pertence (Ação ou FII), como nas corretoras |
+| Segmento | Classificação dos FIIs por tipo de imóvel ou ativo (ex.: logística, shoppings, papel); equivale ao setor das ações |
+| Unit | Certificado que representa um conjunto de ações da mesma empresa; tratado como ação |
 | Backfill | Carga retroativa de dados históricos |
 | Base 252 | *(renda fixa — fase futura)* Convenção brasileira de contagem de dias úteis por ano |
 | IOF | *(renda fixa — fase futura)* Imposto sobre Operações Financeiras, regressivo nos primeiros 30 dias |

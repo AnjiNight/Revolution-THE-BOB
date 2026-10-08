@@ -43,6 +43,7 @@ Cada item tem um status:
 | Histórico diário de ações e FIIs | **Séries históricas da B3 (COTAHIST)** | [DA18](adr/DA18-historico-cotacoes-arquivos-b3.md) | Sugerida | Arquivos grandes, formato posicional; preços não ajustados |
 | Proventos e eventos corporativos | — | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md), [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Em aberto | Necessário para a carteira histórica e, principalmente, para os rendimentos mensais dos FIIs |
 | Ibovespa (benchmark, RF16) | brapi para o recente; histórico a definir | RF16 | Em aberto | Verificar a disponibilidade do índice no plano gratuito |
+| IFIX (benchmark de FIIs — evolução, [DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)) | A definir | — | Adiada | Mesma pendência de fonte histórica do Ibovespa |
 | CDI (diário, benchmark) | **API SGS do Banco Central** | RF10 | Definida | — |
 | Calendário de pregão | Calendário publicado pela B3 | RB11 | Sugerida | Revisão manual anual |
 | Notícias — fonte pai | **Investidor10** | [DA19](adr/DA19-fontes-de-noticias.md) | **Bloqueada** | Sem API ou feed público identificado; termos de uso restringem a uso pessoal e não comercial. Exige autorização ou troca de fonte |

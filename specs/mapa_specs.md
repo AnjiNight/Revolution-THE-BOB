@@ -13,6 +13,7 @@
 | 1.3 | Caminho mínimo corrigido: SPEC-019 deixa de depender da SPEC-016; SPEC-034 antecipada para a Fase 1, e cada Spec que cria dado do usuário entrega a sua parte da exportação e da exclusão; RF10 passa a *Should* (Requisitos v1.3), e a SPEC-007 fica no caminho mínimo apenas como dependência técnica |
 | 1.4 | Padrão de ingestão passa a ser estabelecido pela SPEC-008; SPEC-008, SPEC-009 e SPEC-027 deixam de depender da SPEC-007; SPEC-011 deixa de depender da SPEC-007; SPEC-007 movida para depois da SPEC-009 e retirada do caminho mínimo |
 | 1.5 | Referências desatualizadas corrigidas: OPEN-13 sem o aviso do Tesouro Direto no escopo atual; artefatos lidos incluem DA22; DA07 alterada também por DA22 |
+| 1.6 | Classes de ativo Ação e FII ([DA23](../adr/DA23-classes-de-ativo-acoes-e-fiis.md)): OPEN-46 e OPEN-47 resolvidas; SPEC-006, SPEC-020 e SPEC-021 ajustadas; nova RB22 |
 
 ---
 
@@ -46,7 +47,7 @@ Convenções:
 | Modelo conceitual | [modelo_dominio.md](../modelo_dominio.md) |
 | Casos de uso (diagrama) | [modelo_casos_de_uso.md](../modelo_casos_de_uso.md) |
 | Drivers arquiteturais | [drivers_arquiteturais.md](../drivers_arquiteturais.md) |
-| ADRs DA01–DA22 | [adr/](../adr/README.md) |
+| ADRs DA01–DA23 | [adr/](../adr/README.md) |
 | Documento de arquitetura | [arquitetura.md](../arquitetura.md) |
 | Decisões técnicas | [decisoes_tecnicas.md](../decisoes_tecnicas.md) |
 | README | [README.md](../README.md) |
@@ -138,6 +139,7 @@ Pontos de dependência que definem a ordem:
 | RB19 | Toda tela de cenário exibe aviso educacional | 031 |
 | RB20 | Preço médio, caixa e rentabilidade não incluem custos de operação | 014, 016, 019 |
 | RB21 | Toda tela de compra e venda de ações e FIIs exibe o aviso de custos não considerados | 014, 016 |
+| RB22 | Todo ativo tem exatamente uma classe (Ação ou FII), definida no cadastro e nunca alterada nem deduzida do ticker | 006, 021 |
 
 Invariantes vindos das ADRs (não estão em `requisições.md`, ver OPEN-09 e OPEN-32):
 
@@ -206,6 +208,7 @@ RNFs transversais **não** viram Specs próprias; cada um é associado às Specs
 | Modelo de IA | Versionado, treinado fora do servidor | DA20 | Aceita, com pontos em aberto |
 | Cenários | Probabilidade condicional ao sentimento | DA21 | **Proposta** |
 | Escopo | Ações e FIIs; renda fixa adiada | DA22 | Aceita, com pontos em aberto |
+| Classes de ativo | Ação (inclui units) e FII; setor e segmento; ETFs e BDRs fora | DA23 | Aceita |
 
 Restrições: prazo de um semestre, dois integrantes, custo zero, CVM, LGPD, desktop multiplataforma, APIs gratuitas com limite, sem ordens nem pagamento reais (RES01–RES09).
 
@@ -286,8 +289,8 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
 | OPEN-44 | Aprovar no modelo conceitual as entidades previstas na arquitetura §9 | INC-05 | Várias (marcadas com `†`) |
 | OPEN-45 | Com interface em inglês, notícias (em português, PRE04) e textos gerados continuam em português? | RF38 × PRE04 | 035 |
-| OPEN-46 | Benchmark específico para FIIs (a baseline define só CDI e Ibovespa) | DA22 | 020 |
-| OPEN-47 | Classificação setorial (segmentos) dos FIIs para busca e distribuição por setor | DA22 | 006, 021 |
+| OPEN-46 | ✅ **Resolvida (DA23):** FIIs comparados com CDI e Ibovespa no escopo atual; IFIX como evolução | DA22, DA23 | 020 |
+| OPEN-47 | ✅ **Resolvida (DA23):** ações classificadas por setor e FIIs por segmento | DA22, DA23 | 006, 021 |
 | OPEN-48 | Confirmar que as fontes de cotação (atual e histórica) cobrem os FIIs do catálogo | DA22 | 008, 009 |
 
 ---
@@ -433,18 +436,18 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O administrador cadastra, edita e ativa/desativa ativos — ações e FIIs (ticker, nome, classe, setor); o usuário busca ativos por ticker, nome ou setor |
+| Objetivo | O administrador cadastra, edita e ativa/desativa ativos informando ticker, nome, **classe** (Ação ou FII, imutável) e **setor** (ações) ou **segmento** (FIIs); o usuário busca ativos por ticker, nome, classe, setor ou segmento |
 | Valor | **Usuário:** encontra ativos para estudar e simular. **Sistema:** conjunto curado que define o que é coletado (DA16) |
 | RF | RF07, RF39 |
-| RB | — |
+| RB | RB22 |
 | RNF | RNF15 (auditoria de ações administrativas), RNF04, RNF18 |
 | Caso de uso / fluxo | UC: Buscar ativo; P01 passo 1; P03 "cadastrar ou atualizar ativos" |
-| Entidades | ATIVO (classe ação ou FII), SETOR† |
+| Entidades | ATIVO (classe: Ação ou FII), SETOR† (setores das ações e segmentos dos FIIs) |
 | Drivers | OBJ02, FAS10, PA03 |
-| ADRs | DA12, DA16 (catálogo curado de ~40–50 ativos, divididos entre ações e FIIs), DA22 |
+| ADRs | DA12, DA16 (catálogo curado de ~40–50 ativos, divididos entre ações e FIIs), DA22, DA23 |
 | Depende de | SPEC-002 |
 | Posição | O ativo é referenciado por cotações, lançamentos e notícias; precisa existir antes da ingestão |
-| Em aberto | OPEN-03, OPEN-41, OPEN-47 |
+| Em aberto | OPEN-03, OPEN-41 |
 | Prioridade derivada | Must (RF07); Should (RF39) |
 
 #### SPEC-008 — Carga do histórico diário de cotações
@@ -663,7 +666,7 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Exibir a rentabilidade da carteira lado a lado com CDI e Ibovespa no mesmo período |
+| Objetivo | Exibir a rentabilidade da carteira lado a lado com CDI e Ibovespa no mesmo período, inclusive para carteiras com FIIs (IFIX como evolução, DA23) |
 | Valor | **Usuário:** sabe se a estratégia superou referências do mercado (P02) |
 | RF | RF16 |
 | RB | RB13 |
@@ -671,28 +674,28 @@ Visão geral por fase:
 | Caso de uso / fluxo | UC: Acompanhar rentabilidade; P02 passo 4 |
 | Entidades | INDEXADOR, TAXA_DIARIA, COTACAO (Ibovespa — representação não definida, OPEN-21) |
 | Drivers | OBJ02, QA01 |
-| ADRs | DA06, DA10, DA18 (Proposta) |
+| ADRs | DA06, DA10, DA18 (Proposta), DA23 |
 | Depende de | SPEC-007, SPEC-019 |
 | Posição | Compara com a rentabilidade já estabelecida em 019 |
-| Em aberto | OPEN-21, OPEN-46 |
+| Em aberto | OPEN-21 |
 | Prioridade derivada | Should |
 
 #### SPEC-021 — Distribuição da carteira por classe e setor
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Exibir a composição da carteira por classe de ativo e por setor, com valores de mercado |
+| Objetivo | Exibir a composição da carteira por classe (Ações e FIIs, em blocos separados, como nas corretoras) e, dentro de cada classe, por setor (ações) ou segmento (FIIs), com valores de mercado |
 | Valor | **Usuário:** visualiza diversificação (P01, P02) |
 | RF | RF18 |
-| RB | RB09, RB13 |
+| RB | RB09, RB13, RB22 |
 | RNF | RNF04, RNF12, RNF18 |
 | Caso de uso / fluxo | UC: Consultar posição e saldo; P02 passo 2 |
 | Entidades | ATIVO (classe), SETOR†, posições derivadas |
 | Drivers | OBJ01, QA13 |
-| ADRs | DA09, DA10 |
+| ADRs | DA09, DA10, DA23 |
 | Depende de | SPEC-006, SPEC-019 |
 | Posição | Usa as posições valorizadas de 019 |
-| Em aberto | OPEN-47 |
+| Em aberto | — |
 | Prioridade derivada | Should |
 
 #### SPEC-022 — Comparação de carteiras

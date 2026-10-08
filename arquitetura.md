@@ -3,13 +3,14 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 2.1
+**Versão:** 2.2
 
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0 | 24/09/2026 | Primeira versão, com as decisões DA01–DA15 no corpo do documento |
 | 2.0 | 01/10/2026 | Decisões movidas para [ADRs](adr/README.md); novas decisões DA16–DA21 (cotações por plano, carteira histórica, histórico da B3, fontes de notícias, modelo de IA, cenários por sentimento); ligação com [Decisões Técnicas](decisoes_tecnicas.md) |
 | 2.1 | 02/10/2026 | Escopo inicial restrito a ações e FIIs; renda fixa adiada e movida para pontos de extensão ([DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) |
+| 2.2 | 08/10/2026 | Classes de ativo Ação e FII, com setor e segmento ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); PE14 e PE15 resolvidas |
 
 ---
 
@@ -98,6 +99,7 @@ Cada decisão está registrada como ADR, com contexto, alternativas, decisão, c
 | [DA20](adr/DA20-modelo-ia-noticias.md) | Modelo de IA | Modelo versionado, treinado fora do servidor com janela histórica | Regras de palavras; só API externa | Aceita, com pontos em aberto |
 | [DA21](adr/DA21-cenarios-por-sentimento.md) | Cenários | Probabilidade condicional ao sentimento, com taxa-base e n | Peso fixo; modelo preditivo caixa-preta | Proposta |
 | [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Escopo inicial | Ações e FIIs; renda fixa adiada | Renda fixa no escopo inicial; só ações | Aceita, com pontos em aberto |
+| [DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md) | Classes de ativo | Ação (inclui units) e FII, com setor e segmento; ETFs e BDRs fora | Tipo deduzido do ticker; classe em texto livre | Aceita |
 
 ---
 
@@ -257,7 +259,7 @@ flowchart TB
 |---|---|---|---|
 | Identidade e Conta | Cadastro, login, sessão, recuperação de senha, perfil, consentimento, exportação e exclusão de dados | RF01–RF06 | DA05, DA13 |
 | Assinaturas e Planos | Planos, assinatura com pagamento simulado, verificação de acesso a recursos premium e ao nível de cotação | RF32, RF33 | DA12, DA16 |
-| Catálogo de Ativos | Ativos (ações e FIIs), setores, classe, busca | RF07, RF39 | DA22 |
+| Catálogo de Ativos | Ativos por classe (Ação, FII), setores das ações, segmentos dos FIIs, busca | RF07, RF39 | DA22, DA23 |
 | Dados de Mercado | Cotações durante o pregão (por nível) e de fechamento, histórico, série do CDI, calendário de pregão; consultas de séries | RF08–RF10 | DA16, DA18 |
 | Ingestão | Agendamento, execução e registro das tarefas; adaptadores das fontes externas | RF09, RF10, RF26, RF40 | DA06, DA07, DA14 |
 | Carteiras | Carteiras ao vivo e históricas, lançamentos (compra, venda, aporte, retirada, estorno), validação das regras de lançamento, comparação e simulações salvas | RF11–RF13, RF17–RF22 | DA09, DA17 |
@@ -462,7 +464,7 @@ A visão conceitual está no [Modelo de Domínio](modelo_dominio.md). Esta seç�
 |---|---|---|
 | Identidade e Conta | USUARIO | CONSENTIMENTO, TOKEN_RENOVACAO, PERFIL_ACESSO |
 | Assinaturas e Planos | — | PLANO (inclui nível de cotação), ASSINATURA |
-| Catálogo de Ativos | ATIVO, INDEXADOR (só CDI) | SETOR (inclui segmentos de FIIs, ver DA22); ativo ativo/inativo |
+| Catálogo de Ativos | ATIVO, INDEXADOR (só CDI) | `classe` como lista fechada (Ação, FII); SETOR para ações e SEGMENTO para FIIs (DA23); ativo ativo/inativo |
 | Dados de Mercado | COTACAO, TAXA_DIARIA | COTACAO com **data e hora, fonte e nível** (DA16); CALENDARIO_PREGAO; EVENTO_CORPORATIVO e PROVENTO, incluindo rendimentos de FIIs (DA17, DA18, DA22) |
 | Carteiras | CARTEIRA, TRANSACAO | **tipo** (ao vivo/histórica) em CARTEIRA (DA17); horário e nível da cotação usada em TRANSACAO; LANCAMENTO_CAIXA (aporte/retirada); tipo **estorno** em TRANSACAO; tipo **real** em CARTEIRA (evolução) |
 | Projeção de Cenários | SIMULACAO | CENARIO (ativo, horizonte, faixa de sentimento, probabilidades, taxa-base, n) (DA21) |
@@ -516,6 +518,7 @@ Como as funcionalidades futuras da [Visão de produto](Visão%20de%20produto.md)
 | Lançamentos offline | Fila local de comandos no cliente, validados no servidor ao reconectar (DA08) |
 | Integração com corretoras | Novo adaptador que gera lançamentos na carteira real |
 | Envio ativo de cotações ao cliente (push) | Substitui a consulta periódica do cliente, sem mudar os módulos (DA16) |
+| Novas classes de ativo (ETFs, BDRs) e IFIX como benchmark de FIIs | Novos valores na lista de classes e nova série de benchmark ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)) |
 | **Renda fixa** (CDB, LCI/LCA, Tesouro Direto) — adiada por [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Novos tipos de lançamento (aplicação e resgate) no livro-razão (DA09); regras de IR, IOF e base 252 no núcleo de cálculo (DA10); novos adaptadores para Selic, IPCA e Tesouro (DA06); notificação de vencimento (RF34). Requisitos preservados em [Requisitos §9](requisições.md) |
 
 ---
@@ -557,8 +560,8 @@ Consolidação do que ainda depende de decisão da equipe. O detalhe de cada ite
 | PE11 | Fonte do histórico de notícias para treino | DA20 |
 | PE12 | Horizontes, limite de estabilidade e n mínimo dos cenários | DA21 |
 | PE13 | Hospedagem e serviço de e-mail em camada gratuita | [Decisões Técnicas](decisoes_tecnicas.md) |
-| PE14 | Benchmark específico para FIIs (a baseline só define CDI e Ibovespa) | DA22 |
-| PE15 | Classificação setorial (segmentos) dos FIIs para a distribuição por setor | DA22 |
+| PE14 | ✅ Resolvido: FIIs comparados com CDI e Ibovespa; IFIX como evolução | DA22, DA23 |
+| PE15 | ✅ Resolvido: ações por setor, FIIs por segmento | DA22, DA23 |
 | PE16 | Confirmar cobertura dos FIIs nas fontes de cotação | DA22 |
 
 Os documentos de requisitos, modelo de domínio e visão de produto ainda precisam ser atualizados com as decisões DA16–DA21 (ver a seção "Impacto nos outros documentos" de cada ADR).

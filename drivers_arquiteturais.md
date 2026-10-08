@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.2 (02/10/2026 — escopo inicial em ações e FIIs; FAS02 adiada por DA22)
+**Versão:** 1.3 (08/10/2026 — classes de ativo Ação e FII, DA23)
 
 ---
 
@@ -309,6 +309,7 @@ Decisões tomadas pela equipe em 01/10/2026, registradas como ADRs:
 | Fontes de notícias | Fonte pai fixa (Investidor10, pendente de autorização), fontes curadas e fontes do usuário com prioridade | [DA19](adr/DA19-fontes-de-noticias.md) |
 | IA | Modelo para analisar e gerenciar notícias, aperfeiçoado com janela histórica (6 anos, a definir) | [DA20](adr/DA20-modelo-ia-noticias.md) |
 | Escopo (02/10/2026) | Primeira fase com ações e FIIs; renda fixa adiada | [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) |
+| Classes de ativo (08/10/2026) | Ação (inclui units) e FII separados, como nas corretoras; ETFs e BDRs fora | [DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md) |
 
 ---
 
@@ -338,3 +339,4 @@ Resumo de quais decisões ([ADRs](adr/README.md)) respondem a quais drivers.
 | OBJ02, FAS04, QA08 | DA19 (fontes de notícias) |
 | OBJ03, FAS04, FAS11 | DA20 (modelo de IA), DA21 (cenários por sentimento) |
 | OBJ01, OBJ04, RES01, RES02, FAS02 | DA22 (escopo inicial: ações e FIIs; renda fixa adiada) |
+| OBJ01, OBJ02, QA13, RES08 | DA23 (classes de ativo Ação e FII) |
