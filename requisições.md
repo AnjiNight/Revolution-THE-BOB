@@ -3,13 +3,14 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.2
+**Versão:** 1.3
 
 | Versão | Alteração |
 |---|---|
 | 1.0 | Primeira versão |
 | 1.1 | Custos de operação fora do escopo (RB20, RB21) |
 | 1.2 | Escopo inicial restrito a **ações e fundos imobiliários (FIIs)**; renda fixa adiada para uma fase futura (seção 9, [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) |
+| 1.3 | RF10 (série do CDI) passa de *Must* para *Should*: desde a DA22 o CDI só é usado pelo benchmark (RF16, *Should*) |
 
 ---
 
@@ -61,7 +62,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 | RF07 | Consultar ativos por ticker, nome ou setor | Usuário | Must |
 | RF08 | Exibir ficha do ativo com histórico de cotações | Usuário | Must |
 | RF09 | Importar cotações diárias e históricas de fonte externa | Sistema | Must |
-| RF10 | Importar a série diária do CDI, usada como benchmark | Sistema | Must |
+| RF10 | Importar a série diária do CDI, usada como benchmark | Sistema | Should |
 
 ### 2.3 Carteira e simulação
 

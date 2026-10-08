@@ -10,6 +10,7 @@
 | 1.0 | Primeira versão do mapa |
 | 1.1 | OPEN-13 resolvida: custos de operação fora do escopo, com aviso na compra, na venda e na aplicação no Tesouro Direto (RB20, RB21) |
 | 1.2 | Escopo inicial em ações e FIIs; renda fixa adiada ([DA22](../adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)): SPEC-017, SPEC-018 e SPEC-024 movidas para a fase futura; RB14–RB17 e OPEN-16 a OPEN-20 adiadas; novas OPEN-46 a OPEN-48 |
+| 1.3 | Caminho mínimo corrigido: SPEC-019 deixa de depender da SPEC-016; SPEC-034 antecipada para a Fase 1, e cada Spec que cria dado do usuário entrega a sua parte da exportação e da exclusão; RF10 passa a *Should* (Requisitos v1.3), e a SPEC-007 fica no caminho mínimo apenas como dependência técnica |
 
 ---
 
@@ -93,10 +94,11 @@ flowchart LR
     C08 --> C12["C12 Offline"]
     C09 --> C12
     C06 --> C13["C13 Notificações"]
-    C06 --> C14["C14 LGPD"]
-    C09 --> C14
-    C11 --> C14
-    C12 --> C14
+    C01 --> C14["C14 LGPD"]
+    C06 -. "acrescenta sua parte" .-> C14
+    C09 -.-> C14
+    C11 -.-> C14
+    C12 -.-> C14
 ```
 
 Pontos de dependência que definem a ordem:
@@ -107,7 +109,7 @@ Pontos de dependência que definem a ordem:
 4. **Histórico diário** precede a carteira histórica (DA17), a evolução patrimonial (RF17) e os cenários (DA21).
 5. **Classificação de notícias** precede cenários por sentimento (DA21).
 6. **Plano/assinatura** precede recursos premium: cotações do assinante (DA16) e cenários (RF30).
-7. **LGPD** (exportação e exclusão) depende de todos os comportamentos que guardam dados do usuário.
+7. **LGPD** (exportação e exclusão) depende só da identidade (C01) e é entregue cedo. Cada comportamento posterior que guarda dados do usuário (linhas tracejadas) acrescenta a sua parte na exportação e na exclusão.
 
 ### 1.4 Regras de negócio e invariantes associados
 
@@ -295,14 +297,14 @@ Visão geral por fase:
 | Fase | Specs | Entrega |
 |---|---|---|
 | 0 — Fundação | 001 | Estrutura executável |
-| 1 — Conta e acesso | 002–004 | Usuário identificado e seguro |
+| 1 — Conta e acesso | 002–004, 034 | Usuário identificado e seguro; exportação e exclusão de dados desde o início |
 | 2 — Dados de mercado | 005–011 | Calendário, catálogo, indexadores, cotações, ficha do ativo, monitoramento |
 | 3 — Núcleo da carteira | 012–016 | Carteiras e lançamentos (ao vivo e histórica) |
 | 4 — Renda fixa | ⏸ Adiada (DA22) | Ver "Fase futura — Renda fixa" ao fim desta seção |
 | 5 — Acompanhamento | 019–023 | Rentabilidade, benchmarks, distribuição, comparação, simulações |
 | 6 — Assinatura | 025–026 | Planos e cotações do assinante |
 | 7 — Notícias e cenários | 027–031 | Fontes, classificação, gráfico, preferências, cenários |
-| 8 — Experiência e conformidade | 032–038 | Offline, notificações, LGPD, idioma, biometria, importação, PDF |
+| 8 — Experiência e conformidade | 032, 033, 035–038 | Offline, notificações, idioma, biometria, importação, PDF |
 | Futura — Renda fixa | 017, 018, 024 | ⏸ Adiada (DA22) |
 
 ---
@@ -385,6 +387,24 @@ Visão geral por fase:
 | Em aberto | OPEN-02 |
 | Prioridade derivada | Should |
 
+#### SPEC-034 — Exportação e exclusão de dados pessoais
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O usuário exporta todos os seus dados e pede a exclusão da conta: dados pessoais removidos, auditoria e logs anonimizados e cache local limpo, em até 30 dias. Nesta Spec, cobre os dados criados até aqui (conta e consentimento); **cada Spec posterior que guarde dados do usuário entrega a sua parte** na exportação e na exclusão (ver "Posição") |
+| Valor | **Usuário:** direitos da LGPD. **Sistema:** conformidade (RES05) desde o início |
+| RF | RF06 |
+| RB | RB04 |
+| RNF | RNF11 |
+| Caso de uso / fluxo | UC: Gerenciar perfil e consentimento |
+| Entidades | USUARIO, CONSENTIMENTO†, TOKEN_RENOVACAO†, REGISTRO_AUDITORIA† (anonimização). Entram depois, cada uma com a sua Spec: CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA† (012–016), SIMULACAO (023), ASSINATURA† (025), PREFERENCIA_FONTE† e FONTE_NOTICIA† do usuário (030), cache local (032) |
+| Drivers | FAS09, QA07, PA06, RES05 |
+| ADRs | DA08, DA13, DA19 |
+| Depende de | SPEC-002 |
+| Posição | **Antecipada** (versão 1.3 do mapa): fica logo depois da identidade, e o mecanismo de exportação e exclusão passa a existir antes de qualquer outro dado pessoal. Regra para as Specs seguintes: **toda Spec que crie dado do usuário inclui, nos seus critérios de aceitação, a exportação e a exclusão desse dado** — hoje 012, 013, 014, 015, 016, 023, 025, 030 e 032. Assim a 034 não precisa esperar Specs que não são *Must* |
+| Em aberto | OPEN-04, OPEN-15, OPEN-40 |
+| Prioridade derivada | Must |
+
 ---
 
 ### Fase 2 — Dados de mercado
@@ -441,7 +461,7 @@ Visão geral por fase:
 | Depende de | SPEC-001, SPEC-005 |
 | Posição | Fonte definida e mais simples; valida o padrão de ingestão antes das cotações; exigida pelo benchmark (020) |
 | Em aberto | OPEN-40 |
-| Prioridade derivada | Must |
+| Prioridade derivada | Should (RF10, Requisitos v1.3); **técnica** enquanto SPEC-008, SPEC-009 e SPEC-027 dependerem dela para o padrão de ingestão |
 
 #### SPEC-008 — Carga do histórico diário de cotações
 
@@ -605,7 +625,7 @@ Visão geral por fase:
 | Drivers | OBJ01, FAS01, QA01 |
 | ADRs | DA09, DA17, DA18 (Proposta) |
 | Depende de | SPEC-008, SPEC-013, SPEC-014 |
-| Posição | Reaproveita as regras de 013/014 e exige o histórico de 008 |
+| Posição | Reaproveita as regras de 013/014 e exige o histórico de 008. Se for entregue depois da SPEC-019, inclui a carteira histórica na rentabilidade e na evolução patrimonial (valorização até hoje, DA17) |
 | Em aberto | OPEN-05, OPEN-06, OPEN-09, OPEN-14, OPEN-24 |
 | Prioridade derivada | Sem MoSCoW nos requisitos (decisão DA17) |
 
@@ -623,7 +643,7 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Calcular a rentabilidade da carteira em período selecionado e exibir a evolução patrimonial em gráfico, reconstruindo caixa e posições a partir do histórico; o painel abre em menos de 2 s |
+| Objetivo | Calcular a rentabilidade da carteira em período selecionado e exibir a evolução patrimonial em gráfico, reconstruindo caixa e posições a partir do histórico; o painel abre em menos de 2 s. Cobre a carteira ao vivo; a carteira histórica passa a ser incluída quando a SPEC-016 for entregue |
 | Valor | **Usuário:** responde "teria ganho ou perdido?" (Visão §12) |
 | RF | RF14, RF15, RF17 |
 | RB | RB09, RB13, RB20 |
@@ -632,8 +652,8 @@ Visão geral por fase:
 | Entidades | CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA†, COTACAO |
 | Drivers | OBJ01, QA01, QA04, PA05 |
 | ADRs | DA08, DA09, DA10, DA17 (carteira histórica valorizada até hoje) |
-| Depende de | SPEC-014, SPEC-016 |
-| Posição | Precisa de todos os tipos de lançamento existentes (ações e FIIs, nas carteiras ao vivo e histórica) |
+| Depende de | SPEC-014 |
+| Posição | Precisa dos lançamentos da carteira ao vivo (013–015). Não depende da SPEC-016, que não é *Must*: a carteira histórica entra na rentabilidade quando a 016 for entregue |
 | Em aberto | OPEN-06 |
 | Prioridade derivada | Must |
 
@@ -883,24 +903,6 @@ Visão geral por fase:
 | Em aberto | OPEN-35 |
 | Prioridade derivada | Could |
 
-#### SPEC-034 — Exportação e exclusão de dados pessoais
-
-| Campo | Conteúdo |
-|---|---|
-| Objetivo | O usuário exporta todos os seus dados e pede a exclusão da conta: carteiras e lançamentos removidos, dados pessoais removidos, auditoria e logs anonimizados, assinatura encerrada, fontes próprias removidas e cache local limpo, em até 30 dias |
-| Valor | **Usuário:** direitos da LGPD. **Sistema:** conformidade (RES05) |
-| RF | RF06 |
-| RB | RB04 |
-| RNF | RNF11 |
-| Caso de uso / fluxo | UC: Gerenciar perfil e consentimento |
-| Entidades | USUARIO, CONSENTIMENTO†, CARTEIRA, TRANSACAO, LANCAMENTO_CAIXA†, SIMULACAO, ASSINATURA†, PREFERENCIA_FONTE†, FONTE_NOTICIA† (do usuário), REGISTRO_AUDITORIA† |
-| Drivers | FAS09, QA07, PA06, RES05 |
-| ADRs | DA08, DA13, DA19 |
-| Depende de | SPEC-003, SPEC-012 a SPEC-016, SPEC-023, SPEC-025, SPEC-030, SPEC-032 |
-| Posição | **Must**, mas posicionada depois de todas as Specs que guardam dados do usuário, para não exigir comportamento futuro. **Alternativa para a equipe decidir:** antecipar esta Spec e exigir que cada Spec posterior que crie dado pessoal inclua a sua parte na exportação e na exclusão |
-| Em aberto | OPEN-04, OPEN-15, OPEN-40 |
-| Prioridade derivada | Must |
-
 #### SPEC-035 — Alternância de idioma
 
 | Campo | Conteúdo |
@@ -1058,9 +1060,15 @@ Os 36 RFs do escopo atual estão cobertos. RF23, RF24, RF25 e RF34 foram adiados
 
 Sequência que entrega todos os RFs *Must* (Requisitos §7: "entrega mínima limitada aos requisitos Must"):
 
-`001 → 002 → 005 → 006 → 007 → 008 → 009 → 010 → 012 → 013 → 014 → 015 → 019 → 034`
+`001 → 002 → 034 → 005 → 006 → 007 → 008 → 009 → 010 → 012 → 013 → 014 → 015 → 019`
 
-Dentro desse caminho, **008** (OPEN-05) depende de decisão em aberto.
+Observações:
+
+- Todas as dependências de cada Spec do caminho estão dentro do próprio caminho.
+- **034** vem logo após a identidade; as Specs seguintes do caminho que criam dados do usuário (012–015) entregam a sua parte da exportação e da exclusão.
+- **007** não é *Must* (RF10 é *Should*, Requisitos v1.3); está no caminho só porque 008 e 009 dependem dela para o padrão de ingestão.
+- **019** cobre a carteira ao vivo; a carteira histórica (016) fica fora do caminho mínimo.
+- Dentro desse caminho, **008** (OPEN-05) depende de decisão em aberto.
 
 ### 3.3 Specs bloqueadas por decisão
 
