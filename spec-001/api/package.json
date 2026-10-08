@@ -1,0 +1,35 @@
+{
+  "name": "@simulador/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/main.js",
+  "scripts": {
+    "dev": "tsx watch src/main.ts server",
+    "dev:worker": "tsx watch src/main.ts worker",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "start": "node dist/main.js server",
+    "start:worker": "node dist/main.js worker",
+    "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:rollback": "tsx scripts/rollback.ts"
+  },
+  "dependencies": {
+    "@fastify/helmet": "13.1.2",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "@simulador/shared": "0.1.0",
+    "dotenv": "18.0.6",
+    "fastify": "5.12.5",
+    "pg": "8.23.1",
+    "pino": "10.4.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.0",
+    "tsx": "4.23.15"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "app": {
+    "title": "Simulador de Investimentos",
+    "subtitle": "Simule carteiras com ativos reais, sem dinheiro real."
+  },
+  "server": {
+    "heading": "Conexão com o servidor",
+    "checking": "Verificando o servidor…",
+    "connected": "Servidor conectado",
+    "degraded": "Servidor com problemas no banco de dados",
+    "unavailable": "Servidor indisponível",
+    "invalidUrl": "Endereço do servidor inválido",
+    "version": "Versão do servidor: {{version}}",
+    "retry": "Tentar novamente"
+  },
+  "disclaimer": "Projeto acadêmico de caráter educacional. Não constitui recomendação de investimento."
+}

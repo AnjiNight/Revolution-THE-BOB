@@ -1,0 +1,12 @@
+// Esquema do banco (PostgreSQL). Convenções (SPEC-001):
+// - Tabelas e colunas em português, snake_case, iguais ao modelo de dados (@@map / @map).
+// - Toda migração tem um down.sql escrito à mão, usado por `npm run db:rollback`.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

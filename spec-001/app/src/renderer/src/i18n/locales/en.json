@@ -1,0 +1,17 @@
+{
+  "app": {
+    "title": "Investment Simulator",
+    "subtitle": "Simulate portfolios with real assets, without real money."
+  },
+  "server": {
+    "heading": "Server connection",
+    "checking": "Checking the server…",
+    "connected": "Server connected",
+    "degraded": "Server has database problems",
+    "unavailable": "Server unavailable",
+    "invalidUrl": "Invalid server address",
+    "version": "Server version: {{version}}",
+    "retry": "Try again"
+  },
+  "disclaimer": "Academic, educational project. This is not investment advice."
+}
