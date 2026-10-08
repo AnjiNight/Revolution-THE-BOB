@@ -1,6 +1,8 @@
 
 # Modelo de Dados — Simulador de Investimentos
-Modelo conceitual (MER) das entidades do aplicativo: carteiras de usuários, ativos de renda variável e renda fixa, cotações, notícias e simulações.
+Modelo conceitual (MER) das entidades do aplicativo: carteiras de usuários, ativos (ações e fundos imobiliários), cotações, notícias e simulações.
+
+> **Escopo atual (02/10/2026):** ações e FIIs. A renda fixa foi adiada para uma fase futura ([DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)). Os elementos marcados com *(fase de renda fixa)* continuam no diagrama, mas não fazem parte da primeira fase.
 
 ## Diagrama
 
@@ -45,14 +47,14 @@ Projeção gerada a partir de uma carteira.
 | horizonte | string | Prazo projetado |
 
 ### ATIVO
-Papel negociável — ação da B3 ou título de renda fixa.
+Papel negociável na B3 — ação ou cota de fundo imobiliário (FII). Títulos de renda fixa entram na fase de renda fixa.
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
 | ticker | string | Código de negociação |
 | nome | string | Nome do ativo |
-| classe | string | Renda variável, renda fixa etc. |
-| vencimento | date | Data de vencimento (renda fixa) |
+| classe | enum | **Ação** (inclui units) ou **FII** — lista fechada, definida no cadastro e imutável (RB22, [DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); renda fixa na fase futura |
+| vencimento | date | *(fase de renda fixa)* Data de vencimento |
 
 ### COTACAO
 Preço histórico diário de um ativo.
@@ -76,7 +78,7 @@ Matéria de jornal usada na análise de sentimento.
 Entidade associativa que resolve o N:N entre notícias e ativos citados.
 
 ### INDEXADOR
-Índice de referência ao qual um ativo pode estar atrelado (CDI, IPCA, SELIC).
+Índice de referência. No escopo atual, apenas o **CDI**, usado como benchmark. Na fase de renda fixa, também IPCA e SELIC, aos quais um título pode estar atrelado.
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
@@ -99,7 +101,7 @@ Série histórica de valores do indexador.
 | CARTEIRA | 1 : N | SIMULACAO | origina |
 | ATIVO | 1 : N | TRANSACAO | movimenta |
 | ATIVO | 1 : N | COTACAO | possui |
-| ATIVO | N : 1 | INDEXADOR | indexado_por |
+| ATIVO | N : 1 | INDEXADOR | indexado_por *(fase de renda fixa)* |
 | ATIVO | 1 : N | NOTICIA_ATIVO | mencionado_em |
 | NOTICIA | 1 : N | NOTICIA_ATIVO | cita |
 | INDEXADOR | 1 : N | TAXA_DIARIA | registra |
@@ -111,5 +113,6 @@ O par ATIVO → NOTICIA_ATIVO ← NOTICIA representa o N:N entre ativos e notíc
 - O modelo conceitual acima não traz chaves; na passagem para o lógico cada entidade recebe uma PK própria (`id`) e as FKs correspondentes aos relacionamentos.
 - `NOTICIA_ATIVO` pode ter chave primária composta (`ativo_id`, `noticia_id`).
 - `COTACAO` e `TAXA_DIARIA` são séries temporais: a combinação (ativo/indexador + data) tende a ser única, o que justifica um índice único nesses pares.
-- `vencimento` só se aplica a ativos de renda fixa, então aceita nulo — alternativa é especializar `ATIVO` em subtipos por `classe`.
+- *(Fase de renda fixa)* `vencimento` só se aplica a ativos de renda fixa, então aceita nulo — alternativa é especializar `ATIVO` em subtipos por `classe`.
+- Ações são classificadas por **setor** e FIIs por **segmento** ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); as duas classificações entram junto com SETOR, prevista na arquitetura §9.
 - `sentimento` está como string; se os valores forem fechados (positivo/neutro/negativo), vale usar um enum ou uma tabela de domínio.

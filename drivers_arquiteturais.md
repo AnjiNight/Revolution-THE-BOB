@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.0
+**Versão:** 1.3 (08/10/2026 — classes de ativo Ação e FII, DA23)
 
 ---
 
@@ -11,7 +11,7 @@
 
 Drivers arquiteturais são os requisitos, objetivos e restrições que **moldam a arquitetura** do sistema. Nem todo requisito é um driver: um requisito só se torna driver quando, se fosse diferente, a estrutura do sistema também seria diferente.
 
-Este documento seleciona, a partir de [Visão de produto](Visão%20de%20produto.md), [Especificação de Requisitos](requisições.md), [Personas](personas.md) e [Modelo de Domínio](modelo_dominio.md), aquilo que orienta as decisões registradas no [Documento de Arquitetura](arquitetura.md).
+Este documento seleciona, a partir de [Visão de produto](Visão%20de%20produto.md), [Especificação de Requisitos](requisições.md), [Personas](personas.md) e [Modelo de Domínio](modelo_dominio.md), aquilo que orienta as decisões registradas nos [ADRs](adr/README.md) e consolidadas no [Documento de Arquitetura](arquitetura.md).
 
 Os drivers estão organizados em cinco grupos:
 
@@ -44,7 +44,7 @@ Funcionalidades que, pela sua natureza, exigem decisões estruturais — não ap
 | ID | Funcionalidade | Requisitos | Por que afeta a arquitetura |
 |---|---|---|---|
 | FAS01 | Registrar transações e derivar posição, preço médio e rentabilidade | RF12–RF15, RB05–RB10, RB13 | Exige lançamentos imutáveis, posição sempre **calculada** (nunca editada) e aritmética decimal exata |
-| FAS02 | Renda fixa com IR, IOF, carência e base 252 | RF23–RF25, RB14–RB17 | Depende de calendário de pregão e de séries diárias de indexadores; regras fiscais precisam estar isoladas e testáveis |
+| FAS02 | ~~Renda fixa com IR, IOF, carência e base 252~~ **Adiada para a fase de renda fixa** ([DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) | RF23–RF25, RB14–RB17 | Depende de calendário de pregão e de séries diárias de indexadores; regras fiscais precisam estar isoladas e testáveis |
 | FAS03 | Ingestão de cotações e indexadores | RF09, RF10 | Depende de fontes externas instáveis e com limite de requisições; precisa rodar de forma agendada, independente do uso do app |
 | FAS04 | Coleta, vínculo a ativos e classificação de sentimento de notícias | RF26–RF29, Visão §6 | Processamento pesado e incerto (pesquisa); não pode comprometer o núcleo do sistema se falhar |
 | FAS05 | Gráfico Notícias × Preço do ativo | Visão §19, §24 | Cruza duas bases diferentes (séries de preço e eventos de notícia) no mesmo eixo temporal |
@@ -94,11 +94,11 @@ Formato: **Fonte → Estímulo → Artefato → Ambiente → Resposta → Medida
 | Parte | Descrição |
 |---|---|
 | Fonte | Usuário |
-| Estímulo | Registra uma sequência de compras, vendas e um resgate de renda fixa com 20 dias de aplicação |
+| Estímulo | Registra uma sequência de aportes, compras e vendas de ações e FIIs |
 | Artefato | Módulo de cálculo financeiro |
 | Ambiente | Operação normal |
-| Resposta | Sistema calcula posição, preço médio, rendimento bruto, IOF e IR |
-| Medida | Resultados idênticos, centavo a centavo, a uma calculadora de referência (ex.: Tesouro Direto); nenhum erro de arredondamento por ponto flutuante |
+| Resposta | Sistema calcula caixa, posição, preço médio e rentabilidade |
+| Medida | Resultados idênticos, centavo a centavo, a casos de referência calculados manualmente; nenhum erro de arredondamento por ponto flutuante. *Na fase de renda fixa, o cenário volta a incluir resgate com IOF e IR, comparado à calculadora do Tesouro Direto* |
 
 #### QA02 — Falha de fonte externa de dados
 | Parte | Descrição |
@@ -184,11 +184,11 @@ Formato: **Fonte → Estímulo → Artefato → Ambiente → Resposta → Medida
 | Parte | Descrição |
 |---|---|
 | Fonte | Equipe de desenvolvimento |
-| Estímulo | Alteração em uma regra de IR ou de preço médio |
+| Estímulo | Alteração em uma regra de preço médio ou de rentabilidade |
 | Artefato | Módulo de cálculo financeiro |
 | Ambiente | Tempo de desenvolvimento |
 | Resposta | Regras verificadas por testes automatizados sem banco de dados, rede ou interface |
-| Medida | Suíte do módulo executa em menos de 10 s; cobertura das regras RB05–RB17 (RNF16) |
+| Medida | Suíte do módulo executa em menos de 10 s; cobertura das regras RB05–RB13, RB20 (RNF16); RB14–RB17 na fase de renda fixa |
 
 #### QA11 — Rastreio das transações
 | Parte | Descrição |
@@ -264,10 +264,10 @@ Decisões que já chegam tomadas e não estão abertas a negociação.
 
 | ID | Premissa | Impacto se for falsa |
 |---|---|---|
-| PRE01 | Cotações **diárias** (fechamento) são suficientes; não há necessidade de tempo real | Seria necessária arquitetura de streaming, fora do escopo |
+| PRE01 | ~~Cotações **diárias** (fechamento) são suficientes; não há necessidade de tempo real~~ **Revogada em 01/10/2026** por [DA16](adr/DA16-cotacoes-por-plano.md): ações são exibidas durante o pregão, com atraso conforme o plano (~30 min no gratuito); renda fixa continua diária. Tempo real verdadeiro (streaming) segue fora do escopo | Seria necessária arquitetura de streaming, fora do escopo |
 | PRE02 | Volume pequeno de usuários (contexto acadêmico: dezenas, não milhares) | Um único servidor deixaria de ser suficiente |
 | PRE03 | As APIs de cotações e indexadores continuam gratuitas e disponíveis | Troca de provedor (mitigada por QA08) |
-| PRE04 | Notícias em português, obtidas de feeds públicos | Classificação de sentimento precisaria de outros modelos/idiomas |
+| PRE04 | Notícias em português, obtidas de feeds públicos ou de fontes com autorização de uso (fonte pai, curadas e do usuário — [DA19](adr/DA19-fontes-de-noticias.md)) | Classificação de sentimento precisaria de outros modelos/idiomas |
 | PRE05 | Todos os horários seguem o fuso de Brasília e o calendário da B3 | Cálculos de dias úteis e pregão ficariam incorretos |
 | PRE06 | Uso predominante com conexão; o modo offline é de **consulta** | Edição offline exigiria resolução de conflitos |
 
@@ -300,11 +300,22 @@ Durante a análise foram encontradas divergências entre os documentos do projet
 | 3 | A Visão fala em *IA conversacional* e *probabilidades de alta/queda*; os Requisitos só tratam de *classificação de sentimento* e *projeção* | IA entra como módulo isolado atrás de uma interface, fora do caminho crítico |
 | 4 | O modelo de domínio ainda não tem entidades citadas nas regras: `CalendarioPregao`, lançamento de caixa (aporte/retirada), estorno, assinatura/plano, fonte de notícia, execução de ingestão | Listadas na visão de dados do documento de arquitetura como entidades a incluir |
 
+Decisões tomadas pela equipe em 01/10/2026, registradas como ADRs:
+
+| Tema | Decisão | ADR |
+|---|---|---|
+| Cotações | Exibidas durante o pregão: ~30 min de atraso no plano gratuito; provedor pago no plano assinante | [DA16](adr/DA16-cotacoes-por-plano.md) |
+| Carteiras no passado | Permitidas, em um tipo próprio de carteira (histórica), separado da carteira ao vivo | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md) |
+| Fontes de notícias | Fonte pai fixa (Investidor10, pendente de autorização), fontes curadas e fontes do usuário com prioridade | [DA19](adr/DA19-fontes-de-noticias.md) |
+| IA | Modelo para analisar e gerenciar notícias, aperfeiçoado com janela histórica (6 anos, a definir) | [DA20](adr/DA20-modelo-ia-noticias.md) |
+| Escopo (02/10/2026) | Primeira fase com ações e FIIs; renda fixa adiada | [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) |
+| Classes de ativo (08/10/2026) | Ação (inclui units) e FII separados, como nas corretoras; ETFs e BDRs fora | [DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md) |
+
 ---
 
 ## 9. Rastreabilidade: drivers → decisões
 
-Resumo de quais decisões do [Documento de Arquitetura](arquitetura.md) respondem a quais drivers.
+Resumo de quais decisões ([ADRs](adr/README.md)) respondem a quais drivers.
 
 | Driver | Decisões que respondem |
 |---|---|
@@ -321,4 +332,11 @@ Resumo de quais decisões do [Documento de Arquitetura](arquitetura.md) responde
 | QA10 | DA10 |
 | QA12, FAS10 | DA07, DA14 (registro de execuções) |
 | QA14, RES06 | DA03 (cliente desktop multiplataforma) |
-| OBJ07, RES04 | DA15 (aviso educacional nas projeções) |
+| OBJ07, RES04 | DA15 (aviso educacional nas projeções), DA21 |
+| FAS03, QA02, PA03, OBJ06 | DA16 (cotações por plano) |
+| OBJ01, FAS01 | DA17 (carteira ao vivo e histórica) |
+| QA04, RES03, RES07 | DA18 (histórico pelos arquivos da B3) |
+| OBJ02, FAS04, QA08 | DA19 (fontes de notícias) |
+| OBJ03, FAS04, FAS11 | DA20 (modelo de IA), DA21 (cenários por sentimento) |
+| OBJ01, OBJ04, RES01, RES02, FAS02 | DA22 (escopo inicial: ações e FIIs; renda fixa adiada) |
+| OBJ01, OBJ02, QA13, RES08 | DA23 (classes de ativo Ação e FII) |
