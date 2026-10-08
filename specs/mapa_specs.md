@@ -12,6 +12,7 @@
 | 1.2 | Escopo inicial em ações e FIIs; renda fixa adiada ([DA22](../adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)): SPEC-017, SPEC-018 e SPEC-024 movidas para a fase futura; RB14–RB17 e OPEN-16 a OPEN-20 adiadas; novas OPEN-46 a OPEN-48 |
 | 1.3 | Caminho mínimo corrigido: SPEC-019 deixa de depender da SPEC-016; SPEC-034 antecipada para a Fase 1, e cada Spec que cria dado do usuário entrega a sua parte da exportação e da exclusão; RF10 passa a *Should* (Requisitos v1.3), e a SPEC-007 fica no caminho mínimo apenas como dependência técnica |
 | 1.4 | Padrão de ingestão passa a ser estabelecido pela SPEC-008; SPEC-008, SPEC-009 e SPEC-027 deixam de depender da SPEC-007; SPEC-011 deixa de depender da SPEC-007; SPEC-007 movida para depois da SPEC-009 e retirada do caminho mínimo |
+| 1.5 | Referências desatualizadas corrigidas: OPEN-13 sem o aviso do Tesouro Direto no escopo atual; artefatos lidos incluem DA22; DA07 alterada também por DA22 |
 
 ---
 
@@ -45,7 +46,7 @@ Convenções:
 | Modelo conceitual | [modelo_dominio.md](../modelo_dominio.md) |
 | Casos de uso (diagrama) | [modelo_casos_de_uso.md](../modelo_casos_de_uso.md) |
 | Drivers arquiteturais | [drivers_arquiteturais.md](../drivers_arquiteturais.md) |
-| ADRs DA01–DA21 | [adr/](../adr/README.md) |
+| ADRs DA01–DA22 | [adr/](../adr/README.md) |
 | Documento de arquitetura | [arquitetura.md](../arquitetura.md) |
 | Decisões técnicas | [decisoes_tecnicas.md](../decisoes_tecnicas.md) |
 | README | [README.md](../README.md) |
@@ -189,7 +190,7 @@ RNFs transversais **não** viram Specs próprias; cada um é associado às Specs
 | Banco | Relacional único | DA04 | Aceita |
 | Autenticação | Própria (e-mail e senha); Google como evolução | DA05 | Aceita |
 | Fontes externas | Adaptadores, só pelo servidor | DA06 | Aceita |
-| Ingestão | Assíncrona, agendada, centralizada | DA07 | Aceita (alterada por DA16, DA18) |
+| Ingestão | Assíncrona, agendada, centralizada | DA07 | Aceita (alterada por DA16, DA18, DA22) |
 | Cache/offline | Dois níveis; offline somente leitura | DA08 | Aceita |
 | Lançamentos | Imutáveis; posição derivada | DA09 | Aceita |
 | Cálculo | Núcleo puro | DA10 | Aceita |
@@ -252,7 +253,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-10 | RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
 | OPEN-11 | Relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
 | OPEN-12 | Quantidade fracionária de ações e regras de lote | INC-18 | 014, 016 |
-| OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra, na venda e na aplicação no Tesouro Direto (RB20, RB21) | INC-19 | 014, 016, 019, 024 |
+| OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra e na venda de ações e FIIs (RB20, RB21); o aviso na aplicação no Tesouro Direto volta com a renda fixa (DA22) | INC-19 | 014, 016, 019; 024 na fase de renda fixa |
 | OPEN-14 | Regras do estorno: o que pode ser estornado, efeito em lançamentos posteriores, estorno de estorno, estorno na carteira histórica | RB08 | 015, 016 |
 | OPEN-15 | Exclusão de carteira: exclusão definitiva ou arquivamento, preservando auditoria | INC-17 | 012, 034 |
 | OPEN-16 | ⏸ **Adiada com a renda fixa (DA22).** Tipos de remuneração da renda fixa (prefixado, % do CDI, IPCA + taxa) e atributos da aplicação (taxa contratada, carência) | Modelo, arquitetura §9 | 017 |

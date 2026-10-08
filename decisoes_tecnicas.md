@@ -39,7 +39,7 @@ Cada item tem um status:
 | Dado | Fonte | Usado em | Status | Limitações |
 |---|---|---|---|---|
 | Cotações de ações e FIIs durante o pregão (plano gratuito) | **brapi**, plano gratuito | [DA16](adr/DA16-cotacoes-por-plano.md) | Definida | Atraso de ~30 min; 15.000 requisições/mês; 1 ticker por chamada; 3 meses de histórico; confirmar a cobertura dos FIIs do catálogo |
-| Cotações de ações (plano assinante) | **brapi** Startup ou Pro, ou outro provedor pago | DA16 | Em aberto | Pago; atraso de 15 ou 5 min; quem paga? |
+| Cotações de ações e FIIs (plano assinante) | **brapi** Startup ou Pro, ou outro provedor pago | DA16 | Em aberto | Pago; atraso de 15 ou 5 min; quem paga? |
 | Histórico diário de ações e FIIs | **Séries históricas da B3 (COTAHIST)** | [DA18](adr/DA18-historico-cotacoes-arquivos-b3.md) | Sugerida | Arquivos grandes, formato posicional; preços não ajustados |
 | Proventos e eventos corporativos | — | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md), [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Em aberto | Necessário para a carteira histórica e, principalmente, para os rendimentos mensais dos FIIs |
 | Ibovespa (benchmark, RF16) | brapi para o recente; histórico a definir | RF16 | Em aberto | Verificar a disponibilidade do índice no plano gratuito |

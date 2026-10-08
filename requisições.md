@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.3
+**Versão:** 1.4
 
 | Versão | Alteração |
 |---|---|
@@ -11,6 +11,7 @@
 | 1.1 | Custos de operação fora do escopo (RB20, RB21) |
 | 1.2 | Escopo inicial restrito a **ações e fundos imobiliários (FIIs)**; renda fixa adiada para uma fase futura (seção 9, [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) |
 | 1.3 | RF10 (série do CDI) passa de *Must* para *Should*: desde a DA22 o CDI só é usado pelo benchmark (RF16, *Should*) |
+| 1.4 | Rastreabilidade adiada da RB14 (seção 9.3) passa a usar o calendário de feriados bancários |
 
 ---
 
@@ -276,4 +277,4 @@ A equipe decidiu, em 02/10/2026, concentrar a primeira fase em ações e FIIs ([
 
 | Regra | Implementação no modelo |
 |---|---|
-| RB14 | `TaxaDiaria` indexada por data útil, com contagem sobre `CalendarioPregao` |
+| RB14 | `TaxaDiaria` indexada por data útil, com contagem sobre o calendário de feriados bancários (`FeriadoBancario`), e não sobre `CalendarioPregao`: os dois calendários diferem em alguns dias (ex.: 24/12 e 31/12 não têm pregão, mas são dias úteis bancários) |
