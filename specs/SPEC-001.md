@@ -159,4 +159,4 @@ A tela tem um botão "Tentar novamente".
 | CA09 | ✅ Modo `worker` registrou *heartbeat* com o banco no ar e encerrou ao receber sinal |
 | CA10 | ✅ Migração aplicada → desfeita → aplicada de novo no PostgreSQL 16 real |
 | CA14 | ✅ No Linux (Electron real, sem tela, via Xvfb): os quatro estados da tela, português e inglês, sem rolagem horizontal em 500 px de largura, interface sem acesso ao Node. ⏳ Falta conferir no Windows e no macOS |
-| CA15 | ⏳ O workflow está pronto; será confirmado na primeira execução no GitHub |
+| CA15 | ✅ Primeira execução no GitHub (08/10/2026) passou nos dois jobs: verificação e ciclo de migração |

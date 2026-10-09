@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Aceita |
+| Status | Aceita — **login com Google implementado por [DA24](DA24-login-com-google.md)** (08/10/2026) |
 | Data | 24/09/2026 |
 | Drivers | FAS07, QA05, QA06, RF01–RF04, RNF07–RNF10 |
 | Relacionadas | [DA03](DA03-cliente-desktop-multiplataforma.md), [DA13](DA13-dados-pessoais-concentrados.md) |

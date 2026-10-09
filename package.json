@@ -15,7 +15,7 @@
   "scripts": {
     "build": "npm run build --workspace packages/shared && npm run build --workspace api && npm run build --workspace app",
     "typecheck": "npm run build --workspace packages/shared && npm run typecheck --workspaces --if-present",
-    "test": "npm run build --workspace packages/shared && vitest run",
+    "test": "npm run build --workspace packages/shared && npm run db:generate --workspace api && vitest run",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

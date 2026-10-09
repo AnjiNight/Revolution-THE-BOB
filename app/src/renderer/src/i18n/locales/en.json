@@ -13,5 +13,69 @@
     "version": "Server version: {{version}}",
     "retry": "Try again"
   },
-  "disclaimer": "Academic, educational project. This is not investment advice."
+  "disclaimer": "Academic, educational project. This is not investment advice.",
+  "loading": "Loading…",
+  "auth": {
+    "loginTitle": "Sign in",
+    "registerTitle": "Create account",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "Use at least 8 characters.",
+    "acceptTerms": "I have read and accept the terms of use and the privacy policy.",
+    "termsTitle": "Terms summary (version {{version}})",
+    "termsSummary": "This is an academic simulation project: no operation uses real money and nothing here is investment advice. We store your name, your email and your password protected by encryption, only to identify your account. You will be able to request the export or deletion of your data.",
+    "submitLogin": "Sign in",
+    "submitRegister": "Create account",
+    "submitting": "Please wait…",
+    "noAccount": "Don't have an account?",
+    "goToRegister": "Create account",
+    "haveAccount": "Already have an account?",
+    "goToLogin": "Sign in",
+    "or": "or",
+    "google": "Sign in with Google",
+    "googleWaiting": "Finish signing in in the browser window…",
+    "googleTermsTitle": "First sign-in with Google",
+    "googleTermsIntro": "To create your account, read and accept the terms.",
+    "continue": "Accept and continue",
+    "cancel": "Cancel",
+    "goToCollaborator": "Collaborator area",
+    "collaboratorTitle": "Collaborator area",
+    "collaboratorNote": "Collaborator access is created by the team. It is not possible to sign up here.",
+    "backToLogin": "Back to user sign-in"
+  },
+  "home": {
+    "greeting": "Hello, {{name}}!",
+    "role": {
+      "user": "Profile: user",
+      "collaborator": "Profile: collaborator"
+    },
+    "next": "Your account is ready. Simulation portfolios arrive in the next versions.",
+    "logout": "Sign out",
+    "collaboratorNext": "Team tools (asset management and data collection monitoring) arrive in the next versions."
+  },
+  "fieldErrors": {
+    "required": "Required field.",
+    "too_short": "Too short.",
+    "too_long": "Too long.",
+    "invalid_email": "Enter a valid email.",
+    "terms_not_accepted": "You must accept the terms to continue."
+  },
+  "authErrors": {
+    "validation_error": "Check the highlighted fields.",
+    "email_in_use": "This email is already in use.",
+    "invalid_credentials": "Incorrect email or password.",
+    "invalid_refresh_token": "Your session has expired. Sign in again.",
+    "unauthorized": "Your session has expired. Sign in again.",
+    "rate_limited": "Too many attempts. Wait a minute and try again.",
+    "server_unavailable": "Could not reach the server. Try again.",
+    "invalid_url": "Invalid server address.",
+    "unexpected": "Something went wrong. Try again.",
+    "wrong_account_type": "This account cannot sign in here. Users sign in through the regular sign-in; collaborators, through the Collaborator area.",
+    "terms_required": "Accept the terms to create your account.",
+    "google_login_unavailable": "Sign in with Google is not available.",
+    "google_token_invalid": "Could not confirm the Google sign-in. Try again.",
+    "google_email_not_verified": "Google did not confirm this email.",
+    "google_cancelled": "Google sign-in cancelled."
+  }
 }

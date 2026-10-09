@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.5
+**Versão:** 1.6
 
 | Versão | Alteração |
 |---|---|
@@ -13,6 +13,7 @@
 | 1.3 | RF10 (série do CDI) passa de *Must* para *Should*: desde a DA22 o CDI só é usado pelo benchmark (RF16, *Should*) |
 | 1.4 | Rastreabilidade adiada da RB14 (seção 9.3) passa a usar o calendário de feriados bancários |
 | 1.5 | Classes de ativo separadas como nas corretoras: Ação (inclui units) e FII; ETFs, BDRs e opções fora do escopo; RF07, RF18 e nova RB22 ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)) |
+| 1.6 | Ator "Administrador" renomeado para **Colaborador**; novos RF41 (entrar com Google) e RF42 (Área do colaborador) |
 
 ---
 
@@ -37,7 +38,7 @@ O sistema também coleta notícias econômicas e avalia se o sentimento extraíd
 | Visitante | Usuário não autenticado; acessa apenas cadastro e login |
 | Usuário | Usuário autenticado com plano gratuito |
 | Assinante | Usuário com assinatura ativa; acessa projeções e recursos premium |
-| Administrador | Mantém cadastro de ativos e monitora jobs de ingestão |
+| Colaborador | Pessoa da equipe: mantém o cadastro de ativos e monitora a ingestão. A conta é criada pela própria equipe e entra pela Área do colaborador ([SPEC-002](specs/SPEC-002.md)) |
 | Sistema | Processos automatizados de ingestão de dados |
 
 ---
@@ -56,6 +57,8 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 | RF04 | Permitir desbloqueio da aplicação por biometria do sistema operacional | Usuário | Could |
 | RF05 | Permitir edição dos dados de perfil | Usuário | Should |
 | RF06 | Permitir exportação e exclusão dos dados pessoais | Usuário | Must |
+| RF41 | Permitir entrar com conta Google, só para usuários ([DA24](adr/DA24-login-com-google.md)) | Visitante | Should |
+| RF42 | Oferecer login próprio para colaboradores (Área do colaborador); contas de colaborador são criadas só pela equipe ([SPEC-002](specs/SPEC-002.md)) | Colaborador | Must |
 
 ### 2.2 Ativos e dados de mercado
 
@@ -118,8 +121,8 @@ Adiada para fase futura. RF23, RF24 e RF25 estão preservados na seção 9.
 
 | ID | Requisito | Ator | Prioridade |
 |---|---|---|---|
-| RF39 | Cadastrar e manter ativos disponíveis na plataforma | Administrador | Should |
-| RF40 | Exibir status e falhas dos jobs de ingestão | Administrador | Could |
+| RF39 | Cadastrar e manter ativos disponíveis na plataforma | Colaborador | Should |
+| RF40 | Exibir status e falhas dos jobs de ingestão | Colaborador | Could |
 
 ---
 
@@ -197,7 +200,7 @@ Adiada para fase futura. RB14 a RB17 estão preservadas na seção 9.
 
 | ID | Regra |
 |---|---|
-| RB22 | Todo ativo pertence a exatamente uma classe — Ação (incluindo units) ou FII —, definida pelo administrador no cadastro e não alterada depois; a classe nunca é deduzida do ticker |
+| RB22 | Todo ativo pertence a exatamente uma classe — Ação (incluindo units) ou FII —, definida pelo colaborador no cadastro e não alterada depois; a classe nunca é deduzida do ticker |
 
 ---
 

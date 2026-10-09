@@ -126,3 +126,165 @@ button:focus-visible {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+/* SPEC-002: formulários de autenticação */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.auth-form h2,
+.home h2 {
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+input[type='text'],
+input[type='email'],
+input[type='password'] {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.field-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.field-error,
+.form-error {
+  margin: 0;
+  color: var(--error);
+  font-size: 0.9rem;
+}
+
+.form-error {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--error);
+  border-radius: 8px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.checkbox input {
+  margin-top: 0.25rem;
+}
+
+.terms summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.terms p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.auth-form button[type='submit'] {
+  margin-top: 0.25rem;
+  align-self: flex-start;
+}
+
+.switch {
+  margin: 0;
+  color: var(--muted);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+button.link {
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* SPEC-002: Google e Área do colaborador */
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+button.google {
+  margin-top: 0;
+  align-self: stretch;
+}
+
+.google-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+
+.google-terms h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.google-terms p {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions button {
+  margin-top: 0;
+}
+
+.auth-form.collaborator,
+.home-collaborator {
+  border-top: 4px solid var(--warn);
+}

@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.2 (08/10/2026 — ferramentas de desenvolvimento definidas na [SPEC-001](specs/SPEC-001.md), seção 6)
+**Versão:** 1.4 (08/10/2026 — autenticação e login com Google definidos na [SPEC-002](specs/SPEC-002.md) e na [DA24](adr/DA24-login-com-google.md), seção 4)
 
 ---
 
@@ -67,13 +67,14 @@ Todos com status **Sugerida**.
 | Necessidade | Sugestão | Motivo | Atenção |
 |---|---|---|---|
 | Aritmética decimal | `decimal.js` (já usado internamente pelo Prisma) | RNF12, RB13 | Nunca converter valores monetários para `number` |
-| Hash de senha | `argon2` | RNF07 | — |
-| Tokens no cofre do SO | `safeStorage` do Electron | RNF08, [DA05](adr/DA05-autenticacao-propria.md) | No Linux depende de um cofre instalado (ex.: GNOME Keyring, KWallet); sem ele a proteção é fraca. A biblioteca `keytar`, antes comum, não é mais mantida |
+| Hash de senha | `argon2` (argon2id, parâmetros mínimos da OWASP) | RNF07 | ✅ Definida na [SPEC-002](specs/SPEC-002.md) |
+| Tokens no cofre do SO | `safeStorage` do Electron | RNF08, [DA05](adr/DA05-autenticacao-propria.md) | ✅ Definida na SPEC-002. No Linux sem keyring o Electron usa o modo `basic_text` (senha fixa): o app trata isso como cofre indisponível e não grava o token em disco |
 | Biometria (RF04) | `systemPreferences.promptTouchID` do Electron | RF04 | **Só funciona no macOS.** No Windows e no Linux exigiria módulos nativos. Sugestão: RF04 apenas no macOS, ou retirar do escopo |
 | Cache local do cliente | SQLite (`better-sqlite3`) | [DA08](adr/DA08-cache-dois-niveis-offline-leitura.md), RF36 | Apagar no logout e na exclusão de conta |
 | Validação de entrada | Esquemas JSON do Fastify ou `zod` | DA02 | — |
-| Autenticação | `@fastify/jwt` + tokens de renovação guardados no banco | DA05 | Permitir revogar tokens de renovação |
-| Limite de tentativas | `@fastify/rate-limit` | RNF10 | — |
+| Autenticação | `fast-jwt` (token de acesso HS256, 15 min) + token de renovação opaco, guardado só como hash, trocado a cada uso | DA05 | ✅ Definida na SPEC-002. Usamos o `fast-jwt` direto em vez do `@fastify/jwt`, para o domínio não depender do Fastify |
+| Limite de tentativas | `@fastify/rate-limit` (10/min por IP nas rotas de `/api/auth`) | RNF10 | ✅ Definida na SPEC-002 |
+| Login com Google | OAuth 2.0 com PKCE no processo principal do Electron (navegador do sistema + `127.0.0.1`); `jose` no servidor para verificar o ID token com as chaves públicas do Google | DA24, RF41 | ✅ Definida na SPEC-002. Exige um client ID "Aplicativo para computador" no Google Cloud |
 | Fila e agendador de tarefas | `BullMQ` (sobre o Redis) ou `pg-boss` (sobre o PostgreSQL) | [DA07](adr/DA07-ingestao-assincrona.md), [DA14](adr/DA14-registro-execucoes-logs.md) | O `pg-boss` evita depender do Redis para as tarefas |
 | Gráfico de preço com notícias | TradingView Lightweight Charts | Gráfico Notícias × Preço (Visão §19) | Permite marcadores no eixo do tempo |
 | Gráficos de carteira | Recharts | RF17, RF18 | — |

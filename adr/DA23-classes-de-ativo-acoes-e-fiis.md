@@ -18,7 +18,7 @@ As corretoras resolvem isso separando os ativos em **classes** (Ações, FIIs, E
 
 1. **Deduzir o tipo pelo ticker** (ex.: final 11 = FII) — simples, mas errado: ETFs e units também terminam em 11.
 2. **Classe como texto livre** definida no cadastro — flexível, mas permite valores inconsistentes.
-3. **Lista fechada de classes**, definida pelo administrador no cadastro, como nas corretoras.
+3. **Lista fechada de classes**, definida pelo colaborador no cadastro, como nas corretoras.
 
 ## Decisão
 
@@ -33,7 +33,7 @@ Alternativa 3.
 
 Regras:
 
-- Todo ativo pertence a **exatamente uma classe**, definida pelo administrador no cadastro (RF39), e a classe **não muda** depois.
+- Todo ativo pertence a **exatamente uma classe**, definida pelo colaborador no cadastro (RF39), e a classe **não muda** depois.
 - A classe **nunca** é deduzida do ticker.
 - **Units** são tratadas como ação, como fazem as corretoras: representam ações da mesma empresa.
 - Ações são classificadas por **setor**; FIIs por **segmento**. Busca (RF07) e distribuição da carteira (RF18) mostram as duas classes separadas.
@@ -44,7 +44,7 @@ Regras:
 - (+) Interface familiar para quem já usa corretora: a carteira mostra os blocos "Ações" e "FIIs".
 - (+) Fecha os pontos 2 e 3 de DA22 e evita erros de classificação pelo ticker.
 - (+) ETFs e BDRs podem entrar depois como novas classes, sem mudar a estrutura.
-- (−) O administrador precisa informar a classe e o setor ou segmento de cada ativo no cadastro.
+- (−) O colaborador precisa informar a classe e o setor ou segmento de cada ativo no cadastro.
 - (−) Enquanto o IFIX não entra, a comparação de FIIs com o Ibovespa é menos representativa.
 
 ## Pontos em aberto

@@ -1,4 +1,6 @@
+import type { AuthErrorCode, FieldErrorCode } from '@simulador/shared';
 import { describe, expect, it } from 'vitest';
+import type { ClientAuthError } from '../../../shared/auth-ipc';
 import en from './locales/en.json';
 import ptBR from './locales/pt-BR.json';
 
@@ -33,5 +35,36 @@ describe('arquivos de idioma (CA13)', () => {
       typeof v === 'string' ? v.trim() === '' : Object.values(v as object).some(empty);
     expect(empty(ptBR)).toBe(false);
     expect(empty(en)).toBe(false);
+  });
+
+  it('traduzem todos os códigos de erro de autenticação e de campo', () => {
+    const authErrors: Array<AuthErrorCode | ClientAuthError> = [
+      'validation_error',
+      'email_in_use',
+      'invalid_credentials',
+      'invalid_refresh_token',
+      'unauthorized',
+      'rate_limited',
+      'wrong_account_type',
+      'terms_required',
+      'google_login_unavailable',
+      'google_token_invalid',
+      'google_email_not_verified',
+      'google_cancelled',
+      'server_unavailable',
+      'invalid_url',
+      'unexpected',
+    ];
+    const fieldErrors: FieldErrorCode[] = [
+      'required',
+      'too_short',
+      'too_long',
+      'invalid_email',
+      'terms_not_accepted',
+    ];
+    for (const locale of [ptBR, en]) {
+      for (const code of authErrors) expect(locale.authErrors[code]).toBeTruthy();
+      for (const code of fieldErrors) expect(locale.fieldErrors[code]).toBeTruthy();
+    }
   });
 });

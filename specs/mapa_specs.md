@@ -15,6 +15,8 @@
 | 1.5 | Referências desatualizadas corrigidas: OPEN-13 sem o aviso do Tesouro Direto no escopo atual; artefatos lidos incluem DA22; DA07 alterada também por DA22 |
 | 1.6 | Classes de ativo Ação e FII ([DA23](../adr/DA23-classes-de-ativo-acoes-e-fiis.md)): OPEN-46 e OPEN-47 resolvidas; SPEC-006, SPEC-020 e SPEC-021 ajustadas; nova RB22 |
 | 1.7 | SPEC-001 detalhada ([SPEC-001.md](SPEC-001.md)); OPEN-39 resolvida pela convenção de `down.sql` |
+| 1.8 | SPEC-002 detalhada ([SPEC-002.md](SPEC-002.md)); OPEN-03 resolvida: promoção a administrador por comando no servidor |
+| 1.9 | Perfil "administrador" renomeado para **colaborador**, com conta criada só pela equipe e Área do colaborador; login com Google para usuários ([DA24](../adr/DA24-login-com-google.md)) |
 
 ---
 
@@ -220,7 +222,7 @@ Nenhuma delas foi resolvida neste mapa. Cada uma aponta para uma decisão em abe
 | ID | Inconsistência / lacuna | Documentos | OPEN |
 |---|---|---|---|
 | INC-01 | O diagrama de casos de uso tem o ator **"Gateway de pagamento"**, mas os requisitos dizem que o pagamento é **simulado** e que pagamento real está fora do escopo | Casos de uso × Requisitos §1.1 | OPEN-25 |
-| INC-02 | O diagrama não tem os atores **Administrador** e **Sistema**, nem casos de uso de aporte/retirada, LGPD, administração, offline, notificações, fontes de notícias e carteira histórica | Casos de uso × Requisitos × ADRs | OPEN-43 |
+| INC-02 | O diagrama não tem os atores **Colaborador** (antes chamado de administrador) e **Sistema**, nem casos de uso de aporte/retirada, LGPD, administração, offline, notificações, fontes de notícias e carteira histórica | Casos de uso × Requisitos × ADRs | OPEN-43 |
 | INC-03 | **RB07** ("cotação da data do lançamento") não foi reescrita após DA16/DA17, que definem preço diferente para carteira ao vivo e histórica | Requisitos × DA16, DA17 | OPEN-09 |
 | INC-04 | **RF37** (sincronizar dados pendentes) pressupõe escrita offline; **RNF14** e **DA08** definem offline somente leitura | Requisitos × DA08 | OPEN-10 |
 | INC-05 | O **modelo conceitual** não tem entidades citadas pelas regras e pela arquitetura (calendário, lançamento de caixa, estorno, plano, assinatura, fonte de notícia, execução de tarefa, auditoria, tipo de carteira etc.) | Modelo × Requisitos §5 × Arquitetura §9 | OPEN-44 |
@@ -247,7 +249,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 |---|---|---|---|
 | OPEN-01 | Fonte e responsável pela manutenção do calendário de pregão (hoje "Sugerida") | Decisões técnicas §3 | 005 |
 | OPEN-02 | Hospedagem (servidor, processador, banco com backup diário, cache) e serviço de e-mail | PE13 | 001, 004 |
-| OPEN-03 | Como uma conta de administrador é criada ou promovida | Lacuna | 002, 006, 011 |
+| OPEN-03 | ✅ **Resolvida na [SPEC-002](SPEC-002.md):** o perfil passa a se chamar **colaborador**; colaborador nunca se cadastra pelo app, a equipe cria a conta com `npm run colaborador:criar` (senha forte gerada) e ele entra pela Área do colaborador | Lacuna | 002, 006, 011 |
 | OPEN-04 | Formato, conteúdo e forma de entrega da exportação de dados pessoais | RF06 | 034 |
 | OPEN-05 | Aprovação de DA18 (histórico pelos arquivos da B3, hoje **Proposta**) e tamanho da janela histórica carregada | DA18, PE04 | 008, 016 |
 | OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo) | PE05, DA22 | 008, 014, 016, 019 |
@@ -343,20 +345,22 @@ Visão geral por fase:
 
 #### SPEC-002 — Cadastro, autenticação e sessão
 
+📄 Detalhada em [SPEC-002.md](SPEC-002.md) — em implementação.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O visitante cria conta com e-mail e senha, registrando o consentimento; autentica-se e mantém sessão com renovação automática; o servidor passa a identificar o usuário e o seu perfil de acesso em toda requisição |
 | Valor | **Usuário:** acesso pessoal e seguro. **Sistema:** identidade e perfil, pré-requisitos de RB03 e DA12 |
-| RF | RF01, RF02 |
+| RF | RF01, RF02, RF41 (Google), RF42 (Área do colaborador) |
 | RB | RB01, RB03 (base) |
 | RNF | RNF07, RNF08, RNF09, RNF10, RNF11 (consentimento) |
 | Caso de uso / fluxo | UC: Cadastrar conta (inclui Gerenciar perfil e consentimento); UC: Autenticar-se |
 | Entidades | USUARIO; CONSENTIMENTO†, TOKEN_RENOVACAO†, PERFIL_ACESSO† |
 | Drivers | FAS07, QA05, QA06, RES05 |
-| ADRs | DA05, DA12, DA13 |
+| ADRs | DA05, DA12, DA13, DA24 |
 | Depende de | SPEC-001 |
 | Posição | Tudo que é pessoal (carteiras, preferências, assinatura) ou administrativo (calendário, catálogo) exige identidade e perfil |
-| Em aberto | OPEN-03 |
+| Em aberto | — (OPEN-03 resolvida) |
 | Prioridade derivada | Must |
 
 #### SPEC-003 — Perfil do usuário e consentimento
@@ -421,7 +425,7 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O sistema responde se uma data é dia de pregão da B3 e conta pregões entre duas datas; o administrador carrega e revisa o calendário anualmente |
+| Objetivo | O sistema responde se uma data é dia de pregão da B3 e conta pregões entre duas datas; o colaborador carrega e revisa o calendário anualmente |
 | Valor | **Sistema:** base única para ingestão e lançamentos (RB11); na fase de renda fixa, também para a base 252 |
 | RF | Nenhum diretamente (suporta RF09, RF12, RF13) |
 | RB | RB11 |
@@ -430,7 +434,7 @@ Visão geral por fase:
 | Entidades | CALENDARIO_PREGAO† |
 | Drivers | PRE05, QA01 |
 | ADRs | DA07 (tarefa anual com revisão manual), DA10 |
-| Depende de | SPEC-002 (perfil administrador) |
+| Depende de | SPEC-002 (perfil colaborador) |
 | Posição | Usada por 007, 008, 009, pelas Specs de lançamento e pelos cenários (031) |
 | Em aberto | OPEN-01 |
 | Prioridade derivada | Técnica de regra (habilita os Must) |
@@ -439,7 +443,7 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O administrador cadastra, edita e ativa/desativa ativos informando ticker, nome, **classe** (Ação ou FII, imutável) e **setor** (ações) ou **segmento** (FIIs); o usuário busca ativos por ticker, nome, classe, setor ou segmento |
+| Objetivo | O colaborador cadastra, edita e ativa/desativa ativos informando ticker, nome, **classe** (Ação ou FII, imutável) e **setor** (ações) ou **segmento** (FIIs); o usuário busca ativos por ticker, nome, classe, setor ou segmento |
 | Valor | **Usuário:** encontra ativos para estudar e simular. **Sistema:** conjunto curado que define o que é coletado (DA16) |
 | RF | RF07, RF39 |
 | RB | RB22 |
@@ -529,8 +533,8 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O administrador vê as execuções (horário, fonte, ativos afetados, registros processados, erros) e reexecuta uma tarefa |
-| Valor | **Administrador (P03):** trata falhas sem acessar o banco |
+| Objetivo | O colaborador vê as execuções (horário, fonte, ativos afetados, registros processados, erros) e reexecuta uma tarefa |
+| Valor | **Colaborador (P03):** trata falhas sem acessar o banco |
 | RF | RF40 |
 | RB | — |
 | RNF | RNF04, RNF18 |
@@ -785,7 +789,7 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Cadastrar a fonte pai (fixa) e as fontes curadas (pelo administrador, com categoria e confiabilidade) e coletar notícias periodicamente, sem duplicar, com registro de execução |
+| Objetivo | Cadastrar a fonte pai (fixa) e as fontes curadas (pelo colaborador, com categoria e confiabilidade) e coletar notícias periodicamente, sem duplicar, com registro de execução |
 | Valor | **Sistema:** base mínima e confiável de notícias (DA19) |
 | RF | RF26 |
 | RB | — |
@@ -1062,7 +1066,7 @@ Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora.
 | RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
 
-Os 36 RFs do escopo atual estão cobertos. RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
+Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
 
 ### 3.2 Caminho mínimo (requisitos Must)
 

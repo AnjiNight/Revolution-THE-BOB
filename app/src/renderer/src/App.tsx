@@ -1,35 +1,39 @@
-import { useCallback, useEffect, useState } from 'react';
+import type { PublicUser } from '@simulador/shared';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ServerStatus } from '../../shared/server-status';
+import type { ClientAuthError } from '../../shared/auth-ipc';
+import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
+import { Home } from './components/Home';
+import { LoginForm } from './components/LoginForm';
+import { RegisterForm } from './components/RegisterForm';
+import { ServerStatusPanel } from './components/ServerStatusPanel';
 
-type ViewState = { kind: 'checking' } | ServerStatus;
+type View =
+  | { kind: 'loading' }
+  | { kind: 'login'; notice?: ClientAuthError }
+  | { kind: 'register' }
+  | { kind: 'collaborator-login' }
+  | { kind: 'home'; user: PublicUser };
 
-const MESSAGE_KEY: Record<ViewState['kind'], string> = {
-  checking: 'server.checking',
-  connected: 'server.connected',
-  degraded: 'server.degraded',
-  unavailable: 'server.unavailable',
-  'invalid-url': 'server.invalidUrl',
-};
-
+/** Fluxo de telas da SPEC-002 (§5.3). */
 export function App() {
   const { t } = useTranslation();
-  const [state, setState] = useState<ViewState>({ kind: 'checking' });
-
-  const load = useCallback(() => {
-    window.api
-      .checkServerHealth()
-      .then(setState)
-      .catch(() => setState({ kind: 'unavailable' }));
-  }, []);
+  const [view, setView] = useState<View>({ kind: 'loading' });
 
   useEffect(() => {
-    load();
-  }, [load]);
+    window.api.auth
+      .getSession()
+      .then((result) => {
+        if (result.ok) setView({ kind: 'home', user: result.user });
+        else if (result.error === 'unauthorized') setView({ kind: 'login' });
+        else setView({ kind: 'login', notice: result.error });
+      })
+      .catch(() => setView({ kind: 'login', notice: 'unexpected' }));
+  }, []);
 
-  const retry = () => {
-    setState({ kind: 'checking' });
-    load();
+  const signedIn = (user: PublicUser) => setView({ kind: 'home', user });
+  const logout = () => {
+    void window.api.auth.logout().finally(() => setView({ kind: 'login' }));
   };
 
   return (
@@ -39,20 +43,24 @@ export function App() {
         <p className="subtitle">{t('app.subtitle')}</p>
       </header>
 
-      <section className={`card status status-${state.kind}`} aria-live="polite">
-        <h2>{t('server.heading')}</h2>
-        <p className="status-message">
-          <span className="status-dot" aria-hidden="true" />
-          {t(MESSAGE_KEY[state.kind])}
-        </p>
-        {'version' in state && (
-          <p className="status-detail">{t('server.version', { version: state.version })}</p>
-        )}
-        <button type="button" onClick={retry} disabled={state.kind === 'checking'}>
-          {t('server.retry')}
-        </button>
-      </section>
+      {view.kind === 'loading' && <p aria-live="polite">{t('loading')}</p>}
+      {view.kind === 'login' && (
+        <LoginForm
+          notice={view.notice}
+          onSuccess={signedIn}
+          onGoToRegister={() => setView({ kind: 'register' })}
+          onGoToCollaborator={() => setView({ kind: 'collaborator-login' })}
+        />
+      )}
+      {view.kind === 'register' && (
+        <RegisterForm onSuccess={signedIn} onGoToLogin={() => setView({ kind: 'login' })} />
+      )}
+      {view.kind === 'collaborator-login' && (
+        <CollaboratorLoginForm onSuccess={signedIn} onBack={() => setView({ kind: 'login' })} />
+      )}
+      {view.kind === 'home' && <Home user={view.user} onLogout={logout} />}
 
+      <ServerStatusPanel />
       <footer className="disclaimer">{t('disclaimer')}</footer>
     </main>
   );

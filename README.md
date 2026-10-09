@@ -75,6 +75,25 @@ npm run dev:worker              # processador de tarefas (outro terminal)
 npm run dev:app                 # aplicação desktop (outro terminal)
 ```
 
+Contas de **colaborador** (equipe) não são criadas pelo app ([SPEC-002](specs/SPEC-002.md)). Para criar uma, gerando uma senha forte que aparece uma única vez:
+
+```bash
+npm run colaborador:criar --workspace api -- --nome "Nome Sobrenome" --email pessoa@exemplo.com
+```
+
+O colaborador entra pela **Área do colaborador**, na tela de login.
+
+### Login com Google (opcional)
+
+O botão "Entrar com Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)):
+
+1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e configure a **tela de consentimento OAuth** (tipo externo; adicione os e-mails de teste).
+2. Em **Credenciais → Criar credenciais → ID do cliente OAuth**, escolha **Aplicativo para computador**.
+3. No `api/.env`, preencha `GOOGLE_CLIENT_ID`.
+4. Ao abrir o app, defina `SIMULADOR_GOOGLE_CLIENT_ID` e `SIMULADOR_GOOGLE_CLIENT_SECRET` (ou, no build, `MAIN_VITE_GOOGLE_CLIENT_ID` e `MAIN_VITE_GOOGLE_CLIENT_SECRET`).
+
+Testes contra o PostgreSQL real rodam quando `TEST_DATABASE_URL` aponta para um banco com as migrações aplicadas (atenção: apagam os dados de identidade desse banco). No GitHub Actions eles rodam sempre.
+
 Verificações (as mesmas do GitHub Actions):
 
 ```bash

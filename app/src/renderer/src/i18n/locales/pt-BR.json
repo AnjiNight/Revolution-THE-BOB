@@ -13,5 +13,69 @@
     "version": "Versão do servidor: {{version}}",
     "retry": "Tentar novamente"
   },
-  "disclaimer": "Projeto acadêmico de caráter educacional. Não constitui recomendação de investimento."
+  "disclaimer": "Projeto acadêmico de caráter educacional. Não constitui recomendação de investimento.",
+  "loading": "Carregando…",
+  "auth": {
+    "loginTitle": "Entrar",
+    "registerTitle": "Criar conta",
+    "name": "Nome",
+    "email": "E-mail",
+    "password": "Senha",
+    "passwordHint": "Use pelo menos 8 caracteres.",
+    "acceptTerms": "Li e aceito os termos de uso e a política de privacidade.",
+    "termsTitle": "Resumo dos termos (versão {{version}})",
+    "termsSummary": "Este é um projeto acadêmico de simulação: nenhuma operação usa dinheiro real e nada aqui é recomendação de investimento. Guardamos seu nome, seu e-mail e sua senha protegida por criptografia, apenas para identificar sua conta. Você poderá pedir a exportação ou a exclusão dos seus dados.",
+    "submitLogin": "Entrar",
+    "submitRegister": "Criar conta",
+    "submitting": "Aguarde…",
+    "noAccount": "Ainda não tem conta?",
+    "goToRegister": "Criar conta",
+    "haveAccount": "Já tem conta?",
+    "goToLogin": "Entrar",
+    "or": "ou",
+    "google": "Entrar com Google",
+    "googleWaiting": "Conclua o login na janela do navegador…",
+    "googleTermsTitle": "Primeiro acesso com Google",
+    "googleTermsIntro": "Para criar sua conta, leia e aceite os termos.",
+    "continue": "Aceitar e continuar",
+    "cancel": "Cancelar",
+    "goToCollaborator": "Área do colaborador",
+    "collaboratorTitle": "Área do colaborador",
+    "collaboratorNote": "O acesso de colaborador é criado pela equipe. Não é possível se cadastrar por aqui.",
+    "backToLogin": "Voltar ao login de usuário"
+  },
+  "home": {
+    "greeting": "Olá, {{name}}!",
+    "role": {
+      "user": "Perfil: usuário",
+      "collaborator": "Perfil: colaborador"
+    },
+    "next": "Sua conta está pronta. As carteiras de simulação chegam nas próximas versões.",
+    "logout": "Sair",
+    "collaboratorNext": "As ferramentas da equipe (cadastro de ativos e acompanhamento da coleta de dados) chegam nas próximas versões."
+  },
+  "fieldErrors": {
+    "required": "Campo obrigatório.",
+    "too_short": "Muito curto.",
+    "too_long": "Muito longo.",
+    "invalid_email": "Informe um e-mail válido.",
+    "terms_not_accepted": "É preciso aceitar os termos para continuar."
+  },
+  "authErrors": {
+    "validation_error": "Confira os campos destacados.",
+    "email_in_use": "Este e-mail já está em uso.",
+    "invalid_credentials": "E-mail ou senha incorretos.",
+    "invalid_refresh_token": "Sua sessão expirou. Entre novamente.",
+    "unauthorized": "Sua sessão expirou. Entre novamente.",
+    "rate_limited": "Muitas tentativas. Aguarde um minuto e tente de novo.",
+    "server_unavailable": "Não foi possível falar com o servidor. Tente novamente.",
+    "invalid_url": "Endereço do servidor inválido.",
+    "unexpected": "Algo deu errado. Tente novamente.",
+    "wrong_account_type": "Esta conta não pode entrar por aqui. Usuários entram pelo login comum; colaboradores, pela Área do colaborador.",
+    "terms_required": "Aceite os termos para criar sua conta.",
+    "google_login_unavailable": "O login com Google não está disponível.",
+    "google_token_invalid": "Não foi possível confirmar o login com Google. Tente novamente.",
+    "google_email_not_verified": "O Google não confirmou este e-mail.",
+    "google_cancelled": "Login com Google cancelado."
+  }
 }

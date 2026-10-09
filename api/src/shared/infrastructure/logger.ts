@@ -9,9 +9,13 @@ export const REDACTED_PATHS = [
   'password',
   'token',
   'refreshToken',
+  'accessToken',
+  'passwordHash',
   '*.password',
   '*.token',
   '*.refreshToken',
+  '*.accessToken',
+  '*.passwordHash',
   'databaseUrl',
   '*.databaseUrl',
 ];

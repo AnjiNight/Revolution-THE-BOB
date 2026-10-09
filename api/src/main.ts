@@ -3,6 +3,12 @@ import { pino } from 'pino';
 import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { PrismaDatabaseProbe } from './modules/health/infrastructure/prisma-database-probe.js';
+import { AuthService } from './modules/identity/application/auth-service.js';
+import { Argon2PasswordHasher } from './modules/identity/infrastructure/argon2-password-hasher.js';
+import { JoseGoogleIdentityVerifier } from './modules/identity/infrastructure/jose-google-identity-verifier.js';
+import { JwtAccessTokenService } from './modules/identity/infrastructure/jwt-access-token-service.js';
+import { PrismaRefreshTokenRepository } from './modules/identity/infrastructure/prisma-refresh-token-repository.js';
+import { PrismaUserRepository } from './modules/identity/infrastructure/prisma-user-repository.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 import { readVersion } from './version.js';
@@ -28,7 +34,18 @@ async function main(): Promise<void> {
   let shutdown: () => Promise<void>;
 
   if (mode === 'server') {
-    const app = await buildApp({ config, probe, version });
+    const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
+    const auth = new AuthService({
+      users: new PrismaUserRepository(prisma),
+      refreshTokens: new PrismaRefreshTokenRepository(prisma),
+      hasher: new Argon2PasswordHasher(),
+      accessTokens,
+      refreshTokenTtlDays: config.refreshTokenTtlDays,
+      ...(config.googleClientId
+        ? { google: new JoseGoogleIdentityVerifier(config.googleClientId) }
+        : {}),
+    });
+    const app = await buildApp({ config, probe, version, auth, accessTokens });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
       await app.close();

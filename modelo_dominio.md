@@ -17,7 +17,29 @@ Pessoa cadastrada no aplicativo.
 | Atributo | Tipo | Descrição |
 |---|---|---|
 | nome | string | Nome do usuário |
-| email | string | E-mail de login |
+| email | string | E-mail de login, único e sempre em minúsculas (RB01) |
+| senha_hash | string | Hash argon2id da senha; a senha nunca é guardada (RNF07); vazio em conta só com Google — SPEC-002 |
+| perfil | enum | `usuario` ou `colaborador` (DA12); colaborador só é criado pela equipe; "assinante" vem da assinatura — SPEC-002 |
+| google_sub | string | Identificador da conta Google ligada, se houver ([DA24](adr/DA24-login-com-google.md)); conta só com Google não tem `senha_hash` |
+
+### CONSENTIMENTO
+Aceite dos termos de uso e da política de privacidade (RNF11) — [SPEC-002](specs/SPEC-002.md).
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| tipo | enum | Hoje só `termos_uso_privacidade` |
+| versao | string | Versão dos termos aceita |
+| aceito_em | datetime | Momento do aceite |
+
+### TOKEN_RENOVACAO
+Sessão de login do usuário (RF02, DA05) — [SPEC-002](specs/SPEC-002.md). Só o hash do token é guardado.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| token_hash | string | Hash SHA-256 do token de renovação (único) |
+| familia | uuid | Agrupa as trocas de um mesmo login; reuso de token revoga a família inteira |
+| expira_em | datetime | Validade (30 dias) |
+| revogado_em | datetime | Preenchido na troca, no logout ou ao detectar reuso |
 
 ### CARTEIRA
 Conjunto de posições de um usuário. Um usuário pode ter várias carteiras.
@@ -97,6 +119,8 @@ Série histórica de valores do indexador.
 | Origem | Cardinalidade | Destino | Nome |
 |---|---|---|---|
 | USUARIO | 1 : N | CARTEIRA | possui |
+| USUARIO | 1 : N | CONSENTIMENTO | aceita |
+| USUARIO | 1 : N | TOKEN_RENOVACAO | mantém sessão |
 | CARTEIRA | 1 : N | TRANSACAO | registra |
 | CARTEIRA | 1 : N | SIMULACAO | origina |
 | ATIVO | 1 : N | TRANSACAO | movimenta |

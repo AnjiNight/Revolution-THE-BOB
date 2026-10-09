@@ -1,36 +1,13 @@
-import { Writable } from 'node:stream';
 import { HEALTH_PATH, isHealthResponse } from '@simulador/shared';
-import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { buildApp } from './app.js';
-import type { DatabaseProbe } from './modules/health/application/get-health.js';
-
-class LogCapture extends Writable {
-  lines: string[] = [];
-  override _write(chunk: Buffer, _encoding: string, callback: () => void): void {
-    this.lines.push(...chunk.toString().split('\n').filter(Boolean));
-    callback();
-  }
-  get text(): string {
-    return this.lines.join('\n');
-  }
-}
-
-const probe = (available: boolean): DatabaseProbe => ({
-  isAvailable: () => Promise.resolve(available),
-});
+import { afterEach, describe, expect, it } from 'vitest';
+import { buildTestApp, type LogCapture } from './testing/test-app.js';
 
 let app: FastifyInstance;
 let logs: LogCapture;
 
 async function start(available = true): Promise<FastifyInstance> {
-  logs = new LogCapture();
-  app = await buildApp({
-    config: { env: 'test', logLevel: 'info' },
-    probe: probe(available),
-    version: '9.9.9',
-    logStream: logs,
-  });
+  ({ app, logs } = await buildTestApp({ databaseAvailable: available }));
   return app;
 }
 
