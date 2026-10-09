@@ -13,11 +13,20 @@ export function pickLanguage(systemLanguage: string | undefined): keyof typeof r
   return systemLanguage?.toLowerCase().startsWith('en') ? 'en' : 'pt-BR';
 }
 
-void i18n.use(initReactI18next).init({
-  resources,
-  lng: pickLanguage(globalThis.navigator?.language),
-  fallbackLng: 'pt-BR',
-  interpolation: { escapeValue: false },
-});
+void i18n
+  .use(initReactI18next)
+  .init({
+    resources,
+    lng: pickLanguage(globalThis.navigator?.language),
+    fallbackLng: 'pt-BR',
+    interpolation: { escapeValue: false },
+  })
+  .then(() => {
+    // Mantém o <html lang> igual ao idioma da interface (leitores de tela e hifenização).
+    // Quando a troca de idioma existir (SPEC-035), atualizar também na troca.
+    if (typeof document !== 'undefined' && i18n.language) {
+      document.documentElement.lang = i18n.language;
+    }
+  });
 
 export default i18n;

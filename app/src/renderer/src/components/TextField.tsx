@@ -34,8 +34,11 @@ export function TextField({
       <input
         id={id}
         type={type}
+        // Nome estável (o mesmo do preenchimento automático) para gerenciadores de senha.
+        name={autoComplete}
         value={value}
         autoComplete={autoComplete}
+        spellCheck={type === 'email' ? false : undefined}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
