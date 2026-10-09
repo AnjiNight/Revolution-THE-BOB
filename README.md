@@ -85,12 +85,15 @@ O colaborador entra pela **Área do colaborador**, na tela de login.
 
 ### Login com Google (opcional)
 
-O botão "Entrar com Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)):
+O botão "Continuar com o Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)). O login abre o navegador do sistema: se a pessoa já estiver conectada ao Google lá, basta escolher a conta.
 
-1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e configure a **tela de consentimento OAuth** (tipo externo; adicione os e-mails de teste).
-2. Em **Credenciais → Criar credenciais → ID do cliente OAuth**, escolha **Aplicativo para computador**.
-3. No `api/.env`, preencha `GOOGLE_CLIENT_ID`.
-4. Ao abrir o app, defina `SIMULADOR_GOOGLE_CLIENT_ID` e `SIMULADOR_GOOGLE_CLIENT_SECRET` (ou, no build, `MAIN_VITE_GOOGLE_CLIENT_ID` e `MAIN_VITE_GOOGLE_CLIENT_SECRET`).
+1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e configure a **tela de consentimento OAuth** (tipo externo; enquanto estiver em teste, adicione os e-mails de quem vai testar).
+2. Em **Credenciais → Criar credenciais → ID do cliente OAuth**, escolha **Aplicativo para computador**. Não é preciso cadastrar endereço de retorno: o app usa um endereço local temporário (`127.0.0.1`).
+3. No `api/.env`, preencha `GOOGLE_CLIENT_ID` (o servidor confere o login com ele).
+4. Copie `app/.env.example` para `app/.env` e preencha `MAIN_VITE_GOOGLE_CLIENT_ID` e `MAIN_VITE_GOOGLE_CLIENT_SECRET`. O `app/.env` não vai para o Git.
+5. Reinicie o servidor e o app.
+
+Para o login terminar, o servidor e o banco precisam estar rodando (seção anterior).
 
 Testes contra o PostgreSQL real rodam quando `TEST_DATABASE_URL` aponta para um banco com as migrações aplicadas (atenção: apagam os dados de identidade desse banco). No GitHub Actions eles rodam sempre.
 

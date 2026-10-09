@@ -2,13 +2,14 @@ import { TERMS_VERSION, type PublicUser } from '@simulador/shared';
 import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { GoogleLogo } from './GoogleLogo';
 
 interface GoogleSignInButtonProps {
   onSuccess: (user: PublicUser) => void;
   onError: (error: ClientAuthError | undefined) => void;
 }
 
-/** "Entrar com Google" (DA24), com o aceite dos termos no primeiro acesso (RNF11). */
+/** "Continuar com o Google" (DA24), com o aceite dos termos no primeiro acesso (RNF11). */
 export function GoogleSignInButton({ onSuccess, onError }: GoogleSignInButtonProps) {
   const { t } = useTranslation();
   const termsId = useId();
@@ -90,11 +91,12 @@ export function GoogleSignInButton({ onSuccess, onError }: GoogleSignInButtonPro
       </p>
       <button
         type="button"
-        className="secondary google"
+        className="google-button"
         onClick={() => void signIn()}
         disabled={waiting}
       >
-        {waiting ? t('auth.googleWaiting') : t('auth.google')}
+        <GoogleLogo />
+        <span>{waiting ? t('auth.googleWaiting') : t('auth.google')}</span>
       </button>
     </>
   );

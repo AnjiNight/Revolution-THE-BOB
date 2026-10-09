@@ -414,9 +414,44 @@ input[aria-invalid='true']:focus-visible {
   border-top: 1px solid var(--border);
 }
 
-button.google {
-  margin-top: 0;
+/*
+ * Botão "Continuar com o Google": cores das diretrizes de marca do Google (tema claro: fundo
+ * branco e borda #747775; tema escuro: fundo #131314 e borda #8E918F). Exceção documentada à
+ * regra de formas: o botão do Google usa pílula, como no padrão da marca.
+ */
+button.google-button {
+  --google-bg: #ffffff;
+  --google-border: #747775;
+  --google-text: #1f1f1f;
+
+  gap: 0.75rem;
   align-self: stretch;
+  min-height: 2.75rem;
+  margin-top: 0;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--google-border);
+  border-radius: 999px;
+  background: var(--google-bg);
+  color: var(--google-text);
+  font-weight: 600;
+}
+
+button.google-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--google-text) 8%, var(--google-bg));
+}
+
+@media (prefers-color-scheme: dark) {
+  button.google-button {
+    --google-bg: #131314;
+    --google-border: #8e918f;
+    --google-text: #e3e3e3;
+  }
+}
+
+.google-logo {
+  flex-shrink: 0;
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 .google-terms {
