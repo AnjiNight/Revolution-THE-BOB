@@ -1,0 +1,8 @@
+# Mantém LF em todos os sistemas (igual ao .editorconfig e ao Prettier).
+# Sem isto, o Git do Windows converte para CRLF e o format:check falha.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary

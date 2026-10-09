@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const MIGRATIONS_DIR = new URL('../prisma/migrations/', import.meta.url);
 
@@ -17,6 +18,7 @@ export function migrationsWithoutDown(dir: URL | string = MIGRATIONS_DIR): strin
   );
 }
 
+// fileURLToPath (e não URL.pathname): no Windows, pathname vira "/C:/..." e quebra o caminho.
 export function dirPath(dir: URL | string): string {
-  return typeof dir === 'string' ? dir : decodeURIComponent(dir.pathname);
+  return typeof dir === 'string' ? dir : fileURLToPath(dir);
 }
