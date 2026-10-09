@@ -79,6 +79,7 @@ Todos com status **Sugerida**.
 | Gráfico de preço com notícias | TradingView Lightweight Charts | Gráfico Notícias × Preço (Visão §19) | Permite marcadores no eixo do tempo |
 | Gráficos de carteira | Recharts | RF17, RF18 | — |
 | Internacionalização | `i18next` | RNF20, RF38 | — |
+| Fonte da interface | Geist (`@fontsource-variable/geist`, licença OFL) | Legibilidade e identidade visual das telas (redesign do login, SPEC-002) | ✅ Definida. Empacotada no app: a CSP (`default-src 'self'`) bloqueia fontes externas e o app precisa funcionar sem internet |
 | Testes | Vitest | RNF16, QA10 | — |
 | Empacotamento | `electron-builder` | RNF05 | Um instalador por sistema operacional |
 | Logs estruturados | `pino` (já integrado ao Fastify) | DA14 | Nunca registrar senhas e tokens |

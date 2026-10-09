@@ -36,31 +36,40 @@ export function App() {
     void window.api.auth.logout().finally(() => setView({ kind: 'login' }));
   };
 
+  // Só apresentação: as telas de entrada usam o layout dividido (painel da marca + formulário).
+  const authLayout = view.kind !== 'home';
+
   return (
-    <main className="page">
+    <main className={authLayout ? 'page page-auth' : 'page'}>
       <header className="page-header">
         <h1>{t('app.title')}</h1>
         <p className="subtitle">{t('app.subtitle')}</p>
       </header>
 
-      {view.kind === 'loading' && <p aria-live="polite">{t('loading')}</p>}
-      {view.kind === 'login' && (
-        <LoginForm
-          notice={view.notice}
-          onSuccess={signedIn}
-          onGoToRegister={() => setView({ kind: 'register' })}
-          onGoToCollaborator={() => setView({ kind: 'collaborator-login' })}
-        />
-      )}
-      {view.kind === 'register' && (
-        <RegisterForm onSuccess={signedIn} onGoToLogin={() => setView({ kind: 'login' })} />
-      )}
-      {view.kind === 'collaborator-login' && (
-        <CollaboratorLoginForm onSuccess={signedIn} onBack={() => setView({ kind: 'login' })} />
-      )}
-      {view.kind === 'home' && <Home user={view.user} onLogout={logout} />}
+      <div className="page-content">
+        {view.kind === 'loading' && (
+          <p className="loading" aria-live="polite">
+            {t('loading')}
+          </p>
+        )}
+        {view.kind === 'login' && (
+          <LoginForm
+            notice={view.notice}
+            onSuccess={signedIn}
+            onGoToRegister={() => setView({ kind: 'register' })}
+            onGoToCollaborator={() => setView({ kind: 'collaborator-login' })}
+          />
+        )}
+        {view.kind === 'register' && (
+          <RegisterForm onSuccess={signedIn} onGoToLogin={() => setView({ kind: 'login' })} />
+        )}
+        {view.kind === 'collaborator-login' && (
+          <CollaboratorLoginForm onSuccess={signedIn} onBack={() => setView({ kind: 'login' })} />
+        )}
+        {view.kind === 'home' && <Home user={view.user} onLogout={logout} />}
 
-      <ServerStatusPanel />
+        <ServerStatusPanel />
+      </div>
       <footer className="disclaimer">{t('disclaimer')}</footer>
     </main>
   );
