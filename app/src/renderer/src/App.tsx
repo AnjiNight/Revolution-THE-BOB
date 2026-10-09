@@ -2,6 +2,7 @@ import type { PublicUser } from '@simulador/shared';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../shared/auth-ipc';
+import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
 import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
@@ -36,41 +37,48 @@ export function App() {
     void window.api.auth.logout().finally(() => setView({ kind: 'login' }));
   };
 
-  // Só apresentação: as telas de entrada usam o layout dividido (painel da marca + formulário).
-  const authLayout = view.kind !== 'home';
+  if (view.kind === 'home') {
+    return (
+      <main className="page">
+        <header className="page-header">
+          <h1>{t('app.title')}</h1>
+          <p className="subtitle">{t('app.subtitle')}</p>
+        </header>
 
+        <div className="page-content">
+          <Home user={view.user} onLogout={logout} />
+          <ServerStatusPanel />
+        </div>
+        <footer className="disclaimer">{t('disclaimer')}</footer>
+      </main>
+    );
+  }
+
+  // Telas de entrada: a página de apresentação envolve o formulário da tela atual.
   return (
-    <main className={authLayout ? 'page page-auth' : 'page'}>
-      <header className="page-header">
-        <h1>{t('app.title')}</h1>
-        <p className="subtitle">{t('app.subtitle')}</p>
-      </header>
-
-      <div className="page-content">
-        {view.kind === 'loading' && (
-          <p className="loading" aria-live="polite">
-            {t('loading')}
-          </p>
-        )}
-        {view.kind === 'login' && (
-          <LoginForm
-            notice={view.notice}
-            onSuccess={signedIn}
-            onGoToRegister={() => setView({ kind: 'register' })}
-            onGoToCollaborator={() => setView({ kind: 'collaborator-login' })}
-          />
-        )}
-        {view.kind === 'register' && (
-          <RegisterForm onSuccess={signedIn} onGoToLogin={() => setView({ kind: 'login' })} />
-        )}
-        {view.kind === 'collaborator-login' && (
-          <CollaboratorLoginForm onSuccess={signedIn} onBack={() => setView({ kind: 'login' })} />
-        )}
-        {view.kind === 'home' && <Home user={view.user} onLogout={logout} />}
-
-        <ServerStatusPanel />
-      </div>
-      <footer className="disclaimer">{t('disclaimer')}</footer>
-    </main>
+    <AuthLanding
+      onCreateAccount={() => setView({ kind: 'register' })}
+      onSignIn={() => setView({ kind: 'login' })}
+    >
+      {view.kind === 'loading' && (
+        <p className="loading" aria-live="polite">
+          {t('loading')}
+        </p>
+      )}
+      {view.kind === 'login' && (
+        <LoginForm
+          notice={view.notice}
+          onSuccess={signedIn}
+          onGoToRegister={() => setView({ kind: 'register' })}
+          onGoToCollaborator={() => setView({ kind: 'collaborator-login' })}
+        />
+      )}
+      {view.kind === 'register' && (
+        <RegisterForm onSuccess={signedIn} onGoToLogin={() => setView({ kind: 'login' })} />
+      )}
+      {view.kind === 'collaborator-login' && (
+        <CollaboratorLoginForm onSuccess={signedIn} onBack={() => setView({ kind: 'login' })} />
+      )}
+    </AuthLanding>
   );
 }

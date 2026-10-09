@@ -3,12 +3,15 @@
  * Só CSS de arquivo: a CSP do app (style-src 'self') bloqueia estilos inline.
  * Fonte Geist empacotada no app (funciona sem internet; a CSP não permite fontes externas).
  *
- * Regra de formas: controles (campos e botões) com raio de 10px; superfícies (cartões) com 16px.
+ * Regra de formas: controles de formulário (campos e botões) com raio de 10px; cartões do app
+ * com 16px. Na página de entrada (landing.css): chamadas e navegação em pílula e cartões com
+ * moldura dupla de 28px.
  * Uma única cor de destaque (--accent). Âmbar (--warn) só para estado e para a Área do colaborador.
  */
 @import '@fontsource-variable/geist';
 
 :root {
+  color-scheme: light dark;
   --bg: #f4f6f5;
   --surface: #fdfdfc;
   --surface-sunken: #eef1ef;
@@ -26,12 +29,13 @@
   --error: #b42318;
   --error-soft: #fbeceb;
 
-  /* Painel da marca (lado esquerdo das telas de entrada) */
+  /* Superfícies escuras da marca (cartão "ao vivo" e chamada final da página de entrada) */
   --brand-bg: #0d2a22;
   --brand-glow-1: #14513f;
   --brand-glow-2: #0b6e4f;
   --brand-text: #eef5f1;
   --brand-muted: #a9c2b8;
+  --brand-muted-strong: #d6e6df;
 
   --radius-control: 10px;
   --radius-surface: 16px;
@@ -151,136 +155,6 @@ h3 {
   color: var(--muted);
 }
 
-/* ---------- Telas de entrada: layout dividido ---------- */
-
-.page-auth {
-  display: grid;
-  grid-template-columns: minmax(340px, 0.85fr) 1fr;
-  grid-template-rows: 1fr auto;
-  gap: 0;
-  width: 100%;
-  max-width: none;
-  padding: 0;
-}
-
-/*
- * Fundo do painel da marca: um item da grade, sem elemento extra no HTML.
- * O brilho mais claro fica na borda direita, longe dos textos, para manter o contraste AA.
- */
-.page-auth::before {
-  content: '';
-  grid-column: 1;
-  grid-row: 1 / -1;
-  background:
-    radial-gradient(70% 55% at 100% 50%, var(--brand-glow-2) 0%, transparent 70%),
-    radial-gradient(90% 50% at 0% 0%, var(--brand-glow-1) 0%, transparent 60%), var(--brand-bg);
-}
-
-.page-auth .page-header,
-.page-auth .disclaimer {
-  position: relative;
-  grid-column: 1;
-  padding-inline: clamp(2rem, 4.5vw, 4rem);
-}
-
-.page-auth .page-header {
-  grid-row: 1;
-  align-self: start;
-  max-width: 34rem;
-  padding-top: clamp(2.5rem, 7vh, 5rem);
-}
-
-.page-auth .page-header h1 {
-  color: var(--brand-text);
-  font-size: clamp(2.25rem, 3.6vw, 3rem);
-  font-weight: 650;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  text-wrap: balance;
-}
-
-.page-auth .subtitle {
-  margin-top: 1rem;
-  max-width: 26rem;
-  text-wrap: pretty;
-  color: var(--brand-muted);
-  font-size: 1.0625rem;
-  line-height: 1.55;
-}
-
-.page-auth .disclaimer {
-  grid-row: 2;
-  margin: 0;
-  padding-block: 2rem;
-  max-width: 30rem;
-  color: var(--brand-muted);
-}
-
-.page-auth .page-content {
-  grid-column: 2;
-  grid-row: 1 / -1;
-  justify-content: safe center;
-  align-items: center;
-  gap: 1.5rem;
-  padding: clamp(1.5rem, 4vh, 3.5rem) clamp(1.5rem, 5vw, 4.5rem);
-}
-
-.page-auth .page-content > * {
-  flex-shrink: 0;
-  width: min(100%, 400px);
-}
-
-/* Janela larga: o painel da marca fica parado e só a coluna do formulário rola, se precisar. */
-@media (min-width: 880px) {
-  .page-auth {
-    height: 100dvh;
-  }
-
-  .page-auth .page-content {
-    overflow-y: auto;
-  }
-}
-
-/* Janela estreita (o app aceita a partir de 480px): uma coluna, marca no topo. */
-@media (max-width: 879px) {
-  .page-auth {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto;
-  }
-
-  .page-auth::before {
-    grid-row: 1;
-  }
-
-  .page-auth .page-header {
-    max-width: none;
-    padding-block: 2rem 1.75rem;
-    padding-inline: 1.5rem;
-  }
-
-  .page-auth .page-header h1 {
-    font-size: 1.75rem;
-  }
-
-  .page-auth .subtitle {
-    margin-top: 0.5rem;
-    font-size: 1rem;
-  }
-
-  .page-auth .page-content {
-    grid-column: 1;
-    grid-row: 2;
-    justify-content: flex-start;
-    padding: 2rem 1.5rem;
-  }
-
-  .page-auth .disclaimer {
-    grid-row: 3;
-    padding: 0 1.5rem 1.5rem;
-    color: var(--muted);
-  }
-}
-
 /* ---------- Botões ---------- */
 
 button {
@@ -375,7 +249,7 @@ button.link:focus-visible {
 }
 
 /* Nas telas de entrada o formulário fica direto na página, sem cartão. */
-.page-auth .auth-form {
+.access .auth-form {
   padding: 0;
   border: none;
   border-radius: 0;
@@ -383,7 +257,7 @@ button.link:focus-visible {
   gap: 1rem;
 }
 
-.page-auth .auth-form h2 {
+.access .auth-form h2 {
   margin-bottom: 0.35rem;
   font-size: 1.75rem;
   font-weight: 650;
@@ -695,7 +569,8 @@ button.google {
 /* ---------- Movimento: só para comunicar troca de tela e verificação em andamento ---------- */
 
 @media (prefers-reduced-motion: no-preference) {
-  .page-content > :first-child {
+  .page-content > :first-child,
+  .access-core > :first-child {
     animation: enter 0.36s var(--ease-out) both;
   }
 

@@ -77,5 +77,132 @@
     "google_token_invalid": "Não foi possível confirmar o login com Google. Tente novamente.",
     "google_email_not_verified": "O Google não confirmou este e-mail.",
     "google_cancelled": "Login com Google cancelado."
+  },
+  "landing": {
+    "skip": "Pular para o acesso",
+    "nav": {
+      "label": "Seções da página",
+      "how": "Como funciona",
+      "portfolios": "Carteiras",
+      "news": "Notícias",
+      "assets": "Ações e FIIs",
+      "signIn": "Entrar"
+    },
+    "hero": {
+      "eyebrow": "Simulador educacional da B3",
+      "title": "Invista de mentira. Aprenda de verdade.",
+      "lead": "Monte carteiras com ações e FIIs da B3, acompanhe cotações reais e entenda como as notícias mexem com os preços.",
+      "secondary": "Ver como funciona"
+    },
+    "stage": {
+      "title": "Sete ferramentas diferentes. Uma tela só.",
+      "lead": "Hoje, quem investe pula entre corretora, portais de notícias, gráficos e simuladores. Aqui, tudo conversa entre si.",
+      "listLabel": "O que o simulador reúne",
+      "tiles": {
+        "portfolio": "Carteira",
+        "virtual": "Carteira virtual",
+        "news": "Notícias",
+        "charts": "Gráficos",
+        "history": "Histórico",
+        "simulations": "Simulações",
+        "ai": "Inteligência artificial",
+        "learn": "Educação financeira"
+      }
+    },
+    "how": {
+      "title": "Da notícia à decisão, em quatro movimentos.",
+      "lead": "O caminho que um investidor experiente faz de cabeça, organizado para quem está começando.",
+      "build": {
+        "title": "Monte",
+        "text": "Crie uma carteira com dinheiro fictício e escolha ações e FIIs reais da B3."
+      },
+      "follow": {
+        "title": "Acompanhe",
+        "text": "Veja cotações reais, sempre com o horário de cada preço. Sem promessa de tempo real."
+      },
+      "relate": {
+        "title": "Relacione",
+        "text": "As notícias aparecem no gráfico do ativo, classificadas como positivas, neutras ou negativas."
+      },
+      "learn": {
+        "title": "Aprenda",
+        "text": "Compare o que você decidiu com o que aconteceu no mercado e descubra o que faria diferente."
+      }
+    },
+    "portfolios": {
+      "title": "Duas formas de testar uma ideia.",
+      "live": {
+        "title": "Carteira ao vivo",
+        "text": "Compre e venda agora, com a cotação mais recente disponível. A carteira evolui junto com o mercado."
+      },
+      "historic": {
+        "title": "Carteira histórica",
+        "text": "Escolha uma data no passado, monte a carteira e veja quanto ela valeria hoje.",
+        "quote": "Se eu tivesse investido, teria ganhado ou perdido?"
+      }
+    },
+    "news": {
+      "title": "Notícias com contexto, não com alarde.",
+      "lead": "Cada notícia é ligada aos ativos que cita e classificada pelo tom. No gráfico, você vê o que aconteceu com o preço depois.",
+      "note": "Mostramos possíveis relações, nunca certezas. Cenários são estimativas educacionais, não recomendação.",
+      "positive": {
+        "title": "Positiva",
+        "text": "Tom favorável ao ativo, como um lucro acima do esperado."
+      },
+      "neutral": {
+        "title": "Neutra ou incerta",
+        "text": "Fato relevante sem direção clara, ou com efeito ainda difícil de prever."
+      },
+      "negative": {
+        "title": "Negativa",
+        "text": "Tom desfavorável, como uma mudança de regra que pesa sobre o setor."
+      }
+    },
+    "assets": {
+      "eyebrow": "Para quem está começando",
+      "title": "Ações e FIIs, explicados sem complicação.",
+      "examples": "Exemplos",
+      "stock": {
+        "title": "Ação",
+        "text": "Um pedaço de uma empresa. Você ganha quando ela se valoriza e quando distribui dividendos e juros sobre capital próprio."
+      },
+      "reit": {
+        "title": "Fundo imobiliário (FII)",
+        "text": "Cotas de um fundo que investe em imóveis, como galpões e escritórios, e costuma pagar rendimentos todo mês."
+      },
+      "tip": {
+        "title": "Final 11 não quer dizer FII.",
+        "text": "ETFs e units também terminam em 11. Por isso, aqui cada ativo tem a classe definida no cadastro, como nas corretoras."
+      }
+    },
+    "trust": {
+      "title": "Aprender sem risco, de verdade.",
+      "noMoney": {
+        "title": "Nenhum dinheiro real",
+        "text": "Todas as operações são simuladas. Não há corretora, ordem de compra nem pagamento real."
+      },
+      "education": {
+        "title": "Educação, não recomendação",
+        "text": "Mostramos cenários e estatísticas. Indicar o que comprar é atividade regulada pela CVM, e isso não acontece aqui."
+      },
+      "password": {
+        "title": "Senha protegida",
+        "text": "Guardamos apenas um hash da sua senha, feito com argon2id. Nem a equipe consegue lê-la."
+      },
+      "privacy": {
+        "title": "Seus dados, suas regras",
+        "text": "Você poderá pedir a exportação ou a exclusão dos seus dados, como prevê a LGPD."
+      }
+    },
+    "cta": {
+      "title": "Sua primeira carteira começa sem nenhum risco.",
+      "lead": "Crie sua conta gratuita e comece a aprender com o mercado de verdade.",
+      "register": "Criar conta",
+      "signIn": "Já tenho conta"
+    },
+    "footer": {
+      "project": "Engenharia da Computação, Universidade Presbiteriana Mackenzie.",
+      "team": "Luís Gustavo Sampaio Coêlho e Nicoly Araujo de Paschoa"
+    }
   }
 }

@@ -77,5 +77,132 @@
     "google_token_invalid": "Could not confirm the Google sign-in. Try again.",
     "google_email_not_verified": "Google did not confirm this email.",
     "google_cancelled": "Google sign-in cancelled."
+  },
+  "landing": {
+    "skip": "Skip to sign-in",
+    "nav": {
+      "label": "Page sections",
+      "how": "How it works",
+      "portfolios": "Portfolios",
+      "news": "News",
+      "assets": "Stocks and REITs",
+      "signIn": "Sign in"
+    },
+    "hero": {
+      "eyebrow": "An educational simulator for B3",
+      "title": "Invest for pretend. Learn for real.",
+      "lead": "Build portfolios with B3 stocks and REITs, follow real quotes and see how the news moves prices.",
+      "secondary": "See how it works"
+    },
+    "stage": {
+      "title": "Seven different tools. One screen.",
+      "lead": "Today, investors jump between their broker, news sites, charts and simulators. Here, everything talks to each other.",
+      "listLabel": "What the simulator brings together",
+      "tiles": {
+        "portfolio": "Portfolio",
+        "virtual": "Virtual portfolio",
+        "news": "News",
+        "charts": "Charts",
+        "history": "History",
+        "simulations": "Simulations",
+        "ai": "Artificial intelligence",
+        "learn": "Financial education"
+      }
+    },
+    "how": {
+      "title": "From the headline to the decision, in four moves.",
+      "lead": "The path an experienced investor follows by heart, organized for people who are just starting.",
+      "build": {
+        "title": "Build",
+        "text": "Create a portfolio with pretend money and pick real B3 stocks and REITs."
+      },
+      "follow": {
+        "title": "Follow",
+        "text": "See real quotes, always with the time of each price. No real-time promises."
+      },
+      "relate": {
+        "title": "Relate",
+        "text": "News shows up on the asset chart, classified as positive, neutral or negative."
+      },
+      "learn": {
+        "title": "Learn",
+        "text": "Compare what you decided with what happened in the market and find out what you would do differently."
+      }
+    },
+    "portfolios": {
+      "title": "Two ways to test an idea.",
+      "live": {
+        "title": "Live portfolio",
+        "text": "Buy and sell now, with the latest available quote. The portfolio moves along with the market."
+      },
+      "historic": {
+        "title": "Historical portfolio",
+        "text": "Pick a date in the past, build the portfolio and see what it would be worth today.",
+        "quote": "If I had invested, would I have gained or lost?"
+      }
+    },
+    "news": {
+      "title": "News with context, not with noise.",
+      "lead": "Each article is linked to the assets it mentions and classified by tone. On the chart, you see what happened to the price afterwards.",
+      "note": "We show possible relations, never certainties. Scenarios are educational estimates, not advice.",
+      "positive": {
+        "title": "Positive",
+        "text": "A favorable tone for the asset, such as profits above expectations."
+      },
+      "neutral": {
+        "title": "Neutral or uncertain",
+        "text": "A relevant fact with no clear direction, or an effect that is still hard to predict."
+      },
+      "negative": {
+        "title": "Negative",
+        "text": "An unfavorable tone, such as a rule change that weighs on the sector."
+      }
+    },
+    "assets": {
+      "eyebrow": "For beginners",
+      "title": "Stocks and REITs, explained simply.",
+      "examples": "Examples",
+      "stock": {
+        "title": "Stock",
+        "text": "A piece of a company. You gain when it grows in value and when it pays dividends and interest on equity."
+      },
+      "reit": {
+        "title": "Real estate fund (FII)",
+        "text": "Shares of a fund that invests in real estate, such as warehouses and offices, and usually pays income every month."
+      },
+      "tip": {
+        "title": "Ending in 11 does not mean FII.",
+        "text": "ETFs and units also end in 11. That is why each asset here has its class set at registration, like at brokers."
+      }
+    },
+    "trust": {
+      "title": "Learn without risk, for real.",
+      "noMoney": {
+        "title": "No real money",
+        "text": "Every operation is simulated. There is no broker, no buy order and no real payment."
+      },
+      "education": {
+        "title": "Education, not advice",
+        "text": "We show scenarios and statistics. Recommending what to buy is regulated by the CVM, and that does not happen here."
+      },
+      "password": {
+        "title": "Protected password",
+        "text": "We only store a hash of your password, made with argon2id. Not even the team can read it."
+      },
+      "privacy": {
+        "title": "Your data, your rules",
+        "text": "You will be able to request the export or deletion of your data, as required by the LGPD."
+      }
+    },
+    "cta": {
+      "title": "Your first portfolio starts with zero risk.",
+      "lead": "Create your free account and start learning from the real market.",
+      "register": "Create account",
+      "signIn": "I already have an account"
+    },
+    "footer": {
+      "project": "Computer Engineering, Universidade Presbiteriana Mackenzie.",
+      "team": "Luís Gustavo Sampaio Coêlho and Nicoly Araujo de Paschoa"
+    }
   }
 }
