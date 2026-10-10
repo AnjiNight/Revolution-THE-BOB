@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  acceptConsentSchema,
+  changeEmailSchema,
+  changePasswordSchema,
   googleLoginSchema,
   loginSchema,
   normalizeEmail,
   registerSchema,
+  TERMS_VERSION,
+  updateNameSchema,
   validate,
 } from './auth.js';
 
@@ -86,6 +91,51 @@ describe('googleLoginSchema', () => {
     expect(validate(googleLoginSchema, {})).toEqual({
       success: false,
       fields: { idToken: 'required' },
+    });
+  });
+});
+
+describe('esquemas do perfil (SPEC-003)', () => {
+  it('updateNameSchema usa as mesmas regras do cadastro', () => {
+    expect(validate(updateNameSchema, { name: '  Ana Lima ' })).toEqual({
+      success: true,
+      data: { name: 'Ana Lima' },
+    });
+    expect(validate(updateNameSchema, { name: 'A' })).toEqual({
+      success: false,
+      fields: { name: 'too_short' },
+    });
+  });
+
+  it('changeEmailSchema normaliza o e-mail e exige a senha atual', () => {
+    expect(
+      validate(changeEmailSchema, { email: ' Ana@X.com ', currentPassword: 'qualquer' }),
+    ).toEqual({ success: true, data: { email: 'ana@x.com', currentPassword: 'qualquer' } });
+    expect(validate(changeEmailSchema, { email: 'x', currentPassword: '' })).toEqual({
+      success: false,
+      fields: { email: 'invalid_email', currentPassword: 'required' },
+    });
+  });
+
+  it('changePasswordSchema recusa senha nova curta ou igual à atual', () => {
+    expect(
+      validate(changePasswordSchema, { currentPassword: 'atual-123', newPassword: 'curta' }),
+    ).toEqual({ success: false, fields: { newPassword: 'too_short' } });
+    expect(
+      validate(changePasswordSchema, {
+        currentPassword: 'mesma-senha',
+        newPassword: 'mesma-senha',
+      }),
+    ).toEqual({ success: false, fields: { newPassword: 'same_password' } });
+  });
+
+  it('acceptConsentSchema só aceita a versão vigente dos termos', () => {
+    expect(validate(acceptConsentSchema, { type: 'terms', version: TERMS_VERSION }).success).toBe(
+      true,
+    );
+    expect(validate(acceptConsentSchema, { type: 'terms', version: '0' })).toEqual({
+      success: false,
+      fields: { version: 'invalid_version' },
     });
   });
 });

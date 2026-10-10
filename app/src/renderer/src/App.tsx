@@ -1,11 +1,12 @@
 import type { PublicUser } from '@simulador/shared';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../shared/auth-ipc';
 import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
 import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
+import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
 import { ServerStatusPanel } from './components/ServerStatusPanel';
 
@@ -14,9 +15,10 @@ type View =
   | { kind: 'login'; notice?: ClientAuthError }
   | { kind: 'register' }
   | { kind: 'collaborator-login' }
-  | { kind: 'home'; user: PublicUser };
+  | { kind: 'home'; user: PublicUser }
+  | { kind: 'profile'; user: PublicUser };
 
-/** Fluxo de telas da SPEC-002 (§5.3). */
+/** Fluxo de telas da SPEC-002 (§5.3) e da SPEC-003 (Meu perfil). */
 export function App() {
   const { t } = useTranslation();
   const [view, setView] = useState<View>({ kind: 'loading' });
@@ -36,8 +38,17 @@ export function App() {
   const logout = () => {
     void window.api.auth.logout().finally(() => setView({ kind: 'login' }));
   };
+  const sessionExpired = useCallback(
+    () => setView({ kind: 'login', notice: 'invalid_refresh_token' }),
+    [],
+  );
+  const userChanged = useCallback(
+    ({ id, name, email, role }: PublicUser) =>
+      setView({ kind: 'profile', user: { id, name, email, role } }),
+    [],
+  );
 
-  if (view.kind === 'home') {
+  if (view.kind === 'home' || view.kind === 'profile') {
     return (
       <main className="page">
         <header className="page-header">
@@ -46,7 +57,19 @@ export function App() {
         </header>
 
         <div className="page-content">
-          <Home user={view.user} onLogout={logout} />
+          {view.kind === 'home' ? (
+            <Home
+              user={view.user}
+              onLogout={logout}
+              onOpenProfile={() => setView({ kind: 'profile', user: view.user })}
+            />
+          ) : (
+            <Profile
+              onBack={() => setView({ kind: 'home', user: view.user })}
+              onUserChanged={userChanged}
+              onSessionExpired={sessionExpired}
+            />
+          )}
           <ServerStatusPanel />
         </div>
         <footer className="disclaimer">{t('disclaimer')}</footer>

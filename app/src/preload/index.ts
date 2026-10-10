@@ -1,5 +1,11 @@
+import type { ConsentList, UserProfile } from '@simulador/shared';
 import { contextBridge, ipcRenderer } from 'electron';
-import { AUTH_CHANNELS, type AuthResult } from '../shared/auth-ipc.js';
+import {
+  AUTH_CHANNELS,
+  PROFILE_CHANNELS,
+  type AuthResult,
+  type ClientResult,
+} from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL, type ServerStatus } from '../shared/server-status.js';
 import type { DesktopApi } from './api.js';
 
@@ -17,6 +23,14 @@ const api: DesktopApi = {
     signInWithGoogle: () => invoke<AuthResult>(AUTH_CHANNELS.googleSignIn),
     acceptGoogleTerms: () => invoke<AuthResult>(AUTH_CHANNELS.googleAcceptTerms),
     logout: () => invoke<void>(AUTH_CHANNELS.logout),
+  },
+  profile: {
+    get: () => invoke<ClientResult<UserProfile>>(PROFILE_CHANNELS.get),
+    updateName: (input) => invoke<ClientResult<UserProfile>>(PROFILE_CHANNELS.updateName, input),
+    changeEmail: (input) => invoke<ClientResult<UserProfile>>(PROFILE_CHANNELS.changeEmail, input),
+    changePassword: (input) => invoke<ClientResult<null>>(PROFILE_CHANNELS.changePassword, input),
+    listConsents: () => invoke<ClientResult<ConsentList>>(PROFILE_CHANNELS.listConsents),
+    acceptTerms: () => invoke<ClientResult<null>>(PROFILE_CHANNELS.acceptTerms),
   },
 };
 

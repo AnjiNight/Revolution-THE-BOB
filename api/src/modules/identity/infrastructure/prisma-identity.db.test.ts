@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../../../app.js';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
 import { AuthService } from '../application/auth-service.js';
+import { ProfileService } from '../application/profile-service.js';
 import { createCollaborator } from '../application/create-collaborator.js';
 import { hashRefreshToken } from '../application/refresh-token.js';
 import { EmailInUseError } from '../domain/errors.js';
@@ -121,6 +122,63 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
     expect(linked).toMatchObject({ googleSub: 'sub-ligado', passwordHash: '$argon2id$fake' });
   });
 
+  it('SPEC-003: atualiza nome, e-mail e senha; e-mail duplicado vira EmailInUseError', async () => {
+    const ana = await users.create(newUser);
+    await users.create({ ...newUser, email: 'bia@exemplo.com' });
+
+    expect(await users.updateName(ana.id, 'Ana Lima')).toMatchObject({ name: 'Ana Lima' });
+    expect(await users.updateEmail(ana.id, 'ana.lima@exemplo.com')).toMatchObject({
+      email: 'ana.lima@exemplo.com',
+    });
+    await expect(users.updateEmail(ana.id, 'bia@exemplo.com')).rejects.toBeInstanceOf(
+      EmailInUseError,
+    );
+    expect(await users.updatePasswordHash(ana.id, '$argon2id$nova')).toMatchObject({
+      passwordHash: '$argon2id$nova',
+    });
+    expect(ana.createdAt).toBeInstanceOf(Date);
+  });
+
+  it('SPEC-003: novo aceite entra no histórico sem alterar o anterior', async () => {
+    const ana = await users.create(newUser);
+    const [first] = await users.listConsents(ana.id);
+    await users.addConsent(ana.id, 'terms', TERMS_VERSION);
+    const all = await users.listConsents(ana.id);
+    expect(all).toHaveLength(2);
+    expect(all[0]).toEqual(first);
+    expect(all[1]).toMatchObject({ type: 'terms', version: TERMS_VERSION });
+  });
+
+  it('SPEC-003: revokeAllForUser encerra só as sessões daquela conta', async () => {
+    const ana = await users.create(newUser);
+    const bia = await users.create({ ...newUser, email: 'bia@exemplo.com' });
+    const expiresAt = new Date(Date.now() + 86_400_000);
+    const family = (n: number) => `0d9e1f7a-1111-4222-8333-44445555666${n}`;
+    await tokens.create({
+      userId: ana.id,
+      tokenHash: 'a'.repeat(64),
+      family: family(1),
+      expiresAt,
+    });
+    await tokens.create({
+      userId: ana.id,
+      tokenHash: 'b'.repeat(64),
+      family: family(2),
+      expiresAt,
+    });
+    await tokens.create({
+      userId: bia.id,
+      tokenHash: 'c'.repeat(64),
+      family: family(3),
+      expiresAt,
+    });
+
+    await tokens.revokeAllForUser(ana.id, new Date());
+    expect((await tokens.findByHash('a'.repeat(64)))?.revokedAt).toBeInstanceOf(Date);
+    expect((await tokens.findByHash('b'.repeat(64)))?.revokedAt).toBeInstanceOf(Date);
+    expect((await tokens.findByHash('c'.repeat(64)))?.revokedAt).toBeNull();
+  });
+
   it('o banco recusa conta sem senha e sem Google', async () => {
     await expect(
       prisma.$executeRawUnsafe(
@@ -156,11 +214,18 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       accessTokens,
       refreshTokenTtlDays: 30,
     });
+    const profile = new ProfileService({
+      users,
+      refreshTokens: tokens,
+      hasher: new Argon2PasswordHasher(),
+      sessions: auth,
+    });
     const app = await buildApp({
       config: { env: 'test', logLevel: 'fatal', authRateLimitPerMinute: 1000 },
       probe: { isAvailable: () => Promise.resolve(true) },
       version: 'teste',
       auth,
+      profile,
       accessTokens,
     });
 

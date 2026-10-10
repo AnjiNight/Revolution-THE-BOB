@@ -1,4 +1,13 @@
-import type { AuthResult, LoginInput, RegisterInput } from '../shared/auth-ipc.js';
+import type { ConsentList, UserProfile } from '@simulador/shared';
+import type {
+  AuthResult,
+  ChangeEmailInput,
+  ChangePasswordInput,
+  ClientResult,
+  LoginInput,
+  RegisterInput,
+  UpdateNameInput,
+} from '../shared/auth-ipc.js';
 import type { ServerStatus } from '../shared/server-status.js';
 
 /** Funções que o processo principal expõe para a interface (window.api). */
@@ -13,6 +22,15 @@ export interface DesktopApi {
     signInWithGoogle(): Promise<AuthResult>;
     acceptGoogleTerms(): Promise<AuthResult>;
     logout(): Promise<void>;
+  };
+  /** Perfil da conta conectada (SPEC-003). */
+  profile: {
+    get(): Promise<ClientResult<UserProfile>>;
+    updateName(input: UpdateNameInput): Promise<ClientResult<UserProfile>>;
+    changeEmail(input: ChangeEmailInput): Promise<ClientResult<UserProfile>>;
+    changePassword(input: ChangePasswordInput): Promise<ClientResult<null>>;
+    listConsents(): Promise<ClientResult<ConsentList>>;
+    acceptTerms(): Promise<ClientResult<null>>;
   };
 }
 

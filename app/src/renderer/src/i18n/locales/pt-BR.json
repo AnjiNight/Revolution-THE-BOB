@@ -52,14 +52,39 @@
     },
     "next": "Sua conta está pronta. As carteiras de simulação chegam nas próximas versões.",
     "logout": "Sair",
-    "collaboratorNext": "As ferramentas da equipe (cadastro de ativos e acompanhamento da coleta de dados) chegam nas próximas versões."
+    "collaboratorNext": "As ferramentas da equipe (cadastro de ativos e acompanhamento da coleta de dados) chegam nas próximas versões.",
+    "profile": "Meu perfil"
+  },
+  "profile": {
+    "title": "Meu perfil",
+    "back": "Voltar ao início",
+    "accountType": "Tipo de conta",
+    "signInMethods": "Formas de acesso",
+    "methodPassword": "E-mail e senha",
+    "createdAt": "Conta criada em",
+    "nameSection": "Nome",
+    "emailSection": "E-mail",
+    "newEmail": "E-mail",
+    "passwordSection": "Senha",
+    "currentPassword": "Senha atual",
+    "newPassword": "Nova senha",
+    "save": "Salvar",
+    "saved": "Alterações salvas.",
+    "passwordChanged": "Senha alterada. As outras sessões desta conta foram encerradas.",
+    "googleOnly": "Esta conta entra pelo Google ({{email}}). O e-mail e a senha são gerenciados pelo Google.",
+    "consentsSection": "Consentimentos",
+    "consentItem": "Termos de uso e política de privacidade, versão {{version}}, aceitos em {{date}}",
+    "withdrawConsent": "Para retirar o consentimento, é preciso excluir a conta. A exclusão chega em uma próxima versão.",
+    "termsUpdated": "Os termos de uso e a política de privacidade mudaram. Leia e aceite a nova versão para continuar."
   },
   "fieldErrors": {
     "required": "Campo obrigatório.",
     "too_short": "Muito curto.",
     "too_long": "Muito longo.",
     "invalid_email": "Informe um e-mail válido.",
-    "terms_not_accepted": "É preciso aceitar os termos para continuar."
+    "terms_not_accepted": "É preciso aceitar os termos para continuar.",
+    "same_password": "A nova senha precisa ser diferente da atual.",
+    "invalid_version": "Versão dos termos desatualizada. Recarregue a tela."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -76,7 +101,10 @@
     "google_login_unavailable": "O login com Google não está disponível.",
     "google_token_invalid": "Não foi possível confirmar o login com Google. Tente novamente.",
     "google_email_not_verified": "O Google não confirmou este e-mail.",
-    "google_cancelled": "Login com Google cancelado."
+    "google_cancelled": "Login com Google cancelado.",
+    "invalid_password": "Senha atual incorreta.",
+    "email_change_not_allowed": "O e-mail desta conta vem do Google e não pode ser trocado aqui.",
+    "password_change_not_allowed": "Esta conta entra pelo Google e não tem senha."
   },
   "landing": {
     "skip": "Pular para o acesso",

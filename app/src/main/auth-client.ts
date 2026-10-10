@@ -1,14 +1,21 @@
 import {
   AUTH_PATHS,
+  PROFILE_PATHS,
+  TERMS_VERSION,
   type AuthErrorCode,
   type AuthSession,
+  type ChangeEmailInput,
+  type ChangePasswordInput,
+  type ConsentList,
   type FieldErrors,
   type LoginInput,
   type PublicUser,
   type RegisterInput,
   type TokenPair,
+  type UpdateNameInput,
+  type UserProfile,
 } from '@simulador/shared';
-import type { AuthResult, ClientAuthError } from '../shared/auth-ipc.js';
+import type { AuthResult, ClientAuthError, ClientResult } from '../shared/auth-ipc.js';
 import type { SecretStore } from './secret-store.js';
 import { validateServerUrl } from './server-health.js';
 
@@ -32,6 +39,9 @@ const KNOWN_ERRORS: readonly AuthErrorCode[] = [
   'google_login_unavailable',
   'google_token_invalid',
   'google_email_not_verified',
+  'invalid_password',
+  'email_change_not_allowed',
+  'password_change_not_allowed',
 ];
 
 class RequestFailed extends Error {
@@ -99,6 +109,72 @@ export class AuthClient {
     }
   }
 
+  // --- Perfil (SPEC-003) ---
+
+  getProfile(): Promise<ClientResult<UserProfile>> {
+    return this.profileCall(async () => {
+      const { user } = await this.authorizedRequest<{ user: UserProfile }>(
+        'GET',
+        PROFILE_PATHS.profile,
+      );
+      return user;
+    });
+  }
+
+  updateName(input: UpdateNameInput): Promise<ClientResult<UserProfile>> {
+    return this.profileCall(() => this.updateProfile('PATCH', PROFILE_PATHS.profile, input));
+  }
+
+  changeEmail(input: ChangeEmailInput): Promise<ClientResult<UserProfile>> {
+    return this.profileCall(() => this.updateProfile('PUT', PROFILE_PATHS.email, input));
+  }
+
+  /** O servidor encerra todas as sessões e devolve uma nova, que passa a ser a deste dispositivo. */
+  changePassword(input: ChangePasswordInput): Promise<ClientResult<null>> {
+    return this.profileCall(async () => {
+      const session = await this.authorizedRequest<AuthSession>(
+        'PUT',
+        PROFILE_PATHS.password,
+        input,
+      );
+      await this.options.store.save(session.refreshToken);
+      this.accessToken = session.accessToken;
+      this.user = session.user;
+      return null;
+    });
+  }
+
+  listConsents(): Promise<ClientResult<ConsentList>> {
+    return this.profileCall(() =>
+      this.authorizedRequest<ConsentList>('GET', PROFILE_PATHS.consents),
+    );
+  }
+
+  acceptTerms(): Promise<ClientResult<null>> {
+    return this.profileCall(async () => {
+      await this.authorizedRequest('POST', PROFILE_PATHS.consents, {
+        type: 'terms',
+        version: TERMS_VERSION,
+      });
+      return null;
+    });
+  }
+
+  private async updateProfile(method: string, path: string, body: unknown): Promise<UserProfile> {
+    const { user } = await this.authorizedRequest<{ user: UserProfile }>(method, path, body);
+    this.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+    return user;
+  }
+
+  private async profileCall<T>(action: () => Promise<T>): Promise<ClientResult<T>> {
+    try {
+      return { ok: true, data: await action() };
+    } catch (error) {
+      const result = failure(error);
+      return result.ok ? { ok: false, error: 'unexpected' } : result;
+    }
+  }
+
   /** Requisição autenticada; renova a sessão uma vez se o token de acesso tiver expirado (RF02). */
   async authorizedRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
     try {
@@ -124,8 +200,8 @@ export class AuthClient {
 
   private async loadCurrentUser(): Promise<AuthResult> {
     const { user } = await this.authorizedRequest<{ user: PublicUser }>('GET', AUTH_PATHS.me);
-    this.user = user;
-    return { ok: true, user };
+    this.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+    return { ok: true, user: this.user };
   }
 
   /** Troca o token de renovação; uma única troca por vez, mesmo com várias chamadas juntas. */

@@ -165,7 +165,8 @@ export class AuthService {
     return user ? toPublicUser(user) : null;
   }
 
-  private async startSession(user: User): Promise<AuthSession> {
+  /** Abre uma sessão nova (nova família de tokens). Também usado após a troca de senha. */
+  async startSession(user: User): Promise<AuthSession> {
     const refresh = generateRefreshToken();
     await this.deps.refreshTokens.create({
       userId: user.id,

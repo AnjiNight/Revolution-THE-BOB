@@ -34,3 +34,23 @@ export class GoogleTokenInvalidError extends DomainError {
 export class GoogleEmailNotVerifiedError extends DomainError {
   readonly code = 'google_email_not_verified';
 }
+
+/** A conta do token não existe mais (ex.: excluída depois de o token ser emitido). */
+export class UserNotFoundError extends DomainError {
+  readonly code = 'unauthorized';
+}
+
+/** SPEC-003: a senha atual informada para confirmar a alteração está errada. */
+export class InvalidPasswordError extends DomainError {
+  readonly code = 'invalid_password';
+}
+
+/** SPEC-003: conta só com Google não troca o e-mail (ele vem do Google). */
+export class EmailChangeNotAllowedError extends DomainError {
+  readonly code = 'email_change_not_allowed';
+}
+
+/** SPEC-003: conta só com Google não tem senha para trocar, nem cria uma. */
+export class PasswordChangeNotAllowedError extends DomainError {
+  readonly code = 'password_change_not_allowed';
+}

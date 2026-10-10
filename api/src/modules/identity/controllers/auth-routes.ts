@@ -10,12 +10,9 @@ import { DomainError } from '../../../shared/domain/domain-error.js';
 import { HttpError } from '../../../shared/http/http-error.js';
 import { parseBody } from '../../../shared/http/validation.js';
 import type { AuthService } from '../application/auth-service.js';
-import type { AccessTokenService } from '../application/ports.js';
-import { makeAuthenticate, requireAuth } from './authenticate.js';
 
 export interface AuthRoutesOptions {
   auth: AuthService;
-  accessTokens: AccessTokenService;
   /** Limite de requisições por minuto e por IP em cada rota de /api/auth (RNF10). */
   rateLimitPerMinute: number;
 }
@@ -31,9 +28,20 @@ const DOMAIN_ERROR_HTTP: Record<string, { status: number; message: string }> = {
     status: 403,
     message: 'O Google não confirmou este e-mail.',
   },
+  unauthorized: { status: 401, message: 'Autenticação necessária.' },
+  invalid_password: { status: 401, message: 'Senha atual incorreta.' },
+  email_change_not_allowed: {
+    status: 403,
+    message: 'O e-mail desta conta vem do Google e não pode ser trocado aqui.',
+  },
+  password_change_not_allowed: {
+    status: 403,
+    message: 'Esta conta entra pelo Google e não tem senha.',
+  },
 };
 
-async function run<T>(action: () => Promise<T>): Promise<T> {
+/** Converte erros do domínio de identidade em respostas HTTP. */
+export async function run<T>(action: () => Promise<T>): Promise<T> {
   try {
     return await action();
   } catch (error) {
@@ -85,14 +93,4 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
     await auth.logout(refreshToken);
     return reply.status(204).send();
   });
-
-  app.get(
-    AUTH_PATHS.me,
-    { preHandler: makeAuthenticate(options.accessTokens) },
-    async (request, reply) => {
-      const user = await auth.currentUser(requireAuth(request).userId);
-      if (!user) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');
-      return reply.send({ user });
-    },
-  );
 }

@@ -531,6 +531,105 @@ button.google-button:hover:not(:disabled) {
   margin-bottom: 0.25rem;
 }
 
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* ---------- Meu perfil (SPEC-003) ---------- */
+
+.profile {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.profile-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.profile-header h2 {
+  margin: 0;
+}
+
+.profile-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.profile-summary dt {
+  color: var(--muted);
+}
+
+.profile-summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.profile-section h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.profile-section button[type='submit'] {
+  align-self: flex-start;
+}
+
+.form-success {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.consent-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+}
+
+.terms-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-control);
+  background: var(--warn-soft);
+}
+
+.terms-notice p {
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .profile-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-summary dd {
+    margin-bottom: 0.4rem;
+  }
+}
+
 /* ---------- Situação do servidor (SPEC-001) ---------- */
 
 .status {

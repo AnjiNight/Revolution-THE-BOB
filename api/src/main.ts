@@ -4,6 +4,7 @@ import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { PrismaDatabaseProbe } from './modules/health/infrastructure/prisma-database-probe.js';
 import { AuthService } from './modules/identity/application/auth-service.js';
+import { ProfileService } from './modules/identity/application/profile-service.js';
 import { Argon2PasswordHasher } from './modules/identity/infrastructure/argon2-password-hasher.js';
 import { JoseGoogleIdentityVerifier } from './modules/identity/infrastructure/jose-google-identity-verifier.js';
 import { JwtAccessTokenService } from './modules/identity/infrastructure/jwt-access-token-service.js';
@@ -35,17 +36,21 @@ async function main(): Promise<void> {
 
   if (mode === 'server') {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
+    const users = new PrismaUserRepository(prisma);
+    const refreshTokens = new PrismaRefreshTokenRepository(prisma);
+    const hasher = new Argon2PasswordHasher();
     const auth = new AuthService({
-      users: new PrismaUserRepository(prisma),
-      refreshTokens: new PrismaRefreshTokenRepository(prisma),
-      hasher: new Argon2PasswordHasher(),
+      users,
+      refreshTokens,
+      hasher,
       accessTokens,
       refreshTokenTtlDays: config.refreshTokenTtlDays,
       ...(config.googleClientId
         ? { google: new JoseGoogleIdentityVerifier(config.googleClientId) }
         : {}),
     });
-    const app = await buildApp({ config, probe, version, auth, accessTokens });
+    const profile = new ProfileService({ users, refreshTokens, hasher, sessions: auth });
+    const app = await buildApp({ config, probe, version, auth, profile, accessTokens });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
       await app.close();

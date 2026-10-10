@@ -52,14 +52,39 @@
     },
     "next": "Your account is ready. Simulation portfolios arrive in the next versions.",
     "logout": "Sign out",
-    "collaboratorNext": "Team tools (asset management and data collection monitoring) arrive in the next versions."
+    "collaboratorNext": "Team tools (asset management and data collection monitoring) arrive in the next versions.",
+    "profile": "My profile"
+  },
+  "profile": {
+    "title": "My profile",
+    "back": "Back to home",
+    "accountType": "Account type",
+    "signInMethods": "Sign-in methods",
+    "methodPassword": "Email and password",
+    "createdAt": "Account created on",
+    "nameSection": "Name",
+    "emailSection": "Email",
+    "newEmail": "Email",
+    "passwordSection": "Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "save": "Save",
+    "saved": "Changes saved.",
+    "passwordChanged": "Password changed. Other sessions of this account were signed out.",
+    "googleOnly": "This account signs in with Google ({{email}}). Email and password are managed by Google.",
+    "consentsSection": "Consents",
+    "consentItem": "Terms of use and privacy policy, version {{version}}, accepted on {{date}}",
+    "withdrawConsent": "To withdraw consent, the account must be deleted. Account deletion arrives in a future version.",
+    "termsUpdated": "The terms of use and privacy policy have changed. Read and accept the new version to continue."
   },
   "fieldErrors": {
     "required": "Required field.",
     "too_short": "Too short.",
     "too_long": "Too long.",
     "invalid_email": "Enter a valid email.",
-    "terms_not_accepted": "You must accept the terms to continue."
+    "terms_not_accepted": "You must accept the terms to continue.",
+    "same_password": "The new password must be different from the current one.",
+    "invalid_version": "Outdated terms version. Reload the screen."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -76,7 +101,10 @@
     "google_login_unavailable": "Sign in with Google is not available.",
     "google_token_invalid": "Could not confirm the Google sign-in. Try again.",
     "google_email_not_verified": "Google did not confirm this email.",
-    "google_cancelled": "Google sign-in cancelled."
+    "google_cancelled": "Google sign-in cancelled.",
+    "invalid_password": "Incorrect current password.",
+    "email_change_not_allowed": "This account email comes from Google and cannot be changed here.",
+    "password_change_not_allowed": "This account signs in with Google and has no password."
   },
   "landing": {
     "skip": "Skip to sign-in",

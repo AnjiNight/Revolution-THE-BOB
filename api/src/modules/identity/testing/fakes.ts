@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { ConsentType } from '@simulador/shared';
 import { EmailInUseError } from '../domain/errors.js';
 import type { User } from '../domain/user.js';
 import type {
@@ -8,6 +9,7 @@ import type {
   NewUser,
   PasswordHasher,
   RefreshTokenRepository,
+  StoredConsent,
   StoredRefreshToken,
   UserRepository,
 } from '../application/ports.js';
@@ -17,6 +19,9 @@ import type {
 export class InMemoryUserRepository implements UserRepository {
   readonly users: User[] = [];
   readonly consents: Array<{ userId: string; version: string }> = [];
+  readonly consentDates: Date[] = [];
+
+  constructor(private readonly clock: () => Date = () => new Date()) {}
 
   async create(user: NewUser): Promise<User> {
     if (this.users.some((u) => u.email === user.email)) throw new EmailInUseError();
@@ -27,10 +32,57 @@ export class InMemoryUserRepository implements UserRepository {
       role: user.role,
       passwordHash: user.passwordHash,
       googleSub: user.googleSub,
+      createdAt: this.clock(),
     };
     this.users.push(created);
-    if (user.termsVersion) this.consents.push({ userId: created.id, version: user.termsVersion });
+    if (user.termsVersion) this.pushConsent(created.id, user.termsVersion);
     return { ...created };
+  }
+
+  async updateName(userId: string, name: string): Promise<User> {
+    return this.update(userId, (user) => (user.name = name));
+  }
+
+  async updateEmail(userId: string, email: string): Promise<User> {
+    if (this.users.some((u) => u.email === email && u.id !== userId)) throw new EmailInUseError();
+    return this.update(userId, (user) => (user.email = email));
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string): Promise<User> {
+    return this.update(userId, (user) => (user.passwordHash = passwordHash));
+  }
+
+  async listConsents(userId: string): Promise<StoredConsent[]> {
+    return this.consents.flatMap((consent, index) =>
+      consent.userId === userId
+        ? [
+            {
+              type: 'terms' as const,
+              version: consent.version,
+              acceptedAt: this.consentDates[index]!,
+            },
+          ]
+        : [],
+    );
+  }
+
+  async addConsent(userId: string, _type: ConsentType, version: string): Promise<StoredConsent> {
+    const acceptedAt = this.pushConsent(userId, version);
+    return { type: 'terms', version, acceptedAt };
+  }
+
+  private pushConsent(userId: string, version: string): Date {
+    const acceptedAt = this.clock();
+    this.consents.push({ userId, version });
+    this.consentDates.push(acceptedAt);
+    return acceptedAt;
+  }
+
+  private update(userId: string, change: (user: User) => void): User {
+    const user = this.users.find((u) => u.id === userId);
+    if (!user) throw new Error('usuário inexistente');
+    change(user);
+    return { ...user };
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -86,6 +138,12 @@ export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
   async revokeFamily(family: string, at: Date): Promise<void> {
     for (const token of this.tokens) {
       if (token.family === family && !token.revokedAt) token.revokedAt = at;
+    }
+  }
+
+  async revokeAllForUser(userId: string, at: Date): Promise<void> {
+    for (const token of this.tokens) {
+      if (token.userId === userId && !token.revokedAt) token.revokedAt = at;
     }
   }
 }

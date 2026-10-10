@@ -1,9 +1,15 @@
-import { AUTH_PATHS } from '@simulador/shared';
+import { AUTH_PATHS, PROFILE_PATHS } from '@simulador/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthClient } from './auth-client.js';
 import { MemorySecretStore } from './secret-store.js';
 
 const user = { id: 'u1', name: 'Ana', email: 'ana@exemplo.com', role: 'user' as const };
+const profile = {
+  ...user,
+  hasPassword: true,
+  hasGoogle: false,
+  createdAt: '2026-10-10T12:00:00.000Z',
+};
 
 /** Servidor falso com o comportamento das rotas da SPEC-002. */
 class FakeServer {
@@ -68,10 +74,23 @@ class FakeServer {
         return new Response(null, { status: 204 });
       case AUTH_PATHS.me: {
         const token = headers.authorization?.replace('Bearer ', '') ?? '';
-        return this.validAccess.has(token)
-          ? json(200, { user })
-          : json(401, { error: 'unauthorized', message: 'x' });
+        if (!this.validAccess.has(token)) return json(401, { error: 'unauthorized', message: 'x' });
+        return init?.method === 'PATCH'
+          ? json(200, { user: { ...profile, name: body.name } })
+          : json(200, { user });
       }
+      case PROFILE_PATHS.email:
+        return body.currentPassword === 'certa'
+          ? json(200, { user: { ...profile, email: body.email } })
+          : json(401, { error: 'invalid_password', message: 'x' });
+      case PROFILE_PATHS.password:
+        // O servidor encerra as sessões anteriores e devolve uma nova.
+        this.validRefresh.clear();
+        return json(200, { user, ...this.issue() });
+      case PROFILE_PATHS.consents:
+        return this.validAccess.has(headers.authorization?.replace('Bearer ', '') ?? '')
+          ? json(200, { consents: [], currentVersion: '1' })
+          : json(401, { error: 'unauthorized', message: 'x' });
       default:
         return json(500, { error: 'internal_error', message: 'x' });
     }
@@ -241,5 +260,40 @@ describe('colaborador e Google', () => {
     });
     await expect(client.loginWithGoogle('id-token', true)).resolves.toEqual({ ok: true, user });
     await expect(store.load()).resolves.toBe('refresh-1');
+  });
+});
+
+describe('perfil (SPEC-003)', () => {
+  it('edita o nome e atualiza o usuário da sessão', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.updateName({ name: 'Ana Lima' })).resolves.toMatchObject({
+      ok: true,
+      data: { name: 'Ana Lima' },
+    });
+    await expect(client.restore()).resolves.toEqual({
+      ok: true,
+      user: { ...user, name: 'Ana Lima' },
+    });
+  });
+
+  it('senha atual errada → invalid_password, sem derrubar a sessão', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(
+      client.changeEmail({ email: 'novo@exemplo.com', currentPassword: 'errada' }),
+    ).resolves.toEqual({ ok: false, error: 'invalid_password' });
+    await expect(store.load()).resolves.toBe('refresh-1');
+  });
+
+  it('troca de senha guarda a sessão nova devolvida pelo servidor', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(
+      client.changePassword({ currentPassword: 'certa', newPassword: 'nova-senha-1' }),
+    ).resolves.toEqual({ ok: true, data: null });
+    await expect(store.load()).resolves.toBe('refresh-2');
+    expect(server.validRefresh.has('refresh-1')).toBe(false);
+  });
+
+  it('sem sessão → unauthorized', async () => {
+    await expect(client.listConsents()).resolves.toEqual({ ok: false, error: 'unauthorized' });
   });
 });

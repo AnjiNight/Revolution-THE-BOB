@@ -11,6 +11,14 @@ export const AUTH_PATHS = {
   me: '/api/me',
 } as const;
 
+/** Rotas do perfil da pessoa conectada (SPEC-003, §5.1). */
+export const PROFILE_PATHS = {
+  profile: '/api/me',
+  email: '/api/me/email',
+  password: '/api/me/password',
+  consents: '/api/me/consents',
+} as const;
+
 /** Versão vigente dos termos de uso e da política de privacidade (RNF11). */
 export const TERMS_VERSION = '1';
 
@@ -34,6 +42,30 @@ export interface PublicUser {
   role: Role;
 }
 
+/** Perfil completo da pessoa conectada (SPEC-003): formas de acesso e data de criação. */
+export interface UserProfile extends PublicUser {
+  hasPassword: boolean;
+  hasGoogle: boolean;
+  /** ISO 8601. */
+  createdAt: string;
+}
+
+/** Tipos de consentimento. Hoje só o aceite dos termos de uso e da política de privacidade. */
+export type ConsentType = 'terms';
+
+export interface Consent {
+  type: ConsentType;
+  version: string;
+  /** ISO 8601. */
+  acceptedAt: string;
+}
+
+export interface ConsentList {
+  consents: Consent[];
+  /** Versão vigente dos termos; se a última aceita for outra, o app pede um novo aceite. */
+  currentVersion: string;
+}
+
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
@@ -45,7 +77,13 @@ export interface AuthSession extends TokenPair {
 
 /** Códigos de erro por campo, traduzidos pelo app. */
 export type FieldErrorCode =
-  'required' | 'too_short' | 'too_long' | 'invalid_email' | 'terms_not_accepted';
+  | 'required'
+  | 'too_short'
+  | 'too_long'
+  | 'invalid_email'
+  | 'terms_not_accepted'
+  | 'same_password'
+  | 'invalid_version';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 
@@ -61,7 +99,10 @@ export type AuthErrorCode =
   | 'terms_required'
   | 'google_login_unavailable'
   | 'google_token_invalid'
-  | 'google_email_not_verified';
+  | 'google_email_not_verified'
+  | 'invalid_password'
+  | 'email_change_not_allowed'
+  | 'password_change_not_allowed';
 
 const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'required',
@@ -69,6 +110,8 @@ const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'too_long',
   'invalid_email',
   'terms_not_accepted',
+  'same_password',
+  'invalid_version',
 ];
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -84,28 +127,61 @@ const emailField = z
   .min(1, { error: 'required' })
   .max(EMAIL_MAX, { error: 'too_long' });
 
+const nameField = z
+  .string({ error: 'required' })
+  .trim()
+  .min(1, { error: 'required' })
+  .min(NAME_MIN, { error: 'too_short' })
+  .max(NAME_MAX, { error: 'too_long' });
+
+const newEmailField = emailField.regex(EMAIL_PATTERN, { error: 'invalid_email' });
+
+/** Senha nova: mesmas regras do cadastro (SPEC-002 §5.2). */
+const newPasswordField = z
+  .string({ error: 'required' })
+  .min(1, { error: 'required' })
+  .min(PASSWORD_MIN, { error: 'too_short' })
+  .max(PASSWORD_MAX, { error: 'too_long' });
+
+/** Senha já existente: só exige que venha preenchida. */
+const existingPasswordField = z
+  .string({ error: 'required' })
+  .min(1, { error: 'required' })
+  .max(PASSWORD_MAX, { error: 'too_long' });
+
 export const registerSchema = z.object({
-  name: z
-    .string({ error: 'required' })
-    .trim()
-    .min(1, { error: 'required' })
-    .min(NAME_MIN, { error: 'too_short' })
-    .max(NAME_MAX, { error: 'too_long' }),
-  email: emailField.regex(EMAIL_PATTERN, { error: 'invalid_email' }),
-  password: z
-    .string({ error: 'required' })
-    .min(1, { error: 'required' })
-    .min(PASSWORD_MIN, { error: 'too_short' })
-    .max(PASSWORD_MAX, { error: 'too_long' }),
+  name: nameField,
+  email: newEmailField,
+  password: newPasswordField,
   acceptedTerms: z.literal(true, { error: 'terms_not_accepted' }),
 });
 
 export const loginSchema = z.object({
   email: emailField,
-  password: z
-    .string({ error: 'required' })
-    .min(1, { error: 'required' })
-    .max(PASSWORD_MAX, { error: 'too_long' }),
+  password: existingPasswordField,
+});
+
+/** SPEC-003: editar o nome. */
+export const updateNameSchema = z.object({ name: nameField });
+
+/** SPEC-003: trocar o e-mail, confirmando com a senha atual. */
+export const changeEmailSchema = z.object({
+  email: newEmailField,
+  currentPassword: existingPasswordField,
+});
+
+/** SPEC-003: trocar a senha. A nova não pode ser igual à atual. */
+export const changePasswordSchema = z
+  .object({ currentPassword: existingPasswordField, newPassword: newPasswordField })
+  .refine((input) => input.newPassword !== input.currentPassword, {
+    path: ['newPassword'],
+    error: 'same_password',
+  });
+
+/** SPEC-003: aceitar a versão vigente dos termos. */
+export const acceptConsentSchema = z.object({
+  type: z.literal('terms', { error: 'required' }),
+  version: z.literal(TERMS_VERSION, { error: 'invalid_version' }),
 });
 
 /** Login com Google: o app envia o ID token recebido do Google (DA24). */
@@ -121,6 +197,10 @@ export const refreshSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
+export type UpdateNameInput = z.infer<typeof updateNameSchema>;
+export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type AcceptConsentInput = z.infer<typeof acceptConsentSchema>;
 
 export type ValidationResult<T> =
   { success: true; data: T } | { success: false; fields: FieldErrors };

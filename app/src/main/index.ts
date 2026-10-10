@@ -1,7 +1,13 @@
 import { join } from 'node:path';
-import type { LoginInput, RegisterInput } from '@simulador/shared';
+import type {
+  ChangeEmailInput,
+  ChangePasswordInput,
+  LoginInput,
+  RegisterInput,
+  UpdateNameInput,
+} from '@simulador/shared';
 import { app, BrowserWindow, ipcMain, safeStorage, shell } from 'electron';
-import { AUTH_CHANNELS } from '../shared/auth-ipc.js';
+import { AUTH_CHANNELS, PROFILE_CHANNELS } from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL } from '../shared/server-status.js';
 import { AuthClient } from './auth-client.js';
 import { GoogleOAuthClient } from './google-oauth.js';
@@ -96,6 +102,20 @@ app.whenReady().then(() => {
   ipcMain.handle(AUTH_CHANNELS.googleSignIn, () => google.signIn());
   ipcMain.handle(AUTH_CHANNELS.googleAcceptTerms, () => google.acceptTermsAndContinue());
   ipcMain.handle(AUTH_CHANNELS.logout, () => auth.logout());
+
+  // Perfil (SPEC-003): sempre da conta da sessão atual.
+  ipcMain.handle(PROFILE_CHANNELS.get, () => auth.getProfile());
+  ipcMain.handle(PROFILE_CHANNELS.updateName, (_event, input: UpdateNameInput) =>
+    auth.updateName(input),
+  );
+  ipcMain.handle(PROFILE_CHANNELS.changeEmail, (_event, input: ChangeEmailInput) =>
+    auth.changeEmail(input),
+  );
+  ipcMain.handle(PROFILE_CHANNELS.changePassword, (_event, input: ChangePasswordInput) =>
+    auth.changePassword(input),
+  );
+  ipcMain.handle(PROFILE_CHANNELS.listConsents, () => auth.listConsents());
+  ipcMain.handle(PROFILE_CHANNELS.acceptTerms, () => auth.acceptTerms());
 
   createWindow();
   app.on('activate', () => {

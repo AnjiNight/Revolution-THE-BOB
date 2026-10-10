@@ -1,4 +1,4 @@
-import type { Role } from '@simulador/shared';
+import type { ConsentType, Role } from '@simulador/shared';
 import type { User } from '../domain/user.js';
 
 /** Portas implementadas pela infraestrutura (DA02). */
@@ -21,6 +21,19 @@ export interface UserRepository {
   findByGoogleSub(googleSub: string): Promise<User | null>;
   /** Liga uma conta Google a uma conta existente (mesmo e-mail verificado). */
   linkGoogle(userId: string, googleSub: string): Promise<User>;
+  updateName(userId: string, name: string): Promise<User>;
+  /** Lança EmailInUseError se o e-mail já pertencer a outra conta (RB01). */
+  updateEmail(userId: string, email: string): Promise<User>;
+  updatePasswordHash(userId: string, passwordHash: string): Promise<User>;
+  /** Histórico de consentimentos, do mais antigo ao mais recente. */
+  listConsents(userId: string): Promise<StoredConsent[]>;
+  addConsent(userId: string, type: ConsentType, version: string): Promise<StoredConsent>;
+}
+
+export interface StoredConsent {
+  type: ConsentType;
+  version: string;
+  acceptedAt: Date;
 }
 
 export interface StoredRefreshToken {
@@ -47,6 +60,8 @@ export interface RefreshTokenRepository {
    */
   rotate(currentId: string, next: NewRefreshToken, at: Date): Promise<boolean>;
   revokeFamily(family: string, at: Date): Promise<void>;
+  /** Encerra todas as sessões da conta (troca de senha, SPEC-003). */
+  revokeAllForUser(userId: string, at: Date): Promise<void>;
 }
 
 export interface PasswordHasher {
