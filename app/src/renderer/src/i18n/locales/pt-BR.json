@@ -1,0 +1,208 @@
+{
+  "app": {
+    "title": "Simulador de Investimentos",
+    "subtitle": "Simule carteiras com ativos reais, sem dinheiro real."
+  },
+  "server": {
+    "heading": "Conexão com o servidor",
+    "checking": "Verificando o servidor…",
+    "connected": "Servidor conectado",
+    "degraded": "Servidor com problemas no banco de dados",
+    "unavailable": "Servidor indisponível",
+    "invalidUrl": "Endereço do servidor inválido",
+    "version": "Versão do servidor: {{version}}",
+    "retry": "Tentar novamente"
+  },
+  "disclaimer": "Projeto acadêmico de caráter educacional. Não constitui recomendação de investimento.",
+  "loading": "Carregando…",
+  "auth": {
+    "loginTitle": "Entrar",
+    "registerTitle": "Criar conta",
+    "name": "Nome",
+    "email": "E-mail",
+    "password": "Senha",
+    "passwordHint": "Use pelo menos 8 caracteres.",
+    "acceptTerms": "Li e aceito os termos de uso e a política de privacidade.",
+    "termsTitle": "Resumo dos termos (versão {{version}})",
+    "termsSummary": "Este é um projeto acadêmico de simulação: nenhuma operação usa dinheiro real e nada aqui é recomendação de investimento. Guardamos seu nome, seu e-mail e sua senha protegida por criptografia, apenas para identificar sua conta. Você poderá pedir a exportação ou a exclusão dos seus dados.",
+    "submitLogin": "Entrar",
+    "submitRegister": "Criar conta",
+    "submitting": "Aguarde…",
+    "noAccount": "Ainda não tem conta?",
+    "goToRegister": "Criar conta",
+    "haveAccount": "Já tem conta?",
+    "goToLogin": "Entrar",
+    "or": "ou",
+    "google": "Continuar com o Google",
+    "googleWaiting": "Conclua o login na janela do navegador…",
+    "googleTermsTitle": "Primeiro acesso com Google",
+    "googleTermsIntro": "Para criar sua conta, leia e aceite os termos.",
+    "continue": "Aceitar e continuar",
+    "cancel": "Cancelar",
+    "goToCollaborator": "Área do colaborador",
+    "collaboratorTitle": "Área do colaborador",
+    "collaboratorNote": "O acesso de colaborador é criado pela equipe. Não é possível se cadastrar por aqui.",
+    "backToLogin": "Voltar ao login de usuário"
+  },
+  "home": {
+    "greeting": "Olá, {{name}}!",
+    "role": {
+      "user": "Perfil: usuário",
+      "collaborator": "Perfil: colaborador"
+    },
+    "next": "Sua conta está pronta. As carteiras de simulação chegam nas próximas versões.",
+    "logout": "Sair",
+    "collaboratorNext": "As ferramentas da equipe (cadastro de ativos e acompanhamento da coleta de dados) chegam nas próximas versões."
+  },
+  "fieldErrors": {
+    "required": "Campo obrigatório.",
+    "too_short": "Muito curto.",
+    "too_long": "Muito longo.",
+    "invalid_email": "Informe um e-mail válido.",
+    "terms_not_accepted": "É preciso aceitar os termos para continuar."
+  },
+  "authErrors": {
+    "validation_error": "Confira os campos destacados.",
+    "email_in_use": "Este e-mail já está em uso.",
+    "invalid_credentials": "E-mail ou senha incorretos.",
+    "invalid_refresh_token": "Sua sessão expirou. Entre novamente.",
+    "unauthorized": "Sua sessão expirou. Entre novamente.",
+    "rate_limited": "Muitas tentativas. Aguarde um minuto e tente de novo.",
+    "server_unavailable": "Não foi possível falar com o servidor. Tente novamente.",
+    "invalid_url": "Endereço do servidor inválido.",
+    "unexpected": "Algo deu errado. Tente novamente.",
+    "wrong_account_type": "Esta conta não pode entrar por aqui. Usuários entram pelo login comum; colaboradores, pela Área do colaborador.",
+    "terms_required": "Aceite os termos para criar sua conta.",
+    "google_login_unavailable": "O login com Google não está disponível.",
+    "google_token_invalid": "Não foi possível confirmar o login com Google. Tente novamente.",
+    "google_email_not_verified": "O Google não confirmou este e-mail.",
+    "google_cancelled": "Login com Google cancelado."
+  },
+  "landing": {
+    "skip": "Pular para o acesso",
+    "nav": {
+      "label": "Seções da página",
+      "how": "Como funciona",
+      "portfolios": "Carteiras",
+      "news": "Notícias",
+      "assets": "Ações e FIIs",
+      "signIn": "Entrar"
+    },
+    "hero": {
+      "eyebrow": "Simulador educacional da B3",
+      "title": "Invista de mentira. Aprenda de verdade.",
+      "lead": "Monte carteiras com ações e FIIs da B3, acompanhe cotações reais e entenda como as notícias mexem com os preços.",
+      "secondary": "Ver como funciona"
+    },
+    "stage": {
+      "title": "Sete ferramentas diferentes. Uma tela só.",
+      "lead": "Hoje, quem investe pula entre corretora, portais de notícias, gráficos e simuladores. Aqui, tudo conversa entre si.",
+      "listLabel": "O que o simulador reúne",
+      "tiles": {
+        "portfolio": "Carteira",
+        "virtual": "Carteira virtual",
+        "news": "Notícias",
+        "charts": "Gráficos",
+        "history": "Histórico",
+        "simulations": "Simulações",
+        "ai": "Inteligência artificial",
+        "learn": "Educação financeira"
+      }
+    },
+    "how": {
+      "title": "Da notícia à decisão, em quatro movimentos.",
+      "lead": "O caminho que um investidor experiente faz de cabeça, organizado para quem está começando.",
+      "build": {
+        "title": "Monte",
+        "text": "Crie uma carteira com dinheiro fictício e escolha ações e FIIs reais da B3."
+      },
+      "follow": {
+        "title": "Acompanhe",
+        "text": "Veja cotações reais, sempre com o horário de cada preço. Sem promessa de tempo real."
+      },
+      "relate": {
+        "title": "Relacione",
+        "text": "As notícias aparecem no gráfico do ativo, classificadas como positivas, neutras ou negativas."
+      },
+      "learn": {
+        "title": "Aprenda",
+        "text": "Compare o que você decidiu com o que aconteceu no mercado e descubra o que faria diferente."
+      }
+    },
+    "portfolios": {
+      "title": "Duas formas de testar uma ideia.",
+      "live": {
+        "title": "Carteira ao vivo",
+        "text": "Compre e venda agora, com a cotação mais recente disponível. A carteira evolui junto com o mercado."
+      },
+      "historic": {
+        "title": "Carteira histórica",
+        "text": "Escolha uma data no passado, monte a carteira e veja quanto ela valeria hoje.",
+        "quote": "Se eu tivesse investido, teria ganhado ou perdido?"
+      }
+    },
+    "news": {
+      "title": "Notícias com contexto, não com alarde.",
+      "lead": "Cada notícia é ligada aos ativos que cita e classificada pelo tom. No gráfico, você vê o que aconteceu com o preço depois.",
+      "note": "Mostramos possíveis relações, nunca certezas. Cenários são estimativas educacionais, não recomendação.",
+      "positive": {
+        "title": "Positiva",
+        "text": "Tom favorável ao ativo, como um lucro acima do esperado."
+      },
+      "neutral": {
+        "title": "Neutra ou incerta",
+        "text": "Fato relevante sem direção clara, ou com efeito ainda difícil de prever."
+      },
+      "negative": {
+        "title": "Negativa",
+        "text": "Tom desfavorável, como uma mudança de regra que pesa sobre o setor."
+      }
+    },
+    "assets": {
+      "eyebrow": "Para quem está começando",
+      "title": "Ações e FIIs, explicados sem complicação.",
+      "examples": "Exemplos",
+      "stock": {
+        "title": "Ação",
+        "text": "Um pedaço de uma empresa. Você ganha quando ela se valoriza e quando distribui dividendos e juros sobre capital próprio."
+      },
+      "reit": {
+        "title": "Fundo imobiliário (FII)",
+        "text": "Cotas de um fundo que investe em imóveis, como galpões e escritórios, e costuma pagar rendimentos todo mês."
+      },
+      "tip": {
+        "title": "Final 11 não quer dizer FII.",
+        "text": "ETFs e units também terminam em 11. Por isso, aqui cada ativo tem a classe definida no cadastro, como nas corretoras."
+      }
+    },
+    "trust": {
+      "title": "Aprender sem risco, de verdade.",
+      "noMoney": {
+        "title": "Nenhum dinheiro real",
+        "text": "Todas as operações são simuladas. Não há corretora, ordem de compra nem pagamento real."
+      },
+      "education": {
+        "title": "Educação, não recomendação",
+        "text": "Mostramos cenários e estatísticas. Indicar o que comprar é atividade regulada pela CVM, e isso não acontece aqui."
+      },
+      "password": {
+        "title": "Senha protegida",
+        "text": "Guardamos apenas um hash da sua senha, feito com argon2id. Nem a equipe consegue lê-la."
+      },
+      "privacy": {
+        "title": "Seus dados, suas regras",
+        "text": "Você poderá pedir a exportação ou a exclusão dos seus dados, como prevê a LGPD."
+      }
+    },
+    "cta": {
+      "title": "Sua primeira carteira começa sem nenhum risco.",
+      "lead": "Crie sua conta gratuita e comece a aprender com o mercado de verdade.",
+      "register": "Criar conta",
+      "signIn": "Já tenho conta"
+    },
+    "footer": {
+      "project": "Engenharia da Computação, Universidade Presbiteriana Mackenzie.",
+      "team": "Luís Gustavo Sampaio Coêlho e Nicoly Araujo de Paschoa"
+    }
+  }
+}

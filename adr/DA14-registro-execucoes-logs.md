@@ -9,11 +9,11 @@
 
 ## Contexto
 
-O administrador (P03) precisa ver falhas de ingestão sem acessar o banco (QA12, RF40).
+O colaborador (P03) precisa ver falhas de ingestão sem acessar o banco (QA12, RF40).
 
 ## Alternativas consideradas
 
-1. **Apenas logs em texto** em arquivo — o administrador teria de ler arquivos no servidor.
+1. **Apenas logs em texto** em arquivo — o colaborador teria de ler arquivos no servidor.
 2. **Ferramenta externa de observabilidade** — painéis prontos, mas com custo ou limites incompatíveis com RES03.
 3. **Registro de execuções no banco + logs estruturados.**
 

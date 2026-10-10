@@ -193,7 +193,7 @@ Formato: **Fonte → Estímulo → Artefato → Ambiente → Resposta → Medida
 #### QA11 — Rastreio das transações
 | Parte | Descrição |
 |---|---|
-| Fonte | Usuário ou administrador |
+| Fonte | Usuário ou colaborador |
 | Estímulo | Questiona um saldo ou posição |
 | Artefato | Carteiras e auditoria |
 | Ambiente | Operação normal |
@@ -208,7 +208,7 @@ Formato: **Fonte → Estímulo → Artefato → Ambiente → Resposta → Medida
 | Artefato | Módulo de administração |
 | Ambiente | Execução agendada |
 | Resposta | Registra horário, fonte, ativos afetados, registros processados e erro; permite reexecução |
-| Medida | Administrador identifica a falha sem acessar o banco diretamente (P03) |
+| Medida | Colaborador identifica a falha sem acessar o banco diretamente (P03) |
 
 #### QA13 — Usabilidade para iniciante
 | Parte | Descrição |

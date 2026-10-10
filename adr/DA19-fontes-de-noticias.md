@@ -31,7 +31,7 @@ Alternativa 3.
 | Tipo | Quem define | Usuário pode desativar? | Prioridade | Entra no treino da IA e nas probabilidades oficiais? |
 |---|---|---|---|---|
 | **Fonte pai** | Equipe | Não | Sempre a maior | Sim |
-| **Curadas** | Equipe/administrador, com categoria e confiabilidade | Sim | Definida pelo usuário | Sim |
+| **Curadas** | Equipe/colaborador, com categoria e confiabilidade | Sim | Definida pelo usuário | Sim |
 | **Do usuário** | O próprio usuário | Sim (pode remover) | Definida pelo usuário | **Não** |
 
 Regras:

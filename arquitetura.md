@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Universidade Presbiteriana Mackenzie** — Engenharia da Computação
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 2.2
+**Versão:** 2.3
 
 | Versão | Data | Alteração |
 |---|---|---|
@@ -11,6 +11,7 @@
 | 2.0 | 01/10/2026 | Decisões movidas para [ADRs](adr/README.md); novas decisões DA16–DA21 (cotações por plano, carteira histórica, histórico da B3, fontes de notícias, modelo de IA, cenários por sentimento); ligação com [Decisões Técnicas](decisoes_tecnicas.md) |
 | 2.1 | 02/10/2026 | Escopo inicial restrito a ações e FIIs; renda fixa adiada e movida para pontos de extensão ([DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md)) |
 | 2.2 | 08/10/2026 | Classes de ativo Ação e FII, com setor e segmento ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); PE14 e PE15 resolvidas |
+| 2.3 | 08/10/2026 | Perfil colaborador (conta criada pela equipe, Área do colaborador) e login com Google ([DA24](adr/DA24-login-com-google.md)) |
 
 ---
 
@@ -100,6 +101,7 @@ Cada decisão está registrada como ADR, com contexto, alternativas, decisão, c
 | [DA21](adr/DA21-cenarios-por-sentimento.md) | Cenários | Probabilidade condicional ao sentimento, com taxa-base e n | Peso fixo; modelo preditivo caixa-preta | Proposta |
 | [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Escopo inicial | Ações e FIIs; renda fixa adiada | Renda fixa no escopo inicial; só ações | Aceita, com pontos em aberto |
 | [DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md) | Classes de ativo | Ação (inclui units) e FII, com setor e segmento; ETFs e BDRs fora | Tipo deduzido do ticker; classe em texto livre | Aceita |
+| [DA24](adr/DA24-login-com-google.md) | Login com Google | Navegador do sistema + PKCE + endereço local; servidor verifica o ID token; só para usuários | Janela embutida; serviço de terceiros | Aceita, com pontos em aberto |
 
 ---
 
@@ -110,7 +112,7 @@ Mostra o sistema como uma caixa e quem interage com ele.
 ```mermaid
 flowchart LR
     U(["Investidor<br/>(Visitante, Usuário, Assinante)"])
-    ADM(["Administrador"])
+    ADM(["Colaborador"])
     SIS["Simulador de<br/>Investimentos"]
     COT[("Provedor de cotações<br/>gratuito (~30 min)")]
     COTP[("Provedor de cotações<br/>pago (assinante)")]
@@ -120,6 +122,7 @@ flowchart LR
     NOT[("Fontes curadas e<br/>fontes do usuário (feeds)")]
     IA[("Serviço de IA<br/>(opcional, DA20)")]
     MAIL[("Serviço de e-mail")]
+    GOO[("Google<br/>(login, DA24)")]
 
     U -- "simula carteiras,<br/>consulta ativos, notícias e cenários" --> SIS
     ADM -- "mantém ativos e fontes,<br/>monitora ingestão" --> SIS
@@ -131,6 +134,8 @@ flowchart LR
     SIS -- "coleta notícias" --> NOT
     SIS -. "classifica notícias" .-> IA
     SIS -- "recuperação de senha,<br/>notificações" --> MAIL
+    U -. "entrar com Google" .-> GOO
+    SIS -. "verifica ID token" .-> GOO
 ```
 
 ---

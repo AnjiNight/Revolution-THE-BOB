@@ -1,0 +1,41 @@
+{
+  "name": "simulador-investimentos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Simulador de investimentos — projeto acadêmico (Mackenzie)",
+  "type": "module",
+  "workspaces": [
+    "packages/shared",
+    "api",
+    "app"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "npm run build --workspace packages/shared && npm run build --workspace api && npm run build --workspace app",
+    "typecheck": "npm run build --workspace packages/shared && npm run typecheck --workspaces --if-present",
+    "test": "npm run build --workspace packages/shared && npm run db:generate --workspace api && vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev:api": "npm run dev --workspace api",
+    "dev:worker": "npm run dev:worker --workspace api",
+    "dev:app": "npm run dev --workspace app",
+    "db:up": "docker compose up -d db",
+    "db:migrate": "npm run db:migrate --workspace api",
+    "db:rollback": "npm run db:rollback --workspace api"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "22.20.5",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
+  }
+}

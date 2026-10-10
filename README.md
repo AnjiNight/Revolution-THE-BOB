@@ -52,13 +52,61 @@ Hoje o repositório contém apenas a documentação, na raiz:
 | [Drivers arquiteturais](drivers_arquiteturais.md), [ADRs](adr/README.md), [Decisões técnicas](decisoes_tecnicas.md) e [Arquitetura](arquitetura.md) | Arquitetura e decisões |
 | [Mapa de specs](specs/mapa_specs.md) | Ordem de desenvolvimento (Spec-Driven Development) |
 
-Estrutura prevista para o código, criada na SPEC-001:
+Código (criado na [SPEC-001](specs/SPEC-001.md)):
 
 ```
-app/         Aplicação desktop (Electron)
-api/         API Node + Fastify (servidor e processador de tarefas)
-packages/    Tipos compartilhados
+app/              Aplicação desktop (Electron + React)
+api/              Servidor e processador de tarefas (Fastify + Prisma)
+packages/shared/  Tipos e contratos compartilhados
 ```
+
+## Como rodar
+
+Pré-requisitos: **Node.js 22** e **Docker** (para o PostgreSQL local).
+
+```bash
+npm install                     # instala os três pacotes
+cp .env.example api/.env        # configuração do servidor
+npm run db:up                   # sobe o PostgreSQL 16 (docker compose)
+npm run db:migrate              # aplica as migrações
+
+npm run dev:api                 # servidor em http://localhost:3333
+npm run dev:worker              # processador de tarefas (outro terminal)
+npm run dev:app                 # aplicação desktop (outro terminal)
+```
+
+Contas de **colaborador** (equipe) não são criadas pelo app ([SPEC-002](specs/SPEC-002.md)). Para criar uma, gerando uma senha forte que aparece uma única vez:
+
+```bash
+npm run colaborador:criar --workspace api -- --nome "Nome Sobrenome" --email pessoa@exemplo.com
+```
+
+O colaborador entra pela **Área do colaborador**, na tela de login.
+
+### Login com Google (opcional)
+
+O botão "Continuar com o Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)). O login abre o navegador do sistema: se a pessoa já estiver conectada ao Google lá, basta escolher a conta.
+
+1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e configure a **tela de consentimento OAuth** (tipo externo; enquanto estiver em teste, adicione os e-mails de quem vai testar).
+2. Em **Credenciais → Criar credenciais → ID do cliente OAuth**, escolha **Aplicativo para computador**. Não é preciso cadastrar endereço de retorno: o app usa um endereço local temporário (`127.0.0.1`).
+3. No `api/.env`, preencha `GOOGLE_CLIENT_ID` (o servidor confere o login com ele).
+4. Copie `app/.env.example` para `app/.env` e preencha `MAIN_VITE_GOOGLE_CLIENT_ID` e `MAIN_VITE_GOOGLE_CLIENT_SECRET`. O `app/.env` não vai para o Git.
+5. Reinicie o servidor e o app.
+
+Para o login terminar, o servidor e o banco precisam estar rodando (seção anterior).
+
+Testes contra o PostgreSQL real rodam quando `TEST_DATABASE_URL` aponta para um banco com as migrações aplicadas (atenção: apagam os dados de identidade desse banco). No GitHub Actions eles rodam sempre.
+
+Verificações (as mesmas do GitHub Actions):
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+Migrações: toda pasta em `api/prisma/migrations/` tem um `down.sql` escrito à mão; `npm run db:rollback` desfaz a última migração aplicada.
 
 ## Aviso legal
 

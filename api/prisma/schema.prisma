@@ -1,0 +1,76 @@
+// Esquema do banco (PostgreSQL). Convenções (SPEC-001):
+// - Tabelas e colunas em português, snake_case, iguais ao modelo de dados (@@map / @map).
+// - Toda migração tem um down.sql escrito à mão, usado por `npm run db:rollback`.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Tipo de conta (DA12, SPEC-002). "colaborador" é a equipe: só a própria equipe cria essas contas.
+/// "Assinante" vem da assinatura (SPEC-025).
+enum PerfilAcesso {
+  usuario
+  colaborador
+
+  @@map("perfil_acesso")
+}
+
+enum TipoConsentimento {
+  termos_uso_privacidade
+
+  @@map("tipo_consentimento")
+}
+
+/// Pessoa cadastrada (SPEC-002). E-mail único e sempre em minúsculas (RB01).
+/// Conta só com Google não tem senha; toda conta tem senha ou Google (CHECK na migração).
+model Usuario {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome         String       @db.VarChar(100)
+  email        String       @unique @db.VarChar(254)
+  senhaHash    String?      @map("senha_hash")
+  googleSub    String?      @unique @map("google_sub") @db.VarChar(255)
+  perfil       PerfilAcesso @default(usuario)
+  criadoEm     DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  consentimentos  Consentimento[]
+  tokensRenovacao TokenRenovacao[]
+
+  @@map("usuario")
+}
+
+/// Aceite dos termos de uso e da política de privacidade (RNF11).
+model Consentimento {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId String            @map("usuario_id") @db.Uuid
+  tipo      TipoConsentimento
+  versao    String            @db.VarChar(20)
+  aceitoEm  DateTime          @default(now()) @map("aceito_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("consentimento")
+}
+
+/// Token de renovação da sessão. Só o hash SHA-256 é guardado; "familia" agrupa as trocas de um mesmo login.
+model TokenRenovacao {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId  String    @map("usuario_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash") @db.Char(64)
+  familia    String    @db.Uuid
+  criadoEm   DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  expiraEm   DateTime  @map("expira_em") @db.Timestamptz(3)
+  revogadoEm DateTime? @map("revogado_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([familia])
+  @@map("token_renovacao")
+}

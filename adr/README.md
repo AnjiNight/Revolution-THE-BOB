@@ -26,7 +26,7 @@ Os identificadores **DAxx** são os mesmos usados nos [Drivers Arquiteturais](..
 | [DA02](DA02-camadas-mvc.md) | Camadas e padrão MVC | Aceita | 24/09/2026 |
 | [DA03](DA03-cliente-desktop-multiplataforma.md) | Cliente desktop multiplataforma | Aceita | 24/09/2026 |
 | [DA04](DA04-banco-relacional.md) | Banco de dados relacional | Aceita | 24/09/2026 |
-| [DA05](DA05-autenticacao-propria.md) | Autenticação própria, login externo como evolução | Aceita | 24/09/2026 |
+| [DA05](DA05-autenticacao-propria.md) | Autenticação própria, login externo como evolução | Aceita (complementada por DA24) | 24/09/2026 |
 | [DA06](DA06-adaptadores-fontes-externas.md) | Fontes externas atrás de adaptadores | Aceita | 24/09/2026 |
 | [DA07](DA07-ingestao-assincrona.md) | Ingestão assíncrona, agendada e centralizada | Aceita (alterada por DA16, DA18 e DA22) | 24/09/2026 |
 | [DA08](DA08-cache-dois-niveis-offline-leitura.md) | Cache em dois níveis e offline somente leitura | Aceita | 24/09/2026 |
@@ -45,6 +45,7 @@ Os identificadores **DAxx** são os mesmos usados nos [Drivers Arquiteturais](..
 | [DA21](DA21-cenarios-por-sentimento.md) | Cenários por probabilidade condicional ao sentimento | Proposta | 01/10/2026 |
 | [DA22](DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Escopo inicial: ações e FIIs; renda fixa adiada | Aceita, com pontos em aberto (pontos 2 e 3 resolvidos por DA23) | 02/10/2026 |
 | [DA23](DA23-classes-de-ativo-acoes-e-fiis.md) | Classes de ativo: Ações e FIIs separados, como nas corretoras | Aceita | 08/10/2026 |
+| [DA24](DA24-login-com-google.md) | Login com Google no app desktop (OAuth com PKCE) | Aceita, com pontos em aberto | 08/10/2026 |
 
 ## Modelo para novos ADRs
 

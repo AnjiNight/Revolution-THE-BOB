@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [development, main]
+
+jobs:
+  verificar:
+    name: Lint, tipos, testes e build
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  migracoes:
+    name: Banco real (migrações reversíveis e testes com PostgreSQL)
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      DATABASE_URL: postgresql://simulador:simulador@localhost:5432/simulador
+      TEST_DATABASE_URL: postgresql://simulador:simulador@localhost:5432/simulador
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: simulador
+          POSTGRES_PASSWORD: simulador
+          POSTGRES_DB: simulador
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U simulador"
+          --health-interval 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - name: Testes com o banco real
+        run: npm test
+      - name: Reverter todas as migrações
+        run: |
+          for pasta in api/prisma/migrations/*/; do npm run db:rollback; done
+      - name: Aplicar de novo
+        run: npm run db:migrate

@@ -175,11 +175,11 @@ Mariana considera que o aplicativo resolveu seu problema quando consegue testar 
 
 ---
 
-### P03 — Administrador da Plataforma
+### P03 — Colaborador da Plataforma
 
 **Nome fictício:** André Martins  
 **Idade:** 29 anos  
-**Ocupação:** Administrador do sistema  
+**Ocupação:** Colaborador da equipe (administração do sistema)  
 **Conhecimento financeiro:** Intermediário  
 **Conhecimento técnico:** Avançado  
 
@@ -253,7 +253,7 @@ André considera que o sistema atende sua necessidade quando consegue identifica
 |---|---|---|---|
 | P01 | Lucas Ferreira | Investidor iniciante | Aprender e experimentar investimentos sem utilizar dinheiro real |
 | P02 | Mariana Costa | Investidora intermediária | Testar e comparar diferentes estratégias e cenários |
-| P03 | André Martins | Administrador | Garantir disponibilidade e qualidade dos dados da plataforma |
+| P03 | André Martins | Colaborador | Garantir disponibilidade e qualidade dos dados da plataforma |
 
 ---
 
