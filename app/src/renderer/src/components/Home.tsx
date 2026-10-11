@@ -1,15 +1,53 @@
 import type { ConsentList, PublicUser } from '@simulador/shared';
+import {
+  ArrowUpRight,
+  ClockCounterClockwise,
+  Database,
+  Lightning,
+  Pulse,
+  type Icon,
+} from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isTermsOutdated, TermsUpdateNotice } from './Profile';
 
 interface HomeProps {
   user: PublicUser;
-  onLogout: () => void;
   onOpenProfile: () => void;
 }
 
-export function Home({ user, onLogout, onOpenProfile }: HomeProps) {
+/** O que vem nas próximas versões: carteiras para o usuário, ferramentas para o colaborador. */
+const UPCOMING: Record<
+  PublicUser['role'],
+  ReadonlyArray<{ title: string; text: string; icon: Icon }>
+> = {
+  user: [
+    {
+      title: 'landing.portfolios.live.title',
+      text: 'landing.portfolios.live.text',
+      icon: Lightning,
+    },
+    {
+      title: 'landing.portfolios.historic.title',
+      text: 'landing.portfolios.historic.text',
+      icon: ClockCounterClockwise,
+    },
+  ],
+  collaborator: [
+    {
+      title: 'home.collabTools.assets.title',
+      text: 'home.collabTools.assets.text',
+      icon: Database,
+    },
+    {
+      title: 'home.collabTools.ingestion.title',
+      text: 'home.collabTools.ingestion.text',
+      icon: Pulse,
+    },
+  ],
+};
+
+export function Home({ user, onOpenProfile }: HomeProps) {
   const { t } = useTranslation();
   const [consents, setConsents] = useState<ConsentList | null>(null);
   const [accepting, setAccepting] = useState(false);
@@ -31,21 +69,48 @@ export function Home({ user, onLogout, onOpenProfile }: HomeProps) {
   };
 
   return (
-    <section className={`card home home-${user.role}`}>
+    <div className={`home-view home-${user.role}`}>
       {consents && isTermsOutdated(consents) && (
         <TermsUpdateNotice submitting={accepting} onAccept={() => void accept()} />
       )}
-      <h2>{t('home.greeting', { name: user.name })}</h2>
-      <p className="status-detail">{t(`home.role.${user.role}`)}</p>
-      <p>{user.role === 'collaborator' ? t('home.collaboratorNext') : t('home.next')}</p>
-      <div className="home-actions">
-        <button type="button" onClick={onOpenProfile}>
+
+      <header className="page-hero">
+        <p className={user.role === 'collaborator' ? 'eyebrow eyebrow-warn' : 'eyebrow'}>
+          {t(`profile.roleName.${user.role}`)}
+        </p>
+        <h1>{t('home.greeting', { name: user.name })}</h1>
+        <p className="lead">
+          {user.role === 'collaborator' ? t('home.collaboratorNext') : t('home.next')}
+        </p>
+        <button type="button" className="pill pill-primary" onClick={onOpenProfile}>
           {t('home.profile')}
+          <span className="pill-icon" aria-hidden="true">
+            <ArrowUpRight weight="bold" />
+          </span>
         </button>
-        <button type="button" className="secondary" onClick={onLogout}>
-          {t('home.logout')}
-        </button>
-      </div>
-    </section>
+      </header>
+
+      <section className="upcoming" aria-labelledby="upcoming-title">
+        <h2 id="upcoming-title" className="section-label">
+          {t('home.upcomingTitle')}
+        </h2>
+        <ul className="upcoming-grid">
+          {UPCOMING[user.role].map(({ title, text, icon: ItemIcon }) => (
+            <li key={title} className="bezel">
+              <div className="bezel-core upcoming-card">
+                <div className="upcoming-head">
+                  <span className="round-icon" aria-hidden="true">
+                    <ItemIcon weight="light" />
+                  </span>
+                  <span className="soon-badge">{t('home.soon')}</span>
+                </div>
+                <h3>{t(title)}</h3>
+                <p>{t(text)}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
   );
 }

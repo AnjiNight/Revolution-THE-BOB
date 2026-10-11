@@ -8,22 +8,23 @@ import {
   type FieldErrors,
   type UserProfile,
 } from '@simulador/shared';
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { CheckCircle } from '@phosphor-icons/react';
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError, ClientResult } from '../../../shared/auth-ipc';
+import { formatDate, initials } from '../format';
 import { TextField } from './TextField';
 
 interface ProfileProps {
-  onBack: () => void;
   /** Nome ou e-mail mudou: atualiza o restante do app. */
   onUserChanged: (user: UserProfile) => void;
   /** A sessão caiu durante uma chamada: volta para o login. */
   onSessionExpired: () => void;
 }
 
-/** Tela Meu perfil (SPEC-003 §5.2). */
-export function Profile({ onBack, onUserChanged, onSessionExpired }: ProfileProps) {
-  const { t } = useTranslation();
+/** Tela Meu perfil (SPEC-003 §5.2): resumo da conta à esquerda, edições à direita. */
+export function Profile({ onUserChanged, onSessionExpired }: ProfileProps) {
+  const { t, i18n } = useTranslation();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [consents, setConsents] = useState<ConsentList | null>(null);
   const [error, setError] = useState<ClientAuthError | undefined>();
@@ -49,13 +50,11 @@ export function Profile({ onBack, onUserChanged, onSessionExpired }: ProfileProp
   };
 
   return (
-    <section className="card profile" aria-labelledby="profile-title">
-      <div className="profile-header">
-        <h2 id="profile-title">{t('profile.title')}</h2>
-        <button type="button" className="link" onClick={onBack}>
-          {t('profile.back')}
-        </button>
-      </div>
+    <div className="profile-view">
+      <header className="page-hero page-hero-compact">
+        <h1>{t('profile.title')}</h1>
+        <p className="lead">{t('profile.subtitle')}</p>
+      </header>
 
       {error && (
         <p className="form-error" role="alert">
@@ -65,38 +64,163 @@ export function Profile({ onBack, onUserChanged, onSessionExpired }: ProfileProp
       {!user && !error && <p className="loading">{t('loading')}</p>}
 
       {user && (
-        <>
-          <dl className="profile-summary">
-            <dt>{t('profile.accountType')}</dt>
-            <dd>{t(`home.role.${user.role}`)}</dd>
-            <dt>{t('profile.signInMethods')}</dt>
-            <dd>
-              {[user.hasPassword && t('profile.methodPassword'), user.hasGoogle && 'Google']
-                .filter(Boolean)
-                .join(' + ')}
-            </dd>
-            <dt>{t('profile.createdAt')}</dt>
-            <dd>{new Date(user.createdAt).toLocaleDateString()}</dd>
-          </dl>
+        <div className="profile-layout">
+          <aside className="bezel profile-aside">
+            <div className="bezel-core profile-identity">
+              <span className="avatar avatar-lg" aria-hidden="true">
+                {initials(user.name)}
+              </span>
+              <p className="profile-name">{user.name}</p>
+              <p className="profile-email">{user.email}</p>
+              <p className={user.role === 'collaborator' ? 'eyebrow eyebrow-warn' : 'eyebrow'}>
+                {t(`profile.roleName.${user.role}`)}
+              </p>
+              <dl className="profile-summary">
+                <dt>{t('profile.signInMethods')}</dt>
+                <dd>
+                  {[user.hasPassword && t('profile.methodPassword'), user.hasGoogle && 'Google']
+                    .filter(Boolean)
+                    .join(' + ')}
+                </dd>
+                <dt>{t('profile.createdAt')}</dt>
+                <dd>{formatDate(user.createdAt, i18n.language)}</dd>
+              </dl>
+            </div>
+          </aside>
 
-          <NameForm user={user} onSaved={changed} onSessionExpired={onSessionExpired} />
-          {user.hasPassword ? (
-            <>
-              <EmailForm user={user} onSaved={changed} onSessionExpired={onSessionExpired} />
-              <PasswordForm onSessionExpired={onSessionExpired} />
-            </>
-          ) : (
-            <p className="field-hint">{t('profile.googleOnly', { email: user.email })}</p>
-          )}
-          {consents && (
-            <Consents
-              list={consents}
-              onAccepted={setConsents}
-              onSessionExpired={onSessionExpired}
-            />
-          )}
-        </>
+          <div className="profile-sections">
+            <EditableSection
+              title={t('profile.nameSection')}
+              value={user.name}
+              editLabel={t('profile.editName')}
+              savedText={t('profile.saved')}
+            >
+              {(done) => (
+                <NameForm
+                  user={user}
+                  onSaved={changed}
+                  onDone={done}
+                  onSessionExpired={onSessionExpired}
+                />
+              )}
+            </EditableSection>
+
+            {user.hasPassword ? (
+              <>
+                <EditableSection
+                  title={t('profile.emailSection')}
+                  value={user.email}
+                  editLabel={t('profile.editEmail')}
+                  savedText={t('profile.saved')}
+                >
+                  {(done) => (
+                    <EmailForm
+                      user={user}
+                      onSaved={changed}
+                      onDone={done}
+                      onSessionExpired={onSessionExpired}
+                    />
+                  )}
+                </EditableSection>
+                <EditableSection
+                  title={t('profile.passwordSection')}
+                  value={t('profile.passwordSummary')}
+                  editLabel={t('profile.editPassword')}
+                  savedText={t('profile.passwordChanged')}
+                >
+                  {(done) => <PasswordForm onDone={done} onSessionExpired={onSessionExpired} />}
+                </EditableSection>
+              </>
+            ) : (
+              <section className="profile-panel" aria-labelledby="google-account-title">
+                <h2 id="google-account-title">{t('profile.googleAccount')}</h2>
+                <p className="profile-value">{t('profile.googleOnly', { email: user.email })}</p>
+              </section>
+            )}
+
+            {consents && (
+              <Consents
+                list={consents}
+                onAccepted={setConsents}
+                onSessionExpired={onSessionExpired}
+              />
+            )}
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
+
+/** Fecha a edição; `saved` diz se foi por sucesso (mostra a confirmação) ou cancelamento. */
+type Done = (saved: boolean) => void;
+
+/**
+ * Cartão com o valor atual e um botão que abre a edição. Ao abrir, o foco vai para o primeiro
+ * campo; ao fechar, volta para o botão (navegação por teclado e leitor de tela).
+ */
+function EditableSection({
+  title,
+  value,
+  editLabel,
+  savedText,
+  children,
+}: {
+  title: string;
+  value: ReactNode;
+  editLabel: string;
+  savedText: string;
+  children: (done: Done) => ReactNode;
+}) {
+  const headingId = useId();
+  const [open, setOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const panel = useRef<HTMLElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+
+  useEffect(() => {
+    if (open) panel.current?.querySelector('input')?.focus();
+    else if (wasOpen.current) editButton.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
+
+  const done: Done = (ok) => {
+    setSaved(ok);
+    setOpen(false);
+  };
+
+  return (
+    <section ref={panel} className="profile-panel" aria-labelledby={headingId}>
+      <div className="profile-panel-head">
+        <div>
+          <h2 id={headingId}>{title}</h2>
+          {!open && <p className="profile-value">{value}</p>}
+        </div>
+        {!open && (
+          <button
+            ref={editButton}
+            type="button"
+            className="pill pill-ghost pill-small"
+            onClick={() => {
+              setSaved(false);
+              setOpen(true);
+            }}
+          >
+            {editLabel}
+          </button>
+        )}
+      </div>
+      {open && children(done)}
+      {/* Região sempre presente: o leitor de tela anuncia quando a confirmação aparece. */}
+      <p className="form-success" role="status">
+        {saved && !open && (
+          <>
+            <CheckCircle weight="fill" aria-hidden="true" />
+            {savedText}
+          </>
+        )}
+      </p>
     </section>
   );
 }
@@ -104,11 +228,10 @@ export function Profile({ onBack, onUserChanged, onSessionExpired }: ProfileProp
 interface FormState {
   fields: FieldErrors;
   error?: ClientAuthError | undefined;
-  saved: boolean;
   submitting: boolean;
 }
 
-const IDLE: FormState = { fields: {}, saved: false, submitting: false };
+const IDLE: FormState = { fields: {}, submitting: false };
 
 /** Envia o formulário e traduz o resultado em estado da tela. */
 function useSubmit(onSessionExpired: () => void) {
@@ -122,8 +245,8 @@ function useSubmit(onSessionExpired: () => void) {
     setState({ ...IDLE, submitting: true });
     const result = await send();
     if (result.ok) {
-      onOk(result.data);
-      return setState({ ...IDLE, saved: true });
+      setState(IDLE);
+      return onOk(result.data);
     }
     if (result.error === 'unauthorized') return onSessionExpired();
     setState({ ...IDLE, error: result.error, fields: result.fields ?? {} });
@@ -131,17 +254,18 @@ function useSubmit(onSessionExpired: () => void) {
   return { state, submit };
 }
 
-function Section({
-  title,
+/** Corpo do formulário de edição: erro geral, campos e as ações Salvar e Cancelar. */
+function EditForm({
   state,
-  savedText,
+  saveLabel,
   onSubmit,
+  onCancel,
   children,
 }: {
-  title: string;
   state: FormState;
-  savedText: string;
+  saveLabel: string;
   onSubmit: () => void;
+  onCancel: () => void;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -150,22 +274,21 @@ function Section({
     onSubmit();
   };
   return (
-    <form className="profile-section" onSubmit={handle} noValidate>
-      <h3>{title}</h3>
+    <form className="profile-form" onSubmit={handle} noValidate>
       {state.error && (
         <p className="form-error" role="alert">
           {t(`authErrors.${state.error}`)}
         </p>
       )}
       {children}
-      <button type="submit" disabled={state.submitting}>
-        {state.submitting ? t('auth.submitting') : t('profile.save')}
-      </button>
-      {state.saved && (
-        <p className="form-success" role="status">
-          {savedText}
-        </p>
-      )}
+      <div className="form-actions">
+        <button type="submit" disabled={state.submitting}>
+          {state.submitting ? t('auth.submitting') : saveLabel}
+        </button>
+        <button type="button" className="secondary" onClick={onCancel} disabled={state.submitting}>
+          {t('auth.cancel')}
+        </button>
+      </div>
     </form>
   );
 }
@@ -173,23 +296,27 @@ function Section({
 interface UserFormProps {
   user: UserProfile;
   onSaved: (user: UserProfile) => void;
+  onDone: Done;
   onSessionExpired: () => void;
 }
 
-function NameForm({ user, onSaved, onSessionExpired }: UserFormProps) {
+function NameForm({ user, onSaved, onDone, onSessionExpired }: UserFormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState(user.name);
   const { state, submit } = useSubmit(onSessionExpired);
   return (
-    <Section
-      title={t('profile.nameSection')}
+    <EditForm
       state={state}
-      savedText={t('profile.saved')}
+      saveLabel={t('profile.saveName')}
+      onCancel={() => onDone(false)}
       onSubmit={() =>
         void submit(
           validate(updateNameSchema, { name }),
           () => window.api.profile.updateName({ name }),
-          onSaved,
+          (next) => {
+            onSaved(next);
+            onDone(true);
+          },
         )
       }
     >
@@ -201,28 +328,27 @@ function NameForm({ user, onSaved, onSessionExpired }: UserFormProps) {
         autoComplete="name"
         error={state.fields.name}
       />
-    </Section>
+    </EditForm>
   );
 }
 
-function EmailForm({ user, onSaved, onSessionExpired }: UserFormProps) {
+function EmailForm({ user, onSaved, onDone, onSessionExpired }: UserFormProps) {
   const { t } = useTranslation();
   const [email, setEmail] = useState(user.email);
   const [currentPassword, setCurrentPassword] = useState('');
   const { state, submit } = useSubmit(onSessionExpired);
   return (
-    <Section
-      title={t('profile.emailSection')}
+    <EditForm
       state={state}
-      savedText={t('profile.saved')}
+      saveLabel={t('profile.saveEmail')}
+      onCancel={() => onDone(false)}
       onSubmit={() =>
         void submit(
           validate(changeEmailSchema, { email, currentPassword }),
           () => window.api.profile.changeEmail({ email, currentPassword }),
           (next) => {
-            setEmail(next.email);
-            setCurrentPassword('');
             onSaved(next);
+            onDone(true);
           },
         )
       }
@@ -243,28 +369,31 @@ function EmailForm({ user, onSaved, onSessionExpired }: UserFormProps) {
         autoComplete="current-password"
         error={state.fields.currentPassword}
       />
-    </Section>
+    </EditForm>
   );
 }
 
-function PasswordForm({ onSessionExpired }: { onSessionExpired: () => void }) {
+function PasswordForm({
+  onDone,
+  onSessionExpired,
+}: {
+  onDone: Done;
+  onSessionExpired: () => void;
+}) {
   const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const { state, submit } = useSubmit(onSessionExpired);
   return (
-    <Section
-      title={t('profile.passwordSection')}
+    <EditForm
       state={state}
-      savedText={t('profile.passwordChanged')}
+      saveLabel={t('profile.savePassword')}
+      onCancel={() => onDone(false)}
       onSubmit={() =>
         void submit(
           validate(changePasswordSchema, { currentPassword, newPassword }),
           () => window.api.profile.changePassword({ currentPassword, newPassword }),
-          () => {
-            setCurrentPassword('');
-            setNewPassword('');
-          },
+          () => onDone(true),
         )
       }
     >
@@ -285,11 +414,11 @@ function PasswordForm({ onSessionExpired }: { onSessionExpired: () => void }) {
         hint={t('auth.passwordHint')}
         error={state.fields.newPassword}
       />
-    </Section>
+    </EditForm>
   );
 }
 
-/** Histórico de aceites (RNF11) e aviso quando há versão nova dos termos. */
+/** Histórico de aceites (RNF11), do mais recente para o mais antigo, e aviso de versão nova. */
 function Consents({
   list,
   onAccepted,
@@ -299,22 +428,13 @@ function Consents({
   onAccepted: (list: ConsentList) => void;
   onSessionExpired: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const outdated = isTermsOutdated(list);
   const { state, submit } = useSubmit(onSessionExpired);
+  const newestFirst = [...list.consents].reverse();
   return (
-    <div className="profile-section">
-      <h3>{t('profile.consentsSection')}</h3>
-      <ul className="consent-list">
-        {list.consents.map((consent) => (
-          <li key={`${consent.version}-${consent.acceptedAt}`}>
-            {t('profile.consentItem', {
-              version: consent.version,
-              date: new Date(consent.acceptedAt).toLocaleString(),
-            })}
-          </li>
-        ))}
-      </ul>
+    <section className="profile-panel" aria-labelledby="consents-title">
+      <h2 id="consents-title">{t('profile.consentsSection')}</h2>
       {outdated && (
         <TermsUpdateNotice
           submitting={state.submitting}
@@ -327,8 +447,27 @@ function Consents({
           }
         />
       )}
+      <ol className="consent-timeline">
+        {newestFirst.map((consent, index) => (
+          <li key={`${consent.version}-${consent.acceptedAt}`}>
+            <span className="consent-dot" aria-hidden="true" />
+            <div>
+              <p className="consent-title">{t('profile.consentTitle')}</p>
+              <p className="consent-meta">
+                {t('profile.consentMeta', {
+                  version: consent.version,
+                  date: formatDate(consent.acceptedAt, i18n.language, true),
+                })}
+              </p>
+            </div>
+            {index === 0 && consent.version === list.currentVersion && (
+              <span className="soon-badge current-badge">{t('profile.consentCurrent')}</span>
+            )}
+          </li>
+        ))}
+      </ol>
       <p className="field-hint">{t('profile.withdrawConsent')}</p>
-    </div>
+    </section>
   );
 }
 
@@ -336,6 +475,7 @@ export function isTermsOutdated(list: ConsentList): boolean {
   return list.consents.at(-1)?.version !== list.currentVersion;
 }
 
+/** Aviso de termos novos. `role="status"`: informa sem interromper o leitor de tela. */
 export function TermsUpdateNotice({
   submitting,
   onAccept,
@@ -345,7 +485,7 @@ export function TermsUpdateNotice({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="terms-notice" role="alert">
+    <div className="terms-notice" role="status">
       <p>{t('profile.termsUpdated')}</p>
       <details className="terms">
         <summary>{t('auth.termsTitle', { version: TERMS_VERSION })}</summary>

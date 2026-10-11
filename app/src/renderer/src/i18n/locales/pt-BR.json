@@ -46,19 +46,25 @@
   },
   "home": {
     "greeting": "Olá, {{name}}!",
-    "role": {
-      "user": "Perfil: usuário",
-      "collaborator": "Perfil: colaborador"
-    },
     "next": "Sua conta está pronta. As carteiras de simulação chegam nas próximas versões.",
     "logout": "Sair",
     "collaboratorNext": "As ferramentas da equipe (cadastro de ativos e acompanhamento da coleta de dados) chegam nas próximas versões.",
-    "profile": "Meu perfil"
+    "profile": "Meu perfil",
+    "upcomingTitle": "O que vem por aí",
+    "soon": "Em breve",
+    "collabTools": {
+      "assets": {
+        "title": "Cadastro de ativos",
+        "text": "Cadastrar ações e FIIs com classe e setor ou segmento, para os usuários simularem."
+      },
+      "ingestion": {
+        "title": "Acompanhamento da coleta",
+        "text": "Ver as execuções e as falhas da coleta de cotações e notícias, e repetir quando precisar."
+      }
+    }
   },
   "profile": {
     "title": "Meu perfil",
-    "back": "Voltar ao início",
-    "accountType": "Tipo de conta",
     "signInMethods": "Formas de acesso",
     "methodPassword": "E-mail e senha",
     "createdAt": "Conta criada em",
@@ -68,14 +74,28 @@
     "passwordSection": "Senha",
     "currentPassword": "Senha atual",
     "newPassword": "Nova senha",
-    "save": "Salvar",
     "saved": "Alterações salvas.",
     "passwordChanged": "Senha alterada. As outras sessões desta conta foram encerradas.",
     "googleOnly": "Esta conta entra pelo Google ({{email}}). O e-mail e a senha são gerenciados pelo Google.",
     "consentsSection": "Consentimentos",
-    "consentItem": "Termos de uso e política de privacidade, versão {{version}}, aceitos em {{date}}",
     "withdrawConsent": "Para retirar o consentimento, é preciso excluir a conta. A exclusão chega em uma próxima versão.",
-    "termsUpdated": "Os termos de uso e a política de privacidade mudaram. Leia e aceite a nova versão para continuar."
+    "termsUpdated": "Os termos de uso e a política de privacidade mudaram. Leia o resumo e aceite a nova versão.",
+    "subtitle": "Seus dados de acesso e o histórico de consentimentos.",
+    "roleName": {
+      "user": "Usuário",
+      "collaborator": "Colaborador"
+    },
+    "editName": "Editar nome",
+    "saveName": "Salvar nome",
+    "editEmail": "Trocar e-mail",
+    "saveEmail": "Salvar e-mail",
+    "editPassword": "Trocar senha",
+    "savePassword": "Salvar nova senha",
+    "passwordSummary": "Usada para entrar com e-mail e senha.",
+    "googleAccount": "Conta Google",
+    "consentTitle": "Termos de uso e política de privacidade",
+    "consentMeta": "Versão {{version}}, aceitos em {{date}}",
+    "consentCurrent": "Vigente"
   },
   "fieldErrors": {
     "required": "Campo obrigatório.",
@@ -232,5 +252,10 @@
       "project": "Engenharia da Computação, Universidade Presbiteriana Mackenzie.",
       "team": "Luís Gustavo Sampaio Coêlho e Nicoly Araujo de Paschoa"
     }
+  },
+  "shell": {
+    "skip": "Pular para o conteúdo",
+    "navLabel": "Navegação do app",
+    "home": "Início"
   }
 }

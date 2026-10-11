@@ -1,0 +1,580 @@
+/*
+ * Telas do app depois do login (AppShell): Início e Meu perfil.
+ * Mesma linguagem da página de entrada (ui.css): navegação flutuante, pílulas e cartões com
+ * moldura dupla. Âmbar (--warn) só para o colaborador e para avisos.
+ */
+
+.shell {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  overflow-x: clip;
+  background: var(--bg);
+}
+
+/* Brilho suave no topo, o mesmo da página de entrada, sem competir com o conteúdo. */
+.shell::before {
+  content: '';
+  position: absolute;
+  inset: -18rem -12rem auto 35%;
+  z-index: 0;
+  height: 42rem;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 13%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.shell-collaborator::before {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--warn) 12%, transparent),
+    transparent
+  );
+}
+
+.shell-main,
+.shell-footer {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 2 * var(--gutter), var(--content));
+  margin: 0 auto;
+}
+
+.shell-main {
+  flex: 1;
+  padding: clamp(1.75rem, 6vh, 4rem) 0 clamp(2.5rem, 6vh, 4rem);
+}
+
+/* Destino do link "pular para o conteúdo": recebe o foco sem desenhar um contorno na página toda. */
+.shell-main:focus {
+  outline: none;
+}
+
+.shell-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  padding: 1.5rem 0 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.status-dock {
+  flex: 1 1 18rem;
+  max-width: 26rem;
+}
+
+.shell-footer .disclaimer {
+  flex: 1 1 18rem;
+  max-width: 34rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ---------- Navegação ---------- */
+
+.brand-button,
+.island-links button {
+  min-height: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+}
+
+.brand-button {
+  padding: 0.2rem 0.6rem 0.2rem 0;
+  border-radius: 999px;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.brand-button:hover:not(:disabled) {
+  background: transparent;
+}
+
+.brand-button:focus-visible,
+.island-links button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
+.island-links button {
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    background-color 0.4s var(--ease-premium),
+    color 0.4s var(--ease-premium);
+}
+
+.island-links button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+}
+
+.island-links button[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.shell-account {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.avatar-lg {
+  width: 4.5rem;
+  height: 4.5rem;
+  font-size: 1.4rem;
+}
+
+.shell-collaborator .avatar {
+  background: var(--warn-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 28%, transparent);
+  color: var(--warn);
+}
+
+/* ---------- Abertura de cada tela ---------- */
+
+.page-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-bottom: clamp(2rem, 5vh, 3.5rem);
+}
+
+.page-hero h1 {
+  margin: 1.1rem 0 0;
+  font-size: clamp(2.1rem, 4.2vw, 3.2rem);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.page-hero-compact h1 {
+  margin-top: 0;
+}
+
+.page-hero .lead {
+  max-width: 38rem;
+  margin: 1rem 0 1.75rem;
+  color: var(--muted);
+  font-size: clamp(1.02rem, 1.3vw, 1.15rem);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.page-hero-compact .lead {
+  margin-bottom: 0;
+}
+
+.eyebrow-warn {
+  background: var(--warn-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 28%, transparent);
+  color: var(--warn);
+}
+
+/* ---------- Início: o que vem por aí ---------- */
+
+.section-label {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.upcoming-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upcoming-grid > .bezel {
+  display: grid;
+}
+
+.upcoming-card {
+  padding: clamp(1.4rem, 2.6vw, 2rem);
+}
+
+.upcoming-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.upcoming-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.upcoming-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.home-collaborator .round-icon {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.soon-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  box-shadow: var(--ring);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ---------- Meu perfil ---------- */
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: clamp(1.25rem, 3vw, 2rem);
+  align-items: start;
+}
+
+.profile-aside {
+  position: sticky;
+  top: 6rem;
+}
+
+.profile-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(1.5rem, 2.6vw, 2rem);
+}
+
+.profile-name {
+  margin: 1.1rem 0 0.15rem;
+  font-size: 1.3rem;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.profile-email {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.profile-summary {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  margin: 1.5rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.profile-summary dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.profile-summary dd {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 550;
+}
+
+.profile-summary dd:last-child {
+  margin-bottom: 0;
+}
+
+.profile-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.profile-panel {
+  padding: clamp(1.25rem, 2.4vw, 1.6rem) clamp(1.25rem, 2.6vw, 1.75rem);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow:
+    var(--ring),
+    0 1px 2px color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.profile-panel h2 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.profile-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.profile-panel-head > div {
+  min-width: 0;
+}
+
+.profile-value {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 30rem;
+  margin-top: 1.25rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+}
+
+.form-actions button {
+  margin: 0;
+}
+
+/* Confirmação de sucesso: mesma família de cor do status "conectado". */
+.form-success {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--ok);
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.form-success:not(:empty) {
+  margin-top: 1rem;
+}
+
+.form-success svg {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+}
+
+/* Histórico de consentimentos: linha do tempo, do aceite mais recente para o mais antigo. */
+.consent-timeline {
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.consent-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0 0.9rem;
+  align-items: start;
+  padding-bottom: 1.1rem;
+}
+
+.consent-timeline li:last-child {
+  padding-bottom: 0;
+}
+
+.consent-timeline li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 1.35rem;
+  bottom: 0.15rem;
+  left: calc(0.35rem - 1px);
+  width: 2px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.consent-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: 0.4rem;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.consent-timeline li:first-child .consent-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.consent-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 550;
+}
+
+.consent-meta {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.current-badge {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+}
+
+.profile-panel > .field-hint {
+  margin-top: 1.25rem;
+}
+
+/* ---------- Aviso de termos novos (SPEC-003) ---------- */
+
+.terms-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.15rem;
+  border-left: 3px solid var(--warn);
+  border-radius: 14px;
+  background: var(--warn-soft);
+  line-height: 1.5;
+}
+
+.terms-notice > p {
+  margin: 0;
+}
+
+.terms-notice .terms p {
+  background: var(--surface);
+}
+
+.terms-notice button {
+  margin: 0;
+}
+
+.home-view > .terms-notice {
+  margin-bottom: 1.5rem;
+}
+
+.profile-panel .terms-notice {
+  margin-top: 1.25rem;
+}
+
+/* ---------- Telas estreitas (a janela vai até 480px de largura) ---------- */
+
+@media (max-width: 879px) {
+  .profile-layout,
+  .upcoming-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-aside {
+    position: static;
+  }
+
+  /* Cartão de identidade na horizontal: avatar ao lado do nome e o resumo em duas colunas. */
+  .profile-identity {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 1.1rem;
+    align-items: center;
+  }
+
+  .profile-identity .avatar-lg {
+    grid-row: 1 / span 3;
+  }
+
+  .profile-name {
+    margin-top: 0;
+  }
+
+  .profile-email {
+    margin-bottom: 0.6rem;
+  }
+
+  .profile-summary {
+    grid-column: 1 / -1;
+    grid-template-rows: auto auto;
+    grid-auto-flow: column;
+    column-gap: 1.5rem;
+  }
+
+  .profile-summary dd {
+    margin-bottom: 0;
+  }
+
+  /* Só a marca na navegação; o nome continua para leitores de tela. */
+  .shell .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 560px) {
+  .shell-account .avatar {
+    display: none;
+  }
+
+  .island-links button {
+    padding-inline: 0.65rem;
+  }
+
+  .profile-panel-head {
+    flex-wrap: wrap;
+  }
+}

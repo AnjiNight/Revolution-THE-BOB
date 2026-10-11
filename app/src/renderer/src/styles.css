@@ -4,8 +4,8 @@
  * Fonte Geist empacotada no app (funciona sem internet; a CSP não permite fontes externas).
  *
  * Regra de formas: controles de formulário (campos e botões) com raio de 10px; cartões do app
- * com 16px. Na página de entrada (landing.css): chamadas e navegação em pílula e cartões com
- * moldura dupla de 28px.
+ * com 16px. Na página de entrada (landing.css) e nas telas depois do login (shell.css), com a
+ * base comum de ui.css: chamadas e navegação em pílula e cartões com moldura dupla de 28px.
  * Uma única cor de destaque (--accent). Âmbar (--warn) só para estado e para a Área do colaborador.
  */
 @import '@fontsource-variable/geist';
@@ -101,35 +101,7 @@ h3 {
   letter-spacing: -0.015em;
 }
 
-/* ---------- Estrutura geral (tela inicial, depois do login) ---------- */
-
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: min(100%, 720px);
-  min-height: 100dvh;
-  margin: 0 auto;
-  padding: clamp(1.25rem, 4vw, 3rem);
-}
-
-.page-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  font-weight: 650;
-  line-height: 1.15;
-}
-
-.subtitle {
-  margin: 0.4rem 0 0;
-  color: var(--muted);
-}
+/* ---------- Cartões e textos de apoio (a estrutura das telas fica em shell.css e landing.css) ---------- */
 
 .card {
   background: var(--surface);
@@ -243,8 +215,7 @@ button.link:focus-visible {
   gap: 1rem;
 }
 
-.auth-form h2,
-.home h2 {
+.auth-form h2 {
   margin: 0;
 }
 
@@ -486,8 +457,7 @@ button.google-button:hover:not(:disabled) {
 }
 
 /* Destaque próprio da Área do colaborador (SPEC-002 §5.3). */
-.auth-form.collaborator::before,
-.home-collaborator::before {
+.auth-form.collaborator::before {
   content: '';
   display: block;
   width: 2.5rem;
@@ -505,130 +475,7 @@ button.google-button:hover:not(:disabled) {
   line-height: 1.45;
 }
 
-/* ---------- Tela inicial (depois do login) ---------- */
-
-.home {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
-.home h2 {
-  font-size: 1.5rem;
-  font-weight: 650;
-}
-
-.home p {
-  margin: 0;
-}
-
-.home button {
-  margin-top: 0.5rem;
-}
-
-.home-collaborator::before {
-  margin-bottom: 0.25rem;
-}
-
-.home-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-/* ---------- Meu perfil (SPEC-003) ---------- */
-
-.profile {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.profile-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.profile-header h2 {
-  margin: 0;
-}
-
-.profile-summary {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.4rem 1rem;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.profile-summary dt {
-  color: var(--muted);
-}
-
-.profile-summary dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.profile-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--border);
-}
-
-.profile-section h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.profile-section button[type='submit'] {
-  align-self: flex-start;
-}
-
-.form-success {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.consent-list {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.875rem;
-}
-
-.terms-notice {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.6rem;
-  width: 100%;
-  padding: 0.85rem 0.95rem;
-  border-left: 3px solid var(--warn);
-  border-radius: var(--radius-control);
-  background: var(--warn-soft);
-}
-
-.terms-notice p {
-  margin: 0;
-}
-
-@media (max-width: 480px) {
-  .profile-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-summary dd {
-    margin-bottom: 0.4rem;
-  }
-}
+/* Telas depois do login (Início e Meu perfil): ver shell.css. */
 
 /* ---------- Situação do servidor (SPEC-001) ---------- */
 
@@ -703,7 +550,7 @@ button.google-button:hover:not(:disabled) {
 /* ---------- Movimento: só para comunicar troca de tela e verificação em andamento ---------- */
 
 @media (prefers-reduced-motion: no-preference) {
-  .page-content > :first-child,
+  .shell-main > *,
   .access-core > :first-child {
     animation: enter 0.36s var(--ease-out) both;
   }

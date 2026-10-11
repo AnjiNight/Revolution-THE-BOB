@@ -2,13 +2,13 @@ import type { PublicUser } from '@simulador/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../shared/auth-ipc';
+import { AppShell } from './components/AppShell';
 import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
 import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
 import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
-import { ServerStatusPanel } from './components/ServerStatusPanel';
 
 type View =
   | { kind: 'loading' }
@@ -49,31 +49,21 @@ export function App() {
   );
 
   if (view.kind === 'home' || view.kind === 'profile') {
+    const { user } = view;
     return (
-      <main className="page">
-        <header className="page-header">
-          <h1>{t('app.title')}</h1>
-          <p className="subtitle">{t('app.subtitle')}</p>
-        </header>
-
-        <div className="page-content">
-          {view.kind === 'home' ? (
-            <Home
-              user={view.user}
-              onLogout={logout}
-              onOpenProfile={() => setView({ kind: 'profile', user: view.user })}
-            />
-          ) : (
-            <Profile
-              onBack={() => setView({ kind: 'home', user: view.user })}
-              onUserChanged={userChanged}
-              onSessionExpired={sessionExpired}
-            />
-          )}
-          <ServerStatusPanel />
-        </div>
-        <footer className="disclaimer">{t('disclaimer')}</footer>
-      </main>
+      <AppShell
+        user={user}
+        current={view.kind}
+        onHome={() => setView({ kind: 'home', user })}
+        onProfile={() => setView({ kind: 'profile', user })}
+        onLogout={logout}
+      >
+        {view.kind === 'home' ? (
+          <Home user={user} onOpenProfile={() => setView({ kind: 'profile', user })} />
+        ) : (
+          <Profile onUserChanged={userChanged} onSessionExpired={sessionExpired} />
+        )}
+      </AppShell>
     );
   }
 

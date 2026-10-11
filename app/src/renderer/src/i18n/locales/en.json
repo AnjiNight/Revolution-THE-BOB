@@ -46,19 +46,25 @@
   },
   "home": {
     "greeting": "Hello, {{name}}!",
-    "role": {
-      "user": "Profile: user",
-      "collaborator": "Profile: collaborator"
-    },
     "next": "Your account is ready. Simulation portfolios arrive in the next versions.",
     "logout": "Sign out",
     "collaboratorNext": "Team tools (asset management and data collection monitoring) arrive in the next versions.",
-    "profile": "My profile"
+    "profile": "My profile",
+    "upcomingTitle": "What is coming",
+    "soon": "Coming soon",
+    "collabTools": {
+      "assets": {
+        "title": "Asset registry",
+        "text": "Register stocks and REITs with their class and sector or segment, so users can simulate."
+      },
+      "ingestion": {
+        "title": "Data collection monitoring",
+        "text": "See the runs and failures of quote and news collection, and run them again when needed."
+      }
+    }
   },
   "profile": {
     "title": "My profile",
-    "back": "Back to home",
-    "accountType": "Account type",
     "signInMethods": "Sign-in methods",
     "methodPassword": "Email and password",
     "createdAt": "Account created on",
@@ -68,14 +74,28 @@
     "passwordSection": "Password",
     "currentPassword": "Current password",
     "newPassword": "New password",
-    "save": "Save",
     "saved": "Changes saved.",
     "passwordChanged": "Password changed. Other sessions of this account were signed out.",
     "googleOnly": "This account signs in with Google ({{email}}). Email and password are managed by Google.",
     "consentsSection": "Consents",
-    "consentItem": "Terms of use and privacy policy, version {{version}}, accepted on {{date}}",
     "withdrawConsent": "To withdraw consent, the account must be deleted. Account deletion arrives in a future version.",
-    "termsUpdated": "The terms of use and privacy policy have changed. Read and accept the new version to continue."
+    "termsUpdated": "The terms of use and privacy policy have changed. Read the summary and accept the new version.",
+    "subtitle": "Your sign-in details and consent history.",
+    "roleName": {
+      "user": "User",
+      "collaborator": "Collaborator"
+    },
+    "editName": "Edit name",
+    "saveName": "Save name",
+    "editEmail": "Change email",
+    "saveEmail": "Save email",
+    "editPassword": "Change password",
+    "savePassword": "Save new password",
+    "passwordSummary": "Used to sign in with email and password.",
+    "googleAccount": "Google account",
+    "consentTitle": "Terms of use and privacy policy",
+    "consentMeta": "Version {{version}}, accepted on {{date}}",
+    "consentCurrent": "Current"
   },
   "fieldErrors": {
     "required": "Required field.",
@@ -232,5 +252,10 @@
       "project": "Computer Engineering, Universidade Presbiteriana Mackenzie.",
       "team": "Luís Gustavo Sampaio Coêlho and Nicoly Araujo de Paschoa"
     }
+  },
+  "shell": {
+    "skip": "Skip to content",
+    "navLabel": "App navigation",
+    "home": "Home"
   }
 }
