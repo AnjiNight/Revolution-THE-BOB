@@ -7,13 +7,15 @@ const PASSWORD = 'senha-bem-longa';
 
 let app: FastifyInstance;
 let logs: LogCapture;
+let ctx: Awaited<ReturnType<typeof buildTestApp>>;
 
 afterEach(async () => {
   await app.close();
 });
 
 async function start(rateLimitPerMinute?: number) {
-  ({ app, logs } = await buildTestApp(rateLimitPerMinute ? { rateLimitPerMinute } : {}));
+  ctx = await buildTestApp(rateLimitPerMinute ? { rateLimitPerMinute } : {});
+  ({ app, logs } = ctx);
 }
 
 interface Session {
@@ -22,13 +24,9 @@ interface Session {
   user: { id: string };
 }
 
-async function register(email = 'ana@exemplo.com'): Promise<Session> {
-  const res = await app.inject({
-    method: 'POST',
-    url: AUTH_PATHS.register,
-    payload: { name: 'Ana Souza', email, password: PASSWORD, acceptedTerms: true },
-  });
-  return res.json<Session>();
+/** Cadastro já confirmado (SPEC-039), com a sessão aberta pela confirmação. */
+function register(email = 'ana@exemplo.com'): Promise<Session> {
+  return ctx.registerConfirmed({ email, password: PASSWORD });
 }
 
 const call = (
@@ -59,6 +57,7 @@ describe('GET e PATCH /api/me (CA01, CA02)', () => {
         hasPassword: true,
         hasGoogle: false,
         createdAt: expect.any(String),
+        pendingEmail: null,
       },
     });
   });
@@ -79,6 +78,7 @@ describe('GET e PATCH /api/me (CA01, CA02)', () => {
     ['GET', PROFILE_PATHS.profile],
     ['PATCH', PROFILE_PATHS.profile],
     ['PUT', PROFILE_PATHS.email],
+    ['POST', PROFILE_PATHS.emailConfirm],
     ['PUT', PROFILE_PATHS.password],
     ['GET', PROFILE_PATHS.consents],
     ['POST', PROFILE_PATHS.consents],
@@ -90,22 +90,48 @@ describe('GET e PATCH /api/me (CA01, CA02)', () => {
   });
 });
 
-describe('PUT /api/me/email (CA03–CA05, CA09)', () => {
-  it('troca o e-mail e o login passa a usar o novo', async () => {
+describe('PUT /api/me/email e POST /api/me/email/confirm (CA03–CA05, CA09; SPEC-039 CA08)', () => {
+  it('202 sem trocar ainda; com o código do e-mail novo, troca e o login passa a usar o novo', async () => {
     await start();
     const { accessToken } = await register();
     const res = await call('PUT', PROFILE_PATHS.email, accessToken, {
       email: 'Ana.Lima@Exemplo.com',
       currentPassword: PASSWORD,
     });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ user: { email: 'ana.lima@exemplo.com' } });
+    expect(res.statusCode).toBe(202);
+    await ctx.background.settle();
+    const pending = await call('GET', PROFILE_PATHS.profile, accessToken);
+    expect(pending.json()).toMatchObject({
+      user: { email: 'ana@exemplo.com', pendingEmail: 'ana.lima@exemplo.com' },
+    });
+
+    const confirmed = await call('POST', PROFILE_PATHS.emailConfirm, accessToken, {
+      code: ctx.mailer.lastCode('ana.lima@exemplo.com'),
+    });
+    expect(confirmed.statusCode).toBe(200);
+    expect(confirmed.json()).toMatchObject({
+      user: { email: 'ana.lima@exemplo.com', pendingEmail: null },
+    });
 
     const login = await call('POST', AUTH_PATHS.login, undefined, {
       email: 'ana.lima@exemplo.com',
       password: PASSWORD,
     });
     expect(login.statusCode).toBe(200);
+  });
+
+  it('código errado → 400 invalid_confirmation_code e o e-mail não muda', async () => {
+    await start();
+    const { accessToken } = await register();
+    await call('PUT', PROFILE_PATHS.email, accessToken, {
+      email: 'novo@exemplo.com',
+      currentPassword: PASSWORD,
+    });
+    const res = await call('POST', PROFILE_PATHS.emailConfirm, accessToken, { code: 'ZZZZZZZZ' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'invalid_confirmation_code' });
+    const profile = await call('GET', PROFILE_PATHS.profile, accessToken);
+    expect(profile.json()).toMatchObject({ user: { email: 'ana@exemplo.com' } });
   });
 
   it('409 para e-mail de outra conta, 401 para senha atual errada', async () => {
@@ -250,6 +276,10 @@ describe('segurança (CA08, CA12)', () => {
       email: 'secreto@exemplo.com',
       currentPassword: PASSWORD,
     });
+    await ctx.background.settle();
+    const code = ctx.mailer.lastCode('secreto@exemplo.com');
+    await call('POST', PROFILE_PATHS.emailConfirm, accessToken, { code });
+    await ctx.background.settle();
     await call('PUT', PROFILE_PATHS.password, accessToken, {
       currentPassword: PASSWORD,
       newPassword: 'senha-nova-secreta',
@@ -261,6 +291,7 @@ describe('segurança (CA08, CA12)', () => {
       'senha-nova-secreta',
       'hash:',
       accessToken,
+      code,
     ]) {
       expect(logs.text).not.toContain(secret);
     }

@@ -2,6 +2,9 @@ import type {
   AuthErrorCode,
   ChangeEmailInput,
   ChangePasswordInput,
+  ConfirmEmailChangeInput,
+  EmailConfirmationInput,
+  EmailConfirmationResendInput,
   FieldErrors,
   LoginInput,
   PasswordResetConfirmInput,
@@ -15,6 +18,8 @@ import type {
 export const AUTH_CHANNELS = {
   getSession: 'auth:get-session',
   register: 'auth:register',
+  confirmEmail: 'auth:confirm-email',
+  resendConfirmation: 'auth:resend-confirmation',
   login: 'auth:login',
   collaboratorLogin: 'auth:collaborator-login',
   googleAvailable: 'auth:google-available',
@@ -25,11 +30,12 @@ export const AUTH_CHANNELS = {
   passwordResetConfirm: 'auth:password-reset-confirm',
 } as const;
 
-/** Canais IPC do perfil (SPEC-003). */
+/** Canais IPC do perfil (SPEC-003; troca de e-mail em duas etapas na SPEC-039). */
 export const PROFILE_CHANNELS = {
   get: 'profile:get',
   updateName: 'profile:update-name',
   changeEmail: 'profile:change-email',
+  confirmEmailChange: 'profile:confirm-email-change',
   changePassword: 'profile:change-password',
   listConsents: 'profile:list-consents',
   acceptTerms: 'profile:accept-terms',
@@ -49,6 +55,9 @@ export type ClientResult<T> =
 export type {
   ChangeEmailInput,
   ChangePasswordInput,
+  ConfirmEmailChangeInput,
+  EmailConfirmationInput,
+  EmailConfirmationResendInput,
   LoginInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,

@@ -1,6 +1,7 @@
 import {
   changeEmailSchema,
   changePasswordSchema,
+  confirmEmailChangeSchema,
   TERMS_VERSION,
   updateNameSchema,
   validate,
@@ -12,7 +13,7 @@ import { CheckCircle } from '@phosphor-icons/react';
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError, ClientResult } from '../../../shared/auth-ipc';
-import { formatDate, initials } from '../format';
+import { emailLocale, formatDate, initials } from '../format';
 import { TextField } from './TextField';
 
 interface ProfileProps {
@@ -109,9 +110,18 @@ export function Profile({ onUserChanged, onSessionExpired }: ProfileProps) {
               <>
                 <EditableSection
                   title={t('profile.emailSection')}
-                  value={user.email}
+                  value={
+                    <>
+                      {user.email}
+                      {user.pendingEmail && (
+                        <span className="pending-hint">
+                          {t('profile.pendingEmail', { email: user.pendingEmail })}
+                        </span>
+                      )}
+                    </>
+                  }
                   editLabel={t('profile.editEmail')}
-                  savedText={t('profile.saved')}
+                  savedText={t('profile.emailChanged')}
                 >
                   {(done) => (
                     <EmailForm
@@ -332,26 +342,92 @@ function NameForm({ user, onSaved, onDone, onSessionExpired }: UserFormProps) {
   );
 }
 
+/**
+ * Troca de e-mail em duas etapas (SPEC-039): e-mail novo + senha atual; depois, o código que
+ * chegou no endereço novo. O e-mail da conta só muda na segunda etapa.
+ */
 function EmailForm({ user, onSaved, onDone, onSessionExpired }: UserFormProps) {
-  const { t } = useTranslation();
-  const [email, setEmail] = useState(user.email);
+  const { t, i18n } = useTranslation();
+  const locale = emailLocale(i18n.language);
+  const [step, setStep] = useState<'form' | 'code'>('form');
+  const [email, setEmail] = useState(user.pendingEmail ?? user.email);
   const [currentPassword, setCurrentPassword] = useState('');
+  const [code, setCode] = useState('');
   const { state, submit } = useSubmit(onSessionExpired);
+  const wrapper = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (step === 'code') wrapper.current?.querySelector('input')?.focus();
+  }, [step]);
+
+  if (step === 'code') {
+    return (
+      <div ref={wrapper}>
+        <EditForm
+          state={state}
+          saveLabel={t('profile.confirmEmail')}
+          onCancel={() => onDone(false)}
+          onSubmit={() => {
+            // Envia o código já normalizado (minúsculas, hífen e espaços resolvidos).
+            const checked = validate(confirmEmailChangeSchema, { code, locale });
+            void submit(
+              checked,
+              () =>
+                window.api.profile.confirmEmailChange(checked.success ? checked.data : { code }),
+              (next) => {
+                onSaved(next);
+                onDone(true);
+              },
+            );
+          }}
+        >
+          <p className="reset-sent" role="status">
+            {t('profile.emailCodeSent', { email })}
+          </p>
+          <TextField
+            label={t('reset.code')}
+            type="text"
+            value={code}
+            onChange={setCode}
+            autoComplete="one-time-code"
+            spellCheck={false}
+            hint={t('reset.codeHint')}
+            error={state.fields.code}
+          />
+        </EditForm>
+      </div>
+    );
+  }
+
+  const request = () => {
+    const checked = validate(changeEmailSchema, { email, currentPassword, locale });
+    // Mesmo e-mail de agora: não há o que confirmar.
+    if (checked.success && checked.data.email === user.email && !user.pendingEmail) {
+      return onDone(false);
+    }
+    void submit(
+      checked,
+      () => window.api.profile.changeEmail({ email, currentPassword, locale }),
+      () => {
+        if (!checked.success) return;
+        setEmail(checked.data.email);
+        setCurrentPassword('');
+        if (checked.data.email === user.email) {
+          onSaved({ ...user, pendingEmail: null });
+          return onDone(false);
+        }
+        onSaved({ ...user, pendingEmail: checked.data.email });
+        setStep('code');
+      },
+    );
+  };
+
   return (
     <EditForm
       state={state}
       saveLabel={t('profile.saveEmail')}
       onCancel={() => onDone(false)}
-      onSubmit={() =>
-        void submit(
-          validate(changeEmailSchema, { email, currentPassword }),
-          () => window.api.profile.changeEmail({ email, currentPassword }),
-          (next) => {
-            onSaved(next);
-            onDone(true);
-          },
-        )
-      }
+      onSubmit={request}
     >
       <TextField
         label={t('profile.newEmail')}

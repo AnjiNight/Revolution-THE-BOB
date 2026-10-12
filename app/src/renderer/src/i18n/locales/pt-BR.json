@@ -62,6 +62,13 @@
     "backCollaborator": "Voltar para a Área do colaborador",
     "done": "Senha redefinida. Entre com a nova senha."
   },
+  "confirm": {
+    "title": "Confirme seu e-mail",
+    "sent": "Enviamos um código para {{email}}. Ele vale por 15 minutos.",
+    "pendingLogin": "Sua conta ainda não foi confirmada. Enviamos um código novo para {{email}}.",
+    "submit": "Confirmar e entrar",
+    "fixEmail": "Corrigir e-mail"
+  },
   "home": {
     "greeting": "Olá, {{name}}!",
     "next": "Sua conta está pronta. As carteiras de simulação chegam nas próximas versões.",
@@ -113,7 +120,11 @@
     "googleAccount": "Conta Google",
     "consentTitle": "Termos de uso e política de privacidade",
     "consentMeta": "Versão {{version}}, aceitos em {{date}}",
-    "consentCurrent": "Vigente"
+    "consentCurrent": "Vigente",
+    "confirmEmail": "Confirmar e-mail",
+    "emailCodeSent": "Enviamos um código para {{email}}. Seu e-mail só muda depois da confirmação.",
+    "pendingEmail": "Aguardando confirmação: {{email}}",
+    "emailChanged": "E-mail trocado. O endereço antigo recebeu um aviso."
   },
   "fieldErrors": {
     "required": "Campo obrigatório.",
@@ -145,7 +156,10 @@
     "email_change_not_allowed": "O e-mail desta conta vem do Google e não pode ser trocado aqui.",
     "password_change_not_allowed": "Esta conta entra pelo Google e não tem senha.",
     "invalid_reset_code": "Código inválido ou vencido. Confira o código ou peça um novo.",
-    "password_reset_unavailable": "A recuperação de senha não está disponível neste servidor."
+    "password_reset_unavailable": "A recuperação de senha não está disponível neste servidor.",
+    "email_not_confirmed": "Confirme seu e-mail para entrar.",
+    "invalid_confirmation_code": "Código inválido ou vencido. Confira o código ou peça um novo.",
+    "email_confirmation_unavailable": "A confirmação de e-mail não está disponível neste servidor."
   },
   "landing": {
     "skip": "Pular para o acesso",

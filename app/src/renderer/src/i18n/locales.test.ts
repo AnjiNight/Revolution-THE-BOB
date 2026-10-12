@@ -59,6 +59,9 @@ describe('arquivos de idioma (CA13)', () => {
       'password_change_not_allowed',
       'invalid_reset_code',
       'password_reset_unavailable',
+      'email_not_confirmed',
+      'invalid_confirmation_code',
+      'email_confirmation_unavailable',
     ];
     const fieldErrors: FieldErrorCode[] = [
       'required',

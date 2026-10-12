@@ -57,13 +57,27 @@ class FakeServer {
           ? json(200, { user, ...this.issue() })
           : json(400, { error: 'terms_required', message: 'x' });
       case AUTH_PATHS.register:
-        return body.email === 'usado@exemplo.com'
-          ? json(409, { error: 'email_in_use', message: 'x' })
-          : json(400, {
-              error: 'validation_error',
-              message: 'x',
-              fields: { password: 'too_short' },
-            });
+        if (body.email === 'usado@exemplo.com')
+          return json(409, { error: 'email_in_use', message: 'x' });
+        if (body.password === 'x') {
+          return json(400, {
+            error: 'validation_error',
+            message: 'x',
+            fields: { password: 'too_short' },
+          });
+        }
+        // SPEC-039: conta pendente, sem sessão.
+        return new Response(null, { status: 202 });
+      case AUTH_PATHS.emailConfirmationConfirm:
+        return body.code === 'K7QM4XPD'
+          ? json(200, { user, ...this.issue() })
+          : json(400, { error: 'invalid_confirmation_code', message: 'x' });
+      case AUTH_PATHS.emailConfirmationResend:
+        return new Response(null, { status: 202 });
+      case PROFILE_PATHS.emailConfirm:
+        return body.code === 'K7QM4XPD'
+          ? json(200, { user: { ...profile, email: 'novo@exemplo.com' } })
+          : json(400, { error: 'invalid_confirmation_code', message: 'x' });
       case AUTH_PATHS.refresh:
         if (!this.validRefresh.delete(body.refreshToken ?? '')) {
           return json(401, { error: 'invalid_refresh_token', message: 'x' });
@@ -80,8 +94,9 @@ class FakeServer {
           : json(200, { user });
       }
       case PROFILE_PATHS.email:
+        // SPEC-039: o e-mail só muda depois do código; o servidor responde 202 sem corpo.
         return body.currentPassword === 'certa'
-          ? json(200, { user: { ...profile, email: body.email } })
+          ? new Response(null, { status: 202 })
           : json(401, { error: 'invalid_password', message: 'x' });
       case PROFILE_PATHS.password:
         // O servidor encerra as sessões anteriores e devolve uma nova.
@@ -330,5 +345,48 @@ describe('recuperação de senha (SPEC-004)', () => {
     await expect(
       client.requestPasswordReset({ email: 'ana@exemplo.com', locale: 'pt-BR' }),
     ).resolves.toEqual({ ok: false, error: 'server_unavailable' });
+  });
+});
+
+describe('confirmação de e-mail (SPEC-039)', () => {
+  const registration = {
+    name: 'Ana',
+    email: 'ana@exemplo.com',
+    password: 'senha-bem-longa',
+    acceptedTerms: true as const,
+  };
+
+  it('cadastro aceito (202) não abre sessão; a confirmação abre', async () => {
+    await expect(client.register(registration)).resolves.toEqual({ ok: true, data: null });
+    await expect(store.load()).resolves.toBeNull();
+
+    await expect(
+      client.confirmEmail({ email: 'ana@exemplo.com', code: 'ZZZZZZZZ' }),
+    ).resolves.toEqual({ ok: false, error: 'invalid_confirmation_code' });
+    await expect(
+      client.confirmEmail({ email: 'ana@exemplo.com', code: 'K7QM4XPD' }),
+    ).resolves.toEqual({ ok: true, user });
+    await expect(store.load()).resolves.toBe('refresh-1');
+  });
+
+  it('reenviar código responde sucesso sem sessão', async () => {
+    await expect(
+      client.resendConfirmation({ email: 'ana@exemplo.com', locale: 'en' }),
+    ).resolves.toEqual({ ok: true, data: null });
+  });
+
+  it('troca de e-mail em duas etapas', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(
+      client.changeEmail({ email: 'novo@exemplo.com', currentPassword: 'certa' }),
+    ).resolves.toEqual({ ok: true, data: null });
+    await expect(client.confirmEmailChange({ code: 'K7QM4XPD' })).resolves.toMatchObject({
+      ok: true,
+      data: { email: 'novo@exemplo.com' },
+    });
+    await expect(client.restore()).resolves.toMatchObject({
+      ok: true,
+      user: { email: 'novo@exemplo.com' },
+    });
   });
 });

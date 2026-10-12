@@ -2,6 +2,9 @@ import { join } from 'node:path';
 import type {
   ChangeEmailInput,
   ChangePasswordInput,
+  ConfirmEmailChangeInput,
+  EmailConfirmationInput,
+  EmailConfirmationResendInput,
   LoginInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
@@ -95,6 +98,13 @@ app.whenReady().then(() => {
   });
   ipcMain.handle(AUTH_CHANNELS.getSession, () => auth.restore());
   ipcMain.handle(AUTH_CHANNELS.register, (_event, input: RegisterInput) => auth.register(input));
+  // Confirmação de e-mail (SPEC-039): o código é digitado no app e nunca fica guardado.
+  ipcMain.handle(AUTH_CHANNELS.confirmEmail, (_event, input: EmailConfirmationInput) =>
+    auth.confirmEmail(input),
+  );
+  ipcMain.handle(AUTH_CHANNELS.resendConfirmation, (_event, input: EmailConfirmationResendInput) =>
+    auth.resendConfirmation(input),
+  );
   ipcMain.handle(AUTH_CHANNELS.login, (_event, input: LoginInput) => auth.login(input));
   ipcMain.handle(AUTH_CHANNELS.collaboratorLogin, (_event, input: LoginInput) =>
     auth.collaboratorLogin(input),
@@ -120,6 +130,9 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(PROFILE_CHANNELS.changeEmail, (_event, input: ChangeEmailInput) =>
     auth.changeEmail(input),
+  );
+  ipcMain.handle(PROFILE_CHANNELS.confirmEmailChange, (_event, input: ConfirmEmailChangeInput) =>
+    auth.confirmEmailChange(input),
   );
   ipcMain.handle(PROFILE_CHANNELS.changePassword, (_event, input: ChangePasswordInput) =>
     auth.changePassword(input),

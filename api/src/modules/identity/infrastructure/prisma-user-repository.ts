@@ -28,7 +28,13 @@ function toUser(row: Usuario): User {
     passwordHash: row.senhaHash,
     googleSub: row.googleSub,
     createdAt: row.criadoEm,
+    emailConfirmedAt: row.emailConfirmadoEm,
+    pendingEmail: row.emailPendente,
   };
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
 
 export class PrismaUserRepository implements UserRepository {
@@ -43,6 +49,7 @@ export class PrismaUserRepository implements UserRepository {
           perfil: ROLE_TO_PERFIL[user.role],
           senhaHash: user.passwordHash,
           googleSub: user.googleSub,
+          emailConfirmadoEm: user.emailConfirmedAt,
           ...(user.termsVersion
             ? {
                 consentimentos: {
@@ -86,16 +93,50 @@ export class PrismaUserRepository implements UserRepository {
     return toUser(row);
   }
 
-  async updateEmail(userId: string, email: string): Promise<User> {
+  async confirmEmail(userId: string, at: Date): Promise<User> {
+    const row = await this.prisma.usuario.update({
+      where: { id: userId },
+      data: { emailConfirmadoEm: at },
+    });
+    return toUser(row);
+  }
+
+  async setPendingEmail(userId: string, email: string | null): Promise<User> {
+    const row = await this.prisma.usuario.update({
+      where: { id: userId },
+      data: { emailPendente: email },
+    });
+    return toUser(row);
+  }
+
+  async applyPendingEmail(userId: string): Promise<User> {
+    const current = await this.prisma.usuario.findUniqueOrThrow({ where: { id: userId } });
+    if (!current.emailPendente) return toUser(current);
     try {
-      const row = await this.prisma.usuario.update({ where: { id: userId }, data: { email } });
+      const row = await this.prisma.usuario.update({
+        where: { id: userId },
+        data: { email: current.emailPendente, emailPendente: null },
+      });
       return toUser(row);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new EmailInUseError();
-      }
+      if (isUniqueViolation(error)) throw new EmailInUseError();
       throw error;
     }
+  }
+
+  async deleteUnconfirmed(userId: string): Promise<boolean> {
+    // A condição no próprio DELETE garante que uma conta confirmada nunca é apagada aqui.
+    const { count } = await this.prisma.usuario.deleteMany({
+      where: { id: userId, emailConfirmadoEm: null },
+    });
+    return count === 1;
+  }
+
+  async deleteUnconfirmedCreatedBefore(cutoff: Date): Promise<number> {
+    const { count } = await this.prisma.usuario.deleteMany({
+      where: { emailConfirmadoEm: null, criadoEm: { lt: cutoff } },
+    });
+    return count;
   }
 
   async updatePasswordHash(userId: string, passwordHash: string): Promise<User> {

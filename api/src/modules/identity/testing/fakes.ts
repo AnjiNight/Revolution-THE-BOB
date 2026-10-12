@@ -6,16 +6,17 @@ import type {
   BackgroundRunner,
   EmailMessage,
   EmailSender,
+  EmailCodePurpose,
+  EmailCodeRepository,
   GoogleIdentity,
   GoogleIdentityVerifier,
-  NewPasswordReset,
+  NewEmailCode,
   NewRefreshToken,
   NewUser,
   PasswordHasher,
-  PasswordResetRepository,
   RefreshTokenRepository,
   StoredConsent,
-  StoredPasswordReset,
+  StoredEmailCode,
   StoredRefreshToken,
   TaskLog,
   UserRepository,
@@ -40,6 +41,8 @@ export class InMemoryUserRepository implements UserRepository {
       passwordHash: user.passwordHash,
       googleSub: user.googleSub,
       createdAt: this.clock(),
+      emailConfirmedAt: user.emailConfirmedAt,
+      pendingEmail: null,
     };
     this.users.push(created);
     if (user.termsVersion) this.pushConsent(created.id, user.termsVersion);
@@ -50,9 +53,39 @@ export class InMemoryUserRepository implements UserRepository {
     return this.update(userId, (user) => (user.name = name));
   }
 
-  async updateEmail(userId: string, email: string): Promise<User> {
+  async confirmEmail(userId: string, at: Date): Promise<User> {
+    return this.update(userId, (user) => (user.emailConfirmedAt = at));
+  }
+
+  async setPendingEmail(userId: string, email: string | null): Promise<User> {
+    return this.update(userId, (user) => (user.pendingEmail = email));
+  }
+
+  async applyPendingEmail(userId: string): Promise<User> {
+    const user = this.users.find((u) => u.id === userId);
+    const email = user?.pendingEmail;
+    if (!user || !email) return this.update(userId, () => undefined);
     if (this.users.some((u) => u.email === email && u.id !== userId)) throw new EmailInUseError();
-    return this.update(userId, (user) => (user.email = email));
+    return this.update(userId, (u) => {
+      u.email = email;
+      u.pendingEmail = null;
+    });
+  }
+
+  async deleteUnconfirmed(userId: string): Promise<boolean> {
+    const index = this.users.findIndex((u) => u.id === userId && !u.emailConfirmedAt);
+    if (index < 0) return false;
+    this.users.splice(index, 1);
+    return true;
+  }
+
+  async deleteUnconfirmedCreatedBefore(cutoff: Date): Promise<number> {
+    const before = this.users.length;
+    for (let i = this.users.length - 1; i >= 0; i -= 1) {
+      const user = this.users[i]!;
+      if (!user.emailConfirmedAt && user.createdAt < cutoff) this.users.splice(i, 1);
+    }
+    return before - this.users.length;
   }
 
   async updatePasswordHash(userId: string, passwordHash: string): Promise<User> {
@@ -181,46 +214,56 @@ export class FakeGoogleVerifier implements GoogleIdentityVerifier {
   }
 }
 
-export class InMemoryPasswordResetRepository implements PasswordResetRepository {
-  readonly resets: StoredPasswordReset[] = [];
+export class InMemoryEmailCodeRepository implements EmailCodeRepository {
+  readonly codes: StoredEmailCode[] = [];
 
-  async create(reset: NewPasswordReset, deleteBefore: Date): Promise<void> {
-    await this.closeAllForUser(reset.userId, reset.createdAt);
-    for (let i = this.resets.length - 1; i >= 0; i -= 1) {
-      const old = this.resets[i]!;
-      if (old.userId === reset.userId && old.createdAt < deleteBefore) this.resets.splice(i, 1);
+  async create(code: NewEmailCode, deleteBefore: Date): Promise<void> {
+    for (const old of this.codes) {
+      if (old.userId === code.userId && old.purpose === code.purpose && !old.closedAt) {
+        old.closedAt = code.createdAt;
+      }
     }
-    this.resets.push({ id: randomUUID(), attempts: 0, ...reset });
+    for (let i = this.codes.length - 1; i >= 0; i -= 1) {
+      const old = this.codes[i]!;
+      if (old.userId === code.userId && old.createdAt < deleteBefore) this.codes.splice(i, 1);
+    }
+    this.codes.push({ id: randomUUID(), attempts: 0, ...code });
   }
 
   async countSince(userId: string, since: Date): Promise<number> {
-    return this.resets.filter((r) => r.userId === userId && r.createdAt >= since).length;
+    return this.codes.filter((c) => c.userId === userId && c.createdAt >= since).length;
   }
 
-  async findOpen(userId: string, at: Date): Promise<StoredPasswordReset | null> {
-    const open = this.resets
-      .filter((r) => r.userId === userId && !r.closedAt && r.expiresAt > at)
+  async findOpen(
+    userId: string,
+    purpose: EmailCodePurpose,
+    at: Date,
+  ): Promise<StoredEmailCode | null> {
+    const open = this.codes
+      .filter(
+        (c) => c.userId === userId && c.purpose === purpose && !c.closedAt && c.expiresAt > at,
+      )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return open[0] ? { ...open[0] } : null;
   }
 
   async reserveAttempt(id: string, maxAttempts: number): Promise<boolean> {
-    const reset = this.resets.find((r) => r.id === id);
-    if (!reset || reset.closedAt || reset.attempts >= maxAttempts) return false;
-    reset.attempts += 1;
+    const code = this.codes.find((c) => c.id === id);
+    if (!code || code.closedAt || code.attempts >= maxAttempts) return false;
+    code.attempts += 1;
     return true;
   }
 
   async close(id: string, at: Date): Promise<boolean> {
-    const reset = this.resets.find((r) => r.id === id);
-    if (!reset || reset.closedAt) return false;
-    reset.closedAt = at;
+    const code = this.codes.find((c) => c.id === id);
+    if (!code || code.closedAt) return false;
+    code.closedAt = at;
     return true;
   }
 
   async closeAllForUser(userId: string, at: Date): Promise<void> {
-    for (const reset of this.resets) {
-      if (reset.userId === userId && !reset.closedAt) reset.closedAt = at;
+    for (const code of this.codes) {
+      if (code.userId === userId && !code.closedAt) code.closedAt = at;
     }
   }
 }
@@ -237,9 +280,13 @@ export class FakeEmailSender implements EmailSender {
     this.sent.push(message);
   }
 
-  /** Código do último e-mail enviado, já sem o hífen, como o app envia depois de normalizar. */
-  lastCode(): string {
-    const text = this.sent.at(-1)?.text ?? '';
+  /**
+   * Código do último e-mail enviado (ou do último enviado para `to`), já sem o hífen, como o app
+   * envia depois de normalizar.
+   */
+  lastCode(to?: string): string {
+    const message = to ? this.sent.findLast((m) => m.to === to) : this.sent.at(-1);
+    const text = message?.text ?? '';
     const match = /\b([0-9A-Z]{4})-([0-9A-Z]{4})\b/.exec(text);
     if (!match) throw new Error('nenhum código no último e-mail');
     return `${match[1]}${match[2]}`;

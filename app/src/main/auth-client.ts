@@ -6,7 +6,10 @@ import {
   type AuthSession,
   type ChangeEmailInput,
   type ChangePasswordInput,
+  type ConfirmEmailChangeInput,
   type ConsentList,
+  type EmailConfirmationInput,
+  type EmailConfirmationResendInput,
   type FieldErrors,
   type LoginInput,
   type PasswordResetConfirmInput,
@@ -46,6 +49,9 @@ const KNOWN_ERRORS: readonly AuthErrorCode[] = [
   'password_change_not_allowed',
   'invalid_reset_code',
   'password_reset_unavailable',
+  'email_not_confirmed',
+  'invalid_confirmation_code',
+  'email_confirmation_unavailable',
 ];
 
 class RequestFailed extends Error {
@@ -81,8 +87,25 @@ export class AuthClient {
     }
   }
 
-  register(input: RegisterInput): Promise<AuthResult> {
-    return this.startSession(AUTH_PATHS.register, input);
+  /** SPEC-039: a conta nasce pendente e não abre sessão; o código vai para o e-mail. */
+  register(input: RegisterInput): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      await this.request('POST', AUTH_PATHS.register, input);
+      return null;
+    });
+  }
+
+  /** SPEC-039: código certo libera a conta e abre a sessão neste dispositivo. */
+  confirmEmail(input: EmailConfirmationInput): Promise<AuthResult> {
+    return this.startSession(AUTH_PATHS.emailConfirmationConfirm, input);
+  }
+
+  /** SPEC-039: "Reenviar código". O servidor responde igual exista a conta pendente ou não. */
+  resendConfirmation(input: EmailConfirmationResendInput): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      await this.request('POST', AUTH_PATHS.emailConfirmationResend, input);
+      return null;
+    });
   }
 
   login(input: LoginInput): Promise<AuthResult> {
@@ -147,8 +170,17 @@ export class AuthClient {
     return this.call(() => this.updateProfile('PATCH', PROFILE_PATHS.profile, input));
   }
 
-  changeEmail(input: ChangeEmailInput): Promise<ClientResult<UserProfile>> {
-    return this.call(() => this.updateProfile('PUT', PROFILE_PATHS.email, input));
+  /** SPEC-039: o e-mail ainda não muda; o servidor manda um código para o endereço novo. */
+  changeEmail(input: ChangeEmailInput): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      await this.authorizedRequest('PUT', PROFILE_PATHS.email, input);
+      return null;
+    });
+  }
+
+  /** SPEC-039: código certo troca o e-mail da conta. */
+  confirmEmailChange(input: ConfirmEmailChangeInput): Promise<ClientResult<UserProfile>> {
+    return this.call(() => this.updateProfile('POST', PROFILE_PATHS.emailConfirm, input));
   }
 
   /** O servidor encerra todas as sessões e devolve uma nova, que passa a ser a deste dispositivo. */

@@ -1,4 +1,4 @@
-import { RESET_CODE_ALPHABET, type EmailLocale } from '@simulador/shared';
+import { EMAIL_CODE_ALPHABET, type EmailLocale } from '@simulador/shared';
 import { describe, expect, it } from 'vitest';
 import { InvalidResetCodeError, PasswordResetUnavailableError } from '../domain/errors.js';
 import type { User } from '../domain/user.js';
@@ -6,13 +6,14 @@ import {
   BackgroundTasks,
   FakeEmailSender,
   FakePasswordHasher,
-  InMemoryPasswordResetRepository,
+  InMemoryEmailCodeRepository,
   InMemoryRefreshTokenRepository,
   InMemoryUserRepository,
   MemoryLog,
 } from '../testing/fakes.js';
-import { PasswordResetService, RESET_REQUESTS_PER_HOUR } from './password-reset-service.js';
-import { ResetCodeHasher } from './reset-code.js';
+import { EmailCodeHasher } from './email-code.js';
+import { EMAIL_CODES_PER_HOUR, EmailCodes } from './email-codes.js';
+import { PasswordResetService } from './password-reset-service.js';
 
 const MINUTE = 60_000;
 
@@ -20,26 +21,29 @@ function setup(options: { mailer?: boolean } = {}) {
   let now = new Date('2026-10-12T15:00:00.000Z');
   const clock = () => now;
   const users = new InMemoryUserRepository(clock);
-  const resets = new InMemoryPasswordResetRepository();
+  const resets = new InMemoryEmailCodeRepository();
   const refreshTokens = new InMemoryRefreshTokenRepository();
   const hasher = new FakePasswordHasher();
-  const codes = new ResetCodeHasher('segredo-de-teste-com-mais-de-32-caracteres');
+  const codes = new EmailCodeHasher('segredo-de-teste-com-mais-de-32-caracteres');
   const mailer = new FakeEmailSender();
   const background = new BackgroundTasks();
   const log = new MemoryLog();
   const service = new PasswordResetService({
     users,
-    resets,
+    codes: new EmailCodes({ repository: resets, hasher: codes, clock }),
     refreshTokens,
     hasher,
-    codes,
     clock,
     runInBackground: background.run,
     ...(options.mailer === false ? {} : { mailer }),
   });
 
   const createUser = (
-    overrides: Partial<Pick<User, 'role' | 'passwordHash' | 'googleSub'>> & { email?: string } = {},
+    overrides: Partial<Pick<User, 'role' | 'passwordHash' | 'googleSub'>> & {
+      email?: string;
+      /** SPEC-039: cadastro ainda não confirmado. */
+      pending?: boolean;
+    } = {},
   ) =>
     users.create({
       name: 'Ana Souza',
@@ -49,6 +53,7 @@ function setup(options: { mailer?: boolean } = {}) {
         overrides.passwordHash === undefined ? 'hash:senha-antiga' : overrides.passwordHash,
       googleSub: overrides.googleSub ?? null,
       termsVersion: null,
+      emailConfirmedAt: overrides.pending ? null : now,
     });
 
   const request = async (email = 'ana@exemplo.com', locale: EmailLocale = 'pt-BR') => {
@@ -99,9 +104,9 @@ describe('pedido do código (SPEC-004)', () => {
 
     const code = t.mailer.lastCode();
     expect(code).toHaveLength(8);
-    for (const char of code) expect(RESET_CODE_ALPHABET).toContain(char);
+    for (const char of code) expect(EMAIL_CODE_ALPHABET).toContain(char);
 
-    const [stored] = t.resets.resets;
+    const [stored] = t.resets.codes;
     expect(stored!.codeHash).toBe(t.codes.hash(code));
     expect(stored!.codeHash).not.toContain(code);
     expect(stored!.expiresAt.getTime() - stored!.createdAt.getTime()).toBe(15 * MINUTE);
@@ -119,7 +124,7 @@ describe('pedido do código (SPEC-004)', () => {
     const t = setup();
     await t.request('ninguem@exemplo.com');
     expect(t.mailer.sent).toEqual([]);
-    expect(t.resets.resets).toEqual([]);
+    expect(t.resets.codes).toEqual([]);
   });
 
   it('conta só Google: recebe o aviso, sem código, e o pedido já nasce encerrado (CA02)', async () => {
@@ -130,21 +135,21 @@ describe('pedido do código (SPEC-004)', () => {
     expect(t.mailer.sent[0]!.subject).toBe('Pedido de redefinição de senha');
     expect(t.mailer.sent[0]!.text).toContain('Continuar com o Google');
     expect(() => t.mailer.lastCode()).toThrow();
-    expect(t.resets.resets[0]!.closedAt).not.toBeNull();
+    expect(t.resets.codes[0]!.closedAt).not.toBeNull();
   });
 
-  it(`no máximo ${RESET_REQUESTS_PER_HOUR} e-mails por conta em uma hora (CA08)`, async () => {
+  it(`no máximo ${EMAIL_CODES_PER_HOUR} e-mails por conta em uma hora (CA08)`, async () => {
     const t = setup();
     await t.createUser();
-    for (let i = 0; i < RESET_REQUESTS_PER_HOUR + 1; i += 1) {
+    for (let i = 0; i < EMAIL_CODES_PER_HOUR + 1; i += 1) {
       await t.request();
       t.advance(1);
     }
-    expect(t.mailer.sent).toHaveLength(RESET_REQUESTS_PER_HOUR);
+    expect(t.mailer.sent).toHaveLength(EMAIL_CODES_PER_HOUR);
 
     t.advance(60);
     await t.request();
-    expect(t.mailer.sent).toHaveLength(RESET_REQUESTS_PER_HOUR + 1);
+    expect(t.mailer.sent).toHaveLength(EMAIL_CODES_PER_HOUR + 1);
   });
 
   it('pedir de novo invalida o código anterior (CA04)', async () => {
@@ -191,7 +196,7 @@ describe('redefinição com o código (SPEC-004)', () => {
 
     expect((await t.users.findById(ana.id))?.passwordHash).toBe('hash:senha-nova-123');
     expect(t.refreshTokens.tokens.every((token) => token.revokedAt !== null)).toBe(true);
-    expect(t.resets.resets.every((reset) => reset.closedAt !== null)).toBe(true);
+    expect(t.resets.codes.every((reset) => reset.closedAt !== null)).toBe(true);
     expect(t.mailer.sent.at(-1)).toMatchObject({
       to: 'ana@exemplo.com',
       subject: 'Sua senha foi redefinida',
@@ -235,7 +240,7 @@ describe('redefinição com o código (SPEC-004)', () => {
       await expect(t.confirm(wrong)).rejects.toBeInstanceOf(InvalidResetCodeError);
     }
     await expect(t.confirm(code)).rejects.toBeInstanceOf(InvalidResetCodeError);
-    expect(t.resets.resets[0]!.closedAt).not.toBeNull();
+    expect(t.resets.codes[0]!.closedAt).not.toBeNull();
   });
 
   it('a 5ª tentativa ainda vale se for a certa', async () => {
@@ -274,6 +279,16 @@ describe('redefinição com o código (SPEC-004)', () => {
     for (const secret of ['ana@exemplo.com', code, 'senha-nova-123', 'senha-antiga']) {
       expect(t.log.text).not.toContain(secret);
     }
+  });
+});
+
+describe('conta pendente (SPEC-039 CA10)', () => {
+  it('não recebe código de redefinição, como se não existisse', async () => {
+    const t = setup();
+    await t.createUser({ pending: true });
+    await t.request();
+    expect(t.mailer.sent).toEqual([]);
+    await expect(t.confirm('00000000')).rejects.toBeInstanceOf(InvalidResetCodeError);
   });
 });
 

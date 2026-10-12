@@ -4,6 +4,9 @@ import type {
   ChangeEmailInput,
   ChangePasswordInput,
   ClientResult,
+  ConfirmEmailChangeInput,
+  EmailConfirmationInput,
+  EmailConfirmationResendInput,
   LoginInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
@@ -17,7 +20,11 @@ export interface DesktopApi {
   checkServerHealth(): Promise<ServerStatus>;
   auth: {
     getSession(): Promise<AuthResult>;
-    register(input: RegisterInput): Promise<AuthResult>;
+    /** SPEC-039: cria a conta pendente e manda o código; não abre sessão. */
+    register(input: RegisterInput): Promise<ClientResult<null>>;
+    /** SPEC-039: código certo libera a conta e abre a sessão. */
+    confirmEmail(input: EmailConfirmationInput): Promise<AuthResult>;
+    resendConfirmation(input: EmailConfirmationResendInput): Promise<ClientResult<null>>;
     login(input: LoginInput): Promise<AuthResult>;
     collaboratorLogin(input: LoginInput): Promise<AuthResult>;
     googleAvailable(): Promise<boolean>;
@@ -32,7 +39,9 @@ export interface DesktopApi {
   profile: {
     get(): Promise<ClientResult<UserProfile>>;
     updateName(input: UpdateNameInput): Promise<ClientResult<UserProfile>>;
-    changeEmail(input: ChangeEmailInput): Promise<ClientResult<UserProfile>>;
+    /** SPEC-039: o e-mail só muda depois de `confirmEmailChange` com o código do endereço novo. */
+    changeEmail(input: ChangeEmailInput): Promise<ClientResult<null>>;
+    confirmEmailChange(input: ConfirmEmailChangeInput): Promise<ClientResult<UserProfile>>;
     changePassword(input: ChangePasswordInput): Promise<ClientResult<null>>;
     listConsents(): Promise<ClientResult<ConsentList>>;
     acceptTerms(): Promise<ClientResult<null>>;

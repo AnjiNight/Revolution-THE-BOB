@@ -63,6 +63,24 @@ export class PasswordResetUnavailableError extends DomainError {
   readonly code = 'password_reset_unavailable';
 }
 
+/** SPEC-039: senha certa, mas o e-mail do cadastro ainda não foi confirmado. */
+export class EmailNotConfirmedError extends DomainError {
+  readonly code = 'email_not_confirmed';
+}
+
+/**
+ * SPEC-039: código de confirmação errado, vencido, já usado, sem tentativas ou sem confirmação
+ * pendente. Um erro só, para não revelar quem tem conta.
+ */
+export class InvalidConfirmationCodeError extends DomainError {
+  readonly code = 'invalid_confirmation_code';
+}
+
+/** SPEC-039: sem SMTP não há como confirmar e-mail (só acontece fora de produção). */
+export class EmailConfirmationUnavailableError extends DomainError {
+  readonly code = 'email_confirmation_unavailable';
+}
+
 /** SPEC-003: conta só com Google não tem senha para trocar, nem cria uma. */
 export class PasswordChangeNotAllowedError extends DomainError {
   readonly code = 'password_change_not_allowed';

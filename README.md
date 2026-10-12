@@ -68,6 +68,7 @@ Pré-requisitos: **Node.js 22** e **Docker** (para o PostgreSQL local).
 npm install                     # instala os três pacotes
 cp .env.example api/.env        # configuração do servidor
 npm run db:up                   # sobe o PostgreSQL 16 (docker compose)
+npm run mail:up                 # sobe o Mailpit, que recebe os e-mails (http://localhost:8025)
 npm run db:migrate              # aplica as migrações
 
 npm run dev:api                 # servidor em http://localhost:3333
@@ -95,9 +96,14 @@ O botão "Continuar com o Google" só aparece quando o app e o servidor têm o c
 
 Para o login terminar, o servidor e o banco precisam estar rodando (seção anterior).
 
-### Recuperação de senha por e-mail
+### E-mail: confirmação de cadastro e recuperação de senha
 
-"Esqueci minha senha" envia um código de 8 caracteres que a pessoa digita no app ([SPEC-004](specs/SPEC-004.md)). O servidor envia e-mail por SMTP; sem `SMTP_HOST` no `api/.env`, a recuperação fica desligada.
+O app manda códigos de 8 caracteres por e-mail, que a pessoa digita no próprio app:
+
+- **Confirmação de e-mail** ([SPEC-039](specs/SPEC-039.md)): quem se cadastra com e-mail e senha só entra depois de digitar o código; a troca de e-mail no Meu perfil também pede o código do endereço novo. Contas nunca confirmadas são apagadas em 7 dias pelo processador (`npm run dev:worker`).
+- **"Esqueci minha senha"** ([SPEC-004](specs/SPEC-004.md)).
+
+O servidor envia e-mail por SMTP. Sem `SMTP_HOST` no `api/.env`, o cadastro com senha, a troca de e-mail e a recuperação ficam desligados (o login com Google continua); em produção, o SMTP é obrigatório.
 
 No desenvolvimento, os e-mails vão para o **Mailpit**, que roda no Docker e não manda nada para a internet:
 

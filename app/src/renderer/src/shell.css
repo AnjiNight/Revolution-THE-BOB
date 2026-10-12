@@ -365,6 +365,15 @@
   min-width: 0;
 }
 
+/* SPEC-039: troca de e-mail esperando o código. */
+.pending-hint {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--warn);
+  font-size: 0.85rem;
+  font-weight: 550;
+}
+
 .profile-value {
   margin: 0.3rem 0 0;
   color: var(--muted);

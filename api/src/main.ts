@@ -3,14 +3,13 @@ import { pino } from 'pino';
 import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { PrismaDatabaseProbe } from './modules/health/infrastructure/prisma-database-probe.js';
-import { AuthService } from './modules/identity/application/auth-service.js';
-import { PasswordResetService } from './modules/identity/application/password-reset-service.js';
-import { ProfileService } from './modules/identity/application/profile-service.js';
-import { ResetCodeHasher } from './modules/identity/application/reset-code.js';
+import { EmailCodeHasher } from './modules/identity/application/email-code.js';
+import { deleteExpiredPendingAccounts } from './modules/identity/application/email-confirmation-service.js';
+import { createIdentityServices } from './modules/identity/identity-services.js';
 import { Argon2PasswordHasher } from './modules/identity/infrastructure/argon2-password-hasher.js';
 import { JoseGoogleIdentityVerifier } from './modules/identity/infrastructure/jose-google-identity-verifier.js';
 import { JwtAccessTokenService } from './modules/identity/infrastructure/jwt-access-token-service.js';
-import { PrismaPasswordResetRepository } from './modules/identity/infrastructure/prisma-password-reset-repository.js';
+import { PrismaEmailCodeRepository } from './modules/identity/infrastructure/prisma-email-code-repository.js';
 import { PrismaRefreshTokenRepository } from './modules/identity/infrastructure/prisma-refresh-token-repository.js';
 import { PrismaUserRepository } from './modules/identity/infrastructure/prisma-user-repository.js';
 import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-sender.js';
@@ -40,28 +39,20 @@ async function main(): Promise<void> {
 
   if (mode === 'server') {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
-    const users = new PrismaUserRepository(prisma);
-    const refreshTokens = new PrismaRefreshTokenRepository(prisma);
-    const hasher = new Argon2PasswordHasher();
-    const auth = new AuthService({
-      users,
-      refreshTokens,
-      hasher,
+    // Sem SMTP (só fora de produção), a confirmação de e-mail e a recuperação de senha ficam
+    // desligadas (503); o login com Google continua funcionando.
+    const { auth, profile, passwordReset } = createIdentityServices({
+      users: new PrismaUserRepository(prisma),
+      refreshTokens: new PrismaRefreshTokenRepository(prisma),
+      emailCodes: new PrismaEmailCodeRepository(prisma),
+      hasher: new Argon2PasswordHasher(),
+      codeHasher: new EmailCodeHasher(config.jwtSecret),
       accessTokens,
       refreshTokenTtlDays: config.refreshTokenTtlDays,
-      ...(config.googleClientId
-        ? { google: new JoseGoogleIdentityVerifier(config.googleClientId) }
-        : {}),
-    });
-    const profile = new ProfileService({ users, refreshTokens, hasher, sessions: auth });
-    // SPEC-004: sem SMTP configurado, a recuperação de senha fica desligada (503).
-    const passwordReset = new PasswordResetService({
-      users,
-      resets: new PrismaPasswordResetRepository(prisma),
-      refreshTokens,
-      hasher,
-      codes: new ResetCodeHasher(config.jwtSecret),
-      ...(config.smtp ? { mailer: new SmtpEmailSender(config.smtp, config.env) } : {}),
+      mailer: config.smtp ? new SmtpEmailSender(config.smtp, config.env) : undefined,
+      google: config.googleClientId
+        ? new JoseGoogleIdentityVerifier(config.googleClientId)
+        : undefined,
     });
     const app = await buildApp({
       config,
@@ -78,7 +69,19 @@ async function main(): Promise<void> {
     };
   } else {
     const logger = pino(loggerOptions(config.logLevel));
-    const worker = startWorker({ logger, probe, heartbeatSeconds: config.workerHeartbeatSeconds });
+    const users = new PrismaUserRepository(prisma);
+    const worker = startWorker({
+      logger,
+      probe,
+      heartbeatSeconds: config.workerHeartbeatSeconds,
+      // SPEC-039 (RB23): uma vez por dia, apaga as contas nunca confirmadas há mais de 7 dias.
+      dailyTasks: [
+        {
+          name: 'limpeza de contas não confirmadas',
+          run: () => deleteExpiredPendingAccounts(users, new Date()),
+        },
+      ],
+    });
     shutdown = async () => {
       worker.stop();
     };

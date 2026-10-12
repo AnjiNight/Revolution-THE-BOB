@@ -18,6 +18,7 @@
 | 1.8 | SPEC-002 detalhada ([SPEC-002.md](SPEC-002.md)); OPEN-03 resolvida: promoção a administrador por comando no servidor |
 | 1.9 | Perfil "administrador" renomeado para **colaborador**, com conta criada só pela equipe e Área do colaborador; login com Google para usuários ([DA24](../adr/DA24-login-com-google.md)) |
 | 1.10 | SPEC-001, SPEC-002 e SPEC-003 marcadas como implementadas; SPEC-004 detalhada ([SPEC-004.md](SPEC-004.md)), aprovada e implementada; parte de e-mail da OPEN-02 resolvida (envio por SMTP; o provedor sai junto com a hospedagem) |
+| 1.11 | Nova SPEC-039 (confirmação de e-mail, RF43 e RB23 da versão 1.7 dos requisitos), na Fase 1, logo depois da SPEC-004; aprovada e implementada |
 
 ---
 
@@ -402,6 +403,26 @@ Visão geral por fase:
 | Depende de | SPEC-002 |
 | Posição | Separada da 002 porque depende de integração externa ainda não escolhida (OPEN-02) e tem validação própria; não bloqueia nenhuma Spec seguinte |
 | Em aberto | OPEN-02 (parte do e-mail resolvida na SPEC-004: SMTP; o provedor sai junto com a hospedagem) |
+| Prioridade derivada | Should |
+
+#### SPEC-039 — Confirmação de e-mail
+
+📄 Detalhada em [SPEC-039.md](SPEC-039.md) — implementada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Conta com e-mail e senha só é liberada depois de a pessoa confirmar o e-mail com um código; a troca de e-mail no perfil também exige o código no endereço novo; contas não confirmadas são apagadas em 7 dias |
+| Valor | **Usuário:** não perde a conta por erro de digitação; ninguém cria conta com o e-mail dele. **Sistema:** não guarda dado de terceiros (LGPD) e fecha o sequestro de conta pelo login com Google |
+| RF | RF43 (novo, Requisitos v1.7); muda RF01 e RF05 |
+| RB | RB01, RB04, RB23 (nova) |
+| RNF | RNF07, RNF10, RNF11, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Cadastrar conta; UC: Gerenciar perfil e consentimento (confirmação fora do diagrama, ver OPEN-43) |
+| Entidades | USUARIO (`email_confirmado_em`, `email_pendente`); CODIGO_EMAIL (generaliza a tabela da SPEC-004) |
+| Drivers | FAS07, QA06, QA07, RES05 |
+| ADRs | DA05, DA13, DA24 |
+| Depende de | SPEC-002, SPEC-003, SPEC-004 (reaproveita o envio de e-mail e o código) |
+| Posição | Logo depois da SPEC-004, que criou o envio de e-mail e o mecanismo de código; muda comportamentos entregues pelas SPECs 002 e 003 |
+| Em aberto | Textos dos e-mails (revisar no Pull Request) |
 | Prioridade derivada | Should |
 
 #### SPEC-034 — Exportação e exclusão de dados pessoais
@@ -1071,7 +1092,7 @@ Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora.
 | RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
 
-Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
+Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002; RF43, da versão 1.7, pela SPEC-039). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
 
 ### 3.2 Caminho mínimo (requisitos Must)
 

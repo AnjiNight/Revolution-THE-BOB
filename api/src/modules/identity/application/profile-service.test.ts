@@ -3,20 +3,26 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   EmailChangeNotAllowedError,
   EmailInUseError,
+  InvalidConfirmationCodeError,
   InvalidPasswordError,
   PasswordChangeNotAllowedError,
   UserNotFoundError,
 } from '../domain/errors.js';
+import { createIdentityServices } from '../identity-services.js';
 import { JwtAccessTokenService } from '../infrastructure/jwt-access-token-service.js';
 import {
+  BackgroundTasks,
+  FakeEmailSender,
   FakeGoogleVerifier,
   FakePasswordHasher,
+  InMemoryEmailCodeRepository,
   InMemoryRefreshTokenRepository,
   InMemoryUserRepository,
 } from '../testing/fakes.js';
-import { AuthService } from './auth-service.js';
+import type { AuthService } from './auth-service.js';
 import { createCollaborator } from './create-collaborator.js';
-import { ProfileService } from './profile-service.js';
+import { EmailCodeHasher } from './email-code.js';
+import type { ProfileService } from './profile-service.js';
 import { hashRefreshToken } from './refresh-token.js';
 
 const PASSWORD = 'senha-bem-longa';
@@ -25,6 +31,8 @@ let now: Date;
 let users: InMemoryUserRepository;
 let tokens: InMemoryRefreshTokenRepository;
 let hasher: FakePasswordHasher;
+let mailer: FakeEmailSender;
+let background: BackgroundTasks;
 let auth: AuthService;
 let profile: ProfileService;
 
@@ -33,26 +41,38 @@ beforeEach(() => {
   users = new InMemoryUserRepository(() => now);
   tokens = new InMemoryRefreshTokenRepository();
   hasher = new FakePasswordHasher();
-  auth = new AuthService({
+  mailer = new FakeEmailSender();
+  background = new BackgroundTasks();
+  ({ auth, profile } = createIdentityServices({
     users,
     refreshTokens: tokens,
+    emailCodes: new InMemoryEmailCodeRepository(),
     hasher,
+    codeHasher: new EmailCodeHasher('segredo-de-teste-com-mais-de-32-caracteres'),
     accessTokens: new JwtAccessTokenService('segredo-de-teste-com-mais-de-32-caracteres', 15),
     refreshTokenTtlDays: 30,
+    mailer,
     google: new FakeGoogleVerifier(),
     clock: () => now,
-  });
-  profile = new ProfileService({
-    users,
-    refreshTokens: tokens,
-    hasher,
-    sessions: auth,
-    clock: () => now,
-  });
+    runInBackground: background.run,
+  }));
 });
 
-const register = (email = 'ana@exemplo.com') =>
-  auth.register({ name: 'Ana Souza', email, password: PASSWORD, acceptedTerms: true });
+/** Cadastro já confirmado (SPEC-039), com a sessão aberta pela confirmação. */
+async function register(email = 'ana@exemplo.com') {
+  await auth.register({ name: 'Ana Souza', email, password: PASSWORD, acceptedTerms: true });
+  await background.settle();
+  return auth.confirmEmail({ email, code: mailer.lastCode(email) });
+}
+
+/** Troca de e-mail completa: pedido com a senha e confirmação com o código do e-mail novo. */
+async function changeEmail(userId: string, email: string, currentPassword = PASSWORD) {
+  await profile.changeEmail(userId, { email, currentPassword });
+  await background.settle();
+  const updated = await profile.confirmEmailChange(userId, { code: mailer.lastCode(email) });
+  await background.settle();
+  return updated;
+}
 
 const googleOnly = () =>
   auth.loginWithGoogle({ idToken: 'google:sub-1:gi@gmail.com', acceptedTerms: true });
@@ -69,6 +89,7 @@ describe('perfil (CA01, CA02)', () => {
       hasPassword: true,
       hasGoogle: false,
       createdAt: '2026-10-10T12:00:00.000Z',
+      pendingEmail: null,
     });
     expect(JSON.stringify(result)).not.toContain('hash:');
   });
@@ -91,20 +112,61 @@ describe('perfil (CA01, CA02)', () => {
   });
 });
 
-describe('troca de e-mail (CA03–CA06)', () => {
-  it('com a senha certa, troca e o login passa a usar o novo e-mail', async () => {
+describe('troca de e-mail (SPEC-003 CA03–CA06, SPEC-039 CA08)', () => {
+  it('o e-mail só muda com o código enviado ao novo; até lá, vale o antigo', async () => {
     const { user } = await register();
-    const updated = await profile.changeEmail(user.id, {
+    await profile.changeEmail(user.id, {
       email: 'ana.lima@exemplo.com',
       currentPassword: PASSWORD,
     });
-    expect(updated.email).toBe('ana.lima@exemplo.com');
+    await background.settle();
+
+    expect(mailer.sent.at(-1)).toMatchObject({
+      to: 'ana.lima@exemplo.com',
+      subject: 'Confirme seu novo e-mail',
+    });
+    expect(await profile.getProfile(user.id)).toMatchObject({
+      email: 'ana@exemplo.com',
+      pendingEmail: 'ana.lima@exemplo.com',
+    });
+    await expect(
+      auth.login({ email: 'ana@exemplo.com', password: PASSWORD }, 'user'),
+    ).resolves.toBeDefined();
+
+    const updated = await profile.confirmEmailChange(user.id, {
+      code: mailer.lastCode('ana.lima@exemplo.com'),
+    });
+    await background.settle();
+    expect(updated).toMatchObject({ email: 'ana.lima@exemplo.com', pendingEmail: null });
     await expect(
       auth.login({ email: 'ana.lima@exemplo.com', password: PASSWORD }, 'user'),
     ).resolves.toMatchObject({ user: { id: user.id } });
   });
 
-  it('e-mail de outra conta → EmailInUseError (RB01)', async () => {
+  it('o endereço antigo recebe o aviso, com o novo parcialmente escondido', async () => {
+    const { user } = await register();
+    await changeEmail(user.id, 'ana.lima@exemplo.com');
+    const notice = mailer.sent.at(-1);
+    expect(notice).toMatchObject({
+      to: 'ana@exemplo.com',
+      subject: 'O e-mail da sua conta foi trocado',
+    });
+    expect(notice?.text).toContain('a***@exemplo.com');
+    expect(notice?.text).not.toContain('ana.lima@exemplo.com');
+  });
+
+  it('código errado não muda nada', async () => {
+    const { user } = await register();
+    await profile.changeEmail(user.id, { email: 'novo@exemplo.com', currentPassword: PASSWORD });
+    await background.settle();
+    const code = mailer.lastCode('novo@exemplo.com');
+    await expect(
+      profile.confirmEmailChange(user.id, { code: code === '00000000' ? '11111111' : '00000000' }),
+    ).rejects.toBeInstanceOf(InvalidConfirmationCodeError);
+    expect((await profile.getProfile(user.id)).email).toBe('ana@exemplo.com');
+  });
+
+  it('e-mail de outra conta confirmada → EmailInUseError (RB01)', async () => {
     const { user } = await register();
     await register('bia@exemplo.com');
     await expect(
@@ -112,12 +174,28 @@ describe('troca de e-mail (CA03–CA06)', () => {
     ).rejects.toBeInstanceOf(EmailInUseError);
   });
 
+  it('e-mail de conta pendente pode ser usado; a pendente é descartada na confirmação', async () => {
+    const { user } = await register();
+    await auth.register({
+      name: 'Bia',
+      email: 'bia@exemplo.com',
+      password: 'senha-da-bia',
+      acceptedTerms: true,
+    });
+    const updated = await changeEmail(user.id, 'bia@exemplo.com');
+    expect(updated.email).toBe('bia@exemplo.com');
+    expect(users.users).toHaveLength(1);
+  });
+
   it('senha atual errada → InvalidPasswordError e nada muda', async () => {
     const { user } = await register();
     await expect(
       profile.changeEmail(user.id, { email: 'novo@exemplo.com', currentPassword: 'errada' }),
     ).rejects.toBeInstanceOf(InvalidPasswordError);
-    expect((await profile.getProfile(user.id)).email).toBe('ana@exemplo.com');
+    expect(await profile.getProfile(user.id)).toMatchObject({
+      email: 'ana@exemplo.com',
+      pendingEmail: null,
+    });
   });
 
   it('conta só com Google não troca o e-mail', async () => {
@@ -130,22 +208,19 @@ describe('troca de e-mail (CA03–CA06)', () => {
   it('conta com senha e Google troca o e-mail e continua entrando pelo Google', async () => {
     const { user } = await register('gi@gmail.com');
     await auth.loginWithGoogle({ idToken: 'google:sub-1:gi@gmail.com' });
-    await profile.changeEmail(user.id, { email: 'gi@exemplo.com', currentPassword: PASSWORD });
+    await changeEmail(user.id, 'gi@exemplo.com');
     await expect(
       auth.loginWithGoogle({ idToken: 'google:sub-1:gi@gmail.com' }),
     ).resolves.toMatchObject({ user: { id: user.id, email: 'gi@exemplo.com' } });
   });
 
-  it('colaborador troca o próprio e-mail e segue entrando pela Área do colaborador', async () => {
+  it('colaborador troca o próprio e-mail com o código e segue entrando pela Área do colaborador', async () => {
     const created = await createCollaborator(users, hasher, {
       name: 'Nicoly',
       email: 'nicoly@exemplo.com',
     });
     if (!created.ok) throw new Error('falhou');
-    await profile.changeEmail(created.user.id, {
-      email: 'nicoly@equipe.com',
-      currentPassword: created.password,
-    });
+    await changeEmail(created.user.id, 'nicoly@equipe.com', created.password);
     await expect(
       auth.login({ email: 'nicoly@equipe.com', password: created.password }, 'collaborator'),
     ).resolves.toMatchObject({ user: { role: 'collaborator' } });

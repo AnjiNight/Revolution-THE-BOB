@@ -3,6 +3,7 @@ import { CheckCircle } from '@phosphor-icons/react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { emailLocale } from '../format';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { TextField } from './TextField';
 
@@ -14,6 +15,8 @@ interface LoginFormProps {
   passwordReset?: boolean | undefined;
   onSuccess: (user: PublicUser) => void;
   onForgotPassword: (email: string) => void;
+  /** SPEC-039: conta ainda não confirmada; o servidor já mandou um código novo. */
+  onConfirmationRequired: (email: string) => void;
   onGoToRegister: () => void;
   onGoToCollaborator: () => void;
 }
@@ -24,10 +27,11 @@ export function LoginForm({
   passwordReset,
   onSuccess,
   onForgotPassword,
+  onConfirmationRequired,
   onGoToRegister,
   onGoToCollaborator,
 }: LoginFormProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState(initialEmail ?? '');
   const [password, setPassword] = useState('');
   const [fields, setFields] = useState<FieldErrors>({});
@@ -36,7 +40,11 @@ export function LoginForm({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const checked = validate(loginSchema, { email, password });
+    const checked = validate(loginSchema, {
+      email,
+      password,
+      locale: emailLocale(i18n.language),
+    });
     if (!checked.success) {
       setFields(checked.fields);
       setError(undefined);
@@ -47,6 +55,7 @@ export function LoginForm({
     const result = await window.api.auth.login(checked.data);
     setSubmitting(false);
     if (result.ok) return onSuccess(result.user);
+    if (result.error === 'email_not_confirmed') return onConfirmationRequired(checked.data.email);
     setError(result.error);
     setFields(result.fields ?? {});
   };

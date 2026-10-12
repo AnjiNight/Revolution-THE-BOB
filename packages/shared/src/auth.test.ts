@@ -3,15 +3,18 @@ import {
   acceptConsentSchema,
   changeEmailSchema,
   changePasswordSchema,
-  formatResetCode,
+  confirmEmailChangeSchema,
+  emailConfirmationResendSchema,
+  emailConfirmationSchema,
+  formatEmailCode,
   googleLoginSchema,
   loginSchema,
   normalizeEmail,
-  normalizeResetCode,
+  normalizeEmailCode,
   passwordResetConfirmSchema,
   passwordResetRequestSchema,
   registerSchema,
-  RESET_CODE_ALPHABET,
+  EMAIL_CODE_ALPHABET,
   TERMS_VERSION,
   updateNameSchema,
   validate,
@@ -34,6 +37,7 @@ describe('registerSchema', () => {
         email: 'ana.souza@exemplo.com',
         password: 'senha-bem-longa',
         acceptedTerms: true,
+        locale: 'pt-BR',
       },
     });
   });
@@ -70,7 +74,7 @@ describe('loginSchema', () => {
   it('normaliza o e-mail e não exige tamanho mínimo de senha', () => {
     expect(validate(loginSchema, { email: ' A@B.com ', password: 'x' })).toEqual({
       success: true,
-      data: { email: 'a@b.com', password: 'x' },
+      data: { email: 'a@b.com', password: 'x', locale: 'pt-BR' },
     });
   });
 
@@ -115,7 +119,10 @@ describe('esquemas do perfil (SPEC-003)', () => {
   it('changeEmailSchema normaliza o e-mail e exige a senha atual', () => {
     expect(
       validate(changeEmailSchema, { email: ' Ana@X.com ', currentPassword: 'qualquer' }),
-    ).toEqual({ success: true, data: { email: 'ana@x.com', currentPassword: 'qualquer' } });
+    ).toEqual({
+      success: true,
+      data: { email: 'ana@x.com', currentPassword: 'qualquer', locale: 'pt-BR' },
+    });
     expect(validate(changeEmailSchema, { email: 'x', currentPassword: '' })).toEqual({
       success: false,
       fields: { email: 'invalid_email', currentPassword: 'required' },
@@ -147,14 +154,14 @@ describe('esquemas do perfil (SPEC-003)', () => {
 
 describe('recuperação de senha (SPEC-004)', () => {
   it('o alfabeto do código não tem I, L, O nem U', () => {
-    expect(RESET_CODE_ALPHABET).toHaveLength(32);
-    expect(RESET_CODE_ALPHABET).not.toMatch(/[ILOU]/);
+    expect(EMAIL_CODE_ALPHABET).toHaveLength(32);
+    expect(EMAIL_CODE_ALPHABET).not.toMatch(/[ILOU]/);
   });
 
   it('normaliza o código como a pessoa costuma digitar (CA10)', () => {
-    expect(normalizeResetCode(' k7qm-4xpd ')).toBe('K7QM4XPD');
-    expect(normalizeResetCode('O1IL 2345')).toBe('01112345');
-    expect(formatResetCode('K7QM4XPD')).toBe('K7QM-4XPD');
+    expect(normalizeEmailCode(' k7qm-4xpd ')).toBe('K7QM4XPD');
+    expect(normalizeEmailCode('O1IL 2345')).toBe('01112345');
+    expect(formatEmailCode('K7QM4XPD')).toBe('K7QM-4XPD');
   });
 
   it('passwordResetRequestSchema valida o e-mail e cai para português com idioma desconhecido', () => {
@@ -212,5 +219,29 @@ describe('recuperação de senha (SPEC-004)', () => {
         newPassword: 'x'.repeat(8),
       }),
     ).toEqual({ success: false, fields: { code: 'invalid_code' } });
+  });
+});
+
+describe('confirmação de e-mail (SPEC-039)', () => {
+  it('confirmar o cadastro exige e-mail e código no formato do alfabeto', () => {
+    expect(validate(emailConfirmationSchema, { email: ' Ana@X.com ', code: 'k7qm 4xpd' })).toEqual({
+      success: true,
+      data: { email: 'ana@x.com', code: 'K7QM4XPD' },
+    });
+    expect(validate(emailConfirmationSchema, { email: 'ana@x.com', code: '123' })).toEqual({
+      success: false,
+      fields: { code: 'invalid_code' },
+    });
+  });
+
+  it('reenviar aceita o idioma; trocar o e-mail confirma só com o código', () => {
+    expect(validate(emailConfirmationResendSchema, { email: 'ana@x.com', locale: 'en' })).toEqual({
+      success: true,
+      data: { email: 'ana@x.com', locale: 'en' },
+    });
+    expect(validate(confirmEmailChangeSchema, { code: 'K7QM-4XPD' })).toEqual({
+      success: true,
+      data: { code: 'K7QM4XPD', locale: 'pt-BR' },
+    });
   });
 });

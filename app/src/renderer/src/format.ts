@@ -1,3 +1,10 @@
+import type { EmailLocale } from '@simulador/shared';
+
+/** Idioma dos e-mails que o servidor manda, a partir do idioma da interface (RNF20). */
+export function emailLocale(language: string): EmailLocale {
+  return language.toLowerCase().startsWith('en') ? 'en' : 'pt-BR';
+}
+
 /** Iniciais para o avatar: primeira letra do primeiro e do último nome ("Lucas Ferreira" → "LF"). */
 export function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);

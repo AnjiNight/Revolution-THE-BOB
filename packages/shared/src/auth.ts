@@ -10,13 +10,16 @@ export const AUTH_PATHS = {
   logout: '/api/auth/logout',
   passwordResetRequest: '/api/auth/password-reset/request',
   passwordResetConfirm: '/api/auth/password-reset/confirm',
+  emailConfirmationConfirm: '/api/auth/email-confirmation/confirm',
+  emailConfirmationResend: '/api/auth/email-confirmation/resend',
   me: '/api/me',
 } as const;
 
-/** Rotas do perfil da pessoa conectada (SPEC-003, §5.1). */
+/** Rotas do perfil da pessoa conectada (SPEC-003, §5.1; SPEC-039 para a troca de e-mail). */
 export const PROFILE_PATHS = {
   profile: '/api/me',
   email: '/api/me/email',
+  emailConfirm: '/api/me/email/confirm',
   password: '/api/me/password',
   consents: '/api/me/consents',
 } as const;
@@ -31,16 +34,20 @@ export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
 
 /**
- * Código de redefinição de senha (SPEC-004): 8 caracteres do alfabeto Crockford, sem I, L, O e U,
- * que se confundem ao ler. 32^8 ≈ 1 trilhão de combinações.
+ * Código enviado por e-mail (redefinição de senha, SPEC-004; confirmação de e-mail, SPEC-039):
+ * 8 caracteres do alfabeto Crockford, sem I, L, O e U, que se confundem ao ler.
+ * 32^8 ≈ 1 trilhão de combinações.
  */
-export const RESET_CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-export const RESET_CODE_LENGTH = 8;
-export const RESET_CODE_TTL_MINUTES = 15;
+export const EMAIL_CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+export const EMAIL_CODE_LENGTH = 8;
+export const EMAIL_CODE_TTL_MINUTES = 15;
 /** Tentativas erradas que um código aguenta antes de deixar de valer. */
-export const RESET_CODE_MAX_ATTEMPTS = 5;
+export const EMAIL_CODE_MAX_ATTEMPTS = 5;
 /** Quanto o app espera antes de liberar "Reenviar código". */
-export const RESET_CODE_RESEND_SECONDS = 60;
+export const EMAIL_CODE_RESEND_SECONDS = 60;
+
+/** Conta com e-mail e senha não confirmada é apagada depois deste prazo (RB23, SPEC-039). */
+export const PENDING_ACCOUNT_DAYS = 7;
 
 /** Idiomas dos e-mails enviados pelo servidor (RNF20). */
 export type EmailLocale = 'pt-BR' | 'en';
@@ -65,6 +72,8 @@ export interface UserProfile extends PublicUser {
   hasGoogle: boolean;
   /** ISO 8601. */
   createdAt: string;
+  /** SPEC-039: e-mail novo esperando o código de confirmação, se houver. */
+  pendingEmail: string | null;
 }
 
 /** Tipos de consentimento. Hoje só o aceite dos termos de uso e da política de privacidade. */
@@ -122,7 +131,10 @@ export type AuthErrorCode =
   | 'email_change_not_allowed'
   | 'password_change_not_allowed'
   | 'invalid_reset_code'
-  | 'password_reset_unavailable';
+  | 'password_reset_unavailable'
+  | 'email_not_confirmed'
+  | 'invalid_confirmation_code'
+  | 'email_confirmation_unavailable';
 
 const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'required',
@@ -145,16 +157,16 @@ export function normalizeEmail(email: string): string {
  * Código como a pessoa digitou → código canônico: maiúsculas, sem espaços nem hífen, e as letras
  * que o alfabeto não usa trocadas pelo número parecido (O → 0; I e L → 1).
  */
-export function normalizeResetCode(code: string): string {
+export function normalizeEmailCode(code: string): string {
   return code.toUpperCase().replace(/[\s-]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');
 }
 
 /** Código canônico → como aparece no e-mail: `K7QM-4XPD`. */
-export function formatResetCode(code: string): string {
+export function formatEmailCode(code: string): string {
   return `${code.slice(0, 4)}-${code.slice(4)}`;
 }
 
-const RESET_CODE_PATTERN = new RegExp(`^[${RESET_CODE_ALPHABET}]{${RESET_CODE_LENGTH}}$`);
+const EMAIL_CODE_PATTERN = new RegExp(`^[${EMAIL_CODE_ALPHABET}]{${EMAIL_CODE_LENGTH}}$`);
 
 const emailField = z
   .string({ error: 'required' })
@@ -185,26 +197,48 @@ const existingPasswordField = z
   .min(1, { error: 'required' })
   .max(PASSWORD_MAX, { error: 'too_long' });
 
+/** Idioma do e-mail: opcional; qualquer valor diferente de `en` vira português. */
+const localeField = z
+  .unknown()
+  .optional()
+  .transform((value): EmailLocale => (value === 'en' ? 'en' : 'pt-BR'));
+
+const emailCodeField = z
+  .string({ error: 'required' })
+  .max(32, { error: 'invalid_code' })
+  .transform(normalizeEmailCode)
+  .pipe(
+    z.string().min(1, { error: 'required' }).regex(EMAIL_CODE_PATTERN, { error: 'invalid_code' }),
+  );
+
 export const registerSchema = z.object({
   name: nameField,
   email: newEmailField,
   password: newPasswordField,
   acceptedTerms: z.literal(true, { error: 'terms_not_accepted' }),
+  /** Idioma do e-mail de confirmação (SPEC-039). */
+  locale: localeField,
 });
 
 export const loginSchema = z.object({
   email: emailField,
   password: existingPasswordField,
+  /** Conta ainda não confirmada recebe um código novo neste idioma (SPEC-039). */
+  locale: localeField,
 });
 
 /** SPEC-003: editar o nome. */
 export const updateNameSchema = z.object({ name: nameField });
 
-/** SPEC-003: trocar o e-mail, confirmando com a senha atual. */
+/** SPEC-003: trocar o e-mail, confirmando com a senha atual. SPEC-039: o código vai para o novo. */
 export const changeEmailSchema = z.object({
   email: newEmailField,
   currentPassword: existingPasswordField,
+  locale: localeField,
 });
+
+/** SPEC-039: confirmar o e-mail novo com o código enviado para ele. */
+export const confirmEmailChangeSchema = z.object({ code: emailCodeField, locale: localeField });
 
 /** SPEC-003: trocar a senha. A nova não pode ser igual à atual. */
 export const changePasswordSchema = z
@@ -230,20 +264,6 @@ export const refreshSchema = z.object({
   refreshToken: z.string({ error: 'required' }).min(1, { error: 'required' }).max(200),
 });
 
-/** Idioma do e-mail: opcional; qualquer valor diferente de `en` vira português. */
-const localeField = z
-  .unknown()
-  .optional()
-  .transform((value): EmailLocale => (value === 'en' ? 'en' : 'pt-BR'));
-
-const resetCodeField = z
-  .string({ error: 'required' })
-  .max(32, { error: 'invalid_code' })
-  .transform(normalizeResetCode)
-  .pipe(
-    z.string().min(1, { error: 'required' }).regex(RESET_CODE_PATTERN, { error: 'invalid_code' }),
-  );
-
 /** SPEC-004: pedir o código de redefinição. */
 export const passwordResetRequestSchema = z.object({
   email: newEmailField,
@@ -253,22 +273,41 @@ export const passwordResetRequestSchema = z.object({
 /** SPEC-004: redefinir a senha com o código recebido por e-mail. */
 export const passwordResetConfirmSchema = z.object({
   email: newEmailField,
-  code: resetCodeField,
+  code: emailCodeField,
   newPassword: newPasswordField,
   locale: localeField,
 });
 
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
+/** SPEC-039: confirmar o cadastro com o código enviado ao e-mail. */
+export const emailConfirmationSchema = z.object({
+  email: newEmailField,
+  code: emailCodeField,
+});
+
+/** SPEC-039: pedir outro código de confirmação do cadastro. */
+export const emailConfirmationResendSchema = z.object({
+  email: newEmailField,
+  locale: localeField,
+});
+
+/** O idioma do e-mail é opcional em quem chama: sem ele, português (o esquema faz o mesmo). */
+type OptionalLocale<T> = Omit<T, 'locale'> & { locale?: EmailLocale };
+
+export type RegisterInput = OptionalLocale<z.infer<typeof registerSchema>>;
+export type LoginInput = OptionalLocale<z.infer<typeof loginSchema>>;
 export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
 export type UpdateNameInput = z.infer<typeof updateNameSchema>;
-export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
+export type ChangeEmailInput = OptionalLocale<z.infer<typeof changeEmailSchema>>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type AcceptConsentInput = z.infer<typeof acceptConsentSchema>;
 export type PasswordResetRequestInput = z.input<typeof passwordResetRequestSchema>;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
 export type PasswordResetConfirmInput = z.input<typeof passwordResetConfirmSchema>;
 export type PasswordResetConfirm = z.infer<typeof passwordResetConfirmSchema>;
+export type EmailConfirmationInput = z.infer<typeof emailConfirmationSchema>;
+export type EmailConfirmationResendInput = z.input<typeof emailConfirmationResendSchema>;
+export type EmailConfirmationResend = z.infer<typeof emailConfirmationResendSchema>;
+export type ConfirmEmailChangeInput = OptionalLocale<z.infer<typeof confirmEmailChangeSchema>>;
 
 export type ValidationResult<T> =
   { success: true; data: T } | { success: false; fields: FieldErrors };

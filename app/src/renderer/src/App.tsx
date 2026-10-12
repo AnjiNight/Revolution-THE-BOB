@@ -5,6 +5,7 @@ import type { ClientAuthError } from '../../shared/auth-ipc';
 import { AppShell } from './components/AppShell';
 import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
+import { ConfirmEmailForm } from './components/ConfirmEmailForm';
 import { ForgotPasswordForm } from './components/ForgotPasswordForm';
 import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
@@ -20,13 +21,17 @@ interface AfterReset {
 type View =
   | { kind: 'loading' }
   | ({ kind: 'login'; notice?: ClientAuthError } & AfterReset)
-  | { kind: 'register' }
+  | { kind: 'register'; name?: string; email?: string }
+  | { kind: 'confirm-email'; email: string; name?: string; reason: 'signup' | 'login' }
   | ({ kind: 'collaborator-login' } & AfterReset)
   | { kind: 'forgot-password'; origin: 'user' | 'collaborator'; email: string }
   | { kind: 'home'; user: PublicUser }
   | { kind: 'profile'; user: PublicUser };
 
-/** Fluxo de telas da SPEC-002 (§5.3), da SPEC-003 (Meu perfil) e da SPEC-004 (recuperar senha). */
+/**
+ * Fluxo de telas da SPEC-002 (§5.3), da SPEC-003 (Meu perfil), da SPEC-004 (recuperar senha) e da
+ * SPEC-039 (confirmar o e-mail antes de entrar).
+ */
 export function App() {
   const { t } = useTranslation();
   const [view, setView] = useState<View>({ kind: 'loading' });
@@ -93,12 +98,38 @@ export function App() {
           passwordReset={view.passwordReset}
           onSuccess={signedIn}
           onForgotPassword={(email) => setView({ kind: 'forgot-password', origin: 'user', email })}
+          onConfirmationRequired={(email) =>
+            setView({ kind: 'confirm-email', email, reason: 'login' })
+          }
           onGoToRegister={() => setView({ kind: 'register' })}
           onGoToCollaborator={() => setView({ kind: 'collaborator-login' })}
         />
       )}
       {view.kind === 'register' && (
-        <RegisterForm onSuccess={signedIn} onGoToLogin={() => setView({ kind: 'login' })} />
+        <RegisterForm
+          initialName={view.name}
+          initialEmail={view.email}
+          onRegistered={(email, name) =>
+            setView({ kind: 'confirm-email', email, name, reason: 'signup' })
+          }
+          onSuccess={signedIn}
+          onGoToLogin={() => setView({ kind: 'login' })}
+        />
+      )}
+      {view.kind === 'confirm-email' && (
+        <ConfirmEmailForm
+          email={view.email}
+          reason={view.reason}
+          onSuccess={signedIn}
+          onFixEmail={() =>
+            setView({
+              kind: 'register',
+              email: view.email,
+              ...(view.name ? { name: view.name } : {}),
+            })
+          }
+          onBack={() => setView({ kind: 'login', email: view.email })}
+        />
       )}
       {view.kind === 'collaborator-login' && (
         <CollaboratorLoginForm

@@ -67,6 +67,12 @@ const configSchema = z
   .refine((c) => !c.SMTP_HOST || Boolean(c.EMAIL_FROM), {
     error: 'EMAIL_FROM é obrigatório quando SMTP_HOST está preenchido',
     path: ['EMAIL_FROM'],
+  })
+  // SPEC-039 (RB23): sem e-mail, ninguém confirmaria a conta. Fora de produção, o servidor sobe
+  // sem SMTP, com o cadastro por senha e a recuperação de senha desligados.
+  .refine((c) => c.NODE_ENV !== 'production' || Boolean(c.SMTP_HOST), {
+    error: 'SMTP_HOST é obrigatório em produção (confirmação de e-mail)',
+    path: ['SMTP_HOST'],
   });
 
 /** Envio de e-mail por SMTP (SPEC-004). */

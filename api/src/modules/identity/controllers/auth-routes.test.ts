@@ -13,13 +13,20 @@ const body = {
 
 let app: FastifyInstance;
 let logs: LogCapture;
+let ctx: Awaited<ReturnType<typeof buildTestApp>>;
+/** Cadastro + confirmação do e-mail pela API (SPEC-039): devolve a sessão. */
+const registerConfirmed = () => ctx.registerConfirmed();
 
 afterEach(async () => {
   await app.close();
 });
 
-async function start(rateLimitPerMinute?: number, google = true) {
-  const ctx = await buildTestApp({ ...(rateLimitPerMinute ? { rateLimitPerMinute } : {}), google });
+async function start(rateLimitPerMinute?: number, google = true, email = true) {
+  ctx = await buildTestApp({
+    ...(rateLimitPerMinute ? { rateLimitPerMinute } : {}),
+    google,
+    email,
+  });
   ({ app, logs } = ctx);
   return ctx;
 }
@@ -27,19 +34,28 @@ async function start(rateLimitPerMinute?: number, google = true) {
 const post = (url: string, payload: object) => app.inject({ method: 'POST', url, payload });
 
 describe('POST /api/auth/register', () => {
-  it('201 com usuário e sessão (CA01)', async () => {
+  it('202 sem sessão e e-mail com o código; a confirmação devolve a sessão (CA01, SPEC-039)', async () => {
     await start();
     const res = await post(AUTH_PATHS.register, body);
-    expect(res.statusCode).toBe(201);
-    const json = res.json<Record<string, unknown>>();
+    expect(res.statusCode).toBe(202);
+    expect(res.body).toBe('');
+    await ctx.background.settle();
+    expect(ctx.mailer.sent[0]).toMatchObject({ to: 'ana@exemplo.com' });
+
+    const confirmed = await post(AUTH_PATHS.emailConfirmationConfirm, {
+      email: 'ANA@exemplo.com',
+      code: ctx.mailer.lastCode(),
+    });
+    expect(confirmed.statusCode).toBe(200);
+    const json = confirmed.json<Record<string, unknown>>();
     expect(json.user).toMatchObject({ name: 'Ana Souza', email: 'ana@exemplo.com', role: 'user' });
     expect(json.accessToken).toEqual(expect.any(String));
     expect(json.refreshToken).toEqual(expect.any(String));
   });
 
-  it('409 para e-mail já usado, mesmo com maiúsculas diferentes (CA02)', async () => {
+  it('409 para e-mail de conta confirmada, mesmo com maiúsculas diferentes (CA02)', async () => {
     await start();
-    await post(AUTH_PATHS.register, body);
+    await registerConfirmed();
     const res = await post(AUTH_PATHS.register, { ...body, email: 'ANA@EXEMPLO.COM' });
     expect(res.statusCode).toBe(409);
     expect(res.json()).toMatchObject({ error: 'email_in_use' });
@@ -81,7 +97,7 @@ describe('POST /api/auth/register', () => {
 describe('POST /api/auth/login', () => {
   it('200 com credenciais corretas', async () => {
     await start();
-    await post(AUTH_PATHS.register, body);
+    await registerConfirmed();
     const res = await post(AUTH_PATHS.login, {
       email: ' ana@EXEMPLO.com',
       password: body.password,
@@ -91,7 +107,7 @@ describe('POST /api/auth/login', () => {
 
   it('mesma resposta para senha errada e e-mail inexistente (CA05)', async () => {
     await start();
-    await post(AUTH_PATHS.register, body);
+    await registerConfirmed();
     const wrongPassword = await post(AUTH_PATHS.login, { email: body.email, password: 'errada' });
     const unknownEmail = await post(AUTH_PATHS.login, {
       email: 'ninguem@exemplo.com',
@@ -110,9 +126,7 @@ describe('POST /api/auth/login', () => {
 describe('GET /api/me (CA06)', () => {
   it('200 com token válido', async () => {
     await start();
-    const { accessToken } = (await post(AUTH_PATHS.register, body)).json<{
-      accessToken: string;
-    }>();
+    const { accessToken } = await registerConfirmed();
     const res = await app.inject({
       method: 'GET',
       url: AUTH_PATHS.me,
@@ -141,7 +155,7 @@ describe('GET /api/me (CA06)', () => {
 describe('POST /api/auth/refresh e /logout (CA07, CA08, CA09)', () => {
   it('renova, recusa reuso e encerra com logout', async () => {
     await start();
-    const first = (await post(AUTH_PATHS.register, body)).json<{ refreshToken: string }>();
+    const first = await registerConfirmed();
 
     const renewed = await post(AUTH_PATHS.refresh, { refreshToken: first.refreshToken });
     expect(renewed.statusCode).toBe(200);
@@ -159,9 +173,7 @@ describe('POST /api/auth/refresh e /logout (CA07, CA08, CA09)', () => {
 
   it('logout responde 204 e invalida a renovação', async () => {
     await start();
-    const { refreshToken } = (await post(AUTH_PATHS.register, body)).json<{
-      refreshToken: string;
-    }>();
+    const { refreshToken } = await registerConfirmed();
     expect((await post(AUTH_PATHS.logout, { refreshToken })).statusCode).toBe(204);
     expect((await post(AUTH_PATHS.refresh, { refreshToken })).statusCode).toBe(401);
     expect((await post(AUTH_PATHS.logout, { refreshToken })).statusCode).toBe(204);
@@ -193,10 +205,7 @@ describe('limite de tentativas (CA10, RNF10)', () => {
 describe('logs (CA04)', () => {
   it('nunca contêm senha, hash nem tokens', async () => {
     await start();
-    const session = (await post(AUTH_PATHS.register, body)).json<{
-      accessToken: string;
-      refreshToken: string;
-    }>();
+    const session = await registerConfirmed();
     await post(AUTH_PATHS.login, { email: body.email, password: 'senha-errada-qualquer' });
     await app.inject({
       method: 'GET',
@@ -226,7 +235,7 @@ describe('Área do colaborador (CA11)', () => {
       email: 'nicoly@exemplo.com',
     });
     if (!created.ok) throw new Error('falhou');
-    await post(AUTH_PATHS.register, body);
+    await registerConfirmed();
 
     const ok = await post(AUTH_PATHS.collaboratorLogin, {
       email: 'nicoly@exemplo.com',
@@ -252,8 +261,8 @@ describe('Área do colaborador (CA11)', () => {
   it('não existe cadastro de colaborador pela API', async () => {
     await start();
     const res = await post(AUTH_PATHS.register, { ...body, role: 'collaborator' });
-    expect(res.statusCode).toBe(201);
-    expect(res.json()).toMatchObject({ user: { role: 'user' } });
+    expect(res.statusCode).toBe(202);
+    expect(ctx.users.users[0]?.role).toBe('user');
   });
 });
 
@@ -284,5 +293,113 @@ describe('POST /api/auth/google (CA17–CA20)', () => {
     const res = await post(AUTH_PATHS.google, { idToken: 'google:sub-1:ana@gmail.com' });
     expect(res.statusCode).toBe(503);
     expect(res.json()).toMatchObject({ error: 'google_login_unavailable' });
+  });
+});
+
+describe('confirmação de e-mail (SPEC-039)', () => {
+  it('código errado → 400 invalid_confirmation_code, o mesmo para e-mail sem conta (CA02)', async () => {
+    await start();
+    await post(AUTH_PATHS.register, body);
+    await ctx.background.settle();
+    const wrong = await post(AUTH_PATHS.emailConfirmationConfirm, {
+      email: body.email,
+      code: 'ZZZZ-ZZZZ',
+    });
+    const unknown = await post(AUTH_PATHS.emailConfirmationConfirm, {
+      email: 'ninguem@exemplo.com',
+      code: 'ZZZZ-ZZZZ',
+    });
+    for (const res of [wrong, unknown]) {
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({
+        error: 'invalid_confirmation_code',
+        message: 'Código inválido ou vencido.',
+      });
+    }
+  });
+
+  it('login de conta pendente: 403 email_not_confirmed só com a senha certa, e um código novo (CA03)', async () => {
+    await start();
+    await post(AUTH_PATHS.register, body);
+    await ctx.background.settle();
+
+    const wrong = await post(AUTH_PATHS.login, { email: body.email, password: 'errada' });
+    expect(wrong.json()).toMatchObject({ error: 'invalid_credentials' });
+
+    const pending = await post(AUTH_PATHS.login, {
+      email: body.email,
+      password: body.password,
+      locale: 'en',
+    });
+    expect(pending.statusCode).toBe(403);
+    expect(pending.json()).toMatchObject({ error: 'email_not_confirmed' });
+    await ctx.background.settle();
+    expect(ctx.mailer.sent).toHaveLength(2);
+    expect(ctx.mailer.sent[1]?.subject).toBe('Confirm your email');
+  });
+
+  it('cadastro de novo com e-mail pendente → 202 (substitui), não 409 (CA05)', async () => {
+    await start();
+    await post(AUTH_PATHS.register, body);
+    const again = await post(AUTH_PATHS.register, { ...body, name: 'Outra Pessoa' });
+    expect(again.statusCode).toBe(202);
+    expect(ctx.users.users).toHaveLength(1);
+  });
+
+  it('reenviar responde 202 sempre, e só manda e-mail para conta pendente (CA06)', async () => {
+    await start();
+    await post(AUTH_PATHS.register, body);
+    await ctx.background.settle();
+    const responses = await Promise.all(
+      [body.email, 'ninguem@exemplo.com'].map((email) =>
+        post(AUTH_PATHS.emailConfirmationResend, { email }),
+      ),
+    );
+    for (const res of responses) {
+      expect(res.statusCode).toBe(202);
+      expect(res.body).toBe('');
+    }
+    await ctx.background.settle();
+    expect(ctx.mailer.sent.map((m) => m.to)).toEqual(['ana@exemplo.com', 'ana@exemplo.com']);
+  });
+
+  it('a 11ª requisição em um minuto às rotas de confirmação recebe 429 (CA06)', async () => {
+    await start(10);
+    for (const send of [
+      () => post(AUTH_PATHS.emailConfirmationResend, { email: 'a@b.com' }),
+      () => post(AUTH_PATHS.emailConfirmationConfirm, { email: 'a@b.com', code: 'ZZZZZZZZ' }),
+    ]) {
+      for (let i = 0; i < 10; i += 1) expect((await send()).statusCode).not.toBe(429);
+      expect((await send()).statusCode).toBe(429);
+    }
+  });
+
+  it('sem SMTP: cadastro com senha → 503; Google continua (SPEC-039 §4)', async () => {
+    await start(undefined, true, false);
+    const res = await post(AUTH_PATHS.register, body);
+    expect(res.statusCode).toBe(503);
+    expect(res.json()).toMatchObject({ error: 'email_confirmation_unavailable' });
+    const google = await post(AUTH_PATHS.google, {
+      idToken: 'google:sub-1:g@gmail.com',
+      acceptedTerms: true,
+    });
+    expect(google.statusCode).toBe(200);
+  });
+
+  it('nenhum log contém e-mail, código ou senha (CA12)', async () => {
+    await start();
+    await post(AUTH_PATHS.register, body);
+    // O login da conta pendente manda um código novo, que invalida o do cadastro.
+    await post(AUTH_PATHS.login, { email: body.email, password: body.password });
+    await ctx.background.settle();
+    const code = ctx.mailer.lastCode();
+    await post(AUTH_PATHS.emailConfirmationConfirm, { email: body.email, code: 'ZZZZZZZZ' });
+    await post(AUTH_PATHS.emailConfirmationConfirm, { email: body.email, code });
+    await ctx.background.settle();
+
+    expect(logs.text).toContain('e-mail confirmado');
+    for (const secret of ['ana@exemplo.com', 'Ana@Exemplo.com', code, body.password]) {
+      expect(logs.text).not.toContain(secret);
+    }
   });
 });

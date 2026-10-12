@@ -20,6 +20,15 @@ enum PerfilAcesso {
   @@map("perfil_acesso")
 }
 
+/// Para que serve um código enviado por e-mail (SPEC-004 e SPEC-039).
+enum FinalidadeCodigo {
+  redefinir_senha
+  confirmar_cadastro
+  trocar_email
+
+  @@map("finalidade_codigo")
+}
+
 enum TipoConsentimento {
   termos_uso_privacidade
 
@@ -28,19 +37,23 @@ enum TipoConsentimento {
 
 /// Pessoa cadastrada (SPEC-002). E-mail único e sempre em minúsculas (RB01).
 /// Conta só com Google não tem senha; toda conta tem senha ou Google (CHECK na migração).
+/// SPEC-039: sem "email_confirmado_em", a conta está pendente e não entra; "email_pendente" é o e-mail
+/// novo de uma troca ainda não confirmada.
 model Usuario {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nome         String       @db.VarChar(100)
-  email        String       @unique @db.VarChar(254)
-  senhaHash    String?      @map("senha_hash")
-  googleSub    String?      @unique @map("google_sub") @db.VarChar(255)
-  perfil       PerfilAcesso @default(usuario)
-  criadoEm     DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome              String       @db.VarChar(100)
+  email             String       @unique @db.VarChar(254)
+  senhaHash         String?      @map("senha_hash")
+  googleSub         String?      @unique @map("google_sub") @db.VarChar(255)
+  perfil            PerfilAcesso @default(usuario)
+  criadoEm          DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm      DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  emailConfirmadoEm DateTime?    @map("email_confirmado_em") @db.Timestamptz(3)
+  emailPendente     String?      @map("email_pendente") @db.VarChar(254)
 
-  consentimentos    Consentimento[]
-  tokensRenovacao   TokenRenovacao[]
-  redefinicoesSenha RedefinicaoSenha[]
+  consentimentos  Consentimento[]
+  tokensRenovacao TokenRenovacao[]
+  codigosEmail    CodigoEmail[]
 
   @@map("usuario")
 }
@@ -76,19 +89,20 @@ model TokenRenovacao {
   @@map("token_renovacao")
 }
 
-/// Código de redefinição de senha (SPEC-004). Só o HMAC do código é guardado.
+/// Código enviado por e-mail (SPEC-004, SPEC-039). Só o HMAC do código é guardado.
 /// "encerrado_em" marca o código que já não vale: usado, substituído ou sem tentativas.
-model RedefinicaoSenha {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usuarioId   String    @map("usuario_id") @db.Uuid
-  codigoHash  String    @map("codigo_hash") @db.Char(64)
-  tentativas  Int       @default(0) @db.SmallInt
-  criadoEm    DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
-  expiraEm    DateTime  @map("expira_em") @db.Timestamptz(3)
-  encerradoEm DateTime? @map("encerrado_em") @db.Timestamptz(3)
+model CodigoEmail {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId   String           @map("usuario_id") @db.Uuid
+  finalidade  FinalidadeCodigo
+  codigoHash  String           @map("codigo_hash") @db.Char(64)
+  tentativas  Int              @default(0) @db.SmallInt
+  criadoEm    DateTime         @default(now()) @map("criado_em") @db.Timestamptz(3)
+  expiraEm    DateTime         @map("expira_em") @db.Timestamptz(3)
+  encerradoEm DateTime?        @map("encerrado_em") @db.Timestamptz(3)
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId, criadoEm])
-  @@map("redefinicao_senha")
+  @@map("codigo_email")
 }

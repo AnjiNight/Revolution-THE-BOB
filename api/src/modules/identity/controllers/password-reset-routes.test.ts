@@ -15,13 +15,11 @@ async function start(options: TestAppOptions = {}) {
   return built;
 }
 
+/** Cadastro já confirmado (SPEC-039); o e-mail de confirmação sai da lista de enviados. */
 async function register(email = 'ana@exemplo.com') {
-  const res = await built.app.inject({
-    method: 'POST',
-    url: AUTH_PATHS.register,
-    payload: { name: 'Ana Souza', email, password: PASSWORD, acceptedTerms: true },
-  });
-  return res.json<{ refreshToken: string }>();
+  const session = await built.registerConfirmed({ email, password: PASSWORD });
+  built.mailer.sent.length = 0;
+  return session;
 }
 
 const requestCode = (payload: object) =>
@@ -41,6 +39,7 @@ describe('POST /api/auth/password-reset/request', () => {
       passwordHash: null,
       googleSub: 'sub',
       termsVersion: null,
+      emailConfirmedAt: new Date(),
     });
 
     const responses = await Promise.all(
@@ -157,6 +156,7 @@ describe('POST /api/auth/password-reset/confirm', () => {
       passwordHash: await hasher.hash('senha-gerada-pela-equipe'),
       googleSub: null,
       termsVersion: null,
+      emailConfirmedAt: new Date(),
     });
     await requestCode({ email: 'bia@equipe.com' });
     await background.settle();
@@ -218,7 +218,7 @@ describe('limites, privacidade e SMTP', () => {
   });
 
   it('sem SMTP, as duas rotas respondem 503, mesmo com dados inválidos (CA12)', async () => {
-    await start({ passwordReset: false });
+    await start({ email: false });
     for (const res of [
       await requestCode({ email: 'ana@exemplo.com' }),
       await confirm({ email: 'x', code: '', newPassword: '' }),

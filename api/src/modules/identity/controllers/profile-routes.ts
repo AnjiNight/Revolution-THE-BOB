@@ -2,6 +2,7 @@ import {
   acceptConsentSchema,
   changeEmailSchema,
   changePasswordSchema,
+  confirmEmailChangeSchema,
   PROFILE_PATHS,
   updateNameSchema,
 } from '@simulador/shared';
@@ -39,9 +40,18 @@ export function registerProfileRoutes(app: FastifyInstance, options: ProfileRout
     return reply.send({ user });
   });
 
+  // SPEC-039: o e-mail ainda não muda; o código vai para o endereço novo.
   app.put(PROFILE_PATHS.email, withPassword, async (request, reply) => {
     const input = parseBody(changeEmailSchema, request.body);
-    const user = await run(() => profile.changeEmail(requireAuth(request).userId, input));
+    await run(() => profile.changeEmail(requireAuth(request).userId, input, request.log));
+    return reply.status(202).send();
+  });
+
+  app.post(PROFILE_PATHS.emailConfirm, withPassword, async (request, reply) => {
+    const input = parseBody(confirmEmailChangeSchema, request.body);
+    const user = await run(() =>
+      profile.confirmEmailChange(requireAuth(request).userId, input, request.log),
+    );
     return reply.send({ user });
   });
 

@@ -11,6 +11,8 @@
 | Drivers | QA05, QA07, RES05 |
 | ADRs | [DA05](../adr/DA05-autenticacao-propria.md), [DA12](../adr/DA12-autorizacao-planos-no-servidor.md), [DA13](../adr/DA13-dados-pessoais-concentrados.md), [DA24](../adr/DA24-login-com-google.md) |
 
+> **Mudança da [SPEC-039](SPEC-039.md):** a troca de e-mail passa a ter duas etapas. O e-mail novo só vale depois do código enviado para ele (o CA03 abaixo vale com essa diferença), e o endereço antigo recebe um aviso.
+
 ---
 
 ## 1. Objetivo

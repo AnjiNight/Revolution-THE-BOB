@@ -62,6 +62,13 @@
     "backCollaborator": "Back to the collaborator area",
     "done": "Password reset. Sign in with your new password."
   },
+  "confirm": {
+    "title": "Confirm your email",
+    "sent": "We sent a code to {{email}}. It is valid for 15 minutes.",
+    "pendingLogin": "Your account is not confirmed yet. We sent a new code to {{email}}.",
+    "submit": "Confirm and sign in",
+    "fixEmail": "Fix email"
+  },
   "home": {
     "greeting": "Hello, {{name}}!",
     "next": "Your account is ready. Simulation portfolios arrive in the next versions.",
@@ -113,7 +120,11 @@
     "googleAccount": "Google account",
     "consentTitle": "Terms of use and privacy policy",
     "consentMeta": "Version {{version}}, accepted on {{date}}",
-    "consentCurrent": "Current"
+    "consentCurrent": "Current",
+    "confirmEmail": "Confirm email",
+    "emailCodeSent": "We sent a code to {{email}}. Your email only changes after you confirm it.",
+    "pendingEmail": "Waiting for confirmation: {{email}}",
+    "emailChanged": "Email changed. The old address received a notice."
   },
   "fieldErrors": {
     "required": "Required field.",
@@ -145,7 +156,10 @@
     "email_change_not_allowed": "This account email comes from Google and cannot be changed here.",
     "password_change_not_allowed": "This account signs in with Google and has no password.",
     "invalid_reset_code": "Invalid or expired code. Check the code or ask for a new one.",
-    "password_reset_unavailable": "Password reset is not available on this server."
+    "password_reset_unavailable": "Password reset is not available on this server.",
+    "email_not_confirmed": "Confirm your email to sign in.",
+    "invalid_confirmation_code": "Invalid or expired code. Check the code or ask for a new one.",
+    "email_confirmation_unavailable": "Email confirmation is not available on this server."
   },
   "landing": {
     "skip": "Skip to sign-in",

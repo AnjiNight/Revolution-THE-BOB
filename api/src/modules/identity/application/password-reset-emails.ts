@@ -1,4 +1,4 @@
-import { formatResetCode, RESET_CODE_TTL_MINUTES, type EmailLocale } from '@simulador/shared';
+import { formatEmailCode, EMAIL_CODE_TTL_MINUTES, type EmailLocale } from '@simulador/shared';
 import type { EmailMessage } from './ports.js';
 
 /**
@@ -14,7 +14,7 @@ const SIGNATURE: Record<EmailLocale, string> = {
 };
 
 export function resetCodeEmail(locale: EmailLocale, name: string, code: string): Draft {
-  const formatted = formatResetCode(code);
+  const formatted = formatEmailCode(code);
   if (locale === 'en') {
     return {
       subject: 'Your code to reset your password',
@@ -25,7 +25,7 @@ export function resetCodeEmail(locale: EmailLocale, name: string, code: string):
         '',
         `    ${formatted}`,
         '',
-        `It is valid for ${RESET_CODE_TTL_MINUTES} minutes and can be used only once. Type it in the app, on the "Reset password" screen.`,
+        `It is valid for ${EMAIL_CODE_TTL_MINUTES} minutes and can be used only once. Type it in the app, on the "Reset password" screen.`,
         '',
         "If you didn't ask for it, ignore this email: your password stays the same.",
         'We never ask for this code by phone, message or another email.',
@@ -43,7 +43,7 @@ export function resetCodeEmail(locale: EmailLocale, name: string, code: string):
       '',
       `    ${formatted}`,
       '',
-      `Ele vale por ${RESET_CODE_TTL_MINUTES} minutos e só pode ser usado uma vez. Digite-o no app, na tela "Recuperar senha".`,
+      `Ele vale por ${EMAIL_CODE_TTL_MINUTES} minutos e só pode ser usado uma vez. Digite-o no app, na tela "Recuperar senha".`,
       '',
       'Se você não pediu, ignore este e-mail: sua senha continua a mesma.',
       'Nunca pedimos este código por telefone, mensagem ou outro e-mail.',

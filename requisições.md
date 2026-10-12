@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.6
+**Versão:** 1.7
 
 | Versão | Alteração |
 |---|---|
@@ -14,6 +14,7 @@
 | 1.4 | Rastreabilidade adiada da RB14 (seção 9.3) passa a usar o calendário de feriados bancários |
 | 1.5 | Classes de ativo separadas como nas corretoras: Ação (inclui units) e FII; ETFs, BDRs e opções fora do escopo; RF07, RF18 e nova RB22 ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)) |
 | 1.6 | Ator "Administrador" renomeado para **Colaborador**; novos RF41 (entrar com Google) e RF42 (Área do colaborador) |
+| 1.7 | Novo RF43 (confirmação de e-mail por código, no cadastro e na troca de e-mail) e nova RB23 (conta só liberada depois de confirmar o e-mail); ver [SPEC-039](specs/SPEC-039.md) |
 
 ---
 
@@ -59,6 +60,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 | RF06 | Permitir exportação e exclusão dos dados pessoais | Usuário | Must |
 | RF41 | Permitir entrar com conta Google, só para usuários ([DA24](adr/DA24-login-com-google.md)) | Visitante | Should |
 | RF42 | Oferecer login próprio para colaboradores (Área do colaborador); contas de colaborador são criadas só pela equipe ([SPEC-002](specs/SPEC-002.md)) | Colaborador | Must |
+| RF43 | Confirmar o e-mail com um código enviado a ele: no cadastro com e-mail e senha (a conta só é liberada depois) e na troca de e-mail ([SPEC-039](specs/SPEC-039.md)) | Visitante | Should |
 
 ### 2.2 Ativos e dados de mercado
 
@@ -168,6 +170,7 @@ Restrições do domínio, independentes de tecnologia.
 | RB02 | Toda carteira pertence obrigatoriamente a um único usuário |
 | RB03 | O usuário acessa apenas as próprias carteiras |
 | RB04 | Dados do usuário são removidos em até 30 dias após pedido de exclusão |
+| RB23 | Conta criada com e-mail e senha só é liberada depois de o e-mail ser confirmado; contas não confirmadas são apagadas 7 dias após o cadastro |
 
 ### 4.2 Transações (Simulação)
 
@@ -211,6 +214,7 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | Regra | Implementação no modelo |
 |---|---|
 | RB01 | Restrição de unicidade em `Usuario.email` |
+| RB23 | `Usuario.email_confirmado_em` vazio bloqueia a sessão; limpeza diária das contas não confirmadas pelo processador de tarefas |
 | RB02 | Chave estrangeira obrigatória `Carteira.usuario_id` |
 | RB05, RB06 | Validação na camada de serviço, sobre saldo e posição calculados |
 | RB07 | `Transacao.data` referencia `Cotacao` pela mesma data |

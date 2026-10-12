@@ -1,14 +1,15 @@
 import {
   passwordResetConfirmSchema,
   passwordResetRequestSchema,
-  RESET_CODE_RESEND_SECONDS,
+  EMAIL_CODE_RESEND_SECONDS,
   validate,
-  type EmailLocale,
   type FieldErrors,
 } from '@simulador/shared';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { emailLocale } from '../format';
+import { useCountdown } from '../useCountdown';
 import { TextField } from './TextField';
 
 interface ForgotPasswordFormProps {
@@ -34,7 +35,7 @@ export function ForgotPasswordForm({
   onBack,
 }: ForgotPasswordFormProps) {
   const { t, i18n } = useTranslation();
-  const locale: EmailLocale = i18n.language.startsWith('en') ? 'en' : 'pt-BR';
+  const locale = emailLocale(i18n.language);
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState('');
@@ -43,20 +44,14 @@ export function ForgotPasswordForm({
   const [error, setError] = useState<ClientAuthError | undefined>();
   const [resent, setResent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [waitSeconds, setWaitSeconds] = useState(0);
+  // Contagem para liberar "Reenviar código".
+  const [waitSeconds, setWaitSeconds] = useCountdown();
   const form = useRef<HTMLFormElement>(null);
 
   // A cada passo, o foco vai para o primeiro campo (teclado e leitor de tela).
   useEffect(() => {
     form.current?.querySelector('input')?.focus();
   }, [step]);
-
-  // Contagem para liberar "Reenviar código".
-  useEffect(() => {
-    if (waitSeconds <= 0) return;
-    const timer = setTimeout(() => setWaitSeconds((s) => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [waitSeconds]);
 
   const fail = (result: { error: ClientAuthError; fields?: FieldErrors }) => {
     setError(result.error);
@@ -80,7 +75,7 @@ export function ForgotPasswordForm({
       return false;
     }
     setEmail(checked.data.email);
-    setWaitSeconds(RESET_CODE_RESEND_SECONDS);
+    setWaitSeconds(EMAIL_CODE_RESEND_SECONDS);
     return true;
   };
 

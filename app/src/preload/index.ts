@@ -16,7 +16,10 @@ const api: DesktopApi = {
   checkServerHealth: () => invoke<ServerStatus>(CHECK_SERVER_CHANNEL),
   auth: {
     getSession: () => invoke<AuthResult>(AUTH_CHANNELS.getSession),
-    register: (input) => invoke<AuthResult>(AUTH_CHANNELS.register, input),
+    register: (input) => invoke<ClientResult<null>>(AUTH_CHANNELS.register, input),
+    confirmEmail: (input) => invoke<AuthResult>(AUTH_CHANNELS.confirmEmail, input),
+    resendConfirmation: (input) =>
+      invoke<ClientResult<null>>(AUTH_CHANNELS.resendConfirmation, input),
     login: (input) => invoke<AuthResult>(AUTH_CHANNELS.login, input),
     collaboratorLogin: (input) => invoke<AuthResult>(AUTH_CHANNELS.collaboratorLogin, input),
     googleAvailable: () => invoke<boolean>(AUTH_CHANNELS.googleAvailable),
@@ -31,7 +34,9 @@ const api: DesktopApi = {
   profile: {
     get: () => invoke<ClientResult<UserProfile>>(PROFILE_CHANNELS.get),
     updateName: (input) => invoke<ClientResult<UserProfile>>(PROFILE_CHANNELS.updateName, input),
-    changeEmail: (input) => invoke<ClientResult<UserProfile>>(PROFILE_CHANNELS.changeEmail, input),
+    changeEmail: (input) => invoke<ClientResult<null>>(PROFILE_CHANNELS.changeEmail, input),
+    confirmEmailChange: (input) =>
+      invoke<ClientResult<UserProfile>>(PROFILE_CHANNELS.confirmEmailChange, input),
     changePassword: (input) => invoke<ClientResult<null>>(PROFILE_CHANNELS.changePassword, input),
     listConsents: () => invoke<ClientResult<ConsentList>>(PROFILE_CHANNELS.listConsents),
     acceptTerms: () => invoke<ClientResult<null>>(PROFILE_CHANNELS.acceptTerms),
