@@ -20,6 +20,7 @@ describe('loadConfig (CA08)', () => {
       refreshTokenTtlDays: 30,
       authRateLimitPerMinute: 10,
       googleClientId: null,
+      smtp: null,
       workerHeartbeatSeconds: 60,
     });
   });
@@ -67,5 +68,36 @@ describe('loadConfig (CA08)', () => {
     expect(() => loadConfig({ ...base, JWT_SECRET: exemplo, NODE_ENV: 'production' })).toThrow(
       /produção/,
     );
+  });
+
+  it('liga o envio de e-mail só com SMTP_HOST, com porta 587 por padrão (SPEC-004)', () => {
+    expect(loadConfig({ ...base, SMTP_HOST: '' }).smtp).toBeNull();
+    expect(
+      loadConfig({
+        ...base,
+        SMTP_HOST: 'localhost',
+        SMTP_PORT: '1025',
+        EMAIL_FROM: 'App <a@x.com>',
+      }).smtp,
+    ).toEqual({ host: 'localhost', port: 1025, user: null, password: null, from: 'App <a@x.com>' });
+    expect(
+      loadConfig({
+        ...base,
+        SMTP_HOST: 'smtp.exemplo.com',
+        SMTP_USER: 'conta',
+        SMTP_PASSWORD: 'senha',
+        EMAIL_FROM: 'a@x.com',
+      }).smtp,
+    ).toEqual({
+      host: 'smtp.exemplo.com',
+      port: 587,
+      user: 'conta',
+      password: 'senha',
+      from: 'a@x.com',
+    });
+  });
+
+  it('SMTP_HOST sem EMAIL_FROM impede o servidor de iniciar (CA12)', () => {
+    expect(() => loadConfig({ ...base, SMTP_HOST: 'localhost' })).toThrow(/EMAIL_FROM/);
   });
 });

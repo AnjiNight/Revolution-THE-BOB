@@ -8,6 +8,8 @@ export const AUTH_PATHS = {
   google: '/api/auth/google',
   refresh: '/api/auth/refresh',
   logout: '/api/auth/logout',
+  passwordResetRequest: '/api/auth/password-reset/request',
+  passwordResetConfirm: '/api/auth/password-reset/confirm',
   me: '/api/me',
 } as const;
 
@@ -27,6 +29,21 @@ export const NAME_MAX = 100;
 export const EMAIL_MAX = 254;
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
+
+/**
+ * Código de redefinição de senha (SPEC-004): 8 caracteres do alfabeto Crockford, sem I, L, O e U,
+ * que se confundem ao ler. 32^8 ≈ 1 trilhão de combinações.
+ */
+export const RESET_CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+export const RESET_CODE_LENGTH = 8;
+export const RESET_CODE_TTL_MINUTES = 15;
+/** Tentativas erradas que um código aguenta antes de deixar de valer. */
+export const RESET_CODE_MAX_ATTEMPTS = 5;
+/** Quanto o app espera antes de liberar "Reenviar código". */
+export const RESET_CODE_RESEND_SECONDS = 60;
+
+/** Idiomas dos e-mails enviados pelo servidor (RNF20). */
+export type EmailLocale = 'pt-BR' | 'en';
 
 /**
  * Tipo de conta. "user" se cadastra pelo app; "collaborator" (equipe) só é criado pela própria
@@ -83,7 +100,8 @@ export type FieldErrorCode =
   | 'invalid_email'
   | 'terms_not_accepted'
   | 'same_password'
-  | 'invalid_version';
+  | 'invalid_version'
+  | 'invalid_code';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 
@@ -102,7 +120,9 @@ export type AuthErrorCode =
   | 'google_email_not_verified'
   | 'invalid_password'
   | 'email_change_not_allowed'
-  | 'password_change_not_allowed';
+  | 'password_change_not_allowed'
+  | 'invalid_reset_code'
+  | 'password_reset_unavailable';
 
 const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'required',
@@ -112,6 +132,7 @@ const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'terms_not_accepted',
   'same_password',
   'invalid_version',
+  'invalid_code',
 ];
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -119,6 +140,21 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
+
+/**
+ * Código como a pessoa digitou → código canônico: maiúsculas, sem espaços nem hífen, e as letras
+ * que o alfabeto não usa trocadas pelo número parecido (O → 0; I e L → 1).
+ */
+export function normalizeResetCode(code: string): string {
+  return code.toUpperCase().replace(/[\s-]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');
+}
+
+/** Código canônico → como aparece no e-mail: `K7QM-4XPD`. */
+export function formatResetCode(code: string): string {
+  return `${code.slice(0, 4)}-${code.slice(4)}`;
+}
+
+const RESET_CODE_PATTERN = new RegExp(`^[${RESET_CODE_ALPHABET}]{${RESET_CODE_LENGTH}}$`);
 
 const emailField = z
   .string({ error: 'required' })
@@ -194,6 +230,34 @@ export const refreshSchema = z.object({
   refreshToken: z.string({ error: 'required' }).min(1, { error: 'required' }).max(200),
 });
 
+/** Idioma do e-mail: opcional; qualquer valor diferente de `en` vira português. */
+const localeField = z
+  .unknown()
+  .optional()
+  .transform((value): EmailLocale => (value === 'en' ? 'en' : 'pt-BR'));
+
+const resetCodeField = z
+  .string({ error: 'required' })
+  .max(32, { error: 'invalid_code' })
+  .transform(normalizeResetCode)
+  .pipe(
+    z.string().min(1, { error: 'required' }).regex(RESET_CODE_PATTERN, { error: 'invalid_code' }),
+  );
+
+/** SPEC-004: pedir o código de redefinição. */
+export const passwordResetRequestSchema = z.object({
+  email: newEmailField,
+  locale: localeField,
+});
+
+/** SPEC-004: redefinir a senha com o código recebido por e-mail. */
+export const passwordResetConfirmSchema = z.object({
+  email: newEmailField,
+  code: resetCodeField,
+  newPassword: newPasswordField,
+  locale: localeField,
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
@@ -201,6 +265,10 @@ export type UpdateNameInput = z.infer<typeof updateNameSchema>;
 export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type AcceptConsentInput = z.infer<typeof acceptConsentSchema>;
+export type PasswordResetRequestInput = z.input<typeof passwordResetRequestSchema>;
+export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
+export type PasswordResetConfirmInput = z.input<typeof passwordResetConfirmSchema>;
+export type PasswordResetConfirm = z.infer<typeof passwordResetConfirmSchema>;
 
 export type ValidationResult<T> =
   { success: true; data: T } | { success: false; fields: FieldErrors };

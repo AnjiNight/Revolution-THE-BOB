@@ -3,10 +3,15 @@ import {
   acceptConsentSchema,
   changeEmailSchema,
   changePasswordSchema,
+  formatResetCode,
   googleLoginSchema,
   loginSchema,
   normalizeEmail,
+  normalizeResetCode,
+  passwordResetConfirmSchema,
+  passwordResetRequestSchema,
   registerSchema,
+  RESET_CODE_ALPHABET,
   TERMS_VERSION,
   updateNameSchema,
   validate,
@@ -137,5 +142,75 @@ describe('esquemas do perfil (SPEC-003)', () => {
       success: false,
       fields: { version: 'invalid_version' },
     });
+  });
+});
+
+describe('recuperação de senha (SPEC-004)', () => {
+  it('o alfabeto do código não tem I, L, O nem U', () => {
+    expect(RESET_CODE_ALPHABET).toHaveLength(32);
+    expect(RESET_CODE_ALPHABET).not.toMatch(/[ILOU]/);
+  });
+
+  it('normaliza o código como a pessoa costuma digitar (CA10)', () => {
+    expect(normalizeResetCode(' k7qm-4xpd ')).toBe('K7QM4XPD');
+    expect(normalizeResetCode('O1IL 2345')).toBe('01112345');
+    expect(formatResetCode('K7QM4XPD')).toBe('K7QM-4XPD');
+  });
+
+  it('passwordResetRequestSchema valida o e-mail e cai para português com idioma desconhecido', () => {
+    expect(validate(passwordResetRequestSchema, { email: ' Ana@X.com ', locale: 'en' })).toEqual({
+      success: true,
+      data: { email: 'ana@x.com', locale: 'en' },
+    });
+    expect(validate(passwordResetRequestSchema, { email: 'ana@x.com', locale: 'fr' })).toEqual({
+      success: true,
+      data: { email: 'ana@x.com', locale: 'pt-BR' },
+    });
+    expect(validate(passwordResetRequestSchema, { email: 'ana@x.com' })).toEqual({
+      success: true,
+      data: { email: 'ana@x.com', locale: 'pt-BR' },
+    });
+    expect(validate(passwordResetRequestSchema, { email: 'sem-arroba' })).toEqual({
+      success: false,
+      fields: { email: 'invalid_email' },
+    });
+  });
+
+  it('passwordResetConfirmSchema normaliza o código e aplica as regras da senha nova', () => {
+    const ok = validate(passwordResetConfirmSchema, {
+      email: 'ana@x.com',
+      code: 'k7qm-4xpd',
+      newPassword: 'senha-nova-longa',
+    });
+    expect(ok).toEqual({
+      success: true,
+      data: {
+        email: 'ana@x.com',
+        code: 'K7QM4XPD',
+        newPassword: 'senha-nova-longa',
+        locale: 'pt-BR',
+      },
+    });
+    expect(
+      validate(passwordResetConfirmSchema, {
+        email: 'ana@x.com',
+        code: 'ABC',
+        newPassword: 'curta',
+      }),
+    ).toEqual({ success: false, fields: { code: 'invalid_code', newPassword: 'too_short' } });
+    expect(
+      validate(passwordResetConfirmSchema, {
+        email: 'ana@x.com',
+        code: ' - ',
+        newPassword: 'x'.repeat(8),
+      }),
+    ).toEqual({ success: false, fields: { code: 'required' } });
+    expect(
+      validate(passwordResetConfirmSchema, {
+        email: 'ana@x.com',
+        code: 'K7QM4XPU',
+        newPassword: 'x'.repeat(8),
+      }),
+    ).toEqual({ success: false, fields: { code: 'invalid_code' } });
   });
 });

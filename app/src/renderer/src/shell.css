@@ -391,24 +391,9 @@
   margin: 0;
 }
 
-/* Confirmação de sucesso: mesma família de cor do status "conectado". */
-.form-success {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0;
-  color: var(--ok);
-  font-size: 0.875rem;
-  font-weight: 550;
-}
-
-.form-success:not(:empty) {
+/* Confirmação de sucesso (estilo base em styles.css): afastada do cartão só quando aparece. */
+.profile-panel .form-success:not(:empty) {
   margin-top: 1rem;
-}
-
-.form-success svg {
-  flex-shrink: 0;
-  font-size: 1.15rem;
 }
 
 /* Histórico de consentimentos: linha do tempo, do aceite mais recente para o mais antigo. */

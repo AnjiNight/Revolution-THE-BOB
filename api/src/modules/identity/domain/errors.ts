@@ -50,6 +50,19 @@ export class EmailChangeNotAllowedError extends DomainError {
   readonly code = 'email_change_not_allowed';
 }
 
+/**
+ * SPEC-004: código errado, vencido, já usado, substituído, sem tentativas ou de e-mail sem conta.
+ * Propositalmente um erro só, para não revelar quem tem conta.
+ */
+export class InvalidResetCodeError extends DomainError {
+  readonly code = 'invalid_reset_code';
+}
+
+/** SPEC-004: o servidor está sem SMTP configurado, então a recuperação de senha fica desligada. */
+export class PasswordResetUnavailableError extends DomainError {
+  readonly code = 'password_reset_unavailable';
+}
+
 /** SPEC-003: conta só com Google não tem senha para trocar, nem cria uma. */
 export class PasswordChangeNotAllowedError extends DomainError {
   readonly code = 'password_change_not_allowed';

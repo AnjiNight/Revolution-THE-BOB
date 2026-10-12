@@ -3,14 +3,21 @@ import type { ConsentType } from '@simulador/shared';
 import { EmailInUseError } from '../domain/errors.js';
 import type { User } from '../domain/user.js';
 import type {
+  BackgroundRunner,
+  EmailMessage,
+  EmailSender,
   GoogleIdentity,
   GoogleIdentityVerifier,
+  NewPasswordReset,
   NewRefreshToken,
   NewUser,
   PasswordHasher,
+  PasswordResetRepository,
   RefreshTokenRepository,
   StoredConsent,
+  StoredPasswordReset,
   StoredRefreshToken,
+  TaskLog,
   UserRepository,
 } from '../application/ports.js';
 
@@ -171,5 +178,104 @@ export class FakeGoogleVerifier implements GoogleIdentityVerifier {
     const [prefix, sub, email, flag] = idToken.split(':');
     if (prefix !== 'google' || !sub || !email) return null;
     return { sub, email, emailVerified: flag !== 'nao-verificado', name: 'Pessoa Google' };
+  }
+}
+
+export class InMemoryPasswordResetRepository implements PasswordResetRepository {
+  readonly resets: StoredPasswordReset[] = [];
+
+  async create(reset: NewPasswordReset, deleteBefore: Date): Promise<void> {
+    await this.closeAllForUser(reset.userId, reset.createdAt);
+    for (let i = this.resets.length - 1; i >= 0; i -= 1) {
+      const old = this.resets[i]!;
+      if (old.userId === reset.userId && old.createdAt < deleteBefore) this.resets.splice(i, 1);
+    }
+    this.resets.push({ id: randomUUID(), attempts: 0, ...reset });
+  }
+
+  async countSince(userId: string, since: Date): Promise<number> {
+    return this.resets.filter((r) => r.userId === userId && r.createdAt >= since).length;
+  }
+
+  async findOpen(userId: string, at: Date): Promise<StoredPasswordReset | null> {
+    const open = this.resets
+      .filter((r) => r.userId === userId && !r.closedAt && r.expiresAt > at)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return open[0] ? { ...open[0] } : null;
+  }
+
+  async reserveAttempt(id: string, maxAttempts: number): Promise<boolean> {
+    const reset = this.resets.find((r) => r.id === id);
+    if (!reset || reset.closedAt || reset.attempts >= maxAttempts) return false;
+    reset.attempts += 1;
+    return true;
+  }
+
+  async close(id: string, at: Date): Promise<boolean> {
+    const reset = this.resets.find((r) => r.id === id);
+    if (!reset || reset.closedAt) return false;
+    reset.closedAt = at;
+    return true;
+  }
+
+  async closeAllForUser(userId: string, at: Date): Promise<void> {
+    for (const reset of this.resets) {
+      if (reset.userId === userId && !reset.closedAt) reset.closedAt = at;
+    }
+  }
+}
+
+/** Guarda os e-mails "enviados". `delayMs` simula um servidor SMTP lento; `failWith`, um erro. */
+export class FakeEmailSender implements EmailSender {
+  readonly sent: EmailMessage[] = [];
+  delayMs = 0;
+  failWith: Error | null = null;
+
+  async send(message: EmailMessage): Promise<void> {
+    if (this.delayMs) await new Promise((resolve) => setTimeout(resolve, this.delayMs));
+    if (this.failWith) throw this.failWith;
+    this.sent.push(message);
+  }
+
+  /** Código do último e-mail enviado, já sem o hífen, como o app envia depois de normalizar. */
+  lastCode(): string {
+    const text = this.sent.at(-1)?.text ?? '';
+    const match = /\b([0-9A-Z]{4})-([0-9A-Z]{4})\b/.exec(text);
+    if (!match) throw new Error('nenhum código no último e-mail');
+    return `${match[1]}${match[2]}`;
+  }
+}
+
+/** Executa as tarefas em segundo plano e deixa o teste esperar por todas (`settle`). */
+export class BackgroundTasks {
+  private readonly pending: Array<Promise<void>> = [];
+
+  readonly run: BackgroundRunner = (task) => {
+    this.pending.push(task());
+  };
+
+  async settle(): Promise<void> {
+    while (this.pending.length > 0) await this.pending.shift();
+  }
+}
+
+/** Log em memória para conferir que nenhum dado pessoal aparece (DA13). */
+export class MemoryLog implements TaskLog {
+  readonly entries: Array<{ level: string; details: object; message: string }> = [];
+
+  info(details: object, message: string): void {
+    this.entries.push({ level: 'info', details, message });
+  }
+
+  warn(details: object, message: string): void {
+    this.entries.push({ level: 'warn', details, message });
+  }
+
+  error(details: object, message: string): void {
+    this.entries.push({ level: 'error', details, message });
+  }
+
+  get text(): string {
+    return JSON.stringify(this.entries);
   }
 }

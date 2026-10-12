@@ -4,11 +4,16 @@ import { buildApp } from '../app.js';
 import type { DatabaseProbe } from '../modules/health/application/get-health.js';
 import { AuthService } from '../modules/identity/application/auth-service.js';
 import type { Clock } from '../modules/identity/application/ports.js';
+import { PasswordResetService } from '../modules/identity/application/password-reset-service.js';
 import { ProfileService } from '../modules/identity/application/profile-service.js';
+import { ResetCodeHasher } from '../modules/identity/application/reset-code.js';
 import { JwtAccessTokenService } from '../modules/identity/infrastructure/jwt-access-token-service.js';
 import {
+  BackgroundTasks,
+  FakeEmailSender,
   FakeGoogleVerifier,
   FakePasswordHasher,
+  InMemoryPasswordResetRepository,
   InMemoryRefreshTokenRepository,
   InMemoryUserRepository,
 } from '../modules/identity/testing/fakes.js';
@@ -32,6 +37,8 @@ export interface TestAppOptions {
   clock?: Clock;
   /** false desliga o login com Google (padrão: ligado, com verificador falso). */
   google?: boolean;
+  /** false desliga a recuperação de senha, como um servidor sem SMTP (padrão: ligada). */
+  passwordReset?: boolean;
 }
 
 /** Servidor completo com repositórios em memória, para testes HTTP sem banco. */
@@ -51,6 +58,19 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     ...(options.google === false ? {} : { google: new FakeGoogleVerifier() }),
   });
   const profile = new ProfileService({ users, refreshTokens, hasher, sessions: auth, ...clock });
+  const mailer = new FakeEmailSender();
+  const resets = new InMemoryPasswordResetRepository();
+  const background = new BackgroundTasks();
+  const passwordReset = new PasswordResetService({
+    users,
+    resets,
+    refreshTokens,
+    hasher,
+    codes: new ResetCodeHasher(TEST_JWT_SECRET),
+    runInBackground: background.run,
+    ...clock,
+    ...(options.passwordReset === false ? {} : { mailer }),
+  });
   const probe: DatabaseProbe = {
     isAvailable: () => Promise.resolve(options.databaseAvailable ?? true),
   };
@@ -65,8 +85,22 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     version: '9.9.9',
     auth,
     profile,
+    passwordReset,
     accessTokens,
     logStream: logs,
   });
-  return { app, logs, users, refreshTokens, hasher, accessTokens, auth, profile };
+  return {
+    app,
+    logs,
+    users,
+    refreshTokens,
+    hasher,
+    accessTokens,
+    auth,
+    profile,
+    passwordReset,
+    resets,
+    mailer,
+    background,
+  };
 }

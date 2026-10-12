@@ -3,6 +3,8 @@ import type {
   ChangeEmailInput,
   ChangePasswordInput,
   LoginInput,
+  PasswordResetConfirmInput,
+  PasswordResetRequestInput,
   RegisterInput,
   UpdateNameInput,
 } from '@simulador/shared';
@@ -102,6 +104,14 @@ app.whenReady().then(() => {
   ipcMain.handle(AUTH_CHANNELS.googleSignIn, () => google.signIn());
   ipcMain.handle(AUTH_CHANNELS.googleAcceptTerms, () => google.acceptTermsAndContinue());
   ipcMain.handle(AUTH_CHANNELS.logout, () => auth.logout());
+
+  // Recuperação de senha (SPEC-004): o código é digitado no app e nunca fica guardado.
+  ipcMain.handle(AUTH_CHANNELS.passwordResetRequest, (_event, input: PasswordResetRequestInput) =>
+    auth.requestPasswordReset(input),
+  );
+  ipcMain.handle(AUTH_CHANNELS.passwordResetConfirm, (_event, input: PasswordResetConfirmInput) =>
+    auth.confirmPasswordReset(input),
+  );
 
   // Perfil (SPEC-003): sempre da conta da sessão atual.
   ipcMain.handle(PROFILE_CHANNELS.get, () => auth.getProfile());

@@ -54,6 +54,11 @@ describe('arquivos de idioma (CA13)', () => {
       'server_unavailable',
       'invalid_url',
       'unexpected',
+      'invalid_password',
+      'email_change_not_allowed',
+      'password_change_not_allowed',
+      'invalid_reset_code',
+      'password_reset_unavailable',
     ];
     const fieldErrors: FieldErrorCode[] = [
       'required',
@@ -61,6 +66,9 @@ describe('arquivos de idioma (CA13)', () => {
       'too_long',
       'invalid_email',
       'terms_not_accepted',
+      'same_password',
+      'invalid_version',
+      'invalid_code',
     ];
     for (const locale of [ptBR, en]) {
       for (const code of authErrors) expect(locale.authErrors[code]).toBeTruthy();

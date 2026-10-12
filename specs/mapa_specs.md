@@ -17,6 +17,7 @@
 | 1.7 | SPEC-001 detalhada ([SPEC-001.md](SPEC-001.md)); OPEN-39 resolvida pela convenção de `down.sql` |
 | 1.8 | SPEC-002 detalhada ([SPEC-002.md](SPEC-002.md)); OPEN-03 resolvida: promoção a administrador por comando no servidor |
 | 1.9 | Perfil "administrador" renomeado para **colaborador**, com conta criada só pela equipe e Área do colaborador; login com Google para usuários ([DA24](../adr/DA24-login-com-google.md)) |
+| 1.10 | SPEC-001, SPEC-002 e SPEC-003 marcadas como implementadas; SPEC-004 detalhada ([SPEC-004.md](SPEC-004.md)), aprovada e implementada; parte de e-mail da OPEN-02 resolvida (envio por SMTP; o provedor sai junto com a hospedagem) |
 
 ---
 
@@ -321,7 +322,7 @@ Visão geral por fase:
 
 #### SPEC-001 — Esqueleto executável cliente–servidor–processador
 
-📄 Detalhada em [SPEC-001.md](SPEC-001.md) — em implementação.
+📄 Detalhada em [SPEC-001.md](SPEC-001.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -345,7 +346,7 @@ Visão geral por fase:
 
 #### SPEC-002 — Cadastro, autenticação e sessão
 
-📄 Detalhada em [SPEC-002.md](SPEC-002.md) — em implementação.
+📄 Detalhada em [SPEC-002.md](SPEC-002.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -365,6 +366,8 @@ Visão geral por fase:
 
 #### SPEC-003 — Perfil do usuário e consentimento
 
+📄 Detalhada em [SPEC-003.md](SPEC-003.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário consulta e edita seus dados de perfil e consulta/altera seus consentimentos |
@@ -383,6 +386,8 @@ Visão geral por fase:
 
 #### SPEC-004 — Recuperação de senha por e-mail
 
+📄 Detalhada em [SPEC-004.md](SPEC-004.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário que esqueceu a senha recebe por e-mail um meio de redefini-la |
@@ -396,7 +401,7 @@ Visão geral por fase:
 | ADRs | DA05 (dependência de serviço de e-mail) |
 | Depende de | SPEC-002 |
 | Posição | Separada da 002 porque depende de integração externa ainda não escolhida (OPEN-02) e tem validação própria; não bloqueia nenhuma Spec seguinte |
-| Em aberto | OPEN-02 |
+| Em aberto | OPEN-02 (parte do e-mail resolvida na SPEC-004: SMTP; o provedor sai junto com a hospedagem) |
 | Prioridade derivada | Should |
 
 #### SPEC-034 — Exportação e exclusão de dados pessoais

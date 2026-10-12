@@ -1,4 +1,5 @@
 import { loginSchema, validate, type FieldErrors, type PublicUser } from '@simulador/shared';
+import { CheckCircle } from '@phosphor-icons/react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
@@ -7,19 +8,27 @@ import { TextField } from './TextField';
 
 interface LoginFormProps {
   notice?: ClientAuthError | undefined;
+  /** E-mail já preenchido (ex.: depois de redefinir a senha). */
+  initialEmail?: string | undefined;
+  /** Mostra o aviso de senha redefinida (SPEC-004). */
+  passwordReset?: boolean | undefined;
   onSuccess: (user: PublicUser) => void;
+  onForgotPassword: (email: string) => void;
   onGoToRegister: () => void;
   onGoToCollaborator: () => void;
 }
 
 export function LoginForm({
   notice,
+  initialEmail,
+  passwordReset,
   onSuccess,
+  onForgotPassword,
   onGoToRegister,
   onGoToCollaborator,
 }: LoginFormProps) {
   const { t } = useTranslation();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail ?? '');
   const [password, setPassword] = useState('');
   const [fields, setFields] = useState<FieldErrors>({});
   const [error, setError] = useState<ClientAuthError | undefined>(notice);
@@ -45,6 +54,12 @@ export function LoginForm({
   return (
     <form className="card auth-form" onSubmit={(event) => void submit(event)} noValidate>
       <h2>{t('auth.loginTitle')}</h2>
+      {passwordReset && !error && (
+        <p className="form-success" role="status">
+          <CheckCircle weight="fill" aria-hidden="true" />
+          {t('reset.done')}
+        </p>
+      )}
       {error && (
         <p className="form-error" role="alert">
           {t(`authErrors.${error}`)}
@@ -66,6 +81,11 @@ export function LoginForm({
         autoComplete="current-password"
         error={fields.password}
       />
+      <p className="forgot">
+        <button type="button" className="link" onClick={() => onForgotPassword(email)}>
+          {t('auth.forgotPassword')}
+        </button>
+      </p>
       <button type="submit" disabled={submitting}>
         {submitting ? t('auth.submitting') : t('auth.submitLogin')}
       </button>

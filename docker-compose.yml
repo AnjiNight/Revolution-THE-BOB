@@ -15,5 +15,14 @@ services:
       interval: 5s
       retries: 10
 
+  # SPEC-004: recebe os e-mails do servidor na própria máquina (nada sai para a internet).
+  # Caixa de entrada em http://localhost:8025; SMTP na porta 1025 (npm run mail:up).
+  mail:
+    image: axllent/mailpit:v1.31.3
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
 volumes:
   dados-postgres:

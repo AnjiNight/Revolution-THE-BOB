@@ -95,6 +95,18 @@ O botão "Continuar com o Google" só aparece quando o app e o servidor têm o c
 
 Para o login terminar, o servidor e o banco precisam estar rodando (seção anterior).
 
+### Recuperação de senha por e-mail
+
+"Esqueci minha senha" envia um código de 8 caracteres que a pessoa digita no app ([SPEC-004](specs/SPEC-004.md)). O servidor envia e-mail por SMTP; sem `SMTP_HOST` no `api/.env`, a recuperação fica desligada.
+
+No desenvolvimento, os e-mails vão para o **Mailpit**, que roda no Docker e não manda nada para a internet:
+
+```bash
+npm run mail:up                 # sobe o Mailpit (docker compose)
+```
+
+A caixa de entrada fica em http://localhost:8025. O `.env.example` já vem apontando para ele (`SMTP_HOST=localhost`, `SMTP_PORT=1025`). Em produção, basta trocar essas variáveis pelas do provedor de e-mail escolhido.
+
 Testes contra o PostgreSQL real rodam quando `TEST_DATABASE_URL` aponta para um banco com as migrações aplicadas (atenção: apagam os dados de identidade desse banco). No GitHub Actions eles rodam sempre.
 
 Verificações (as mesmas do GitHub Actions):

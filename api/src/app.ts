@@ -6,9 +6,11 @@ import type { AppConfig } from './config.js';
 import type { DatabaseProbe } from './modules/health/application/get-health.js';
 import { registerHealthRoutes } from './modules/health/controllers/health-routes.js';
 import type { AuthService } from './modules/identity/application/auth-service.js';
+import type { PasswordResetService } from './modules/identity/application/password-reset-service.js';
 import type { AccessTokenService } from './modules/identity/application/ports.js';
 import type { ProfileService } from './modules/identity/application/profile-service.js';
 import { registerAuthRoutes } from './modules/identity/controllers/auth-routes.js';
+import { registerPasswordResetRoutes } from './modules/identity/controllers/password-reset-routes.js';
 import { registerProfileRoutes } from './modules/identity/controllers/profile-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { HttpError } from './shared/http/http-error.js';
@@ -20,6 +22,7 @@ export interface AppDependencies {
   version: string;
   auth: AuthService;
   profile: ProfileService;
+  passwordReset: PasswordResetService;
   accessTokens: AccessTokenService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
@@ -49,6 +52,10 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
   registerHealthRoutes(app, { probe: deps.probe, version: deps.version });
   registerAuthRoutes(app, {
     auth: deps.auth,
+    rateLimitPerMinute: deps.config.authRateLimitPerMinute,
+  });
+  registerPasswordResetRoutes(app, {
+    passwordReset: deps.passwordReset,
     rateLimitPerMinute: deps.config.authRateLimitPerMinute,
   });
   registerProfileRoutes(app, {

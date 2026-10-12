@@ -23,6 +23,10 @@ const api: DesktopApi = {
     signInWithGoogle: () => invoke<AuthResult>(AUTH_CHANNELS.googleSignIn),
     acceptGoogleTerms: () => invoke<AuthResult>(AUTH_CHANNELS.googleAcceptTerms),
     logout: () => invoke<void>(AUTH_CHANNELS.logout),
+    requestPasswordReset: (input) =>
+      invoke<ClientResult<null>>(AUTH_CHANNELS.passwordResetRequest, input),
+    confirmPasswordReset: (input) =>
+      invoke<ClientResult<null>>(AUTH_CHANNELS.passwordResetConfirm, input),
   },
   profile: {
     get: () => invoke<ClientResult<UserProfile>>(PROFILE_CHANNELS.get),

@@ -38,6 +38,11 @@ const DOMAIN_ERROR_HTTP: Record<string, { status: number; message: string }> = {
     status: 403,
     message: 'Esta conta entra pelo Google e não tem senha.',
   },
+  invalid_reset_code: { status: 400, message: 'Código inválido ou vencido.' },
+  password_reset_unavailable: {
+    status: 503,
+    message: 'A recuperação de senha não está disponível neste servidor.',
+  },
 };
 
 /** Converte erros do domínio de identidade em respostas HTTP. */

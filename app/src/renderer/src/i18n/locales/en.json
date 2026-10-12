@@ -42,7 +42,25 @@
     "goToCollaborator": "Collaborator area",
     "collaboratorTitle": "Collaborator area",
     "collaboratorNote": "Collaborator access is created by the team. It is not possible to sign up here.",
-    "backToLogin": "Back to user sign-in"
+    "backToLogin": "Back to user sign-in",
+    "forgotPassword": "Forgot your password?"
+  },
+  "reset": {
+    "title": "Reset password",
+    "intro": "Enter your account email. We'll send you a code to create a new password.",
+    "sendCode": "Send code",
+    "codeSent": "If there is an account for {{email}}, we sent a code to that address. It is valid for 15 minutes.",
+    "code": "Code",
+    "codeHint": "8 letters and numbers, like K7QM-4XPD.",
+    "newPassword": "New password",
+    "submit": "Reset password",
+    "resend": "Resend code",
+    "resendIn": "Resend code in {{seconds}} s",
+    "resent": "We sent a new code. Always use the latest one.",
+    "otherEmail": "Use another email",
+    "back": "Back to sign in",
+    "backCollaborator": "Back to the collaborator area",
+    "done": "Password reset. Sign in with your new password."
   },
   "home": {
     "greeting": "Hello, {{name}}!",
@@ -104,7 +122,8 @@
     "invalid_email": "Enter a valid email.",
     "terms_not_accepted": "You must accept the terms to continue.",
     "same_password": "The new password must be different from the current one.",
-    "invalid_version": "Outdated terms version. Reload the screen."
+    "invalid_version": "Outdated terms version. Reload the screen.",
+    "invalid_code": "The code has 8 letters and numbers, like K7QM-4XPD."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -124,7 +143,9 @@
     "google_cancelled": "Google sign-in cancelled.",
     "invalid_password": "Incorrect current password.",
     "email_change_not_allowed": "This account email comes from Google and cannot be changed here.",
-    "password_change_not_allowed": "This account signs in with Google and has no password."
+    "password_change_not_allowed": "This account signs in with Google and has no password.",
+    "invalid_reset_code": "Invalid or expired code. Check the code or ask for a new one.",
+    "password_reset_unavailable": "Password reset is not available on this server."
   },
   "landing": {
     "skip": "Skip to sign-in",

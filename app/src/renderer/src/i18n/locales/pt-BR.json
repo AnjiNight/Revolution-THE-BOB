@@ -42,7 +42,25 @@
     "goToCollaborator": "Área do colaborador",
     "collaboratorTitle": "Área do colaborador",
     "collaboratorNote": "O acesso de colaborador é criado pela equipe. Não é possível se cadastrar por aqui.",
-    "backToLogin": "Voltar ao login de usuário"
+    "backToLogin": "Voltar ao login de usuário",
+    "forgotPassword": "Esqueci minha senha"
+  },
+  "reset": {
+    "title": "Recuperar senha",
+    "intro": "Informe o e-mail da sua conta. Vamos enviar um código para você criar uma senha nova.",
+    "sendCode": "Enviar código",
+    "codeSent": "Se houver uma conta com {{email}}, enviamos um código para esse e-mail. Ele vale por 15 minutos.",
+    "code": "Código",
+    "codeHint": "8 letras e números, como K7QM-4XPD.",
+    "newPassword": "Nova senha",
+    "submit": "Redefinir senha",
+    "resend": "Reenviar código",
+    "resendIn": "Reenviar código em {{seconds}} s",
+    "resent": "Enviamos um novo código. Use sempre o mais recente.",
+    "otherEmail": "Usar outro e-mail",
+    "back": "Voltar para entrar",
+    "backCollaborator": "Voltar para a Área do colaborador",
+    "done": "Senha redefinida. Entre com a nova senha."
   },
   "home": {
     "greeting": "Olá, {{name}}!",
@@ -104,7 +122,8 @@
     "invalid_email": "Informe um e-mail válido.",
     "terms_not_accepted": "É preciso aceitar os termos para continuar.",
     "same_password": "A nova senha precisa ser diferente da atual.",
-    "invalid_version": "Versão dos termos desatualizada. Recarregue a tela."
+    "invalid_version": "Versão dos termos desatualizada. Recarregue a tela.",
+    "invalid_code": "O código tem 8 letras e números, como K7QM-4XPD."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -124,7 +143,9 @@
     "google_cancelled": "Login com Google cancelado.",
     "invalid_password": "Senha atual incorreta.",
     "email_change_not_allowed": "O e-mail desta conta vem do Google e não pode ser trocado aqui.",
-    "password_change_not_allowed": "Esta conta entra pelo Google e não tem senha."
+    "password_change_not_allowed": "Esta conta entra pelo Google e não tem senha.",
+    "invalid_reset_code": "Código inválido ou vencido. Confira o código ou peça um novo.",
+    "password_reset_unavailable": "A recuperação de senha não está disponível neste servidor."
   },
   "landing": {
     "skip": "Pular para o acesso",

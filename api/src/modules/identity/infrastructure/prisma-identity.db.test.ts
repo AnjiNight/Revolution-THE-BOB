@@ -3,12 +3,16 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../../../app.js';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
 import { AuthService } from '../application/auth-service.js';
+import { PasswordResetService } from '../application/password-reset-service.js';
 import { ProfileService } from '../application/profile-service.js';
 import { createCollaborator } from '../application/create-collaborator.js';
 import { hashRefreshToken } from '../application/refresh-token.js';
+import { ResetCodeHasher } from '../application/reset-code.js';
 import { EmailInUseError } from '../domain/errors.js';
+import { BackgroundTasks, FakeEmailSender } from '../testing/fakes.js';
 import { Argon2PasswordHasher } from './argon2-password-hasher.js';
 import { JwtAccessTokenService } from './jwt-access-token-service.js';
+import { PrismaPasswordResetRepository } from './prisma-password-reset-repository.js';
 import { PrismaRefreshTokenRepository } from './prisma-refresh-token-repository.js';
 import { PrismaUserRepository } from './prisma-user-repository.js';
 
@@ -22,11 +26,13 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
   let prisma: PrismaClient;
   let users: PrismaUserRepository;
   let tokens: PrismaRefreshTokenRepository;
+  let resets: PrismaPasswordResetRepository;
 
   beforeAll(() => {
     prisma = createPrismaClient(url as string);
     users = new PrismaUserRepository(prisma);
     tokens = new PrismaRefreshTokenRepository(prisma);
+    resets = new PrismaPasswordResetRepository(prisma);
   });
 
   afterAll(async () => {
@@ -179,6 +185,155 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
     expect((await tokens.findByHash('c'.repeat(64)))?.revokedAt).toBeNull();
   });
 
+  describe('SPEC-004: códigos de redefinição de senha', () => {
+    const MINUTE = 60_000;
+    const at = (minutes: number) => new Date(Date.UTC(2026, 9, 12, 12, 0) + minutes * MINUTE);
+    const reset = (userId: string, minutes: number, hash = 'a') => ({
+      userId,
+      codeHash: hash.repeat(64),
+      createdAt: at(minutes),
+      expiresAt: at(minutes + 15),
+      closedAt: null,
+    });
+
+    it('um código novo encerra o anterior, apaga os de mais de um dia e entra na contagem', async () => {
+      const ana = await users.create(newUser);
+      await resets.create(reset(ana.id, -2000, 'a'), at(-1440));
+      await resets.create(reset(ana.id, 0, 'b'), at(-1440));
+      await resets.create(reset(ana.id, 5, 'c'), at(5 - 1440));
+
+      const rows = await prisma.redefinicaoSenha.findMany({ orderBy: { criadoEm: 'asc' } });
+      expect(rows.map((r) => [r.codigoHash[0], r.encerradoEm !== null])).toEqual([
+        ['b', true],
+        ['c', false],
+      ]);
+      expect(await resets.countSince(ana.id, at(-60))).toBe(2);
+      expect((await resets.findOpen(ana.id, at(6)))?.codeHash).toBe('c'.repeat(64));
+      expect(await resets.findOpen(ana.id, at(21))).toBeNull();
+    });
+
+    it('tentativas simultâneas nunca passam do limite, e o código só se encerra uma vez', async () => {
+      const ana = await users.create(newUser);
+      await resets.create(reset(ana.id, 0), at(-1440));
+      const open = await resets.findOpen(ana.id, at(1));
+
+      const reserved = await Promise.all(
+        Array.from({ length: 10 }, () => resets.reserveAttempt(open!.id, 5)),
+      );
+      expect(reserved.filter(Boolean)).toHaveLength(5);
+
+      const closed = await Promise.all([
+        resets.close(open!.id, at(2)),
+        resets.close(open!.id, at(2)),
+      ]);
+      expect(closed.filter(Boolean)).toHaveLength(1);
+    });
+
+    it('o banco recusa mais de 5 tentativas e validade invertida; os códigos somem com a conta (CA15)', async () => {
+      const ana = await users.create(newUser);
+      await resets.create(reset(ana.id, 0), at(-1440));
+      await expect(
+        prisma.$executeRawUnsafe(`UPDATE redefinicao_senha SET tentativas = 6`),
+      ).rejects.toThrow(/redefinicao_senha_tentativas_chk/);
+      await expect(
+        prisma.$executeRawUnsafe(`UPDATE redefinicao_senha SET expira_em = criado_em`),
+      ).rejects.toThrow(/redefinicao_senha_validade_chk/);
+
+      await prisma.usuario.delete({ where: { id: ana.id } });
+      expect(await prisma.redefinicaoSenha.count()).toBe(0);
+    });
+
+    it('fluxo completo pela API com argon2id: pedir, redefinir e entrar com a senha nova', async () => {
+      const mailer = new FakeEmailSender();
+      const background = new BackgroundTasks();
+      const hasher = new Argon2PasswordHasher();
+      const accessTokens = new JwtAccessTokenService(
+        'segredo-de-teste-com-mais-de-32-caracteres',
+        15,
+      );
+      const auth = new AuthService({
+        users,
+        refreshTokens: tokens,
+        hasher,
+        accessTokens,
+        refreshTokenTtlDays: 30,
+      });
+      const app = await buildApp({
+        config: { env: 'test', logLevel: 'fatal', authRateLimitPerMinute: 1000 },
+        probe: { isAvailable: () => Promise.resolve(true) },
+        version: 'teste',
+        auth,
+        profile: new ProfileService({ users, refreshTokens: tokens, hasher, sessions: auth }),
+        passwordReset: new PasswordResetService({
+          users,
+          resets,
+          refreshTokens: tokens,
+          hasher,
+          codes: new ResetCodeHasher('segredo-de-teste-com-mais-de-32-caracteres'),
+          mailer,
+          runInBackground: background.run,
+        }),
+        accessTokens,
+      });
+
+      try {
+        const registered = await app.inject({
+          method: 'POST',
+          url: AUTH_PATHS.register,
+          payload: {
+            name: 'Ana',
+            email: 'ana@exemplo.com',
+            password: 'senha-antiga-1',
+            acceptedTerms: true,
+          },
+        });
+        const { refreshToken } = registered.json<{ refreshToken: string }>();
+
+        const requested = await app.inject({
+          method: 'POST',
+          url: AUTH_PATHS.passwordResetRequest,
+          payload: { email: 'ana@exemplo.com' },
+        });
+        expect(requested.statusCode).toBe(202);
+        await background.settle();
+        const code = mailer.lastCode();
+        const row = await prisma.redefinicaoSenha.findFirst();
+        expect(row?.codigoHash).not.toContain(code);
+
+        const confirmed = await app.inject({
+          method: 'POST',
+          url: AUTH_PATHS.passwordResetConfirm,
+          payload: { email: 'ana@exemplo.com', code, newPassword: 'senha-nova-123' },
+        });
+        expect(confirmed.statusCode).toBe(204);
+        await background.settle();
+
+        const user = await prisma.usuario.findUnique({ where: { email: 'ana@exemplo.com' } });
+        expect(user?.senhaHash).toMatch(/^\$argon2id\$/);
+        const login = (password: string) =>
+          app.inject({
+            method: 'POST',
+            url: AUTH_PATHS.login,
+            payload: { email: 'ana@exemplo.com', password },
+          });
+        expect((await login('senha-nova-123')).statusCode).toBe(200);
+        expect((await login('senha-antiga-1')).statusCode).toBe(401);
+        const renewed = await app.inject({
+          method: 'POST',
+          url: AUTH_PATHS.refresh,
+          payload: { refreshToken },
+        });
+        expect(renewed.statusCode).toBe(401);
+        expect(mailer.sent.map((m) => m.subject)).toEqual([
+          'Seu código para redefinir a senha',
+          'Sua senha foi redefinida',
+        ]);
+      } finally {
+        await app.close();
+      }
+    });
+  });
+
   it('o banco recusa conta sem senha e sem Google', async () => {
     await expect(
       prisma.$executeRawUnsafe(
@@ -220,12 +375,20 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       hasher: new Argon2PasswordHasher(),
       sessions: auth,
     });
+    const passwordReset = new PasswordResetService({
+      users,
+      resets,
+      refreshTokens: tokens,
+      hasher: new Argon2PasswordHasher(),
+      codes: new ResetCodeHasher('segredo-de-teste-com-mais-de-32-caracteres'),
+    });
     const app = await buildApp({
       config: { env: 'test', logLevel: 'fatal', authRateLimitPerMinute: 1000 },
       probe: { isAvailable: () => Promise.resolve(true) },
       version: 'teste',
       auth,
       profile,
+      passwordReset,
       accessTokens,
     });
 

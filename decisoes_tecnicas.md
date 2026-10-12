@@ -75,6 +75,7 @@ Todos com status **Sugerida**.
 | Autenticação | `fast-jwt` (token de acesso HS256, 15 min) + token de renovação opaco, guardado só como hash, trocado a cada uso | DA05 | ✅ Definida na SPEC-002. Usamos o `fast-jwt` direto em vez do `@fastify/jwt`, para o domínio não depender do Fastify |
 | Limite de tentativas | `@fastify/rate-limit` (10/min por IP nas rotas de `/api/auth`) | RNF10 | ✅ Definida na SPEC-002 |
 | Login com Google | OAuth 2.0 com PKCE no processo principal do Electron (navegador do sistema + `127.0.0.1`); `jose` no servidor para verificar o ID token com as chaves públicas do Google | DA24, RF41 | ✅ Definida na SPEC-002. Exige um client ID "Aplicativo para computador" no Google Cloud |
+| Envio de e-mail | SMTP com `nodemailer`; **Mailpit** no `docker compose` para desenvolvimento (nada sai para a internet) | RF03, [SPEC-004](specs/SPEC-004.md) | ✅ Definida na SPEC-004. Qualquer provedor com SMTP serve, trocando só a configuração; em produção, só com TLS. O provedor sai junto com a hospedagem (seção 5) |
 | Fila e agendador de tarefas | `BullMQ` (sobre o Redis) ou `pg-boss` (sobre o PostgreSQL) | [DA07](adr/DA07-ingestao-assincrona.md), [DA14](adr/DA14-registro-execucoes-logs.md) | O `pg-boss` evita depender do Redis para as tarefas |
 | Gráfico de preço com notícias | TradingView Lightweight Charts | Gráfico Notícias × Preço (Visão §19) | Permite marcadores no eixo do tempo |
 | Gráficos de carteira | Recharts | RF17, RF18 | — |
@@ -91,7 +92,7 @@ Todos com status **Sugerida**.
 | Item | Opções | Critérios | Relacionado |
 |---|---|---|---|
 | Hospedagem (servidor, processador de tarefas, PostgreSQL com backup diário, Redis) | Provedores com camada gratuita | Processador de tarefas sempre ligado durante o pregão; **backup diário** (RNF02); servidor que não hiberne durante o pregão | RES03, RNF02, RNF21 |
-| Serviço de e-mail (recuperação de senha) | Provedores com camada gratuita | Volume pequeno | RF03 |
+| Provedor de e-mail (recuperação de senha) | Provedores com camada gratuita que ofereçam SMTP | Volume pequeno; endereço de envio com domínio próprio (menos chance de spam). O código já envia por SMTP ([SPEC-004](specs/SPEC-004.md)): falta só escolher o provedor, junto com a hospedagem | RF03 |
 | Implementação do modelo de IA | API de modelo de linguagem (custo por notícia) × modelo aberto em português ajustado localmente × combinação | Custo zero, qualidade em português financeiro, hardware disponível para treino | [DA20](adr/DA20-modelo-ia-noticias.md) |
 | Provedor de cotações do assinante e quem paga | brapi Startup/Pro; chave gratuita na versão acadêmica | Custo, termos de redistribuição | [DA16](adr/DA16-cotacoes-por-plano.md) |
 | Fonte pai de notícias | Investidor10 com autorização × fatos relevantes da CVM (dados abertos) | Licença de uso, histórico disponível | [DA19](adr/DA19-fontes-de-noticias.md) |

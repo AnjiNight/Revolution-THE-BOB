@@ -4,12 +4,16 @@ import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { PrismaDatabaseProbe } from './modules/health/infrastructure/prisma-database-probe.js';
 import { AuthService } from './modules/identity/application/auth-service.js';
+import { PasswordResetService } from './modules/identity/application/password-reset-service.js';
 import { ProfileService } from './modules/identity/application/profile-service.js';
+import { ResetCodeHasher } from './modules/identity/application/reset-code.js';
 import { Argon2PasswordHasher } from './modules/identity/infrastructure/argon2-password-hasher.js';
 import { JoseGoogleIdentityVerifier } from './modules/identity/infrastructure/jose-google-identity-verifier.js';
 import { JwtAccessTokenService } from './modules/identity/infrastructure/jwt-access-token-service.js';
+import { PrismaPasswordResetRepository } from './modules/identity/infrastructure/prisma-password-reset-repository.js';
 import { PrismaRefreshTokenRepository } from './modules/identity/infrastructure/prisma-refresh-token-repository.js';
 import { PrismaUserRepository } from './modules/identity/infrastructure/prisma-user-repository.js';
+import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-sender.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 import { readVersion } from './version.js';
@@ -50,7 +54,24 @@ async function main(): Promise<void> {
         : {}),
     });
     const profile = new ProfileService({ users, refreshTokens, hasher, sessions: auth });
-    const app = await buildApp({ config, probe, version, auth, profile, accessTokens });
+    // SPEC-004: sem SMTP configurado, a recuperação de senha fica desligada (503).
+    const passwordReset = new PasswordResetService({
+      users,
+      resets: new PrismaPasswordResetRepository(prisma),
+      refreshTokens,
+      hasher,
+      codes: new ResetCodeHasher(config.jwtSecret),
+      ...(config.smtp ? { mailer: new SmtpEmailSender(config.smtp, config.env) } : {}),
+    });
+    const app = await buildApp({
+      config,
+      probe,
+      version,
+      auth,
+      profile,
+      passwordReset,
+      accessTokens,
+    });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
       await app.close();

@@ -87,6 +87,12 @@ class FakeServer {
         // O servidor encerra as sessões anteriores e devolve uma nova.
         this.validRefresh.clear();
         return json(200, { user, ...this.issue() });
+      case AUTH_PATHS.passwordResetRequest:
+        return new Response(null, { status: 202 });
+      case AUTH_PATHS.passwordResetConfirm:
+        return body.code === 'K7QM4XPD'
+          ? new Response(null, { status: 204 })
+          : json(400, { error: 'invalid_reset_code', message: 'x' });
       case PROFILE_PATHS.consents:
         return this.validAccess.has(headers.authorization?.replace('Bearer ', '') ?? '')
           ? json(200, { consents: [], currentVersion: '1' })
@@ -295,5 +301,34 @@ describe('perfil (SPEC-003)', () => {
 
   it('sem sessão → unauthorized', async () => {
     await expect(client.listConsents()).resolves.toEqual({ ok: false, error: 'unauthorized' });
+  });
+});
+
+describe('recuperação de senha (SPEC-004)', () => {
+  it('pedido aceito (202, sem corpo) vira sucesso, sem abrir sessão', async () => {
+    await expect(
+      client.requestPasswordReset({ email: 'ana@exemplo.com', locale: 'pt-BR' }),
+    ).resolves.toEqual({ ok: true, data: null });
+    await expect(store.load()).resolves.toBeNull();
+  });
+
+  it('código certo → sucesso; código errado → invalid_reset_code', async () => {
+    const input = { email: 'ana@exemplo.com', newPassword: 'nova-senha-1', locale: 'en' as const };
+    await expect(client.confirmPasswordReset({ ...input, code: 'K7QM4XPD' })).resolves.toEqual({
+      ok: true,
+      data: null,
+    });
+    await expect(client.confirmPasswordReset({ ...input, code: 'ZZZZZZZZ' })).resolves.toEqual({
+      ok: false,
+      error: 'invalid_reset_code',
+    });
+    await expect(store.load()).resolves.toBeNull();
+  });
+
+  it('servidor fora do ar → server_unavailable', async () => {
+    server.down = true;
+    await expect(
+      client.requestPasswordReset({ email: 'ana@exemplo.com', locale: 'pt-BR' }),
+    ).resolves.toEqual({ ok: false, error: 'server_unavailable' });
   });
 });

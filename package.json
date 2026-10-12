@@ -23,6 +23,7 @@
     "dev:worker": "npm run dev:worker --workspace api",
     "dev:app": "npm run dev --workspace app",
     "db:up": "docker compose up -d db",
+    "mail:up": "docker compose up -d mail",
     "db:migrate": "npm run db:migrate --workspace api",
     "db:rollback": "npm run db:rollback --workspace api"
   },

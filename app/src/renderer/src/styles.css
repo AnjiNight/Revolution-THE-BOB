@@ -360,6 +360,55 @@ input[aria-invalid='true']:focus-visible {
   text-align: center;
 }
 
+/* Confirmação de sucesso: mesma família de cor do status "conectado". */
+.form-success {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--ok);
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.form-success svg {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+}
+
+/* ---------- Recuperação de senha (SPEC-004) ---------- */
+
+/* "Esqueci minha senha", logo abaixo do campo de senha. */
+.auth-form .forgot {
+  margin: -0.5rem 0 0;
+  font-size: 0.875rem;
+  text-align: right;
+}
+
+.reset-sent {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-control);
+  background: var(--accent-soft);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.reset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+/* Contagem para reenviar: o link fica apagado, mas legível. */
+button.link:disabled {
+  color: var(--muted);
+  text-decoration: none;
+  opacity: 1;
+}
+
 /* Último atalho do formulário (Área do colaborador / voltar), separado das ações principais. */
 .auth-form .switch:last-child {
   margin-top: 0.4rem;

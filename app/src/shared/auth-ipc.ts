@@ -4,6 +4,8 @@ import type {
   ChangePasswordInput,
   FieldErrors,
   LoginInput,
+  PasswordResetConfirmInput,
+  PasswordResetRequestInput,
   PublicUser,
   RegisterInput,
   UpdateNameInput,
@@ -19,6 +21,8 @@ export const AUTH_CHANNELS = {
   googleSignIn: 'auth:google-sign-in',
   googleAcceptTerms: 'auth:google-accept-terms',
   logout: 'auth:logout',
+  passwordResetRequest: 'auth:password-reset-request',
+  passwordResetConfirm: 'auth:password-reset-confirm',
 } as const;
 
 /** Canais IPC do perfil (SPEC-003). */
@@ -42,4 +46,12 @@ export type AuthResult =
 export type ClientResult<T> =
   { ok: true; data: T } | { ok: false; error: ClientAuthError; fields?: FieldErrors };
 
-export type { ChangeEmailInput, ChangePasswordInput, LoginInput, RegisterInput, UpdateNameInput };
+export type {
+  ChangeEmailInput,
+  ChangePasswordInput,
+  LoginInput,
+  PasswordResetConfirmInput,
+  PasswordResetRequestInput,
+  RegisterInput,
+  UpdateNameInput,
+};

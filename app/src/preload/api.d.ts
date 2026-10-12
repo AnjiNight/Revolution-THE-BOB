@@ -5,6 +5,8 @@ import type {
   ChangePasswordInput,
   ClientResult,
   LoginInput,
+  PasswordResetConfirmInput,
+  PasswordResetRequestInput,
   RegisterInput,
   UpdateNameInput,
 } from '../shared/auth-ipc.js';
@@ -22,6 +24,9 @@ export interface DesktopApi {
     signInWithGoogle(): Promise<AuthResult>;
     acceptGoogleTerms(): Promise<AuthResult>;
     logout(): Promise<void>;
+    /** SPEC-004: pede o código de redefinição; o resultado não diz se a conta existe. */
+    requestPasswordReset(input: PasswordResetRequestInput): Promise<ClientResult<null>>;
+    confirmPasswordReset(input: PasswordResetConfirmInput): Promise<ClientResult<null>>;
   };
   /** Perfil da conta conectada (SPEC-003). */
   profile: {

@@ -9,6 +9,8 @@ import {
   type ConsentList,
   type FieldErrors,
   type LoginInput,
+  type PasswordResetConfirmInput,
+  type PasswordResetRequestInput,
   type PublicUser,
   type RegisterInput,
   type TokenPair,
@@ -42,6 +44,8 @@ const KNOWN_ERRORS: readonly AuthErrorCode[] = [
   'invalid_password',
   'email_change_not_allowed',
   'password_change_not_allowed',
+  'invalid_reset_code',
+  'password_reset_unavailable',
 ];
 
 class RequestFailed extends Error {
@@ -109,10 +113,28 @@ export class AuthClient {
     }
   }
 
+  // --- Recuperação de senha (SPEC-004): sem sessão, a pessoa ainda não entrou ---
+
+  /** Pede o código. O servidor responde igual exista a conta ou não. */
+  requestPasswordReset(input: PasswordResetRequestInput): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      await this.request('POST', AUTH_PATHS.passwordResetRequest, input);
+      return null;
+    });
+  }
+
+  /** Troca a senha com o código. Não abre sessão: a pessoa entra depois, com a senha nova. */
+  confirmPasswordReset(input: PasswordResetConfirmInput): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      await this.request('POST', AUTH_PATHS.passwordResetConfirm, input);
+      return null;
+    });
+  }
+
   // --- Perfil (SPEC-003) ---
 
   getProfile(): Promise<ClientResult<UserProfile>> {
-    return this.profileCall(async () => {
+    return this.call(async () => {
       const { user } = await this.authorizedRequest<{ user: UserProfile }>(
         'GET',
         PROFILE_PATHS.profile,
@@ -122,16 +144,16 @@ export class AuthClient {
   }
 
   updateName(input: UpdateNameInput): Promise<ClientResult<UserProfile>> {
-    return this.profileCall(() => this.updateProfile('PATCH', PROFILE_PATHS.profile, input));
+    return this.call(() => this.updateProfile('PATCH', PROFILE_PATHS.profile, input));
   }
 
   changeEmail(input: ChangeEmailInput): Promise<ClientResult<UserProfile>> {
-    return this.profileCall(() => this.updateProfile('PUT', PROFILE_PATHS.email, input));
+    return this.call(() => this.updateProfile('PUT', PROFILE_PATHS.email, input));
   }
 
   /** O servidor encerra todas as sessões e devolve uma nova, que passa a ser a deste dispositivo. */
   changePassword(input: ChangePasswordInput): Promise<ClientResult<null>> {
-    return this.profileCall(async () => {
+    return this.call(async () => {
       const session = await this.authorizedRequest<AuthSession>(
         'PUT',
         PROFILE_PATHS.password,
@@ -145,13 +167,11 @@ export class AuthClient {
   }
 
   listConsents(): Promise<ClientResult<ConsentList>> {
-    return this.profileCall(() =>
-      this.authorizedRequest<ConsentList>('GET', PROFILE_PATHS.consents),
-    );
+    return this.call(() => this.authorizedRequest<ConsentList>('GET', PROFILE_PATHS.consents));
   }
 
   acceptTerms(): Promise<ClientResult<null>> {
-    return this.profileCall(async () => {
+    return this.call(async () => {
       await this.authorizedRequest('POST', PROFILE_PATHS.consents, {
         type: 'terms',
         version: TERMS_VERSION,
@@ -166,7 +186,7 @@ export class AuthClient {
     return user;
   }
 
-  private async profileCall<T>(action: () => Promise<T>): Promise<ClientResult<T>> {
+  private async call<T>(action: () => Promise<T>): Promise<ClientResult<T>> {
     try {
       return { ok: true, data: await action() };
     } catch (error) {
@@ -256,7 +276,8 @@ export class AuthClient {
       throw new RequestFailed('server_unavailable');
     }
 
-    if (response.status === 204) return undefined as T;
+    // 202 (pedido aceito) e 204 (feito) não têm corpo.
+    if (response.status === 202 || response.status === 204) return undefined as T;
     const json = (await response.json().catch(() => null)) as Record<string, unknown> | null;
     if (response.ok && json) return json as T;
 

@@ -10,6 +10,8 @@ interface TextFieldProps {
   autoComplete: string;
   error?: FieldErrorCode | undefined;
   hint?: string;
+  /** Padrão: desligado para e-mail. Códigos (SPEC-004) também desligam. */
+  spellCheck?: boolean;
 }
 
 /** Campo com rótulo, dica e mensagem de erro ligados por acessibilidade (RNF18). */
@@ -21,6 +23,7 @@ export function TextField({
   autoComplete,
   error,
   hint,
+  spellCheck,
 }: TextFieldProps) {
   const { t } = useTranslation();
   const id = useId();
@@ -38,7 +41,7 @@ export function TextField({
         name={autoComplete}
         value={value}
         autoComplete={autoComplete}
-        spellCheck={type === 'email' ? false : undefined}
+        spellCheck={spellCheck ?? (type === 'email' ? false : undefined)}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
