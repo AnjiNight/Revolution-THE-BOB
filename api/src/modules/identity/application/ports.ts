@@ -35,6 +35,11 @@ export interface UserRepository {
   deleteUnconfirmed(userId: string): Promise<boolean>;
   /** Limpeza diária (RB23): apaga as contas não confirmadas criadas antes de `cutoff`. */
   deleteUnconfirmedCreatedBefore(cutoff: Date): Promise<number>;
+  /**
+   * SPEC-034: na mesma transação, grava o registro da exclusão (só o id antigo e a data) e apaga a
+   * conta. Consentimentos, sessões e códigos vão junto, em cascata.
+   */
+  deleteAccount(userId: string, at: Date): Promise<void>;
   /** Histórico de consentimentos, do mais antigo ao mais recente. */
   listConsents(userId: string): Promise<StoredConsent[]>;
   addConsent(userId: string, type: ConsentType, version: string): Promise<StoredConsent>;
@@ -72,6 +77,16 @@ export interface RefreshTokenRepository {
   revokeFamily(family: string, at: Date): Promise<void>;
   /** Encerra todas as sessões da conta (troca de senha, SPEC-003). */
   revokeAllForUser(userId: string, at: Date): Promise<void>;
+  /** SPEC-034: as sessões da conta, uma por login (família), para a exportação. */
+  listSessions(userId: string): Promise<StoredSession[]>;
+}
+
+/** Resumo de uma sessão (um login e as suas renovações), sem nenhum token. */
+export interface StoredSession {
+  startedAt: Date;
+  lastRenewedAt: Date;
+  expiresAt: Date;
+  ended: boolean;
 }
 
 export interface PasswordHasher {
@@ -108,7 +123,7 @@ export interface GoogleIdentityVerifier {
 export type Clock = () => Date;
 
 /** Para que serve um código enviado por e-mail (SPEC-004 e SPEC-039). */
-export type EmailCodePurpose = 'password_reset' | 'signup' | 'email_change';
+export type EmailCodePurpose = 'password_reset' | 'signup' | 'email_change' | 'account_deletion';
 
 /** Código enviado por e-mail, como fica guardado: só o HMAC, nunca o código. */
 export interface StoredEmailCode {

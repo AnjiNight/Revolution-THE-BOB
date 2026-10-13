@@ -19,6 +19,7 @@
 | 1.9 | Perfil "administrador" renomeado para **colaborador**, com conta criada só pela equipe e Área do colaborador; login com Google para usuários ([DA24](../adr/DA24-login-com-google.md)) |
 | 1.10 | SPEC-001, SPEC-002 e SPEC-003 marcadas como implementadas; SPEC-004 detalhada ([SPEC-004.md](SPEC-004.md)), aprovada e implementada; parte de e-mail da OPEN-02 resolvida (envio por SMTP; o provedor sai junto com a hospedagem) |
 | 1.11 | Nova SPEC-039 (confirmação de e-mail, RF43 e RB23 da versão 1.7 dos requisitos), na Fase 1, logo depois da SPEC-004; aprovada e implementada |
+| 1.12 | SPEC-034 detalhada ([SPEC-034.md](SPEC-034.md)), aprovada e implementada: OPEN-04 resolvida (JSON versionado, baixado pelo app) e regra da OPEN-40 decidida (backups e logs por no máximo 30 dias) |
 
 ---
 
@@ -427,6 +428,8 @@ Visão geral por fase:
 
 #### SPEC-034 — Exportação e exclusão de dados pessoais
 
+📄 Detalhada em [SPEC-034.md](SPEC-034.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário exporta todos os seus dados e pede a exclusão da conta: dados pessoais removidos, auditoria e logs anonimizados e cache local limpo, em até 30 dias. Nesta Spec, cobre os dados criados até aqui (conta e consentimento); **cada Spec posterior que guarde dados do usuário entrega a sua parte** na exportação e na exclusão (ver "Posição") |
@@ -440,7 +443,7 @@ Visão geral por fase:
 | ADRs | DA08, DA13, DA19 |
 | Depende de | SPEC-002 |
 | Posição | **Antecipada** (versão 1.3 do mapa): fica logo depois da identidade, e o mecanismo de exportação e exclusão passa a existir antes de qualquer outro dado pessoal. Regra para as Specs seguintes: **toda Spec que crie dado do usuário inclui, nos seus critérios de aceitação, a exportação e a exclusão desse dado** — hoje 012, 013, 014, 015, 016, 023, 025, 030 e 032. Assim a 034 não precisa esperar Specs que não são *Must* |
-| Em aberto | OPEN-04, OPEN-15, OPEN-40 |
+| Em aberto | OPEN-04 resolvida; OPEN-40 com regra decidida (30 dias), configurar na hospedagem; OPEN-15 fica com a SPEC-012 |
 | Prioridade derivada | Must |
 
 ---

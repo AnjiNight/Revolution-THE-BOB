@@ -108,6 +108,16 @@ class FakeServer {
         return body.code === 'K7QM4XPD'
           ? new Response(null, { status: 204 })
           : json(400, { error: 'invalid_reset_code', message: 'x' });
+      case PROFILE_PATHS.export:
+        return json(200, { format: 'simulador-investimentos/dados-pessoais', version: 1 });
+      case PROFILE_PATHS.deletionRequest:
+        return new Response(null, { status: 202 });
+      case PROFILE_PATHS.deletionConfirm:
+        if (body.code !== 'K7QM4XPD') {
+          return json(400, { error: 'invalid_confirmation_code', message: 'x' });
+        }
+        this.validRefresh.clear();
+        return new Response(null, { status: 204 });
       case PROFILE_PATHS.consents:
         return this.validAccess.has(headers.authorization?.replace('Bearer ', '') ?? '')
           ? json(200, { consents: [], currentVersion: '1' })
@@ -388,5 +398,35 @@ describe('confirmação de e-mail (SPEC-039)', () => {
       ok: true,
       user: { email: 'novo@exemplo.com' },
     });
+  });
+});
+
+describe('dados pessoais (SPEC-034)', () => {
+  it('exporta com a sessão atual', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.exportData()).resolves.toMatchObject({
+      ok: true,
+      data: { format: 'simulador-investimentos/dados-pessoais', version: 1 },
+    });
+  });
+
+  it('código errado não apaga nada; o certo apaga a conta e a sessão do dispositivo', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.requestDeletion({ locale: 'pt-BR' })).resolves.toEqual({
+      ok: true,
+      data: null,
+    });
+    await expect(client.confirmDeletion({ code: 'ZZZZZZZZ' })).resolves.toEqual({
+      ok: false,
+      error: 'invalid_confirmation_code',
+    });
+    await expect(store.load()).resolves.toBe('refresh-1');
+
+    await expect(client.confirmDeletion({ code: 'K7QM4XPD' })).resolves.toEqual({
+      ok: true,
+      data: null,
+    });
+    await expect(store.load()).resolves.toBeNull();
+    await expect(client.restore()).resolves.toEqual({ ok: false, error: 'unauthorized' });
   });
 });

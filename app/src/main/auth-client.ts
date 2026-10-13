@@ -2,6 +2,8 @@ import {
   AUTH_PATHS,
   PROFILE_PATHS,
   TERMS_VERSION,
+  type AccountDeletionConfirmInput,
+  type AccountDeletionRequestInput,
   type AuthErrorCode,
   type AuthSession,
   type ChangeEmailInput,
@@ -14,6 +16,7 @@ import {
   type LoginInput,
   type PasswordResetConfirmInput,
   type PasswordResetRequestInput,
+  type PersonalDataExport,
   type PublicUser,
   type RegisterInput,
   type TokenPair,
@@ -52,6 +55,7 @@ const KNOWN_ERRORS: readonly AuthErrorCode[] = [
   'email_not_confirmed',
   'invalid_confirmation_code',
   'email_confirmation_unavailable',
+  'deletion_not_allowed',
 ];
 
 class RequestFailed extends Error {
@@ -174,6 +178,32 @@ export class AuthClient {
   changeEmail(input: ChangeEmailInput): Promise<ClientResult<null>> {
     return this.call(async () => {
       await this.authorizedRequest('PUT', PROFILE_PATHS.email, input);
+      return null;
+    });
+  }
+
+  // --- Dados pessoais (SPEC-034) ---
+
+  /** Tudo o que o servidor guarda sobre a pessoa, para salvar em arquivo. */
+  exportData(): Promise<ClientResult<PersonalDataExport>> {
+    return this.call(() => this.authorizedRequest<PersonalDataExport>('GET', PROFILE_PATHS.export));
+  }
+
+  /** Manda o código de exclusão para o e-mail da conta. */
+  requestDeletion(input: AccountDeletionRequestInput): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      await this.authorizedRequest('POST', PROFILE_PATHS.deletionRequest, input);
+      return null;
+    });
+  }
+
+  /** Código certo apaga a conta no servidor; aqui, apaga a sessão guardada no dispositivo. */
+  confirmDeletion(input: AccountDeletionConfirmInput): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      await this.authorizedRequest('POST', PROFILE_PATHS.deletionConfirm, input);
+      this.accessToken = null;
+      this.user = null;
+      await this.options.store.clear();
       return null;
     });
   }

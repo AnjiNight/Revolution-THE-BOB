@@ -43,7 +43,8 @@
     "collaboratorTitle": "Área do colaborador",
     "collaboratorNote": "O acesso de colaborador é criado pela equipe. Não é possível se cadastrar por aqui.",
     "backToLogin": "Voltar ao login de usuário",
-    "forgotPassword": "Esqueci minha senha"
+    "forgotPassword": "Esqueci minha senha",
+    "accountDeleted": "Sua conta foi excluída. Seus dados foram apagados."
   },
   "reset": {
     "title": "Recuperar senha",
@@ -103,7 +104,7 @@
     "passwordChanged": "Senha alterada. As outras sessões desta conta foram encerradas.",
     "googleOnly": "Esta conta entra pelo Google ({{email}}). O e-mail e a senha são gerenciados pelo Google.",
     "consentsSection": "Consentimentos",
-    "withdrawConsent": "Para retirar o consentimento, é preciso excluir a conta. A exclusão chega em uma próxima versão.",
+    "withdrawConsent": "Para retirar o consentimento, exclua sua conta em Seus dados.",
     "termsUpdated": "Os termos de uso e a política de privacidade mudaram. Leia o resumo e aceite a nova versão.",
     "subtitle": "Seus dados de acesso e o histórico de consentimentos.",
     "roleName": {
@@ -124,7 +125,19 @@
     "confirmEmail": "Confirmar e-mail",
     "emailCodeSent": "Enviamos um código para {{email}}. Seu e-mail só muda depois da confirmação.",
     "pendingEmail": "Aguardando confirmação: {{email}}",
-    "emailChanged": "E-mail trocado. O endereço antigo recebeu um aviso."
+    "emailChanged": "E-mail trocado. O endereço antigo recebeu um aviso.",
+    "data": {
+      "title": "Seus dados",
+      "intro": "Baixe uma cópia de tudo o que o app guarda sobre você ou exclua sua conta.",
+      "export": "Baixar meus dados",
+      "exported": "Arquivo salvo.",
+      "delete": "Excluir minha conta",
+      "deleteWarning": "Isto apaga sua conta, seus consentimentos e suas sessões. Não dá para desfazer.",
+      "sendCode": "Enviar código para {{email}}",
+      "codeSent": "Enviamos um código para {{email}}. Ele vale por 15 minutos.",
+      "confirmDelete": "Excluir minha conta para sempre",
+      "collaboratorNote": "A exclusão de contas de colaborador é feita pela equipe."
+    }
   },
   "fieldErrors": {
     "required": "Campo obrigatório.",
@@ -159,7 +172,8 @@
     "password_reset_unavailable": "A recuperação de senha não está disponível neste servidor.",
     "email_not_confirmed": "Confirme seu e-mail para entrar.",
     "invalid_confirmation_code": "Código inválido ou vencido. Confira o código ou peça um novo.",
-    "email_confirmation_unavailable": "A confirmação de e-mail não está disponível neste servidor."
+    "email_confirmation_unavailable": "A confirmação de e-mail não está disponível neste servidor.",
+    "deletion_not_allowed": "A exclusão de contas de colaborador é feita pela equipe."
   },
   "landing": {
     "skip": "Pular para o acesso",

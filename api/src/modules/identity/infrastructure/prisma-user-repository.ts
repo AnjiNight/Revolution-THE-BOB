@@ -132,6 +132,14 @@ export class PrismaUserRepository implements UserRepository {
     return count === 1;
   }
 
+  async deleteAccount(userId: string, at: Date): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.exclusaoConta.create({ data: { usuarioId: userId, excluidaEm: at } }),
+      // Consentimentos, tokens de renovação e códigos vão junto (ON DELETE CASCADE).
+      this.prisma.usuario.delete({ where: { id: userId } }),
+    ]);
+  }
+
   async deleteUnconfirmedCreatedBefore(cutoff: Date): Promise<number> {
     const { count } = await this.prisma.usuario.deleteMany({
       where: { emailConfirmadoEm: null, criadoEm: { lt: cutoff } },

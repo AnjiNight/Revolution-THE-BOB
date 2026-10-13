@@ -81,6 +81,11 @@ export class EmailConfirmationUnavailableError extends DomainError {
   readonly code = 'email_confirmation_unavailable';
 }
 
+/** SPEC-034: conta de colaborador não se exclui pelo app; quem remove é a equipe. */
+export class DeletionNotAllowedError extends DomainError {
+  readonly code = 'deletion_not_allowed';
+}
+
 /** SPEC-003: conta só com Google não tem senha para trocar, nem cria uma. */
 export class PasswordChangeNotAllowedError extends DomainError {
   readonly code = 'password_change_not_allowed';

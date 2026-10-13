@@ -43,7 +43,7 @@ export interface TestAppOptions {
 /** Servidor completo com repositórios em memória, para testes HTTP sem banco. */
 export async function buildTestApp(options: TestAppOptions = {}) {
   const users = new InMemoryUserRepository(options.clock);
-  const refreshTokens = new InMemoryRefreshTokenRepository();
+  const refreshTokens = new InMemoryRefreshTokenRepository(options.clock);
   const emailCodes = new InMemoryEmailCodeRepository();
   const hasher = new FakePasswordHasher();
   const accessTokens = new JwtAccessTokenService(TEST_JWT_SECRET, 15);
@@ -77,6 +77,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     auth: services.auth,
     profile: services.profile,
     passwordReset: services.passwordReset,
+    accountData: services.accountData,
     accessTokens,
     logStream: logs,
   });

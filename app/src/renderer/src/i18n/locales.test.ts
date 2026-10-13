@@ -62,6 +62,7 @@ describe('arquivos de idioma (CA13)', () => {
       'email_not_confirmed',
       'invalid_confirmation_code',
       'email_confirmation_unavailable',
+      'deletion_not_allowed',
     ];
     const fieldErrors: FieldErrorCode[] = [
       'required',

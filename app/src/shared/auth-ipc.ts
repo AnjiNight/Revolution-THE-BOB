@@ -1,4 +1,6 @@
 import type {
+  AccountDeletionConfirmInput,
+  AccountDeletionRequestInput,
   AuthErrorCode,
   ChangeEmailInput,
   ChangePasswordInput,
@@ -39,6 +41,10 @@ export const PROFILE_CHANNELS = {
   changePassword: 'profile:change-password',
   listConsents: 'profile:list-consents',
   acceptTerms: 'profile:accept-terms',
+  /** SPEC-034: dados pessoais. */
+  exportData: 'profile:export-data',
+  requestDeletion: 'profile:request-deletion',
+  confirmDeletion: 'profile:confirm-deletion',
 } as const;
 
 /** Erros que a interface sabe traduzir. */
@@ -53,6 +59,8 @@ export type ClientResult<T> =
   { ok: true; data: T } | { ok: false; error: ClientAuthError; fields?: FieldErrors };
 
 export type {
+  AccountDeletionConfirmInput,
+  AccountDeletionRequestInput,
   ChangeEmailInput,
   ChangePasswordInput,
   ConfirmEmailChangeInput,

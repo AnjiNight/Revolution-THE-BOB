@@ -20,7 +20,7 @@ interface AfterReset {
 
 type View =
   | { kind: 'loading' }
-  | ({ kind: 'login'; notice?: ClientAuthError } & AfterReset)
+  | ({ kind: 'login'; notice?: ClientAuthError; accountDeleted?: boolean } & AfterReset)
   | { kind: 'register'; name?: string; email?: string }
   | { kind: 'confirm-email'; email: string; name?: string; reason: 'signup' | 'login' }
   | ({ kind: 'collaborator-login' } & AfterReset)
@@ -74,7 +74,11 @@ export function App() {
         {view.kind === 'home' ? (
           <Home user={user} onOpenProfile={() => setView({ kind: 'profile', user })} />
         ) : (
-          <Profile onUserChanged={userChanged} onSessionExpired={sessionExpired} />
+          <Profile
+            onUserChanged={userChanged}
+            onSessionExpired={sessionExpired}
+            onAccountDeleted={() => setView({ kind: 'login', accountDeleted: true })}
+          />
         )}
       </AppShell>
     );
@@ -96,6 +100,7 @@ export function App() {
           notice={view.notice}
           initialEmail={view.email}
           passwordReset={view.passwordReset}
+          accountDeleted={view.accountDeleted}
           onSuccess={signedIn}
           onForgotPassword={(email) => setView({ kind: 'forgot-password', origin: 'user', email })}
           onConfirmationRequired={(email) =>

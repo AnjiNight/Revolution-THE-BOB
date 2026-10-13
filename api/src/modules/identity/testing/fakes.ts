@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { ConsentType } from '@simulador/shared';
 import { EmailInUseError } from '../domain/errors.js';
 import type { User } from '../domain/user.js';
+import { summarizeSessions } from '../application/session-summary.js';
 import type {
   BackgroundRunner,
   EmailMessage,
@@ -18,6 +19,7 @@ import type {
   StoredConsent,
   StoredEmailCode,
   StoredRefreshToken,
+  StoredSession,
   TaskLog,
   UserRepository,
 } from '../application/ports.js';
@@ -88,6 +90,22 @@ export class InMemoryUserRepository implements UserRepository {
     return before - this.users.length;
   }
 
+  /** Registros de exclusão (SPEC-034): só o id antigo e a data, como no banco. */
+  readonly deletions: Array<{ userId: string; at: Date }> = [];
+
+  async deleteAccount(userId: string, at: Date): Promise<void> {
+    const index = this.users.findIndex((u) => u.id === userId);
+    if (index < 0) throw new Error('usuário inexistente');
+    this.users.splice(index, 1);
+    for (let i = this.consents.length - 1; i >= 0; i -= 1) {
+      if (this.consents[i]!.userId === userId) {
+        this.consents.splice(i, 1);
+        this.consentDates.splice(i, 1);
+      }
+    }
+    this.deletions.push({ userId, at });
+  }
+
   async updatePasswordHash(userId: string, passwordHash: string): Promise<User> {
     return this.update(userId, (user) => (user.passwordHash = passwordHash));
   }
@@ -149,7 +167,9 @@ export class InMemoryUserRepository implements UserRepository {
 }
 
 export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
-  readonly tokens: Array<StoredRefreshToken & { tokenHash: string }> = [];
+  readonly tokens: Array<StoredRefreshToken & { tokenHash: string; createdAt: Date }> = [];
+
+  constructor(private readonly clock: () => Date = () => new Date()) {}
 
   async create(token: NewRefreshToken): Promise<void> {
     this.tokens.push({
@@ -159,7 +179,19 @@ export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
       family: token.family,
       expiresAt: token.expiresAt,
       revokedAt: null,
+      createdAt: this.clock(),
     });
+  }
+
+  async listSessions(userId: string): Promise<StoredSession[]> {
+    return summarizeSessions(this.tokens.filter((t) => t.userId === userId));
+  }
+
+  /** Simula a exclusão em cascata do banco (SPEC-034). */
+  deleteAllForUser(userId: string): void {
+    for (let i = this.tokens.length - 1; i >= 0; i -= 1) {
+      if (this.tokens[i]!.userId === userId) this.tokens.splice(i, 1);
+    }
   }
 
   async findByHash(tokenHash: string): Promise<StoredRefreshToken | null> {

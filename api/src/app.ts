@@ -5,6 +5,7 @@ import type { DestinationStream } from 'pino';
 import type { AppConfig } from './config.js';
 import type { DatabaseProbe } from './modules/health/application/get-health.js';
 import { registerHealthRoutes } from './modules/health/controllers/health-routes.js';
+import type { AccountDataService } from './modules/identity/application/account-data-service.js';
 import type { AuthService } from './modules/identity/application/auth-service.js';
 import type { PasswordResetService } from './modules/identity/application/password-reset-service.js';
 import type { AccessTokenService } from './modules/identity/application/ports.js';
@@ -23,6 +24,7 @@ export interface AppDependencies {
   auth: AuthService;
   profile: ProfileService;
   passwordReset: PasswordResetService;
+  accountData: AccountDataService;
   accessTokens: AccessTokenService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
@@ -60,6 +62,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
   });
   registerProfileRoutes(app, {
     profile: deps.profile,
+    accountData: deps.accountData,
     accessTokens: deps.accessTokens,
     rateLimitPerMinute: deps.config.authRateLimitPerMinute,
   });

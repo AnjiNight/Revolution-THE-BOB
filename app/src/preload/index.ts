@@ -40,6 +40,9 @@ const api: DesktopApi = {
     changePassword: (input) => invoke<ClientResult<null>>(PROFILE_CHANNELS.changePassword, input),
     listConsents: () => invoke<ClientResult<ConsentList>>(PROFILE_CHANNELS.listConsents),
     acceptTerms: () => invoke<ClientResult<null>>(PROFILE_CHANNELS.acceptTerms),
+    exportData: () => invoke<ClientResult<{ saved: boolean }>>(PROFILE_CHANNELS.exportData),
+    requestDeletion: (input) => invoke<ClientResult<null>>(PROFILE_CHANNELS.requestDeletion, input),
+    confirmDeletion: (input) => invoke<ClientResult<null>>(PROFILE_CHANNELS.confirmDeletion, input),
   },
 };
 

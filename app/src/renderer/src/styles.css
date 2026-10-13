@@ -28,6 +28,7 @@
   --warn-soft: #f8eedf;
   --error: #b42318;
   --error-soft: #fbeceb;
+  --error-ink: #ffffff;
 
   /* Superfícies escuras da marca (cartão "ao vivo" e chamada final da página de entrada) */
   --brand-bg: #0d2a22;
@@ -74,6 +75,7 @@
     --warn-soft: #2c2214;
     --error: #f08a80;
     --error-soft: #2e1918;
+    --error-ink: #2a0d0b;
 
     --brand-bg: #0a1f19;
     --brand-glow-1: #113d31;
@@ -180,6 +182,20 @@ button.secondary {
 button.secondary:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: var(--accent);
+}
+
+/* Ação sem volta (excluir a conta, SPEC-034): o único botão vermelho do app. */
+button.danger {
+  background: var(--error);
+  color: var(--error-ink);
+}
+
+button.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error) 85%, var(--text));
+}
+
+button.danger:focus-visible {
+  outline-color: var(--error);
 }
 
 button.link {

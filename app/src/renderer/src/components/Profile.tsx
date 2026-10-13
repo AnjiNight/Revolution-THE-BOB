@@ -1,4 +1,6 @@
 import {
+  accountDeletionConfirmSchema,
+  accountDeletionRequestSchema,
   changeEmailSchema,
   changePasswordSchema,
   confirmEmailChangeSchema,
@@ -21,10 +23,12 @@ interface ProfileProps {
   onUserChanged: (user: UserProfile) => void;
   /** A sessão caiu durante uma chamada: volta para o login. */
   onSessionExpired: () => void;
+  /** SPEC-034: a conta foi excluída; a sessão local já foi apagada. */
+  onAccountDeleted: () => void;
 }
 
 /** Tela Meu perfil (SPEC-003 §5.2): resumo da conta à esquerda, edições à direita. */
-export function Profile({ onUserChanged, onSessionExpired }: ProfileProps) {
+export function Profile({ onUserChanged, onSessionExpired, onAccountDeleted }: ProfileProps) {
   const { t, i18n } = useTranslation();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [consents, setConsents] = useState<ConsentList | null>(null);
@@ -155,6 +159,12 @@ export function Profile({ onUserChanged, onSessionExpired }: ProfileProps) {
                 onSessionExpired={onSessionExpired}
               />
             )}
+
+            <DataSection
+              user={user}
+              onAccountDeleted={onAccountDeleted}
+              onSessionExpired={onSessionExpired}
+            />
           </div>
         </div>
       )}
@@ -270,12 +280,15 @@ function EditForm({
   saveLabel,
   onSubmit,
   onCancel,
+  danger = false,
   children,
 }: {
   state: FormState;
   saveLabel: string;
   onSubmit: () => void;
   onCancel: () => void;
+  /** Ação sem volta (excluir a conta): botão em vermelho. */
+  danger?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -292,7 +305,7 @@ function EditForm({
       )}
       {children}
       <div className="form-actions">
-        <button type="submit" disabled={state.submitting}>
+        <button type="submit" className={danger ? 'danger' : undefined} disabled={state.submitting}>
           {state.submitting ? t('auth.submitting') : saveLabel}
         </button>
         <button type="button" className="secondary" onClick={onCancel} disabled={state.submitting}>
@@ -491,6 +504,151 @@ function PasswordForm({
         error={state.fields.newPassword}
       />
     </EditForm>
+  );
+}
+
+/**
+ * Seus dados (SPEC-034, LGPD): baixar um arquivo com tudo o que o app guarda e excluir a conta.
+ * A exclusão pede um código enviado ao e-mail da conta e não tem volta.
+ */
+function DataSection({
+  user,
+  onAccountDeleted,
+  onSessionExpired,
+}: {
+  user: UserProfile;
+  onAccountDeleted: () => void;
+  onSessionExpired: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const locale = emailLocale(i18n.language);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [exportError, setExportError] = useState<ClientAuthError | undefined>();
+  const [step, setStep] = useState<'closed' | 'warning' | 'code'>('closed');
+  const [code, setCode] = useState('');
+  const { state, submit } = useSubmit(onSessionExpired);
+  const deleteButton = useRef<HTMLButtonElement>(null);
+  const zone = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(false);
+
+  // Abriu: foco no primeiro controle da área de exclusão. Fechou: volta para o botão.
+  useEffect(() => {
+    if (step !== 'closed') zone.current?.querySelector<HTMLElement>('input, button')?.focus();
+    else if (wasOpen.current) deleteButton.current?.focus();
+    wasOpen.current = step !== 'closed';
+  }, [step]);
+
+  const exportData = async () => {
+    setExportError(undefined);
+    setSaved(false);
+    setSaving(true);
+    const result = await window.api.profile.exportData();
+    setSaving(false);
+    if (result.ok) return setSaved(result.data.saved);
+    if (result.error === 'unauthorized') return onSessionExpired();
+    setExportError(result.error);
+  };
+
+  const close = () => {
+    setCode('');
+    setStep('closed');
+  };
+
+  return (
+    <section className="profile-panel" aria-labelledby="data-title">
+      <h2 id="data-title">{t('profile.data.title')}</h2>
+      <p className="profile-value">{t('profile.data.intro')}</p>
+
+      <div className="data-actions">
+        <button
+          type="button"
+          className="pill pill-ghost pill-small"
+          disabled={saving}
+          onClick={() => void exportData()}
+        >
+          {saving ? t('auth.submitting') : t('profile.data.export')}
+        </button>
+        {user.role === 'user' && step === 'closed' && (
+          <button
+            ref={deleteButton}
+            type="button"
+            className="pill pill-danger pill-small"
+            onClick={() => setStep('warning')}
+          >
+            {t('profile.data.delete')}
+          </button>
+        )}
+      </div>
+
+      <p className="form-success" role="status">
+        {saved && (
+          <>
+            <CheckCircle weight="fill" aria-hidden="true" />
+            {t('profile.data.exported')}
+          </>
+        )}
+      </p>
+      {exportError && (
+        <p className="form-error" role="alert">
+          {t(`authErrors.${exportError}`)}
+        </p>
+      )}
+      {user.role !== 'user' && <p className="field-hint">{t('profile.data.collaboratorNote')}</p>}
+
+      {step !== 'closed' && (
+        <div ref={zone} className="danger-zone">
+          <p className="danger-warning">{t('profile.data.deleteWarning')}</p>
+          {step === 'warning' ? (
+            <EditForm
+              state={state}
+              saveLabel={t('profile.data.sendCode', { email: user.email })}
+              danger
+              onCancel={close}
+              onSubmit={() =>
+                void submit(
+                  validate(accountDeletionRequestSchema, { locale }),
+                  () => window.api.profile.requestDeletion({ locale }),
+                  () => setStep('code'),
+                )
+              }
+            >
+              {null}
+            </EditForm>
+          ) : (
+            <EditForm
+              state={state}
+              saveLabel={t('profile.data.confirmDelete')}
+              danger
+              onCancel={close}
+              onSubmit={() => {
+                const checked = validate(accountDeletionConfirmSchema, { code, locale });
+                void submit(
+                  checked,
+                  () =>
+                    window.api.profile.confirmDeletion(checked.success ? checked.data : { code }),
+                  () => onAccountDeleted(),
+                );
+              }}
+            >
+              <p className="reset-sent" role="status">
+                {t('profile.data.codeSent', { email: user.email })}
+              </p>
+              <TextField
+                label={t('reset.code')}
+                type="text"
+                value={code}
+                onChange={setCode}
+                autoComplete="one-time-code"
+                spellCheck={false}
+                hint={t('reset.codeHint')}
+                error={state.fields.code}
+              />
+            </EditForm>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

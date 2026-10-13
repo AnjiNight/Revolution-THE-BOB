@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
     // Sem SMTP (só fora de produção), a confirmação de e-mail e a recuperação de senha ficam
     // desligadas (503); o login com Google continua funcionando.
-    const { auth, profile, passwordReset } = createIdentityServices({
+    const { auth, profile, passwordReset, accountData } = createIdentityServices({
       users: new PrismaUserRepository(prisma),
       refreshTokens: new PrismaRefreshTokenRepository(prisma),
       emailCodes: new PrismaEmailCodeRepository(prisma),
@@ -61,6 +61,7 @@ async function main(): Promise<void> {
       auth,
       profile,
       passwordReset,
+      accountData,
       accessTokens,
     });
     await app.listen({ host: config.host, port: config.port });

@@ -1,5 +1,8 @@
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type {
+  AccountDeletionConfirmInput,
+  AccountDeletionRequestInput,
   ChangeEmailInput,
   ChangePasswordInput,
   ConfirmEmailChangeInput,
@@ -11,10 +14,11 @@ import type {
   RegisterInput,
   UpdateNameInput,
 } from '@simulador/shared';
-import { app, BrowserWindow, ipcMain, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
 import { AUTH_CHANNELS, PROFILE_CHANNELS } from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL } from '../shared/server-status.js';
 import { AuthClient } from './auth-client.js';
+import { saveDataExport } from './data-export.js';
 import { GoogleOAuthClient } from './google-oauth.js';
 import { GoogleSignIn } from './google-sign-in.js';
 import { EncryptedFileSecretStore, type OsEncryption } from './secret-store.js';
@@ -139,6 +143,31 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(PROFILE_CHANNELS.listConsents, () => auth.listConsents());
   ipcMain.handle(PROFILE_CHANNELS.acceptTerms, () => auth.acceptTerms());
+
+  // Dados pessoais (SPEC-034): o arquivo vai direto para onde a pessoa escolher.
+  ipcMain.handle(PROFILE_CHANNELS.exportData, (event) =>
+    saveDataExport(
+      () => auth.exportData(),
+      {
+        chooseFile: async (defaultPath) => {
+          const window = BrowserWindow.fromWebContents(event.sender);
+          const options = { defaultPath, filters: [{ name: 'JSON', extensions: ['json'] }] };
+          const choice = window
+            ? await dialog.showSaveDialog(window, options)
+            : await dialog.showSaveDialog(options);
+          return choice.canceled || !choice.filePath ? null : choice.filePath;
+        },
+        writeFile: (path, contents) => writeFile(path, contents, 'utf8'),
+      },
+      app.getPath('downloads'),
+    ),
+  );
+  ipcMain.handle(PROFILE_CHANNELS.requestDeletion, (_event, input: AccountDeletionRequestInput) =>
+    auth.requestDeletion(input),
+  );
+  ipcMain.handle(PROFILE_CHANNELS.confirmDeletion, (_event, input: AccountDeletionConfirmInput) =>
+    auth.confirmDeletion(input),
+  );
 
   createWindow();
   app.on('activate', () => {

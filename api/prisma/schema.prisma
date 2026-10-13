@@ -25,6 +25,7 @@ enum FinalidadeCodigo {
   redefinir_senha
   confirmar_cadastro
   trocar_email
+  excluir_conta
 
   @@map("finalidade_codigo")
 }
@@ -105,4 +106,14 @@ model CodigoEmail {
 
   @@index([usuarioId, criadoEm])
   @@map("codigo_email")
+}
+
+/// Registro de que uma conta foi excluída (SPEC-034, QA07). Sem nenhum dado pessoal: o id antigo
+/// da conta não tem chave estrangeira, porque a conta já não existe.
+model ExclusaoConta {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId  String   @map("usuario_id") @db.Uuid
+  excluidaEm DateTime @default(now()) @map("excluida_em") @db.Timestamptz(3)
+
+  @@map("exclusao_conta")
 }

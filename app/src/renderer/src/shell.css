@@ -366,6 +366,55 @@
 }
 
 /* SPEC-039: troca de e-mail esperando o código. */
+/* ---------- Seus dados (SPEC-034) ---------- */
+
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.pill.pill-danger,
+.pill.pill-danger:hover:not(:disabled) {
+  color: var(--error);
+}
+
+.pill.pill-danger {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--error) 45%, transparent);
+}
+
+.pill.pill-danger:hover:not(:disabled) {
+  background: var(--error-soft);
+}
+
+.pill.pill-danger:focus-visible {
+  outline-color: var(--error);
+}
+
+.danger-zone {
+  margin-top: 1rem;
+  padding: 1rem 1.15rem;
+  border-left: 3px solid var(--error);
+  border-radius: 14px;
+  background: var(--error-soft);
+}
+
+.danger-warning {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.danger-zone .profile-form {
+  margin-top: 0.75rem;
+}
+
+.danger-zone input[type='text'] {
+  background: var(--surface);
+}
+
 .pending-hint {
   display: block;
   margin-top: 0.2rem;

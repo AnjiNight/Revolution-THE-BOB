@@ -91,7 +91,7 @@ Todos com status **Sugerida**.
 
 | Item | Opções | Critérios | Relacionado |
 |---|---|---|---|
-| Hospedagem (servidor, processador de tarefas, PostgreSQL com backup diário, Redis) | Provedores com camada gratuita | Processador de tarefas sempre ligado durante o pregão; **backup diário** (RNF02); servidor que não hiberne durante o pregão | RES03, RNF02, RNF21 |
+| Hospedagem (servidor, processador de tarefas, PostgreSQL com backup diário, Redis) | Provedores com camada gratuita | Processador de tarefas sempre ligado durante o pregão; **backup diário** (RNF02); servidor que não hiberne durante o pregão; **backups e logs guardados por no máximo 30 dias**, para os dados de uma conta excluída sumirem de todas as cópias no prazo da RB04 ([SPEC-034](specs/SPEC-034.md), OPEN-40) | RES03, RNF02, RNF21, RB04 |
 | Provedor de e-mail (recuperação de senha) | Provedores com camada gratuita que ofereçam SMTP | Volume pequeno; endereço de envio com domínio próprio (menos chance de spam). O código já envia por SMTP ([SPEC-004](specs/SPEC-004.md)): falta só escolher o provedor, junto com a hospedagem | RF03 |
 | Implementação do modelo de IA | API de modelo de linguagem (custo por notícia) × modelo aberto em português ajustado localmente × combinação | Custo zero, qualidade em português financeiro, hardware disponível para treino | [DA20](adr/DA20-modelo-ia-noticias.md) |
 | Provedor de cotações do assinante e quem paga | brapi Startup/Pro; chave gratuita na versão acadêmica | Custo, termos de redistribuição | [DA16](adr/DA16-cotacoes-por-plano.md) |

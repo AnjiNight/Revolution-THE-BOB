@@ -1,4 +1,4 @@
-import { AUTH_PATHS, TERMS_VERSION } from '@simulador/shared';
+import { AUTH_PATHS, PROFILE_PATHS, TERMS_VERSION } from '@simulador/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../../../app.js';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
@@ -39,7 +39,7 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE usuario CASCADE');
+    await prisma.$executeRawUnsafe('TRUNCATE TABLE usuario, exclusao_conta CASCADE');
   });
 
   const newUser = {
@@ -105,6 +105,7 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       auth: services.auth,
       profile: services.profile,
       passwordReset: services.passwordReset,
+      accountData: services.accountData,
       accessTokens,
     });
     return { app, mailer, background };
@@ -446,6 +447,103 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       expect(await codes.findOpen(ana.id, 'email_change', new Date())).not.toBeNull();
       expect(await codes.findOpen(ana.id, 'signup', new Date())).toBeNull();
       expect(await codes.countSince(ana.id, new Date(Date.now() - 60 * 60 * 1000))).toBe(2);
+    });
+  });
+
+  describe('SPEC-034: exportação e exclusão', () => {
+    it('deleteAccount apaga conta, consentimentos, sessões e códigos e grava só o id e a data', async () => {
+      const ana = await users.create(newUser);
+      const expiresAt = new Date(Date.now() + 86_400_000);
+      await tokens.create({
+        userId: ana.id,
+        tokenHash: 'a'.repeat(64),
+        family: '0d9e1f7a-1111-4222-8333-444455556666',
+        expiresAt,
+      });
+      await codes.create(
+        {
+          userId: ana.id,
+          purpose: 'account_deletion',
+          codeHash: 'b'.repeat(64),
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          closedAt: null,
+        },
+        new Date(0),
+      );
+      const at = new Date('2026-10-13T15:00:00Z');
+
+      await users.deleteAccount(ana.id, at);
+
+      expect(await prisma.usuario.count()).toBe(0);
+      expect(await prisma.consentimento.count()).toBe(0);
+      expect(await prisma.tokenRenovacao.count()).toBe(0);
+      expect(await prisma.codigoEmail.count()).toBe(0);
+      const records = await prisma.exclusaoConta.findMany();
+      expect(records).toEqual([{ id: expect.any(String), usuarioId: ana.id, excluidaEm: at }]);
+    });
+
+    it('listSessions resume uma sessão por login', async () => {
+      const ana = await users.create(newUser);
+      const expiresAt = new Date(Date.now() + 86_400_000);
+      const family = (n: number) => `0d9e1f7a-1111-4222-8333-44445555666${n}`;
+      await tokens.create({
+        userId: ana.id,
+        tokenHash: 'a'.repeat(64),
+        family: family(1),
+        expiresAt,
+      });
+      await tokens.create({
+        userId: ana.id,
+        tokenHash: 'b'.repeat(64),
+        family: family(1),
+        expiresAt,
+      });
+      await tokens.create({
+        userId: ana.id,
+        tokenHash: 'c'.repeat(64),
+        family: family(2),
+        expiresAt,
+      });
+      await tokens.revokeFamily(family(2), new Date());
+
+      const sessions = await tokens.listSessions(ana.id);
+      expect(sessions.map((s) => s.ended)).toEqual([false, true]);
+    });
+
+    it('fluxo completo pela API: exportar, pedir e confirmar a exclusão', async () => {
+      const { app, mailer, background } = await buildDbApp();
+      try {
+        const session = await registerConfirmedThroughApi(app, mailer, background);
+        const auth = { authorization: `Bearer ${session.accessToken}` };
+
+        const exported = await app.inject({
+          method: 'GET',
+          url: PROFILE_PATHS.export,
+          headers: auth,
+        });
+        expect(exported.statusCode).toBe(200);
+        expect(exported.json()).toMatchObject({ account: { email: 'ana@exemplo.com' } });
+
+        await app.inject({
+          method: 'POST',
+          url: PROFILE_PATHS.deletionRequest,
+          headers: auth,
+          payload: {},
+        });
+        await background.settle();
+        const deleted = await app.inject({
+          method: 'POST',
+          url: PROFILE_PATHS.deletionConfirm,
+          headers: auth,
+          payload: { code: mailer.lastCode('ana@exemplo.com') },
+        });
+        expect(deleted.statusCode).toBe(204);
+        expect(await prisma.usuario.count()).toBe(0);
+        expect(await prisma.exclusaoConta.count()).toBe(1);
+      } finally {
+        await app.close();
+      }
     });
   });
 

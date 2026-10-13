@@ -21,6 +21,10 @@ export const PROFILE_PATHS = {
   email: '/api/me/email',
   emailConfirm: '/api/me/email/confirm',
   password: '/api/me/password',
+  /** SPEC-034: exportação e exclusão dos dados pessoais. */
+  export: '/api/me/export',
+  deletionRequest: '/api/me/deletion/request',
+  deletionConfirm: '/api/me/deletion/confirm',
   consents: '/api/me/consents',
 } as const;
 
@@ -92,6 +96,39 @@ export interface ConsentList {
   currentVersion: string;
 }
 
+/** Identificação do arquivo de exportação (SPEC-034). Cada Spec que acrescentar dados sobe a versão. */
+export const PERSONAL_DATA_FORMAT = 'simulador-investimentos/dados-pessoais';
+export const PERSONAL_DATA_VERSION = 1;
+
+/**
+ * Arquivo "Baixar meus dados" (SPEC-034, LGPD). Tudo o que o app guarda sobre a pessoa, sem
+ * segredos de segurança (hash da senha, tokens, códigos) nem o identificador interno do Google.
+ */
+export interface PersonalDataExport {
+  format: typeof PERSONAL_DATA_FORMAT;
+  version: typeof PERSONAL_DATA_VERSION;
+  /** ISO 8601. */
+  exportedAt: string;
+  account: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+    signInMethods: Array<'password' | 'google'>;
+    createdAt: string;
+    emailConfirmedAt: string | null;
+    pendingEmail: string | null;
+  };
+  consents: Consent[];
+  /** Cada login é uma sessão; as renovações automáticas não abrem sessão nova. */
+  sessions: Array<{
+    startedAt: string;
+    lastRenewedAt: string;
+    expiresAt: string;
+    ended: boolean;
+  }>;
+}
+
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
@@ -134,7 +171,8 @@ export type AuthErrorCode =
   | 'password_reset_unavailable'
   | 'email_not_confirmed'
   | 'invalid_confirmation_code'
-  | 'email_confirmation_unavailable';
+  | 'email_confirmation_unavailable'
+  | 'deletion_not_allowed';
 
 const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'required',
@@ -290,6 +328,12 @@ export const emailConfirmationResendSchema = z.object({
   locale: localeField,
 });
 
+/** SPEC-034: pedir o código para excluir a conta (vai para o e-mail da conta). */
+export const accountDeletionRequestSchema = z.object({ locale: localeField });
+
+/** SPEC-034: excluir a conta com o código recebido. */
+export const accountDeletionConfirmSchema = z.object({ code: emailCodeField, locale: localeField });
+
 /** O idioma do e-mail é opcional em quem chama: sem ele, português (o esquema faz o mesmo). */
 type OptionalLocale<T> = Omit<T, 'locale'> & { locale?: EmailLocale };
 
@@ -308,6 +352,12 @@ export type EmailConfirmationInput = z.infer<typeof emailConfirmationSchema>;
 export type EmailConfirmationResendInput = z.input<typeof emailConfirmationResendSchema>;
 export type EmailConfirmationResend = z.infer<typeof emailConfirmationResendSchema>;
 export type ConfirmEmailChangeInput = OptionalLocale<z.infer<typeof confirmEmailChangeSchema>>;
+export type AccountDeletionRequestInput = OptionalLocale<
+  z.infer<typeof accountDeletionRequestSchema>
+>;
+export type AccountDeletionConfirmInput = OptionalLocale<
+  z.infer<typeof accountDeletionConfirmSchema>
+>;
 
 export type ValidationResult<T> =
   { success: true; data: T } | { success: false; fields: FieldErrors };

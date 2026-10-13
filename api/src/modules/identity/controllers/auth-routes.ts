@@ -43,6 +43,10 @@ const DOMAIN_ERROR_HTTP: Record<string, { status: number; message: string }> = {
   invalid_reset_code: { status: 400, message: 'Código inválido ou vencido.' },
   email_not_confirmed: { status: 403, message: 'Confirme o e-mail antes de entrar.' },
   invalid_confirmation_code: { status: 400, message: 'Código inválido ou vencido.' },
+  deletion_not_allowed: {
+    status: 403,
+    message: 'A exclusão de contas de colaborador é feita pela equipe.',
+  },
   email_confirmation_unavailable: {
     status: 503,
     message: 'A confirmação de e-mail não está disponível neste servidor.',

@@ -96,14 +96,15 @@ O botão "Continuar com o Google" só aparece quando o app e o servidor têm o c
 
 Para o login terminar, o servidor e o banco precisam estar rodando (seção anterior).
 
-### E-mail: confirmação de cadastro e recuperação de senha
+### E-mail: confirmação de cadastro, recuperação de senha e exclusão de conta
 
 O app manda códigos de 8 caracteres por e-mail, que a pessoa digita no próprio app:
 
 - **Confirmação de e-mail** ([SPEC-039](specs/SPEC-039.md)): quem se cadastra com e-mail e senha só entra depois de digitar o código; a troca de e-mail no Meu perfil também pede o código do endereço novo. Contas nunca confirmadas são apagadas em 7 dias pelo processador (`npm run dev:worker`).
 - **"Esqueci minha senha"** ([SPEC-004](specs/SPEC-004.md)).
+- **Excluir minha conta** ([SPEC-034](specs/SPEC-034.md)), em Meu perfil → Seus dados: a conta e todos os dados são apagados na hora, depois do código. Na mesma seção, **"Baixar meus dados"** salva um arquivo JSON com tudo o que o app guarda sobre a pessoa (LGPD).
 
-O servidor envia e-mail por SMTP. Sem `SMTP_HOST` no `api/.env`, o cadastro com senha, a troca de e-mail e a recuperação ficam desligados (o login com Google continua); em produção, o SMTP é obrigatório.
+O servidor envia e-mail por SMTP. Sem `SMTP_HOST` no `api/.env`, o cadastro com senha, a troca de e-mail, a recuperação e a exclusão de conta ficam desligados (o login com Google e a exportação continuam); em produção, o SMTP é obrigatório.
 
 No desenvolvimento, os e-mails vão para o **Mailpit**, que roda no Docker e não manda nada para a internet:
 

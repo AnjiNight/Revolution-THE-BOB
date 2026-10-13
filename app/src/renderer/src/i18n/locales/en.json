@@ -43,7 +43,8 @@
     "collaboratorTitle": "Collaborator area",
     "collaboratorNote": "Collaborator access is created by the team. It is not possible to sign up here.",
     "backToLogin": "Back to user sign-in",
-    "forgotPassword": "Forgot your password?"
+    "forgotPassword": "Forgot your password?",
+    "accountDeleted": "Your account was deleted. Your data was erased."
   },
   "reset": {
     "title": "Reset password",
@@ -103,7 +104,7 @@
     "passwordChanged": "Password changed. Other sessions of this account were signed out.",
     "googleOnly": "This account signs in with Google ({{email}}). Email and password are managed by Google.",
     "consentsSection": "Consents",
-    "withdrawConsent": "To withdraw consent, the account must be deleted. Account deletion arrives in a future version.",
+    "withdrawConsent": "To withdraw consent, delete your account in Your data.",
     "termsUpdated": "The terms of use and privacy policy have changed. Read the summary and accept the new version.",
     "subtitle": "Your sign-in details and consent history.",
     "roleName": {
@@ -124,7 +125,19 @@
     "confirmEmail": "Confirm email",
     "emailCodeSent": "We sent a code to {{email}}. Your email only changes after you confirm it.",
     "pendingEmail": "Waiting for confirmation: {{email}}",
-    "emailChanged": "Email changed. The old address received a notice."
+    "emailChanged": "Email changed. The old address received a notice.",
+    "data": {
+      "title": "Your data",
+      "intro": "Download a copy of everything the app keeps about you, or delete your account.",
+      "export": "Download my data",
+      "exported": "File saved.",
+      "delete": "Delete my account",
+      "deleteWarning": "This erases your account, your consents and your sessions. It cannot be undone.",
+      "sendCode": "Send code to {{email}}",
+      "codeSent": "We sent a code to {{email}}. It is valid for 15 minutes.",
+      "confirmDelete": "Delete my account forever",
+      "collaboratorNote": "Collaborator accounts are deleted by the team."
+    }
   },
   "fieldErrors": {
     "required": "Required field.",
@@ -159,7 +172,8 @@
     "password_reset_unavailable": "Password reset is not available on this server.",
     "email_not_confirmed": "Confirm your email to sign in.",
     "invalid_confirmation_code": "Invalid or expired code. Check the code or ask for a new one.",
-    "email_confirmation_unavailable": "Email confirmation is not available on this server."
+    "email_confirmation_unavailable": "Email confirmation is not available on this server.",
+    "deletion_not_allowed": "Collaborator accounts are deleted by the team."
   },
   "landing": {
     "skip": "Skip to sign-in",

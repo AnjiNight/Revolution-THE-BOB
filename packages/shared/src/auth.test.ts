@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   acceptConsentSchema,
+  accountDeletionConfirmSchema,
+  accountDeletionRequestSchema,
   changeEmailSchema,
   changePasswordSchema,
   confirmEmailChangeSchema,
@@ -242,6 +244,23 @@ describe('confirmação de e-mail (SPEC-039)', () => {
     expect(validate(confirmEmailChangeSchema, { code: 'K7QM-4XPD' })).toEqual({
       success: true,
       data: { code: 'K7QM4XPD', locale: 'pt-BR' },
+    });
+  });
+});
+
+describe('exclusão de conta (SPEC-034)', () => {
+  it('o pedido só leva o idioma; a confirmação normaliza o código', () => {
+    expect(validate(accountDeletionRequestSchema, {})).toEqual({
+      success: true,
+      data: { locale: 'pt-BR' },
+    });
+    expect(validate(accountDeletionConfirmSchema, { code: 'k7qm-4xpd', locale: 'en' })).toEqual({
+      success: true,
+      data: { code: 'K7QM4XPD', locale: 'en' },
+    });
+    expect(validate(accountDeletionConfirmSchema, { code: '12' })).toEqual({
+      success: false,
+      fields: { code: 'invalid_code' },
     });
   });
 });

@@ -14,11 +14,13 @@ const PURPOSE_TO_FINALIDADE: Record<EmailCodePurpose, FinalidadeCodigo> = {
   password_reset: 'redefinir_senha',
   signup: 'confirmar_cadastro',
   email_change: 'trocar_email',
+  account_deletion: 'excluir_conta',
 };
 const FINALIDADE_TO_PURPOSE: Record<FinalidadeCodigo, EmailCodePurpose> = {
   redefinir_senha: 'password_reset',
   confirmar_cadastro: 'signup',
   trocar_email: 'email_change',
+  excluir_conta: 'account_deletion',
 };
 
 function toStored(row: CodigoEmail): StoredEmailCode {
@@ -34,7 +36,7 @@ function toStored(row: CodigoEmail): StoredEmailCode {
   };
 }
 
-/** Códigos enviados por e-mail: redefinição de senha (SPEC-004) e confirmação (SPEC-039). */
+/** Códigos enviados por e-mail: redefinição de senha (SPEC-004), confirmação (SPEC-039) e exclusão (SPEC-034). */
 export class PrismaEmailCodeRepository implements EmailCodeRepository {
   constructor(private readonly prisma: PrismaClient) {}
 

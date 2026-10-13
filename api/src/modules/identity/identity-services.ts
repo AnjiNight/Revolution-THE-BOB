@@ -1,3 +1,4 @@
+import { AccountDataService } from './application/account-data-service.js';
 import { AuthService } from './application/auth-service.js';
 import type { EmailCodeHasher } from './application/email-code.js';
 import { EmailCodes } from './application/email-codes.js';
@@ -78,5 +79,12 @@ export function createIdentityServices(infra: IdentityInfrastructure) {
     ...mailer,
     ...optional,
   });
-  return { auth, profile, passwordReset, confirmations, codes };
+  const accountData = new AccountDataService({
+    users: infra.users,
+    refreshTokens: infra.refreshTokens,
+    codes,
+    ...mailer,
+    ...optional,
+  });
+  return { auth, profile, passwordReset, accountData, confirmations, codes };
 }

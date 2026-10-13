@@ -13,6 +13,8 @@ interface LoginFormProps {
   initialEmail?: string | undefined;
   /** Mostra o aviso de senha redefinida (SPEC-004). */
   passwordReset?: boolean | undefined;
+  /** Mostra o aviso de conta excluída (SPEC-034). */
+  accountDeleted?: boolean | undefined;
   onSuccess: (user: PublicUser) => void;
   onForgotPassword: (email: string) => void;
   /** SPEC-039: conta ainda não confirmada; o servidor já mandou um código novo. */
@@ -25,6 +27,7 @@ export function LoginForm({
   notice,
   initialEmail,
   passwordReset,
+  accountDeleted,
   onSuccess,
   onForgotPassword,
   onConfirmationRequired,
@@ -63,10 +66,10 @@ export function LoginForm({
   return (
     <form className="card auth-form" onSubmit={(event) => void submit(event)} noValidate>
       <h2>{t('auth.loginTitle')}</h2>
-      {passwordReset && !error && (
+      {(passwordReset || accountDeleted) && !error && (
         <p className="form-success" role="status">
           <CheckCircle weight="fill" aria-hidden="true" />
-          {t('reset.done')}
+          {accountDeleted ? t('auth.accountDeleted') : t('reset.done')}
         </p>
       )}
       {error && (

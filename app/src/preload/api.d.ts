@@ -1,5 +1,7 @@
 import type { ConsentList, UserProfile } from '@simulador/shared';
 import type {
+  AccountDeletionConfirmInput,
+  AccountDeletionRequestInput,
   AuthResult,
   ChangeEmailInput,
   ChangePasswordInput,
@@ -45,6 +47,11 @@ export interface DesktopApi {
     changePassword(input: ChangePasswordInput): Promise<ClientResult<null>>;
     listConsents(): Promise<ClientResult<ConsentList>>;
     acceptTerms(): Promise<ClientResult<null>>;
+    /** SPEC-034: abre "Salvar como"; `saved: false` quando a pessoa cancela. */
+    exportData(): Promise<ClientResult<{ saved: boolean }>>;
+    requestDeletion(input: AccountDeletionRequestInput): Promise<ClientResult<null>>;
+    /** Apaga a conta no servidor e a sessão guardada no dispositivo. */
+    confirmDeletion(input: AccountDeletionConfirmInput): Promise<ClientResult<null>>;
   };
 }
 
