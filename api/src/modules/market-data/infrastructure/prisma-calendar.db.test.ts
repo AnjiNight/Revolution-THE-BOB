@@ -1,6 +1,11 @@
+import { randomUUID } from 'node:crypto';
+import type { NonTradingDay } from '@simulador/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
+import type { AuditEntry } from '../../audit/application/audit.js';
+import { PrismaAuditTrail } from '../../audit/infrastructure/prisma-audit.js';
 import { CalendarService } from '../application/calendar-service.js';
+import type { NewCalendarPublication } from '../application/ports.js';
 import { suggestNonTradingDays } from '../domain/calendar-suggestion.js';
 import { PrismaCalendarRepository } from './prisma-calendar-repository.js';
 
@@ -16,10 +21,12 @@ const OTHER_COLLABORATOR = '7c1d2e3f-5555-4666-8777-888899990000';
 describe.skipIf(!url)('calendário de pregão no PostgreSQL', () => {
   let prisma: PrismaClient;
   let calendars: PrismaCalendarRepository;
+  let auditTrail: PrismaAuditTrail;
 
   beforeAll(() => {
     prisma = createPrismaClient(url as string);
     calendars = new PrismaCalendarRepository(prisma);
+    auditTrail = new PrismaAuditTrail(prisma);
   });
 
   afterAll(async () => {
@@ -30,8 +37,25 @@ describe.skipIf(!url)('calendário de pregão no PostgreSQL', () => {
     await prisma.$executeRawUnsafe('TRUNCATE TABLE ano_calendario CASCADE');
   });
 
+  const plain = (days: NonTradingDay[]) => days.map(({ date, reason }) => ({ date, reason }));
+
+  /** Entrada de auditoria como o serviço monta (SPEC-006). */
+  const auditOf =
+    (publication: NewCalendarPublication) =>
+    (before: NonTradingDay[] | null): AuditEntry => ({
+      at: publication.publishedAt,
+      collaboratorId: publication.publishedBy,
+      action: 'calendar_published',
+      entity: 'calendar_year',
+      entityId: String(publication.year),
+      details: { before: before && plain(before), after: plain(publication.nonTradingDays) },
+    });
+
+  const publishList = (publication: NewCalendarPublication) =>
+    calendars.publish(publication, auditOf(publication));
+
   const publish = (year: number, publishedBy = COLLABORATOR, at = new Date()) =>
-    calendars.publish({
+    publishList({
       year,
       publishedAt: at,
       publishedBy,
@@ -50,7 +74,7 @@ describe.skipIf(!url)('calendário de pregão no PostgreSQL', () => {
   it('republicar substitui a lista inteira e registra o novo autor (CA04)', async () => {
     await publish(2026);
     const later = new Date('2026-12-05T12:00:00.000Z');
-    await calendars.publish({
+    await publishList({
       year: 2026,
       publishedAt: later,
       publishedBy: OTHER_COLLABORATOR,
@@ -68,7 +92,7 @@ describe.skipIf(!url)('calendário de pregão no PostgreSQL', () => {
   it('publicação com dia recusado pelo banco não deixa nada pela metade', async () => {
     await publish(2026);
     await expect(
-      calendars.publish({
+      publishList({
         year: 2026,
         publishedAt: new Date(),
         publishedBy: OTHER_COLLABORATOR,
@@ -95,6 +119,70 @@ describe.skipIf(!url)('calendário de pregão no PostgreSQL', () => {
     const rules = await new CalendarService({ calendars }).tradingCalendar(2026, 2026);
     expect(rules.countTradingDays('2026-01-01', '2026-12-31')).toBe(247);
     expect(() => rules.nextTradingDay('2026-12-30')).toThrow(/2027/);
+  });
+
+  describe('auditoria da publicação (SPEC-006, CA07)', () => {
+    it('grava a lista anterior e a nova, com quando e o id de quem publicou', async () => {
+      // Id próprio do teste: outros arquivos de teste gravam no mesmo registro ao mesmo tempo.
+      const collaborator = randomUUID();
+      const service = new CalendarService({ calendars });
+      await service.publish(
+        2026,
+        { nonTradingDays: [{ date: '2026-01-01', reason: 'Ano novo' }] },
+        collaborator,
+      );
+      await service.publish(
+        2026,
+        { nonTradingDays: [{ date: '2026-02-16', reason: 'Carnaval' }] },
+        collaborator,
+      );
+
+      const entries = await auditTrail.byCollaborator(collaborator);
+      expect(entries).toEqual([
+        expect.objectContaining({
+          action: 'calendar_published',
+          entity: 'calendar_year',
+          entityId: '2026',
+          details: { before: null, after: [{ date: '2026-01-01', reason: 'Ano novo' }] },
+        }),
+        expect.objectContaining({
+          details: {
+            before: [{ date: '2026-01-01', reason: 'Ano novo' }],
+            after: [{ date: '2026-02-16', reason: 'Carnaval' }],
+          },
+        }),
+      ]);
+      expect(entries[0]?.at).toBeInstanceOf(Date);
+    });
+
+    it('publicação recusada pelo banco não grava auditoria', async () => {
+      const collaborator = randomUUID();
+      await expect(
+        publishList({
+          year: 2026,
+          publishedAt: new Date(),
+          publishedBy: collaborator,
+          nonTradingDays: [{ date: '2026-10-24', reason: 'Sábado' }],
+        }),
+      ).rejects.toThrow();
+      expect(await auditTrail.byCollaborator(collaborator)).toEqual([]);
+    });
+
+    it('o registro de auditoria só aceita inclusões (RNF15)', async () => {
+      const collaborator = randomUUID();
+      await publish(2026, collaborator);
+      await expect(
+        prisma.$executeRawUnsafe(
+          `UPDATE registro_auditoria SET entidade_id = 'x' WHERE colaborador_id = '${collaborator}'`,
+        ),
+      ).rejects.toThrow(/registro_auditoria_somente_insercao|só aceita inclusões/);
+      await expect(
+        prisma.$executeRawUnsafe(
+          `DELETE FROM registro_auditoria WHERE colaborador_id = '${collaborator}'`,
+        ),
+      ).rejects.toThrow(/registro_auditoria_somente_insercao|só aceita inclusões/);
+      expect(await auditTrail.byCollaborator(collaborator)).toHaveLength(1);
+    });
   });
 
   describe('restrições do banco (CA11)', () => {

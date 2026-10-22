@@ -1,9 +1,13 @@
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  AssetSearchQuery,
+  AssetUpdateInput,
   AuthErrorCode,
   CalendarErrorCode,
   CalendarPublication,
+  CatalogErrorCode,
+  CatalogQuery,
   ChangeEmailInput,
   ChangePasswordInput,
   ConfirmEmailChangeInput,
@@ -11,6 +15,7 @@ import type {
   EmailConfirmationResendInput,
   FieldErrors,
   LoginInput,
+  NewAssetInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   PublicUser,
@@ -56,10 +61,21 @@ export const CALENDAR_CHANNELS = {
   publish: 'calendar:publish',
 } as const;
 
+/** Canais IPC do catálogo de ativos (SPEC-006); manutenção só para colaborador. */
+export const ASSET_CHANNELS = {
+  search: 'assets:search',
+  catalog: 'assets:catalog',
+  create: 'assets:create',
+  update: 'assets:update',
+  deactivate: 'assets:deactivate',
+  reactivate: 'assets:reactivate',
+} as const;
+
 /** Erros que a interface sabe traduzir. */
 export type ClientAuthError =
   | AuthErrorCode
   | CalendarErrorCode
+  | CatalogErrorCode
   | 'server_unavailable'
   | 'invalid_url'
   | 'unexpected'
@@ -75,13 +91,17 @@ export type ClientResult<T> =
 export type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  AssetSearchQuery,
+  AssetUpdateInput,
   CalendarPublication,
+  CatalogQuery,
   ChangeEmailInput,
   ChangePasswordInput,
   ConfirmEmailChangeInput,
   EmailConfirmationInput,
   EmailConfirmationResendInput,
   LoginInput,
+  NewAssetInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   RegisterInput,

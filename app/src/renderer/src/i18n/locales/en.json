@@ -72,17 +72,13 @@
   },
   "home": {
     "greeting": "Hello, {{name}}!",
-    "next": "Your account is ready. Simulation portfolios arrive in the next versions.",
+    "next": "Your account is ready. You can already search stocks and REITs (FIIs); simulation portfolios are coming in future versions.",
     "logout": "Sign out",
-    "collaboratorNext": "Team tools (asset management and data collection monitoring) arrive in the next versions.",
+    "collaboratorNext": "Keep the trading calendar and the asset catalog up to date. Data collection monitoring is coming in future versions.",
     "profile": "My profile",
     "upcomingTitle": "What is coming",
     "soon": "Coming soon",
     "collabTools": {
-      "assets": {
-        "title": "Asset registry",
-        "text": "Register stocks and REITs with their class and sector or segment, so users can simulate."
-      },
       "ingestion": {
         "title": "Data collection monitoring",
         "text": "See the runs and failures of quote and news collection, and run them again when needed."
@@ -92,6 +88,22 @@
       "missing": "The {{year}} trading calendar hasn't been published. Until it is, entries dated in that year are blocked.",
       "nextYear": "The {{year}} trading calendar hasn't been published yet. Publish it by December 31.",
       "open": "Open the calendar"
+    },
+    "availableTitle": "Available now",
+    "open": "Open",
+    "tools": {
+      "search": {
+        "title": "Search assets",
+        "text": "Find stocks and REITs (FIIs) by ticker, name, sector or segment."
+      },
+      "calendar": {
+        "title": "Trading calendar",
+        "text": "Publish the weekdays when B3 is closed, checked against B3's official calendar."
+      },
+      "assets": {
+        "title": "Asset catalog",
+        "text": "Add and maintain the stocks and REITs (FIIs) users find in the search."
+      }
     }
   },
   "profile": {
@@ -156,7 +168,11 @@
     "invalid_date": "Enter a valid date.",
     "wrong_year": "The date must be in the selected year.",
     "weekend": "Weekends never have trading and are not listed.",
-    "duplicate": "This date is already on the list."
+    "duplicate": "This date is already on the list.",
+    "invalid_ticker": "Use the B3 code: 4 characters and 1 or 2 digits, like PETR4 or MXRF11.",
+    "invalid_option": "Choose an option from the list.",
+    "wrong_class": "This option doesn't belong to the asset's class.",
+    "immutable": "The class can't be changed after the asset is created."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -184,7 +200,9 @@
     "email_confirmation_unavailable": "Email confirmation is not available on this server.",
     "deletion_not_allowed": "Collaborator accounts are deleted by the team.",
     "forbidden": "This area is for the team only.",
-    "calendar_not_published": "The team hasn't published the trading calendar for that year yet. Without it, the app doesn't know which days the exchange was open."
+    "calendar_not_published": "The team hasn't published the trading calendar for that year yet. Without it, the app doesn't know which days the exchange was open.",
+    "ticker_in_use": "Another asset already uses this ticker.",
+    "asset_not_found": "This asset no longer exists. The list has been refreshed."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -317,7 +335,9 @@
     "skip": "Skip to content",
     "navLabel": "App navigation",
     "home": "Home",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "assets": "Assets",
+    "logoutLabel": "Sign out of your account"
   },
   "calendar": {
     "title": "Trading calendar",
@@ -348,5 +368,109 @@
     "confirmText": "The list replaces the previous one and takes effect immediately for everyone: any weekday not on it counts as a trading day.",
     "confirm": "Publish now",
     "publishedOk": "{{year}} calendar published."
+  },
+  "assets": {
+    "title": "Assets",
+    "subtitle": "Search stocks and Brazilian REITs (FIIs) to study and simulate.",
+    "catalogNote": "The catalog has the assets chosen by the team.",
+    "searchLabel": "Search by ticker or name",
+    "searchHint": "For example: PETR4, Itaú or logistics.",
+    "classFilter": "Class",
+    "allClasses": "All",
+    "sectorFilter": "Sector or segment",
+    "allSectors": "All",
+    "clear": "Clear filters",
+    "resultCount": "Assets found: {{count}}",
+    "searching": "Searching…",
+    "hasMore": "Showing the first 50. Refine the search to see the others.",
+    "empty": "No assets match this search.",
+    "emptyCatalog": "The catalog is still empty. The team is adding the assets.",
+    "listLabel": "Asset search results",
+    "columns": {
+      "asset": "Asset",
+      "class": "Class",
+      "sector": "Sector or segment",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "class": {
+      "stock": "Stock",
+      "fii": "REIT (FII)"
+    },
+    "classPlural": {
+      "stock": "Stocks",
+      "fii": "REITs (FIIs)"
+    },
+    "sectorLabel": {
+      "stock": "Sector",
+      "fii": "Segment"
+    },
+    "sectors": {
+      "stock": {
+        "bens_industriais": "Industrials",
+        "comunicacoes": "Communications",
+        "consumo_ciclico": "Consumer discretionary",
+        "consumo_nao_ciclico": "Consumer staples",
+        "financeiro": "Financials",
+        "materiais_basicos": "Basic materials",
+        "petroleo_gas_biocombustiveis": "Oil, gas and biofuels",
+        "saude": "Health care",
+        "tecnologia_informacao": "Information technology",
+        "utilidade_publica": "Utilities",
+        "outros": "Other"
+      },
+      "fii": {
+        "lajes_corporativas": "Office buildings",
+        "logistica": "Logistics",
+        "shoppings": "Shopping malls",
+        "recebiveis": "Real estate receivables",
+        "fundo_de_fundos": "Fund of funds",
+        "hibrido": "Hybrid",
+        "residencial": "Residential",
+        "hoteis": "Hotels",
+        "renda_urbana": "Urban income",
+        "desenvolvimento": "Development",
+        "outros": "Other"
+      }
+    }
+  },
+  "catalog": {
+    "title": "Asset catalog",
+    "subtitle": "The assets users find in the search. Assets are never deleted, only deactivated. Every change is logged.",
+    "statusFilter": "Status",
+    "statusAll": "All",
+    "statusActive": "Active",
+    "statusInactive": "Deactivated",
+    "activeCount": "Active assets in the catalog: {{count}}",
+    "capacityWarning": "The free quote collection supports about {{limit}} assets. Above that, deactivate some or use a paid quote plan.",
+    "new": "New asset",
+    "newTitle": "New asset",
+    "editTitle": "Edit {{ticker}}",
+    "ticker": "Ticker",
+    "tickerHint": "B3 code, like PETR4 or MXRF11.",
+    "name": "Name",
+    "class": "Class",
+    "classHint": "The class can't be changed after the asset is created.",
+    "choose": "Choose…",
+    "create": "Add asset",
+    "save": "Save",
+    "created": "{{ticker}} added.",
+    "updated": "{{ticker}} updated.",
+    "unchanged": "Nothing changed in {{ticker}}.",
+    "deactivated": "{{ticker}} deactivated.",
+    "reactivated": "{{ticker}} reactivated.",
+    "edit": "Edit",
+    "editLabel": "Edit {{ticker}}",
+    "deactivate": "Deactivate",
+    "deactivateLabel": "Deactivate {{ticker}}",
+    "reactivate": "Reactivate",
+    "reactivateLabel": "Reactivate {{ticker}}",
+    "deactivateConfirm": "{{ticker}} disappears from the search and can't be bought anymore. Anyone who already holds it still sees it and can sell.",
+    "confirmDeactivate": "Deactivate now",
+    "active": "Active",
+    "inactive": "Deactivated",
+    "empty": "No assets match these filters.",
+    "emptyCatalog": "No assets yet. Start with \"New asset\".",
+    "listLabel": "Catalog assets"
   }
 }

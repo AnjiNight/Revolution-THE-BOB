@@ -1,11 +1,15 @@
 import type {
+  AssetSearchResult,
   CalendarSuggestion,
+  CatalogAsset,
+  CatalogListResult,
   ConsentList,
   TradingCalendarYear,
   UserProfile,
 } from '@simulador/shared';
 import { contextBridge, ipcRenderer } from 'electron';
 import {
+  ASSET_CHANNELS,
   AUTH_CHANNELS,
   CALENDAR_CHANNELS,
   PROFILE_CHANNELS,
@@ -56,6 +60,14 @@ const api: DesktopApi = {
       invoke<ClientResult<CalendarSuggestion>>(CALENDAR_CHANNELS.suggestion, year),
     publish: (year, input) =>
       invoke<ClientResult<TradingCalendarYear>>(CALENDAR_CHANNELS.publish, year, input),
+  },
+  assets: {
+    search: (query) => invoke<ClientResult<AssetSearchResult>>(ASSET_CHANNELS.search, query),
+    catalog: (query) => invoke<ClientResult<CatalogListResult>>(ASSET_CHANNELS.catalog, query),
+    create: (input) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.create, input),
+    update: (id, input) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.update, id, input),
+    deactivate: (id) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.deactivate, id),
+    reactivate: (id) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.reactivate, id),
   },
 };
 

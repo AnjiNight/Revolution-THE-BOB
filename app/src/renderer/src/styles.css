@@ -267,6 +267,7 @@ input[type='text'],
 input[type='email'],
 input[type='password'],
 input[type='date'],
+input[type='search'],
 select {
   width: 100%;
   min-height: 2.75rem;
@@ -283,6 +284,7 @@ input[type='text']:hover,
 input[type='email']:hover,
 input[type='password']:hover,
 input[type='date']:hover,
+input[type='search']:hover,
 select:hover:not(:disabled) {
   border-color: var(--muted);
 }

@@ -8,7 +8,7 @@ import {
   registerSchema,
 } from '@simulador/shared';
 import type { FastifyInstance } from 'fastify';
-import { DomainError } from '../../../shared/domain/domain-error.js';
+import { domainErrorRunner, type DomainErrorTable } from '../../../shared/http/domain-errors.js';
 import { HttpError } from '../../../shared/http/http-error.js';
 import { parseBody } from '../../../shared/http/validation.js';
 import type { AuthService } from '../application/auth-service.js';
@@ -19,7 +19,7 @@ export interface AuthRoutesOptions {
   rateLimitPerMinute: number;
 }
 
-const DOMAIN_ERROR_HTTP: Record<string, { status: number; message: string }> = {
+const DOMAIN_ERROR_HTTP: DomainErrorTable = {
   email_in_use: { status: 409, message: 'Este e-mail já está em uso.' },
   invalid_credentials: { status: 401, message: 'E-mail ou senha incorretos.' },
   invalid_refresh_token: { status: 401, message: 'Sessão expirada. Entre novamente.' },
@@ -58,17 +58,7 @@ const DOMAIN_ERROR_HTTP: Record<string, { status: number; message: string }> = {
 };
 
 /** Converte erros do domínio de identidade em respostas HTTP. */
-export async function run<T>(action: () => Promise<T>): Promise<T> {
-  try {
-    return await action();
-  } catch (error) {
-    const mapped = error instanceof DomainError ? DOMAIN_ERROR_HTTP[error.code] : undefined;
-    if (error instanceof DomainError && mapped) {
-      throw new HttpError(mapped.status, error.code, mapped.message);
-    }
-    throw error;
-  }
-}
+export const run = domainErrorRunner(DOMAIN_ERROR_HTTP);
 
 export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOptions): void {
   const { auth } = options;

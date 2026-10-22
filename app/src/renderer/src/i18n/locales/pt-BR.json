@@ -72,17 +72,13 @@
   },
   "home": {
     "greeting": "Olá, {{name}}!",
-    "next": "Sua conta está pronta. As carteiras de simulação chegam nas próximas versões.",
+    "next": "Sua conta está pronta. Já dá para buscar ações e FIIs; as carteiras de simulação chegam nas próximas versões.",
     "logout": "Sair",
-    "collaboratorNext": "As ferramentas da equipe (cadastro de ativos e acompanhamento da coleta de dados) chegam nas próximas versões.",
+    "collaboratorNext": "Mantenha o calendário de pregão e o catálogo de ativos. O acompanhamento da coleta de dados chega nas próximas versões.",
     "profile": "Meu perfil",
     "upcomingTitle": "O que vem por aí",
     "soon": "Em breve",
     "collabTools": {
-      "assets": {
-        "title": "Cadastro de ativos",
-        "text": "Cadastrar ações e FIIs com classe e setor ou segmento, para os usuários simularem."
-      },
       "ingestion": {
         "title": "Acompanhamento da coleta",
         "text": "Ver as execuções e as falhas da coleta de cotações e notícias, e repetir quando precisar."
@@ -92,6 +88,22 @@
       "missing": "O calendário de pregão de {{year}} não foi publicado. Sem ele, os lançamentos com datas desse ano ficam bloqueados.",
       "nextYear": "O calendário de pregão de {{year}} ainda não foi publicado. Publique até 31 de dezembro.",
       "open": "Abrir o calendário"
+    },
+    "availableTitle": "Disponível agora",
+    "open": "Abrir",
+    "tools": {
+      "search": {
+        "title": "Buscar ativos",
+        "text": "Encontre ações e FIIs por ticker, nome, setor ou segmento."
+      },
+      "calendar": {
+        "title": "Calendário de pregão",
+        "text": "Publique os dias úteis em que a B3 não abre, conferidos com o calendário oficial."
+      },
+      "assets": {
+        "title": "Catálogo de ativos",
+        "text": "Cadastre e mantenha as ações e os FIIs que os usuários encontram na busca."
+      }
     }
   },
   "profile": {
@@ -156,7 +168,11 @@
     "invalid_date": "Informe uma data válida.",
     "wrong_year": "A data precisa ser do ano escolhido.",
     "weekend": "Fim de semana nunca tem pregão e não entra na lista.",
-    "duplicate": "Esta data já está na lista."
+    "duplicate": "Esta data já está na lista.",
+    "invalid_ticker": "Use o código da B3: 4 caracteres e 1 ou 2 números, como PETR4 ou MXRF11.",
+    "invalid_option": "Escolha uma opção da lista.",
+    "wrong_class": "Esta opção não é da classe do ativo.",
+    "immutable": "A classe não pode ser mudada depois do cadastro."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -184,7 +200,9 @@
     "email_confirmation_unavailable": "A confirmação de e-mail não está disponível neste servidor.",
     "deletion_not_allowed": "A exclusão de contas de colaborador é feita pela equipe.",
     "forbidden": "Esta área é só da equipe.",
-    "calendar_not_published": "O calendário de pregão desse ano ainda não foi publicado pela equipe. Sem ele, o app não sabe em quais dias a bolsa abriu."
+    "calendar_not_published": "O calendário de pregão desse ano ainda não foi publicado pela equipe. Sem ele, o app não sabe em quais dias a bolsa abriu.",
+    "ticker_in_use": "Outro ativo já usa este ticker.",
+    "asset_not_found": "Este ativo não existe mais. A lista foi atualizada."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -317,7 +335,9 @@
     "skip": "Pular para o conteúdo",
     "navLabel": "Navegação do app",
     "home": "Início",
-    "calendar": "Calendário"
+    "calendar": "Calendário",
+    "assets": "Ativos",
+    "logoutLabel": "Sair da conta"
   },
   "calendar": {
     "title": "Calendário de pregão",
@@ -348,5 +368,109 @@
     "confirmText": "A lista substitui a anterior e passa a valer na hora para todos: de segunda a sexta, toda data fora dela conta como dia de pregão.",
     "confirm": "Publicar agora",
     "publishedOk": "Calendário de {{year}} publicado."
+  },
+  "assets": {
+    "title": "Ativos",
+    "subtitle": "Busque ações e fundos imobiliários (FIIs) para estudar e simular.",
+    "catalogNote": "O catálogo tem os ativos escolhidos pela equipe.",
+    "searchLabel": "Buscar por ticker ou nome",
+    "searchHint": "Por exemplo: PETR4, Itaú ou logística.",
+    "classFilter": "Classe",
+    "allClasses": "Todas",
+    "sectorFilter": "Setor ou segmento",
+    "allSectors": "Todos",
+    "clear": "Limpar filtros",
+    "resultCount": "Ativos encontrados: {{count}}",
+    "searching": "Buscando…",
+    "hasMore": "Mostrando os 50 primeiros. Refine a busca para ver os outros.",
+    "empty": "Nenhum ativo encontrado com essa busca.",
+    "emptyCatalog": "O catálogo ainda está vazio. A equipe está cadastrando os ativos.",
+    "listLabel": "Resultado da busca de ativos",
+    "columns": {
+      "asset": "Ativo",
+      "class": "Classe",
+      "sector": "Setor ou segmento",
+      "status": "Situação",
+      "actions": "Ações"
+    },
+    "class": {
+      "stock": "Ação",
+      "fii": "FII"
+    },
+    "classPlural": {
+      "stock": "Ações",
+      "fii": "FIIs"
+    },
+    "sectorLabel": {
+      "stock": "Setor",
+      "fii": "Segmento"
+    },
+    "sectors": {
+      "stock": {
+        "bens_industriais": "Bens industriais",
+        "comunicacoes": "Comunicações",
+        "consumo_ciclico": "Consumo cíclico",
+        "consumo_nao_ciclico": "Consumo não cíclico",
+        "financeiro": "Financeiro",
+        "materiais_basicos": "Materiais básicos",
+        "petroleo_gas_biocombustiveis": "Petróleo, gás e biocombustíveis",
+        "saude": "Saúde",
+        "tecnologia_informacao": "Tecnologia da informação",
+        "utilidade_publica": "Utilidade pública",
+        "outros": "Outros"
+      },
+      "fii": {
+        "lajes_corporativas": "Lajes corporativas",
+        "logistica": "Logística",
+        "shoppings": "Shoppings",
+        "recebiveis": "Recebíveis (papel)",
+        "fundo_de_fundos": "Fundo de fundos",
+        "hibrido": "Híbrido",
+        "residencial": "Residencial",
+        "hoteis": "Hotéis",
+        "renda_urbana": "Renda urbana",
+        "desenvolvimento": "Desenvolvimento",
+        "outros": "Outros"
+      }
+    }
+  },
+  "catalog": {
+    "title": "Catálogo de ativos",
+    "subtitle": "Os ativos que os usuários encontram na busca. Ativo nunca é apagado: é desativado. Cada mudança fica registrada.",
+    "statusFilter": "Situação",
+    "statusAll": "Todos",
+    "statusActive": "Ativos",
+    "statusInactive": "Desativados",
+    "activeCount": "Ativos no catálogo: {{count}}",
+    "capacityWarning": "A coleta gratuita de cotações comporta cerca de {{limit}} ativos. Acima disso, desative alguns ou use um plano pago de cotações.",
+    "new": "Novo ativo",
+    "newTitle": "Novo ativo",
+    "editTitle": "Editar {{ticker}}",
+    "ticker": "Ticker",
+    "tickerHint": "Código da B3, como PETR4 ou MXRF11.",
+    "name": "Nome",
+    "class": "Classe",
+    "classHint": "A classe não pode ser mudada depois do cadastro.",
+    "choose": "Escolha…",
+    "create": "Cadastrar",
+    "save": "Salvar",
+    "created": "{{ticker}} cadastrado.",
+    "updated": "{{ticker}} atualizado.",
+    "unchanged": "Nada mudou em {{ticker}}.",
+    "deactivated": "{{ticker}} desativado.",
+    "reactivated": "{{ticker}} reativado.",
+    "edit": "Editar",
+    "editLabel": "Editar {{ticker}}",
+    "deactivate": "Desativar",
+    "deactivateLabel": "Desativar {{ticker}}",
+    "reactivate": "Reativar",
+    "reactivateLabel": "Reativar {{ticker}}",
+    "deactivateConfirm": "{{ticker}} some da busca e não pode mais ser comprado. Quem já tem continua vendo e pode vender.",
+    "confirmDeactivate": "Desativar agora",
+    "active": "Ativo",
+    "inactive": "Desativado",
+    "empty": "Nenhum ativo com esses filtros.",
+    "emptyCatalog": "Nenhum ativo cadastrado ainda. Comece por \"Novo ativo\".",
+    "listLabel": "Ativos do catálogo"
   }
 }

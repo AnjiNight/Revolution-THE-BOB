@@ -21,6 +21,7 @@
 | 1.11 | Nova SPEC-039 (confirmação de e-mail, RF43 e RB23 da versão 1.7 dos requisitos), na Fase 1, logo depois da SPEC-004; aprovada e implementada |
 | 1.12 | SPEC-034 detalhada ([SPEC-034.md](SPEC-034.md)), aprovada e implementada: OPEN-04 resolvida (JSON versionado, baixado pelo app) e regra da OPEN-40 decidida (backups e logs por no máximo 30 dias) |
 | 1.13 | SPEC-005 detalhada ([SPEC-005.md](SPEC-005.md)), aprovada e implementada; OPEN-01 resolvida (calendário oficial da B3, conferido e publicado pelo colaborador, com sugestão automática) |
+| 1.14 | SPEC-006 detalhada ([SPEC-006.md](SPEC-006.md)), aprovada e implementada, com o registro de auditoria (RNF15) que passa a valer também para o calendário da SPEC-005; OPEN-41 resolvida (busca só no catálogo da equipe) |
 
 ---
 
@@ -291,7 +292,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
 | OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
 | OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
-| OPEN-41 | Busca de ativos: só no catálogo curado ou em qualquer ticker da B3 | INC-09 | 006 |
+| OPEN-41 | ✅ **Resolvida na [SPEC-006](SPEC-006.md):** a busca procura só nos ativos ativos do catálogo da equipe | INC-09 | 006 |
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
 | OPEN-44 | Aprovar no modelo conceitual as entidades previstas na arquitetura §9 | INC-05 | Várias (marcadas com `†`) |
@@ -473,6 +474,8 @@ Visão geral por fase:
 
 #### SPEC-006 — Catálogo de ativos: manutenção e busca
 
+📄 Detalhada em [SPEC-006.md](SPEC-006.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O colaborador cadastra, edita e ativa/desativa ativos informando ticker, nome, **classe** (Ação ou FII, imutável) e **setor** (ações) ou **segmento** (FIIs); o usuário busca ativos por ticker, nome, classe, setor ou segmento |
@@ -486,7 +489,7 @@ Visão geral por fase:
 | ADRs | DA12, DA16 (catálogo curado de ~40–50 ativos, divididos entre ações e FIIs), DA22, DA23 |
 | Depende de | SPEC-002 |
 | Posição | O ativo é referenciado por cotações, lançamentos e notícias; precisa existir antes da ingestão |
-| Em aberto | OPEN-03, OPEN-41 |
+| Em aberto | OPEN-03 e OPEN-41 resolvidas (SPEC-002 e SPEC-006) |
 | Prioridade derivada | Must (RF07); Should (RF39) |
 
 #### SPEC-008 — Carga do histórico diário de cotações

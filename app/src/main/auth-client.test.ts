@@ -1,4 +1,11 @@
-import { AUTH_PATHS, CALENDAR_PATHS, calendarPath, PROFILE_PATHS } from '@simulador/shared';
+import {
+  ASSET_PATHS,
+  assetPath,
+  AUTH_PATHS,
+  CALENDAR_PATHS,
+  calendarPath,
+  PROFILE_PATHS,
+} from '@simulador/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthClient } from './auth-client.js';
 import { MemorySecretStore } from './secret-store.js';
@@ -11,9 +18,17 @@ const profile = {
   createdAt: '2026-10-10T12:00:00.000Z',
 };
 
+const ASSET = {
+  id: '0d9e1f7a-1111-4222-8333-444455556666',
+  ticker: 'PETR4',
+  name: 'Petrobras PN',
+  class: 'stock' as const,
+  sector: 'petroleo_gas_biocombustiveis' as const,
+};
+
 /** Servidor falso com o comportamento das rotas da SPEC-002. */
 class FakeServer {
-  calls: Array<{ method: string; path: string; authorization?: string }> = [];
+  calls: Array<{ method: string; path: string; search?: string; authorization?: string }> = [];
   validAccess = new Set<string>();
   validRefresh = new Set<string>();
   counter = 0;
@@ -39,6 +54,7 @@ class FakeServer {
     this.calls.push({
       method: init?.method ?? 'GET',
       path: url.pathname,
+      ...(url.search ? { search: url.search } : {}),
       ...(headers.authorization ? { authorization: headers.authorization } : {}),
     });
     const json = (status: number, data: unknown) => Response.json(data, { status });
@@ -133,6 +149,17 @@ class FakeServer {
           message: 'x',
           fields: { 'nonTradingDays.0.date': 'weekend' },
         });
+      // SPEC-006: a conta "Ana" busca; as rotas do colaborador recusam.
+      case ASSET_PATHS.search:
+        return json(200, { assets: [ASSET], hasMore: false });
+      case ASSET_PATHS.catalog:
+        return init?.method === 'POST'
+          ? json(409, { error: 'ticker_in_use', message: 'x' })
+          : json(403, { error: 'forbidden', message: 'x' });
+      case assetPath(ASSET_PATHS.deactivate, ASSET.id):
+        return json(200, { asset: { ...ASSET, active: false } });
+      case assetPath(ASSET_PATHS.asset, ASSET.id):
+        return json(404, { error: 'asset_not_found', message: 'x' });
       default:
         return json(500, { error: 'internal_error', message: 'x' });
     }
@@ -477,6 +504,56 @@ describe('calendário de pregão (SPEC-005)', () => {
     const before = server.calls.length;
     for (const year of [1999, 2101, 2026.5, Number.NaN]) {
       await expect(client.getCalendar(year)).resolves.toEqual({ ok: false, error: 'unexpected' });
+    }
+    expect(server.calls).toHaveLength(before);
+  });
+});
+
+describe('catálogo de ativos (SPEC-006)', () => {
+  it('busca com os filtros na query string, sem os vazios', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.searchAssets({ q: 'petr', class: 'stock' })).resolves.toEqual({
+      ok: true,
+      data: { assets: [ASSET], hasMore: false },
+    });
+    expect(server.calls.at(-1)).toMatchObject({
+      method: 'GET',
+      path: ASSET_PATHS.search,
+      search: '?q=petr&class=stock',
+      authorization: 'Bearer access-1',
+    });
+    await client.searchAssets({ q: '' });
+    expect(server.calls.at(-1)?.search).toBeUndefined();
+  });
+
+  it('traduz 403, 409 e 404 e devolve o ativo das ações', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.assetCatalog({ q: '', status: 'all' })).resolves.toEqual({
+      ok: false,
+      error: 'forbidden',
+    });
+    await expect(
+      client.createAsset({ ticker: 'PETR4', name: 'Petrobras', class: 'stock', sector: 'outros' }),
+    ).resolves.toEqual({ ok: false, error: 'ticker_in_use' });
+    await expect(client.updateAsset(ASSET.id, { name: 'Outro' })).resolves.toEqual({
+      ok: false,
+      error: 'asset_not_found',
+    });
+    await expect(client.deactivateAsset(ASSET.id)).resolves.toEqual({
+      ok: true,
+      data: { ...ASSET, active: false },
+    });
+  });
+
+  it('id que não é UUID nem chega ao servidor', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    const before = server.calls.length;
+    for (const id of ['../../me', 'abc', '']) {
+      await expect(client.deactivateAsset(id)).resolves.toEqual({ ok: false, error: 'unexpected' });
+      await expect(client.updateAsset(id, { name: 'x' })).resolves.toEqual({
+        ok: false,
+        error: 'unexpected',
+      });
     }
     expect(server.calls).toHaveLength(before);
   });

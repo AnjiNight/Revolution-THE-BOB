@@ -146,3 +146,5 @@ CALENDARIO_PREGAO† vira estas duas tabelas. A migração tem `down.sql` (RNF17
 Total: **375 testes** passando (com o banco real), lint, tipos, formatação e build.
 
 **Para as próximas Specs:** as cotações e os lançamentos (SPEC-008, 009, 012–015) pedem as regras com `CalendarService.tradingCalendar(de, até)` e, quando a data cai num ano não publicado, respondem com o código `calendar_not_published`. O app já tem o aviso que explica o motivo (`authErrors.calendar_not_published`).
+
+> **Nota (SPEC-006, 22/10/2026):** cada publicação também passa a ser gravada no registro de auditoria (RNF15), com a lista anterior e a nova, na mesma transação. Ver [SPEC-006](SPEC-006.md).

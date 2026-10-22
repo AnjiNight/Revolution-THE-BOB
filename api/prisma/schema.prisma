@@ -142,3 +142,76 @@ model DiaSemPregao {
   @@index([ano])
   @@map("dia_sem_pregao")
 }
+
+/// Classe do ativo (DA23, RB22): lista fechada, escolhida no cadastro e nunca alterada (gatilho na
+/// migração). "acao" inclui as units.
+enum ClasseAtivo {
+  acao
+  fii
+
+  @@map("classe_ativo")
+}
+
+/// Setor (ações) ou segmento (FIIs) da lista fixa da SPEC-006 §4. Preenchida pela migração; o app
+/// só lê. O mesmo código pode existir nas duas classes ("outros").
+model Setor {
+  classe ClasseAtivo
+  codigo String      @db.VarChar(40)
+
+  ativos Ativo[]
+
+  @@id([classe, codigo])
+  @@map("setor")
+}
+
+/// Ativo do catálogo (SPEC-006). Nunca é apagado: sem "desativado_em" ele está ativo. O par
+/// (classe, setor) aponta para "setor", o que garante setor da mesma classe do ativo.
+model Ativo {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticker       String      @unique @db.VarChar(6)
+  nome         String      @db.VarChar(100)
+  classe       ClasseAtivo
+  setor        String      @db.VarChar(40)
+  criadoEm     DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime    @map("atualizado_em") @db.Timestamptz(3)
+  desativadoEm DateTime?   @map("desativado_em") @db.Timestamptz(3)
+
+  setorAtivo Setor @relation(fields: [classe, setor], references: [classe, codigo], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([classe, setor])
+  @@map("ativo")
+}
+
+/// O que a equipe fez (SPEC-006, RNF15).
+enum AcaoAuditoria {
+  ativo_cadastrado
+  ativo_editado
+  ativo_desativado
+  ativo_reativado
+  calendario_publicado
+
+  @@map("acao_auditoria")
+}
+
+enum EntidadeAuditoria {
+  ativo
+  ano_calendario
+
+  @@map("entidade_auditoria")
+}
+
+/// Registro de auditoria das ações administrativas (SPEC-006, RNF15). Só aceita inclusões (gatilho
+/// na migração). "colaborador_id" é só o id, sem chave estrangeira, e "detalhes" (antes e depois)
+/// nunca tem dado pessoal (DA13).
+model RegistroAuditoria {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ocorridoEm    DateTime          @map("ocorrido_em") @db.Timestamptz(3)
+  colaboradorId String            @map("colaborador_id") @db.Uuid
+  acao          AcaoAuditoria
+  entidade      EntidadeAuditoria
+  entidadeId    String            @map("entidade_id") @db.VarChar(64)
+  detalhes      Json              @db.JsonB
+
+  @@index([entidade, entidadeId, ocorridoEm])
+  @@map("registro_auditoria")
+}

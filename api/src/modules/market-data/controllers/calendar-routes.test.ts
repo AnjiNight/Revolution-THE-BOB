@@ -175,4 +175,27 @@ describe('rotas do calendário de pregão (SPEC-005)', () => {
     const both = await t.calendar.tradingCalendar(2026, 2026);
     expect(both.nextTradingDay('2026-12-30')).toBe('2027-01-04');
   });
+
+  it('cada publicação vai para a auditoria com a lista anterior e a nova (SPEC-006, CA07)', async () => {
+    await publish(2026, [{ date: '2026-01-01', reason: 'Ano novo' }]);
+    await publish(2026, [{ date: '2026-02-16', reason: 'Carnaval' }]);
+    // Publicação recusada não grava nada.
+    await publish(2026, [{ date: '2026-10-24', reason: 'Sábado' }]);
+    await publish(2026, [{ date: '2026-01-01', reason: 'x' }], user);
+
+    expect(t.audit.forEntity('calendar_year', '2026')).toEqual([
+      expect.objectContaining({
+        at: NOW,
+        collaboratorId: collaborator.user.id,
+        action: 'calendar_published',
+        details: { before: null, after: [{ date: '2026-01-01', reason: 'Ano novo' }] },
+      }),
+      expect.objectContaining({
+        details: {
+          before: [{ date: '2026-01-01', reason: 'Ano novo' }],
+          after: [{ date: '2026-02-16', reason: 'Carnaval' }],
+        },
+      }),
+    ]);
+  });
 });

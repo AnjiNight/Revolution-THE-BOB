@@ -86,6 +86,8 @@ O colaborador entra pela **Área do colaborador**, na tela de login.
 
 **Calendário de pregão** ([SPEC-005](specs/SPEC-005.md)): enquanto um ano não é publicado, o app recusa datas dele. Na Área do colaborador, abra **Calendário**, clique em **Carregar sugestão**, confira com o calendário oficial da B3 e clique em **Publicar**. O ano seguinte deve ser publicado até 31 de dezembro (o Início do colaborador avisa desde 1º de dezembro).
 
+**Catálogo de ativos** ([SPEC-006](specs/SPEC-006.md)): a busca do usuário só mostra os ativos que a equipe cadastrou. Na Área do colaborador, abra **Ativos** e use **Novo ativo** (ticker, nome, classe Ação ou FII e setor ou segmento). A classe não muda depois do cadastro, e ativo nunca é apagado: é desativado. Cada mudança no catálogo e cada publicação do calendário ficam no registro de auditoria.
+
 ### Login com Google (opcional)
 
 O botão "Continuar com o Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)). O login abre o navegador do sistema: se a pessoa já estiver conectada ao Google lá, basta escolher a conta.

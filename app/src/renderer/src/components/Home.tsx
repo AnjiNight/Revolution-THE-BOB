@@ -11,6 +11,7 @@ import {
   ClockCounterClockwise,
   Database,
   Lightning,
+  MagnifyingGlass,
   Pulse,
   type Icon,
 } from '@phosphor-icons/react';
@@ -21,9 +22,22 @@ import { isTermsOutdated, TermsUpdateNotice } from './Profile';
 interface HomeProps {
   user: PublicUser;
   onOpenProfile: () => void;
-  /** SPEC-005: abre o calendário de pregão no ano do aviso. */
-  onOpenCalendar: (year: number) => void;
+  /** SPEC-005: abre o calendário de pregão (no ano do aviso, se vier de um). */
+  onOpenCalendar: (year?: number) => void;
+  /** SPEC-006: busca (usuário) ou catálogo (colaborador). */
+  onOpenAssets: () => void;
 }
+
+type Tool = 'search' | 'calendar' | 'assets';
+
+/** O que já funciona: a busca para o usuário; o calendário e o catálogo para o colaborador. */
+const AVAILABLE: Record<PublicUser['role'], ReadonlyArray<{ tool: Tool; icon: Icon }>> = {
+  user: [{ tool: 'search', icon: MagnifyingGlass }],
+  collaborator: [
+    { tool: 'calendar', icon: CalendarBlank },
+    { tool: 'assets', icon: Database },
+  ],
+};
 
 /** O que vem nas próximas versões: carteiras para o usuário, ferramentas para o colaborador. */
 const UPCOMING: Record<
@@ -44,11 +58,6 @@ const UPCOMING: Record<
   ],
   collaborator: [
     {
-      title: 'home.collabTools.assets.title',
-      text: 'home.collabTools.assets.text',
-      icon: Database,
-    },
-    {
       title: 'home.collabTools.ingestion.title',
       text: 'home.collabTools.ingestion.text',
       icon: Pulse,
@@ -56,7 +65,7 @@ const UPCOMING: Record<
   ],
 };
 
-export function Home({ user, onOpenProfile, onOpenCalendar }: HomeProps) {
+export function Home({ user, onOpenProfile, onOpenCalendar, onOpenAssets }: HomeProps) {
   const { t } = useTranslation();
   const [consents, setConsents] = useState<ConsentList | null>(null);
   const [accepting, setAccepting] = useState(false);
@@ -99,6 +108,41 @@ export function Home({ user, onOpenProfile, onOpenCalendar }: HomeProps) {
           </span>
         </button>
       </header>
+
+      <section className="upcoming available" aria-labelledby="available-title">
+        <h2 id="available-title" className="section-label">
+          {t('home.availableTitle')}
+        </h2>
+        <ul className="upcoming-grid">
+          {AVAILABLE[user.role].map(({ tool, icon: ItemIcon }) => {
+            const title = t(`home.tools.${tool}.title`);
+            return (
+              <li key={tool} className="bezel">
+                <div className="bezel-core upcoming-card available-card">
+                  <div className="upcoming-head">
+                    <span className="round-icon" aria-hidden="true">
+                      <ItemIcon weight="light" />
+                    </span>
+                  </div>
+                  <h3>{title}</h3>
+                  <p>{t(`home.tools.${tool}.text`)}</p>
+                  <button
+                    type="button"
+                    className="pill pill-ghost pill-small"
+                    aria-label={`${t('home.open')}: ${title}`}
+                    onClick={() => (tool === 'calendar' ? onOpenCalendar() : onOpenAssets())}
+                  >
+                    {t('home.open')}
+                    <span className="pill-icon" aria-hidden="true">
+                      <ArrowUpRight weight="bold" />
+                    </span>
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <section className="upcoming" aria-labelledby="upcoming-title">
         <h2 id="upcoming-title" className="section-label">

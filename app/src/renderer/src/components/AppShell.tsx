@@ -8,19 +8,21 @@ import { ServerStatusPanel } from './ServerStatusPanel';
 
 interface AppShellProps {
   user: PublicUser;
-  current: 'home' | 'profile' | 'calendar';
+  current: 'home' | 'profile' | 'calendar' | 'assets';
   onHome: () => void;
   onProfile: () => void;
   /** SPEC-005: só na Área do colaborador. */
   onCalendar: () => void;
+  /** SPEC-006: busca (usuário) ou catálogo (colaborador). */
+  onAssets: () => void;
   onLogout: () => void;
   children: ReactNode;
 }
 
 /**
- * Moldura das telas depois do login (Início, Meu perfil e, para o colaborador, o Calendário): a
- * mesma navegação flutuante da página de entrada, com a pessoa conectada e o botão Sair, e a
- * situação do servidor no rodapé.
+ * Moldura das telas depois do login (Início, Ativos, Meu perfil e, para o colaborador, o
+ * Calendário): a mesma navegação flutuante da página de entrada, com a pessoa conectada e o
+ * botão Sair, e a situação do servidor no rodapé.
  */
 export function AppShell({
   user,
@@ -28,6 +30,7 @@ export function AppShell({
   onHome,
   onProfile,
   onCalendar,
+  onAssets,
   onLogout,
   children,
 }: AppShellProps) {
@@ -63,6 +66,11 @@ export function AppShell({
               </li>
             )}
             <li>
+              <button type="button" aria-current={ariaCurrent('assets')} onClick={onAssets}>
+                {t('shell.assets')}
+              </button>
+            </li>
+            <li>
               <button type="button" aria-current={ariaCurrent('profile')} onClick={onProfile}>
                 {t('home.profile')}
               </button>
@@ -73,8 +81,13 @@ export function AppShell({
             <span className="avatar" aria-hidden="true" title={user.name}>
               {initials(user.name)}
             </span>
-            <button type="button" className="pill pill-ghost pill-small" onClick={onLogout}>
-              {t('home.logout')}
+            <button
+              type="button"
+              className="pill pill-ghost pill-small logout-button"
+              aria-label={t('shell.logoutLabel')}
+              onClick={onLogout}
+            >
+              <span className="logout-text">{t('home.logout')}</span>
               <span className="pill-icon" aria-hidden="true">
                 <SignOut weight="bold" />
               </span>

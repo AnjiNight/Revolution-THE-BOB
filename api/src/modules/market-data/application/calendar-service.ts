@@ -33,18 +33,28 @@ export class CalendarService {
     return { year, nonTradingDays: suggestNonTradingDays(year) };
   }
 
-  /** Colaborador: publica (ou republica) o ano. A lista já chega validada (CA05). */
+  /**
+   * Colaborador: publica (ou republica) o ano. A lista já chega validada (CA05). A auditoria guarda
+   * a lista anterior e a nova (SPEC-006, RNF15).
+   */
   async publish(
     year: number,
     publication: CalendarPublication,
     collaboratorId: string,
   ): Promise<TradingCalendarYear> {
-    const stored = await this.deps.calendars.publish({
-      year,
-      publishedAt: this.clock(),
-      publishedBy: collaboratorId,
-      nonTradingDays: publication.nonTradingDays,
-    });
+    const now = this.clock();
+    const after = publication.nonTradingDays.map(({ date, reason }) => ({ date, reason }));
+    const stored = await this.deps.calendars.publish(
+      { year, publishedAt: now, publishedBy: collaboratorId, nonTradingDays: after },
+      (before) => ({
+        at: now,
+        collaboratorId,
+        action: 'calendar_published',
+        entity: 'calendar_year',
+        entityId: String(year),
+        details: { before: before?.map(({ date, reason }) => ({ date, reason })) ?? null, after },
+      }),
+    );
     return toPublic(stored);
   }
 

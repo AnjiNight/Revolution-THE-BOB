@@ -3,20 +3,29 @@ import { join } from 'node:path';
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  AssetSearchQuery,
+  AssetUpdateInput,
   CalendarPublication,
+  CatalogQuery,
   ChangeEmailInput,
   ChangePasswordInput,
   ConfirmEmailChangeInput,
   EmailConfirmationInput,
   EmailConfirmationResendInput,
   LoginInput,
+  NewAssetInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   RegisterInput,
   UpdateNameInput,
 } from '@simulador/shared';
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
-import { AUTH_CHANNELS, CALENDAR_CHANNELS, PROFILE_CHANNELS } from '../shared/auth-ipc.js';
+import {
+  ASSET_CHANNELS,
+  AUTH_CHANNELS,
+  CALENDAR_CHANNELS,
+  PROFILE_CHANNELS,
+} from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL } from '../shared/server-status.js';
 import { AuthClient } from './auth-client.js';
 import { saveDataExport } from './data-export.js';
@@ -178,6 +187,18 @@ app.whenReady().then(() => {
   ipcMain.handle(CALENDAR_CHANNELS.publish, (_event, year: number, input: CalendarPublication) =>
     auth.publishCalendar(year, input),
   );
+
+  // Catálogo de ativos (SPEC-006): o servidor confere se a conta é de colaborador.
+  ipcMain.handle(ASSET_CHANNELS.search, (_event, query: AssetSearchQuery) =>
+    auth.searchAssets(query),
+  );
+  ipcMain.handle(ASSET_CHANNELS.catalog, (_event, query: CatalogQuery) => auth.assetCatalog(query));
+  ipcMain.handle(ASSET_CHANNELS.create, (_event, input: NewAssetInput) => auth.createAsset(input));
+  ipcMain.handle(ASSET_CHANNELS.update, (_event, id: string, input: AssetUpdateInput) =>
+    auth.updateAsset(id, input),
+  );
+  ipcMain.handle(ASSET_CHANNELS.deactivate, (_event, id: string) => auth.deactivateAsset(id));
+  ipcMain.handle(ASSET_CHANNELS.reactivate, (_event, id: string) => auth.reactivateAsset(id));
 
   createWindow();
   app.on('activate', () => {

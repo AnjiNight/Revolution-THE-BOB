@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs';
 import { pino } from 'pino';
 import { buildApp } from './app.js';
+import { AssetCatalogService } from './modules/asset-catalog/application/asset-catalog-service.js';
+import { PrismaAssetRepository } from './modules/asset-catalog/infrastructure/prisma-asset-repository.js';
 import { ConfigError, loadConfig } from './config.js';
 import { PrismaDatabaseProbe } from './modules/health/infrastructure/prisma-database-probe.js';
 import { EmailCodeHasher } from './modules/identity/application/email-code.js';
@@ -66,6 +68,7 @@ async function main(): Promise<void> {
       accountData,
       accessTokens,
       calendar: new CalendarService({ calendars: new PrismaCalendarRepository(prisma) }),
+      catalog: new AssetCatalogService({ assets: new PrismaAssetRepository(prisma) }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {

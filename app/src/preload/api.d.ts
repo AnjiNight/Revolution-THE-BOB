@@ -1,5 +1,8 @@
 import type {
+  AssetSearchResult,
   CalendarSuggestion,
+  CatalogAsset,
+  CatalogListResult,
   ConsentList,
   TradingCalendarYear,
   UserProfile,
@@ -7,8 +10,11 @@ import type {
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  AssetSearchQuery,
+  AssetUpdateInput,
   AuthResult,
   CalendarPublication,
+  CatalogQuery,
   ChangeEmailInput,
   ChangePasswordInput,
   ClientResult,
@@ -16,6 +22,7 @@ import type {
   EmailConfirmationInput,
   EmailConfirmationResendInput,
   LoginInput,
+  NewAssetInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   RegisterInput,
@@ -65,6 +72,17 @@ export interface DesktopApi {
     suggestion(year: number): Promise<ClientResult<CalendarSuggestion>>;
     /** Substitui a lista inteira do ano. */
     publish(year: number, input: CalendarPublication): Promise<ClientResult<TradingCalendarYear>>;
+  };
+  /** Catálogo de ativos (SPEC-006). Busca para todos; o resto só colaborador (403 para usuário). */
+  assets: {
+    /** Só ativos ativos, até 50 (`hasMore` avisa que há mais). */
+    search(query: AssetSearchQuery): Promise<ClientResult<AssetSearchResult>>;
+    catalog(query: CatalogQuery): Promise<ClientResult<CatalogListResult>>;
+    create(input: NewAssetInput): Promise<ClientResult<CatalogAsset>>;
+    /** Só o que muda; a classe nunca (RB22). */
+    update(id: string, input: AssetUpdateInput): Promise<ClientResult<CatalogAsset>>;
+    deactivate(id: string): Promise<ClientResult<CatalogAsset>>;
+    reactivate(id: string): Promise<ClientResult<CatalogAsset>>;
   };
 }
 

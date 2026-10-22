@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../shared/auth-ipc';
 import { AppShell } from './components/AppShell';
+import { AssetCatalog } from './components/AssetCatalog';
+import { AssetSearch } from './components/AssetSearch';
 import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
 import { ConfirmEmailForm } from './components/ConfirmEmailForm';
@@ -28,11 +30,13 @@ type View =
   | { kind: 'forgot-password'; origin: 'user' | 'collaborator'; email: string }
   | { kind: 'home'; user: PublicUser }
   | { kind: 'profile'; user: PublicUser }
-  | { kind: 'calendar'; user: PublicUser; year?: number };
+  | { kind: 'calendar'; user: PublicUser; year?: number }
+  | { kind: 'assets'; user: PublicUser };
 
 /**
  * Fluxo de telas da SPEC-002 (§5.3), da SPEC-003 (Meu perfil), da SPEC-004 (recuperar senha), da
- * SPEC-039 (confirmar o e-mail antes de entrar) e da SPEC-005 (calendário de pregão, colaborador).
+ * SPEC-039 (confirmar o e-mail antes de entrar), da SPEC-005 (calendário de pregão, colaborador) e
+ * da SPEC-006 (ativos: busca do usuário e catálogo do colaborador).
  */
 export function App() {
   const { t } = useTranslation();
@@ -63,7 +67,12 @@ export function App() {
     [],
   );
 
-  if (view.kind === 'home' || view.kind === 'profile' || view.kind === 'calendar') {
+  if (
+    view.kind === 'home' ||
+    view.kind === 'profile' ||
+    view.kind === 'calendar' ||
+    view.kind === 'assets'
+  ) {
     const { user } = view;
     const openCalendar = (year?: number) =>
       setView({ kind: 'calendar', user, ...(year ? { year } : {}) });
@@ -74,6 +83,7 @@ export function App() {
         onHome={() => setView({ kind: 'home', user })}
         onProfile={() => setView({ kind: 'profile', user })}
         onCalendar={() => openCalendar()}
+        onAssets={() => setView({ kind: 'assets', user })}
         onLogout={logout}
       >
         {view.kind === 'home' && (
@@ -81,6 +91,7 @@ export function App() {
             user={user}
             onOpenProfile={() => setView({ kind: 'profile', user })}
             onOpenCalendar={openCalendar}
+            onOpenAssets={() => setView({ kind: 'assets', user })}
           />
         )}
         {view.kind === 'calendar' && (
@@ -91,6 +102,12 @@ export function App() {
             onSessionExpired={sessionExpired}
           />
         )}
+        {view.kind === 'assets' &&
+          (user.role === 'collaborator' ? (
+            <AssetCatalog onSessionExpired={sessionExpired} />
+          ) : (
+            <AssetSearch onSessionExpired={sessionExpired} />
+          ))}
         {view.kind === 'profile' && (
           <Profile
             onUserChanged={userChanged}

@@ -10,6 +10,8 @@ import { EmailInUseError } from '../domain/errors.js';
 import { createIdentityServices } from '../identity-services.js';
 import { CalendarService } from '../../market-data/application/calendar-service.js';
 import { InMemoryCalendarRepository } from '../../market-data/testing/fakes.js';
+import { AssetCatalogService } from '../../asset-catalog/application/asset-catalog-service.js';
+import { InMemoryAssetRepository } from '../../asset-catalog/testing/fakes.js';
 import { BackgroundTasks, FakeEmailSender } from '../testing/fakes.js';
 import { Argon2PasswordHasher } from './argon2-password-hasher.js';
 import { JwtAccessTokenService } from './jwt-access-token-service.js';
@@ -110,6 +112,7 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       accountData: services.accountData,
       accessTokens,
       calendar: new CalendarService({ calendars: new InMemoryCalendarRepository() }),
+      catalog: new AssetCatalogService({ assets: new InMemoryAssetRepository() }),
     });
     return { app, mailer, background };
   }

@@ -1,9 +1,11 @@
-import type { IsoDate } from '@simulador/shared';
+import type { IsoDate, NonTradingDay } from '@simulador/shared';
 import type {
   AnoCalendario,
   DiaSemPregao,
   PrismaClient,
 } from '../../../generated/prisma/client.js';
+import type { AuditEntry } from '../../audit/application/audit.js';
+import { auditRow } from '../../audit/infrastructure/prisma-audit.js';
 import type {
   CalendarRepository,
   NewCalendarPublication,
@@ -55,29 +57,39 @@ export class PrismaCalendarRepository implements CalendarRepository {
   }
 
   /**
-   * Numa transação só: grava quando e quem publicou, apaga a lista antiga e grava a nova. O
-   * `upsert` vem primeiro e trava a linha do ano, então duas publicações juntas não se misturam.
+   * Numa transação só: trava o ano (se já existe), lê a lista anterior para a auditoria, grava
+   * quando e quem publicou, troca a lista e grava o registro de auditoria. Duas publicações juntas
+   * do mesmo ano esperam uma pela outra; uma falha não deixa nada pela metade.
    */
-  async publish(publication: NewCalendarPublication): Promise<StoredCalendarYear> {
+  async publish(
+    publication: NewCalendarPublication,
+    audit: (before: NonTradingDay[] | null) => AuditEntry,
+  ): Promise<StoredCalendarYear> {
     const ano = publication.year;
     const header = { publicadoEm: publication.publishedAt, publicadoPor: publication.publishedBy };
-    const [, , , row] = await this.prisma.$transaction([
-      this.prisma.anoCalendario.upsert({
-        where: { ano },
-        create: { ano, ...header },
-        update: header,
-      }),
-      this.prisma.diaSemPregao.deleteMany({ where: { ano } }),
-      this.prisma.diaSemPregao.createMany({
+    return this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ ano: number }>>`
+        SELECT ano FROM ano_calendario WHERE ano = ${ano} FOR UPDATE`;
+      const before =
+        locked.length === 0
+          ? null
+          : (await tx.diaSemPregao.findMany({ where: { ano }, orderBy: { data: 'asc' } })).map(
+              (day) => ({ date: toIsoDate(day.data), reason: day.motivo }),
+            );
+      await tx.anoCalendario.upsert({ where: { ano }, create: { ano, ...header }, update: header });
+      await tx.diaSemPregao.deleteMany({ where: { ano } });
+      await tx.diaSemPregao.createMany({
         data: publication.nonTradingDays.map((day) => ({
           data: fromIsoDate(day.date),
           ano,
           motivo: day.reason,
         })),
-      }),
+      });
+      await tx.registroAuditoria.create({ data: auditRow(audit(before)) });
       // Lido dentro da transação: devolve o que esta publicação gravou.
-      this.prisma.anoCalendario.findUniqueOrThrow({ where: { ano }, include: WITH_DAYS }),
-    ]);
-    return toStored(row);
+      return toStored(
+        await tx.anoCalendario.findUniqueOrThrow({ where: { ano }, include: WITH_DAYS }),
+      );
+    });
   }
 }

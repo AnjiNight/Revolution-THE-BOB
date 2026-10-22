@@ -1,4 +1,6 @@
 import {
+  ASSET_PATHS,
+  assetPath,
   AUTH_PATHS,
   CALENDAR_PATHS,
   calendarPath,
@@ -7,11 +9,18 @@ import {
   TERMS_VERSION,
   type AccountDeletionConfirmInput,
   type AccountDeletionRequestInput,
+  type AssetSearchQuery,
+  type AssetSearchResult,
+  type AssetUpdateInput,
   type AuthErrorCode,
   type AuthSession,
   type CalendarErrorCode,
   type CalendarPublication,
   type CalendarSuggestion,
+  type CatalogAsset,
+  type CatalogErrorCode,
+  type CatalogListResult,
+  type CatalogQuery,
   type ChangeEmailInput,
   type ChangePasswordInput,
   type ConfirmEmailChangeInput,
@@ -20,6 +29,7 @@ import {
   type EmailConfirmationResendInput,
   type FieldErrors,
   type LoginInput,
+  type NewAssetInput,
   type PasswordResetConfirmInput,
   type PasswordResetRequestInput,
   type PersonalDataExport,
@@ -42,7 +52,7 @@ export interface AuthClientOptions {
   timeoutMs?: number;
 }
 
-const KNOWN_ERRORS: ReadonlyArray<AuthErrorCode | CalendarErrorCode> = [
+const KNOWN_ERRORS: ReadonlyArray<AuthErrorCode | CalendarErrorCode | CatalogErrorCode> = [
   'validation_error',
   'email_in_use',
   'invalid_credentials',
@@ -65,6 +75,8 @@ const KNOWN_ERRORS: ReadonlyArray<AuthErrorCode | CalendarErrorCode> = [
   'deletion_not_allowed',
   'forbidden',
   'calendar_not_published',
+  'ticker_in_use',
+  'asset_not_found',
 ];
 
 class RequestFailed extends Error {
@@ -284,6 +296,59 @@ export class AuthClient {
     );
   }
 
+  // --- Catálogo de ativos (SPEC-006) ---
+
+  /** Qualquer pessoa conectada: só ativos ativos, até 50. */
+  searchAssets(query: AssetSearchQuery): Promise<ClientResult<AssetSearchResult>> {
+    return this.call(() =>
+      this.authorizedRequest<AssetSearchResult>('GET', withQuery(ASSET_PATHS.search, query)),
+    );
+  }
+
+  /** Colaborador: todos os ativos que passam nos filtros, inclusive desativados. */
+  assetCatalog(query: CatalogQuery): Promise<ClientResult<CatalogListResult>> {
+    return this.call(() =>
+      this.authorizedRequest<CatalogListResult>('GET', withQuery(ASSET_PATHS.catalog, query)),
+    );
+  }
+
+  createAsset(input: NewAssetInput): Promise<ClientResult<CatalogAsset>> {
+    return this.call(async () => {
+      const { asset } = await this.authorizedRequest<{ asset: CatalogAsset }>(
+        'POST',
+        ASSET_PATHS.catalog,
+        input,
+      );
+      return asset;
+    });
+  }
+
+  updateAsset(id: string, input: AssetUpdateInput): Promise<ClientResult<CatalogAsset>> {
+    return this.call(() => this.assetAction('PATCH', ASSET_PATHS.asset, id, input));
+  }
+
+  deactivateAsset(id: string): Promise<ClientResult<CatalogAsset>> {
+    return this.call(() => this.assetAction('POST', ASSET_PATHS.deactivate, id));
+  }
+
+  reactivateAsset(id: string): Promise<ClientResult<CatalogAsset>> {
+    return this.call(() => this.assetAction('POST', ASSET_PATHS.reactivate, id));
+  }
+
+  private async assetAction(
+    method: string,
+    path: string,
+    id: string,
+    body?: unknown,
+  ): Promise<CatalogAsset> {
+    const { asset } = await this.authorizedRequest<{ asset: CatalogAsset }>(
+      method,
+      assetUrl(path, id),
+      body,
+    );
+    return asset;
+  }
+
   private async updateProfile(method: string, path: string, body: unknown): Promise<UserProfile> {
     const { user } = await this.authorizedRequest<{ user: UserProfile }>(method, path, body);
     this.user = { id: user.id, name: user.name, email: user.email, role: user.role };
@@ -391,6 +456,24 @@ export class AuthClient {
     }
     throw new RequestFailed(response.status >= 500 ? 'server_unavailable' : 'unexpected');
   }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** O id vem da interface: só um UUID entra no caminho da rota. */
+function assetUrl(path: string, id: string): string {
+  if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+  return assetPath(path, id);
+}
+
+/** Filtros da busca na query string; vazios ficam de fora. */
+function withQuery(path: string, query: AssetSearchQuery | CatalogQuery): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value === 'string' && value !== '') params.set(key, value);
+  }
+  const text = params.toString();
+  return text ? `${path}?${text}` : path;
 }
 
 /** O ano vem da interface: só um ano aceito entra no caminho da rota. */

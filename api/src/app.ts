@@ -2,6 +2,8 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { DestinationStream } from 'pino';
+import type { AssetCatalogService } from './modules/asset-catalog/application/asset-catalog-service.js';
+import { registerAssetRoutes } from './modules/asset-catalog/controllers/asset-routes.js';
 import type { AppConfig } from './config.js';
 import type { DatabaseProbe } from './modules/health/application/get-health.js';
 import { registerHealthRoutes } from './modules/health/controllers/health-routes.js';
@@ -30,6 +32,8 @@ export interface AppDependencies {
   accessTokens: AccessTokenService;
   /** SPEC-005: calendário de pregão (módulo Dados de Mercado). */
   calendar: CalendarService;
+  /** SPEC-006: catálogo de ativos. */
+  catalog: AssetCatalogService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -71,6 +75,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     rateLimitPerMinute: deps.config.authRateLimitPerMinute,
   });
   registerCalendarRoutes(app, { calendar: deps.calendar, accessTokens: deps.accessTokens });
+  registerAssetRoutes(app, { catalog: deps.catalog, accessTokens: deps.accessTokens });
 
   return app;
 }

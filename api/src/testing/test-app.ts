@@ -2,6 +2,9 @@ import { Writable } from 'node:stream';
 import { AUTH_PATHS, type AuthSession } from '@simulador/shared';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app.js';
+import { AssetCatalogService } from '../modules/asset-catalog/application/asset-catalog-service.js';
+import { InMemoryAssetRepository } from '../modules/asset-catalog/testing/fakes.js';
+import { InMemoryAuditTrail } from '../modules/audit/testing/fakes.js';
 import type { DatabaseProbe } from '../modules/health/application/get-health.js';
 import { EmailCodeHasher } from '../modules/identity/application/email-code.js';
 import type { Clock } from '../modules/identity/application/ports.js';
@@ -67,7 +70,14 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   const probe: DatabaseProbe = {
     isAvailable: () => Promise.resolve(options.databaseAvailable ?? true),
   };
-  const calendars = new InMemoryCalendarRepository();
+  // Um registro de auditoria só, como no banco: o calendário e o catálogo gravam nele.
+  const audit = new InMemoryAuditTrail();
+  const calendars = new InMemoryCalendarRepository(audit);
+  const assets = new InMemoryAssetRepository(audit);
+  const catalog = new AssetCatalogService({
+    assets,
+    ...(options.clock ? { clock: options.clock } : {}),
+  });
   const calendar = new CalendarService({
     calendars,
     ...(options.clock ? { clock: options.clock } : {}),
@@ -87,6 +97,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     accountData: services.accountData,
     accessTokens,
     calendar,
+    catalog,
     logStream: logs,
   });
 
@@ -132,6 +143,9 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     registerConfirmed,
     calendars,
     calendar,
+    audit,
+    assets,
+    catalog,
     ...services,
   };
 }

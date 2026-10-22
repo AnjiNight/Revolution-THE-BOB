@@ -152,7 +152,12 @@ export type FieldErrorCode =
   | 'invalid_date'
   | 'wrong_year'
   | 'weekend'
-  | 'duplicate';
+  | 'duplicate'
+  // SPEC-006: catálogo de ativos.
+  | 'invalid_ticker'
+  | 'invalid_option'
+  | 'wrong_class'
+  | 'immutable';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 
@@ -194,6 +199,10 @@ const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'wrong_year',
   'weekend',
   'duplicate',
+  'invalid_ticker',
+  'invalid_option',
+  'wrong_class',
+  'immutable',
 ];
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -1,3 +1,6 @@
+import type { NonTradingDay } from '@simulador/shared';
+import type { AuditEntry } from '../../audit/application/audit.js';
+import { InMemoryAuditTrail } from '../../audit/testing/fakes.js';
 import type {
   CalendarRepository,
   NewCalendarPublication,
@@ -7,6 +10,8 @@ import type {
 /** Calendário em memória para testes sem banco. */
 export class InMemoryCalendarRepository implements CalendarRepository {
   readonly years = new Map<number, StoredCalendarYear>();
+
+  constructor(readonly audit: InMemoryAuditTrail = new InMemoryAuditTrail()) {}
 
   findYear(year: number): Promise<StoredCalendarYear | null> {
     return Promise.resolve(this.copy(this.years.get(year)));
@@ -20,7 +25,12 @@ export class InMemoryCalendarRepository implements CalendarRepository {
     return Promise.resolve(found);
   }
 
-  publish(publication: NewCalendarPublication): Promise<StoredCalendarYear> {
+  publish(
+    publication: NewCalendarPublication,
+    audit: (before: NonTradingDay[] | null) => AuditEntry,
+  ): Promise<StoredCalendarYear> {
+    const before = this.years.get(publication.year)?.nonTradingDays.map((day) => ({ ...day }));
+    this.audit.append(audit(before ?? null));
     const stored: StoredCalendarYear = {
       ...publication,
       nonTradingDays: [...publication.nonTradingDays].sort((a, b) => a.date.localeCompare(b.date)),

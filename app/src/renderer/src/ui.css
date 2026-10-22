@@ -29,6 +29,16 @@ html {
   }
 }
 
+/* Texto só para leitores de tela (ex.: cabeçalho de uma coluna de ações). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* ---------- Link para pular direto ao acesso (teclado e leitor de tela) ---------- */
 
 .skip-link {

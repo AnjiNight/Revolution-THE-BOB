@@ -1,4 +1,5 @@
 import type { NonTradingDay } from '@simulador/shared';
+import type { AuditEntry } from '../../audit/application/audit.js';
 
 /** Ano publicado, como fica guardado (SPEC-005 §6). */
 export interface StoredCalendarYear {
@@ -21,6 +22,13 @@ export interface CalendarRepository {
   findYear(year: number): Promise<StoredCalendarYear | null>;
   /** Anos publicados de `from` a `to`, incluindo os dois; os não publicados ficam de fora. */
   findYears(from: number, to: number): Promise<StoredCalendarYear[]>;
-  /** Publica ou republica o ano: a lista nova substitui a anterior inteira, de uma vez. */
-  publish(publication: NewCalendarPublication): Promise<StoredCalendarYear>;
+  /**
+   * Publica ou republica o ano: a lista nova substitui a anterior inteira, de uma vez, junto com o
+   * registro de auditoria (SPEC-006). `audit` recebe a lista anterior (`null` na primeira vez),
+   * lida com o ano travado.
+   */
+  publish(
+    publication: NewCalendarPublication,
+    audit: (before: NonTradingDay[] | null) => AuditEntry,
+  ): Promise<StoredCalendarYear>;
 }
