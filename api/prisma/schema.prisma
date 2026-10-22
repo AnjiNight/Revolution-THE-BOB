@@ -117,3 +117,28 @@ model ExclusaoConta {
 
   @@map("exclusao_conta")
 }
+
+/// Ano do calendário de pregão publicado por um colaborador (SPEC-005). Ano sem linha aqui não foi
+/// publicado, e as regras de pregão recusam datas dele. "publicado_por" é só o id do colaborador,
+/// sem chave estrangeira: o módulo Dados de Mercado não depende das tabelas da identidade (DA13).
+model AnoCalendario {
+  ano          Int      @id @db.SmallInt
+  publicadoEm  DateTime @map("publicado_em") @db.Timestamptz(3)
+  publicadoPor String   @map("publicado_por") @db.Uuid
+
+  diasSemPregao DiaSemPregao[]
+
+  @@map("ano_calendario")
+}
+
+/// Dia útil sem pregão na B3 (SPEC-005, RB11). Fins de semana nunca entram (CHECK na migração).
+model DiaSemPregao {
+  data   DateTime @id @db.Date
+  ano    Int      @db.SmallInt
+  motivo String   @db.VarChar(100)
+
+  anoCalendario AnoCalendario @relation(fields: [ano], references: [ano], onDelete: Cascade)
+
+  @@index([ano])
+  @@map("dia_sem_pregao")
+}

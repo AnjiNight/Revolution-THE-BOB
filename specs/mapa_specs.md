@@ -20,6 +20,7 @@
 | 1.10 | SPEC-001, SPEC-002 e SPEC-003 marcadas como implementadas; SPEC-004 detalhada ([SPEC-004.md](SPEC-004.md)), aprovada e implementada; parte de e-mail da OPEN-02 resolvida (envio por SMTP; o provedor sai junto com a hospedagem) |
 | 1.11 | Nova SPEC-039 (confirmação de e-mail, RF43 e RB23 da versão 1.7 dos requisitos), na Fase 1, logo depois da SPEC-004; aprovada e implementada |
 | 1.12 | SPEC-034 detalhada ([SPEC-034.md](SPEC-034.md)), aprovada e implementada: OPEN-04 resolvida (JSON versionado, baixado pelo app) e regra da OPEN-40 decidida (backups e logs por no máximo 30 dias) |
+| 1.13 | SPEC-005 detalhada ([SPEC-005.md](SPEC-005.md)), aprovada e implementada; OPEN-01 resolvida (calendário oficial da B3, conferido e publicado pelo colaborador, com sugestão automática) |
 
 ---
 
@@ -452,6 +453,8 @@ Visão geral por fase:
 
 #### SPEC-005 — Calendário de pregão
 
+📄 Detalhada em [SPEC-005.md](SPEC-005.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O sistema responde se uma data é dia de pregão da B3 e conta pregões entre duas datas; o colaborador carrega e revisa o calendário anualmente |
@@ -465,7 +468,7 @@ Visão geral por fase:
 | ADRs | DA07 (tarefa anual com revisão manual), DA10 |
 | Depende de | SPEC-002 (perfil colaborador) |
 | Posição | Usada por 007, 008, 009, pelas Specs de lançamento e pelos cenários (031) |
-| Em aberto | OPEN-01 |
+| Em aberto | OPEN-01 resolvida na SPEC-005 |
 | Prioridade derivada | Técnica de regra (habilita os Must) |
 
 #### SPEC-006 — Catálogo de ativos: manutenção e busca

@@ -87,6 +87,11 @@
         "title": "Data collection monitoring",
         "text": "See the runs and failures of quote and news collection, and run them again when needed."
       }
+    },
+    "calendarReminder": {
+      "missing": "The {{year}} trading calendar hasn't been published. Until it is, entries dated in that year are blocked.",
+      "nextYear": "The {{year}} trading calendar hasn't been published yet. Publish it by December 31.",
+      "open": "Open the calendar"
     }
   },
   "profile": {
@@ -147,7 +152,11 @@
     "terms_not_accepted": "You must accept the terms to continue.",
     "same_password": "The new password must be different from the current one.",
     "invalid_version": "Outdated terms version. Reload the screen.",
-    "invalid_code": "The code has 8 letters and numbers, like K7QM-4XPD."
+    "invalid_code": "The code has 8 letters and numbers, like K7QM-4XPD.",
+    "invalid_date": "Enter a valid date.",
+    "wrong_year": "The date must be in the selected year.",
+    "weekend": "Weekends never have trading and are not listed.",
+    "duplicate": "This date is already on the list."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -173,7 +182,9 @@
     "email_not_confirmed": "Confirm your email to sign in.",
     "invalid_confirmation_code": "Invalid or expired code. Check the code or ask for a new one.",
     "email_confirmation_unavailable": "Email confirmation is not available on this server.",
-    "deletion_not_allowed": "Collaborator accounts are deleted by the team."
+    "deletion_not_allowed": "Collaborator accounts are deleted by the team.",
+    "forbidden": "This area is for the team only.",
+    "calendar_not_published": "The team hasn't published the trading calendar for that year yet. Without it, the app doesn't know which days the exchange was open."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -305,6 +316,37 @@
   "shell": {
     "skip": "Skip to content",
     "navLabel": "App navigation",
-    "home": "Home"
+    "home": "Home",
+    "calendar": "Calendar"
+  },
+  "calendar": {
+    "title": "Trading calendar",
+    "subtitle": "The weekdays when B3 is closed. Until a year is published, the app doesn't accept dates in it.",
+    "year": "Year",
+    "published": "Published on {{date}}",
+    "notPublished": "Not published",
+    "b3Note": "Check against B3's official calendar before publishing. B3 releases next year's calendar in early December.",
+    "loadSuggestion": "Load suggestion",
+    "suggestionLoaded": "Suggestion loaded. Check each day against B3's calendar.",
+    "suggested": "Suggestion",
+    "listTitle": "Non-trading days in {{year}}",
+    "count": "Days on the list: {{count}}",
+    "empty": "No days on the list. Load the suggestion or add the days.",
+    "weekendNote": "Saturdays and Sundays never have trading and don't need to be listed.",
+    "date": "Date",
+    "reason": "Reason",
+    "actions": "Actions",
+    "remove": "Remove",
+    "removeLabel": "Remove {{date}} ({{reason}})",
+    "addTitle": "Add a day",
+    "reasonHint": "As in B3's calendar, for example \"Carnival\".",
+    "add": "Add",
+    "unsaved": "There are unpublished changes.",
+    "yearLocked": "Publish or discard the changes to switch years.",
+    "discard": "Discard changes",
+    "publish": "Publish {{year}}",
+    "confirmText": "The list replaces the previous one and takes effect immediately for everyone: any weekday not on it counts as a trading day.",
+    "confirm": "Publish now",
+    "publishedOk": "{{year}} calendar published."
   }
 }

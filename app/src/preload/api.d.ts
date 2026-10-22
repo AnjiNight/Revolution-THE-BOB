@@ -1,8 +1,14 @@
-import type { ConsentList, UserProfile } from '@simulador/shared';
+import type {
+  CalendarSuggestion,
+  ConsentList,
+  TradingCalendarYear,
+  UserProfile,
+} from '@simulador/shared';
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
   AuthResult,
+  CalendarPublication,
   ChangeEmailInput,
   ChangePasswordInput,
   ClientResult,
@@ -52,6 +58,13 @@ export interface DesktopApi {
     requestDeletion(input: AccountDeletionRequestInput): Promise<ClientResult<null>>;
     /** Apaga a conta no servidor e a sessão guardada no dispositivo. */
     confirmDeletion(input: AccountDeletionConfirmInput): Promise<ClientResult<null>>;
+  };
+  /** Calendário de pregão (SPEC-005). Sugestão e publicação: só colaborador (403 para usuário). */
+  calendar: {
+    getYear(year: number): Promise<ClientResult<TradingCalendarYear>>;
+    suggestion(year: number): Promise<ClientResult<CalendarSuggestion>>;
+    /** Substitui a lista inteira do ano. */
+    publish(year: number, input: CalendarPublication): Promise<ClientResult<TradingCalendarYear>>;
   };
 }
 

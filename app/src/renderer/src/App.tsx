@@ -11,6 +11,7 @@ import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
 import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
+import { TradingCalendar } from './components/TradingCalendar';
 
 /** Volta da recuperação de senha (SPEC-004): e-mail preenchido e aviso de senha redefinida. */
 interface AfterReset {
@@ -26,11 +27,12 @@ type View =
   | ({ kind: 'collaborator-login' } & AfterReset)
   | { kind: 'forgot-password'; origin: 'user' | 'collaborator'; email: string }
   | { kind: 'home'; user: PublicUser }
-  | { kind: 'profile'; user: PublicUser };
+  | { kind: 'profile'; user: PublicUser }
+  | { kind: 'calendar'; user: PublicUser; year?: number };
 
 /**
- * Fluxo de telas da SPEC-002 (§5.3), da SPEC-003 (Meu perfil), da SPEC-004 (recuperar senha) e da
- * SPEC-039 (confirmar o e-mail antes de entrar).
+ * Fluxo de telas da SPEC-002 (§5.3), da SPEC-003 (Meu perfil), da SPEC-004 (recuperar senha), da
+ * SPEC-039 (confirmar o e-mail antes de entrar) e da SPEC-005 (calendário de pregão, colaborador).
  */
 export function App() {
   const { t } = useTranslation();
@@ -61,19 +63,35 @@ export function App() {
     [],
   );
 
-  if (view.kind === 'home' || view.kind === 'profile') {
+  if (view.kind === 'home' || view.kind === 'profile' || view.kind === 'calendar') {
     const { user } = view;
+    const openCalendar = (year?: number) =>
+      setView({ kind: 'calendar', user, ...(year ? { year } : {}) });
     return (
       <AppShell
         user={user}
         current={view.kind}
         onHome={() => setView({ kind: 'home', user })}
         onProfile={() => setView({ kind: 'profile', user })}
+        onCalendar={() => openCalendar()}
         onLogout={logout}
       >
-        {view.kind === 'home' ? (
-          <Home user={user} onOpenProfile={() => setView({ kind: 'profile', user })} />
-        ) : (
+        {view.kind === 'home' && (
+          <Home
+            user={user}
+            onOpenProfile={() => setView({ kind: 'profile', user })}
+            onOpenCalendar={openCalendar}
+          />
+        )}
+        {view.kind === 'calendar' && (
+          // A chave reabre a tela no ano pedido pelo aviso do Início.
+          <TradingCalendar
+            key={view.year ?? 'atual'}
+            initialYear={view.year}
+            onSessionExpired={sessionExpired}
+          />
+        )}
+        {view.kind === 'profile' && (
           <Profile
             onUserChanged={userChanged}
             onSessionExpired={sessionExpired}

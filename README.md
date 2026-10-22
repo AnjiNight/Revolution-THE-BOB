@@ -84,6 +84,8 @@ npm run colaborador:criar --workspace api -- --nome "Nome Sobrenome" --email pes
 
 O colaborador entra pela **Área do colaborador**, na tela de login.
 
+**Calendário de pregão** ([SPEC-005](specs/SPEC-005.md)): enquanto um ano não é publicado, o app recusa datas dele. Na Área do colaborador, abra **Calendário**, clique em **Carregar sugestão**, confira com o calendário oficial da B3 e clique em **Publicar**. O ano seguinte deve ser publicado até 31 de dezembro (o Início do colaborador avisa desde 1º de dezembro).
+
 ### Login com Google (opcional)
 
 O botão "Continuar com o Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)). O login abre o navegador do sistema: se a pessoa já estiver conectada ao Google lá, basta escolher a conta.

@@ -1,7 +1,13 @@
-import type { ConsentList, UserProfile } from '@simulador/shared';
+import type {
+  CalendarSuggestion,
+  ConsentList,
+  TradingCalendarYear,
+  UserProfile,
+} from '@simulador/shared';
 import { contextBridge, ipcRenderer } from 'electron';
 import {
   AUTH_CHANNELS,
+  CALENDAR_CHANNELS,
   PROFILE_CHANNELS,
   type AuthResult,
   type ClientResult,
@@ -43,6 +49,13 @@ const api: DesktopApi = {
     exportData: () => invoke<ClientResult<{ saved: boolean }>>(PROFILE_CHANNELS.exportData),
     requestDeletion: (input) => invoke<ClientResult<null>>(PROFILE_CHANNELS.requestDeletion, input),
     confirmDeletion: (input) => invoke<ClientResult<null>>(PROFILE_CHANNELS.confirmDeletion, input),
+  },
+  calendar: {
+    getYear: (year) => invoke<ClientResult<TradingCalendarYear>>(CALENDAR_CHANNELS.getYear, year),
+    suggestion: (year) =>
+      invoke<ClientResult<CalendarSuggestion>>(CALENDAR_CHANNELS.suggestion, year),
+    publish: (year, input) =>
+      invoke<ClientResult<TradingCalendarYear>>(CALENDAR_CHANNELS.publish, year, input),
   },
 };
 

@@ -13,6 +13,8 @@ import { PrismaEmailCodeRepository } from './modules/identity/infrastructure/pri
 import { PrismaRefreshTokenRepository } from './modules/identity/infrastructure/prisma-refresh-token-repository.js';
 import { PrismaUserRepository } from './modules/identity/infrastructure/prisma-user-repository.js';
 import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-sender.js';
+import { CalendarService } from './modules/market-data/application/calendar-service.js';
+import { PrismaCalendarRepository } from './modules/market-data/infrastructure/prisma-calendar-repository.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 import { readVersion } from './version.js';
@@ -63,6 +65,7 @@ async function main(): Promise<void> {
       passwordReset,
       accountData,
       accessTokens,
+      calendar: new CalendarService({ calendars: new PrismaCalendarRepository(prisma) }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {

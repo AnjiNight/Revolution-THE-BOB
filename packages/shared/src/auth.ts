@@ -147,7 +147,12 @@ export type FieldErrorCode =
   | 'terms_not_accepted'
   | 'same_password'
   | 'invalid_version'
-  | 'invalid_code';
+  | 'invalid_code'
+  // SPEC-005: dias do calendário de pregão.
+  | 'invalid_date'
+  | 'wrong_year'
+  | 'weekend'
+  | 'duplicate';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 
@@ -172,7 +177,9 @@ export type AuthErrorCode =
   | 'email_not_confirmed'
   | 'invalid_confirmation_code'
   | 'email_confirmation_unavailable'
-  | 'deletion_not_allowed';
+  | 'deletion_not_allowed'
+  /** Conta conectada, mas sem o perfil que a rota exige (ex.: rota de colaborador, SPEC-005). */
+  | 'forbidden';
 
 const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'required',
@@ -183,6 +190,10 @@ const FIELD_ERROR_CODES: readonly FieldErrorCode[] = [
   'same_password',
   'invalid_version',
   'invalid_code',
+  'invalid_date',
+  'wrong_year',
+  'weekend',
+  'duplicate',
 ];
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

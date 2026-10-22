@@ -1,6 +1,13 @@
-import type { ConsentList, PublicUser } from '@simulador/shared';
+import {
+  calendarYearsToCheck,
+  isoDateInBrasilia,
+  yearOf,
+  type ConsentList,
+  type PublicUser,
+} from '@simulador/shared';
 import {
   ArrowUpRight,
+  CalendarBlank,
   ClockCounterClockwise,
   Database,
   Lightning,
@@ -14,6 +21,8 @@ import { isTermsOutdated, TermsUpdateNotice } from './Profile';
 interface HomeProps {
   user: PublicUser;
   onOpenProfile: () => void;
+  /** SPEC-005: abre o calendário de pregão no ano do aviso. */
+  onOpenCalendar: (year: number) => void;
 }
 
 /** O que vem nas próximas versões: carteiras para o usuário, ferramentas para o colaborador. */
@@ -47,7 +56,7 @@ const UPCOMING: Record<
   ],
 };
 
-export function Home({ user, onOpenProfile }: HomeProps) {
+export function Home({ user, onOpenProfile, onOpenCalendar }: HomeProps) {
   const { t } = useTranslation();
   const [consents, setConsents] = useState<ConsentList | null>(null);
   const [accepting, setAccepting] = useState(false);
@@ -73,6 +82,7 @@ export function Home({ user, onOpenProfile }: HomeProps) {
       {consents && isTermsOutdated(consents) && (
         <TermsUpdateNotice submitting={accepting} onAccept={() => void accept()} />
       )}
+      {user.role === 'collaborator' && <CalendarReminder onOpen={onOpenCalendar} />}
 
       <header className="page-hero">
         <p className={user.role === 'collaborator' ? 'eyebrow eyebrow-warn' : 'eyebrow'}>
@@ -111,6 +121,56 @@ export function Home({ user, onOpenProfile }: HomeProps) {
           ))}
         </ul>
       </section>
+    </div>
+  );
+}
+
+/**
+ * SPEC-005 (CA09): avisa o colaborador do calendário de pregão que falta publicar. O ano atual,
+ * sempre (sem ele os lançamentos desse ano ficam bloqueados); o seguinte, desde 1º de dezembro.
+ * "Hoje" é o dia em Brasília.
+ */
+function CalendarReminder({ onOpen }: { onOpen: (year: number) => void }) {
+  const { t } = useTranslation();
+  const [today] = useState(() => isoDateInBrasilia(new Date()));
+  const [missing, setMissing] = useState<number[]>([]);
+
+  useEffect(() => {
+    let current = true;
+    void Promise.all(
+      calendarYearsToCheck(today).map((year) => window.api.calendar.getYear(year)),
+    ).then((results) => {
+      if (!current) return;
+      // Falha na consulta não vira aviso: só ano que o servidor confirmou não estar publicado.
+      setMissing(results.flatMap((r) => (r.ok && !r.data.published ? [r.data.year] : [])));
+    });
+    return () => {
+      current = false;
+    };
+  }, [today]);
+
+  if (missing.length === 0) return null;
+  return (
+    <div className="calendar-reminder" role="status">
+      <ul>
+        {missing.map((year) => (
+          <li key={year}>
+            {year === yearOf(today)
+              ? t('home.calendarReminder.missing', { year })
+              : t('home.calendarReminder.nextYear', { year })}
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        className="pill pill-ghost pill-small"
+        onClick={() => onOpen(missing[0]!)}
+      >
+        {t('home.calendarReminder.open')}
+        <span className="pill-icon" aria-hidden="true">
+          <CalendarBlank weight="bold" />
+        </span>
+      </button>
     </div>
   );
 }

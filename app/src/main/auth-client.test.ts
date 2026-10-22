@@ -1,4 +1,4 @@
-import { AUTH_PATHS, PROFILE_PATHS } from '@simulador/shared';
+import { AUTH_PATHS, CALENDAR_PATHS, calendarPath, PROFILE_PATHS } from '@simulador/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthClient } from './auth-client.js';
 import { MemorySecretStore } from './secret-store.js';
@@ -122,6 +122,17 @@ class FakeServer {
         return this.validAccess.has(headers.authorization?.replace('Bearer ', '') ?? '')
           ? json(200, { consents: [], currentVersion: '1' })
           : json(401, { error: 'unauthorized', message: 'x' });
+      // SPEC-005: a conta "Ana" é usuário; o servidor recusa as rotas do colaborador.
+      case calendarPath(CALENDAR_PATHS.year, 2026):
+        return json(200, { year: 2026, published: false, publishedAt: null, nonTradingDays: [] });
+      case calendarPath(CALENDAR_PATHS.suggestion, 2026):
+        return json(403, { error: 'forbidden', message: 'x' });
+      case calendarPath(CALENDAR_PATHS.publish, 2026):
+        return json(400, {
+          error: 'validation_error',
+          message: 'x',
+          fields: { 'nonTradingDays.0.date': 'weekend' },
+        });
       default:
         return json(500, { error: 'internal_error', message: 'x' });
     }
@@ -428,5 +439,45 @@ describe('dados pessoais (SPEC-034)', () => {
     });
     await expect(store.load()).resolves.toBeNull();
     await expect(client.restore()).resolves.toEqual({ ok: false, error: 'unauthorized' });
+  });
+});
+
+describe('calendário de pregão (SPEC-005)', () => {
+  it('consulta o ano com a sessão atual', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.getCalendar(2026)).resolves.toEqual({
+      ok: true,
+      data: { year: 2026, published: false, publishedAt: null, nonTradingDays: [] },
+    });
+    expect(server.calls.at(-1)).toMatchObject({
+      method: 'GET',
+      path: '/api/calendar/2026',
+      authorization: 'Bearer access-1',
+    });
+  });
+
+  it('traduz o 403 das rotas do colaborador e os erros de cada dia', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.calendarSuggestion(2026)).resolves.toEqual({
+      ok: false,
+      error: 'forbidden',
+    });
+    await expect(
+      client.publishCalendar(2026, { nonTradingDays: [{ date: '2026-10-24', reason: 'Sábado' }] }),
+    ).resolves.toEqual({
+      ok: false,
+      error: 'validation_error',
+      fields: { 'nonTradingDays.0.date': 'weekend' },
+    });
+    expect(server.calls.at(-1)).toMatchObject({ method: 'PUT' });
+  });
+
+  it('ano fora de 2000 a 2100 nem chega ao servidor', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    const before = server.calls.length;
+    for (const year of [1999, 2101, 2026.5, Number.NaN]) {
+      await expect(client.getCalendar(year)).resolves.toEqual({ ok: false, error: 'unexpected' });
+    }
+    expect(server.calls).toHaveLength(before);
   });
 });

@@ -265,7 +265,9 @@ button.link:focus-visible {
 
 input[type='text'],
 input[type='email'],
-input[type='password'] {
+input[type='password'],
+input[type='date'],
+select {
   width: 100%;
   min-height: 2.75rem;
   padding: 0 0.85rem;
@@ -279,11 +281,14 @@ input[type='password'] {
 
 input[type='text']:hover,
 input[type='email']:hover,
-input[type='password']:hover {
+input[type='password']:hover,
+input[type='date']:hover,
+select:hover:not(:disabled) {
   border-color: var(--muted);
 }
 
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   border-color: var(--accent);
   outline: 2px solid var(--accent);
   outline-offset: 1px;

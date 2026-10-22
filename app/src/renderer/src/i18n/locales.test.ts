@@ -63,6 +63,8 @@ describe('arquivos de idioma (CA13)', () => {
       'invalid_confirmation_code',
       'email_confirmation_unavailable',
       'deletion_not_allowed',
+      'forbidden',
+      'calendar_not_published',
     ];
     const fieldErrors: FieldErrorCode[] = [
       'required',
@@ -73,6 +75,10 @@ describe('arquivos de idioma (CA13)', () => {
       'same_password',
       'invalid_version',
       'invalid_code',
+      'invalid_date',
+      'wrong_year',
+      'weekend',
+      'duplicate',
     ];
     for (const locale of [ptBR, en]) {
       for (const code of authErrors) expect(locale.authErrors[code]).toBeTruthy();

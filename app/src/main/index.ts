@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  CalendarPublication,
   ChangeEmailInput,
   ChangePasswordInput,
   ConfirmEmailChangeInput,
@@ -15,7 +16,7 @@ import type {
   UpdateNameInput,
 } from '@simulador/shared';
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
-import { AUTH_CHANNELS, PROFILE_CHANNELS } from '../shared/auth-ipc.js';
+import { AUTH_CHANNELS, CALENDAR_CHANNELS, PROFILE_CHANNELS } from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL } from '../shared/server-status.js';
 import { AuthClient } from './auth-client.js';
 import { saveDataExport } from './data-export.js';
@@ -167,6 +168,15 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(PROFILE_CHANNELS.confirmDeletion, (_event, input: AccountDeletionConfirmInput) =>
     auth.confirmDeletion(input),
+  );
+
+  // Calendário de pregão (SPEC-005): o servidor confere se a conta é de colaborador.
+  ipcMain.handle(CALENDAR_CHANNELS.getYear, (_event, year: number) => auth.getCalendar(year));
+  ipcMain.handle(CALENDAR_CHANNELS.suggestion, (_event, year: number) =>
+    auth.calendarSuggestion(year),
+  );
+  ipcMain.handle(CALENDAR_CHANNELS.publish, (_event, year: number, input: CalendarPublication) =>
+    auth.publishCalendar(year, input),
   );
 
   createWindow();

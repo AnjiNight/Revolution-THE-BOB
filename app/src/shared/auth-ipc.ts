@@ -2,6 +2,8 @@ import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
   AuthErrorCode,
+  CalendarErrorCode,
+  CalendarPublication,
   ChangeEmailInput,
   ChangePasswordInput,
   ConfirmEmailChangeInput,
@@ -47,9 +49,21 @@ export const PROFILE_CHANNELS = {
   confirmDeletion: 'profile:confirm-deletion',
 } as const;
 
+/** Canais IPC do calendário de pregão (SPEC-005); sugestão e publicação só para colaborador. */
+export const CALENDAR_CHANNELS = {
+  getYear: 'calendar:get-year',
+  suggestion: 'calendar:suggestion',
+  publish: 'calendar:publish',
+} as const;
+
 /** Erros que a interface sabe traduzir. */
 export type ClientAuthError =
-  AuthErrorCode | 'server_unavailable' | 'invalid_url' | 'unexpected' | 'google_cancelled';
+  | AuthErrorCode
+  | CalendarErrorCode
+  | 'server_unavailable'
+  | 'invalid_url'
+  | 'unexpected'
+  | 'google_cancelled';
 
 export type AuthResult =
   { ok: true; user: PublicUser } | { ok: false; error: ClientAuthError; fields?: FieldErrors };
@@ -61,6 +75,7 @@ export type ClientResult<T> =
 export type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  CalendarPublication,
   ChangeEmailInput,
   ChangePasswordInput,
   ConfirmEmailChangeInput,

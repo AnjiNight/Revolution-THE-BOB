@@ -1,4 +1,4 @@
-import type { EmailLocale } from '@simulador/shared';
+import type { EmailLocale, IsoDate } from '@simulador/shared';
 
 /** Idioma dos e-mails que o servidor manda, a partir do idioma da interface (RNF20). */
 export function emailLocale(language: string): EmailLocale {
@@ -22,4 +22,21 @@ export function formatDate(iso: string, language: string, withTime = false): str
     dateStyle: 'long',
     ...(withTime ? { timeStyle: 'short' as const } : {}),
   }).format(new Date(iso));
+}
+
+/**
+ * Dia do calendário (AAAA-MM-DD, SPEC-005) no idioma da interface: "16 de fev. de 2026". Lido em
+ * UTC de propósito: é um dia, não um instante, e não pode mudar com o fuso da máquina.
+ */
+export function formatCalendarDay(date: IsoDate, language: string): string {
+  return new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeZone: 'UTC' }).format(
+    new Date(`${date}T00:00:00Z`),
+  );
+}
+
+/** Dia da semana de um dia do calendário: "segunda-feira", "Monday". */
+export function formatWeekday(date: IsoDate, language: string): string {
+  return new Intl.DateTimeFormat(language, { weekday: 'long', timeZone: 'UTC' }).format(
+    new Date(`${date}T00:00:00Z`),
+  );
 }

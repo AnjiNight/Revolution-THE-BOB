@@ -1,11 +1,17 @@
 import {
   AUTH_PATHS,
+  CALENDAR_PATHS,
+  calendarPath,
+  parseCalendarYear,
   PROFILE_PATHS,
   TERMS_VERSION,
   type AccountDeletionConfirmInput,
   type AccountDeletionRequestInput,
   type AuthErrorCode,
   type AuthSession,
+  type CalendarErrorCode,
+  type CalendarPublication,
+  type CalendarSuggestion,
   type ChangeEmailInput,
   type ChangePasswordInput,
   type ConfirmEmailChangeInput,
@@ -20,6 +26,7 @@ import {
   type PublicUser,
   type RegisterInput,
   type TokenPair,
+  type TradingCalendarYear,
   type UpdateNameInput,
   type UserProfile,
 } from '@simulador/shared';
@@ -35,7 +42,7 @@ export interface AuthClientOptions {
   timeoutMs?: number;
 }
 
-const KNOWN_ERRORS: readonly AuthErrorCode[] = [
+const KNOWN_ERRORS: ReadonlyArray<AuthErrorCode | CalendarErrorCode> = [
   'validation_error',
   'email_in_use',
   'invalid_credentials',
@@ -56,6 +63,8 @@ const KNOWN_ERRORS: readonly AuthErrorCode[] = [
   'invalid_confirmation_code',
   'email_confirmation_unavailable',
   'deletion_not_allowed',
+  'forbidden',
+  'calendar_not_published',
 ];
 
 class RequestFailed extends Error {
@@ -242,6 +251,39 @@ export class AuthClient {
     });
   }
 
+  // --- Calendário de pregão (SPEC-005) ---
+
+  /** Qualquer pessoa conectada: ano não publicado vem com `published: false`. */
+  getCalendar(year: number): Promise<ClientResult<TradingCalendarYear>> {
+    return this.call(() =>
+      this.authorizedRequest<TradingCalendarYear>('GET', calendarUrl(CALENDAR_PATHS.year, year)),
+    );
+  }
+
+  /** Colaborador: sugestão do ano para conferir com a B3. */
+  calendarSuggestion(year: number): Promise<ClientResult<CalendarSuggestion>> {
+    return this.call(() =>
+      this.authorizedRequest<CalendarSuggestion>(
+        'GET',
+        calendarUrl(CALENDAR_PATHS.suggestion, year),
+      ),
+    );
+  }
+
+  /** Colaborador: publica a lista inteira do ano, substituindo a anterior. */
+  publishCalendar(
+    year: number,
+    input: CalendarPublication,
+  ): Promise<ClientResult<TradingCalendarYear>> {
+    return this.call(() =>
+      this.authorizedRequest<TradingCalendarYear>(
+        'PUT',
+        calendarUrl(CALENDAR_PATHS.publish, year),
+        input,
+      ),
+    );
+  }
+
   private async updateProfile(method: string, path: string, body: unknown): Promise<UserProfile> {
     const { user } = await this.authorizedRequest<{ user: UserProfile }>(method, path, body);
     this.user = { id: user.id, name: user.name, email: user.email, role: user.role };
@@ -349,6 +391,13 @@ export class AuthClient {
     }
     throw new RequestFailed(response.status >= 500 ? 'server_unavailable' : 'unexpected');
   }
+}
+
+/** O ano vem da interface: só um ano aceito entra no caminho da rota. */
+function calendarUrl(path: string, year: number): string {
+  const checked = parseCalendarYear(String(year));
+  if (checked === null) throw new RequestFailed('unexpected');
+  return calendarPath(path, checked);
 }
 
 function failure(error: unknown): AuthResult {

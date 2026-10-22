@@ -8,6 +8,8 @@ import { deleteExpiredPendingAccounts } from '../application/email-confirmation-
 import { hashRefreshToken } from '../application/refresh-token.js';
 import { EmailInUseError } from '../domain/errors.js';
 import { createIdentityServices } from '../identity-services.js';
+import { CalendarService } from '../../market-data/application/calendar-service.js';
+import { InMemoryCalendarRepository } from '../../market-data/testing/fakes.js';
 import { BackgroundTasks, FakeEmailSender } from '../testing/fakes.js';
 import { Argon2PasswordHasher } from './argon2-password-hasher.js';
 import { JwtAccessTokenService } from './jwt-access-token-service.js';
@@ -107,6 +109,7 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       passwordReset: services.passwordReset,
       accountData: services.accountData,
       accessTokens,
+      calendar: new CalendarService({ calendars: new InMemoryCalendarRepository() }),
     });
     return { app, mailer, background };
   }

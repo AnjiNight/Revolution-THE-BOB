@@ -16,6 +16,8 @@ import {
   InMemoryRefreshTokenRepository,
   InMemoryUserRepository,
 } from '../modules/identity/testing/fakes.js';
+import { CalendarService } from '../modules/market-data/application/calendar-service.js';
+import { InMemoryCalendarRepository } from '../modules/market-data/testing/fakes.js';
 
 export const TEST_JWT_SECRET = 'segredo-de-teste-com-mais-de-32-caracteres';
 
@@ -65,6 +67,11 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   const probe: DatabaseProbe = {
     isAvailable: () => Promise.resolve(options.databaseAvailable ?? true),
   };
+  const calendars = new InMemoryCalendarRepository();
+  const calendar = new CalendarService({
+    calendars,
+    ...(options.clock ? { clock: options.clock } : {}),
+  });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -79,6 +86,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     passwordReset: services.passwordReset,
     accountData: services.accountData,
     accessTokens,
+    calendar,
     logStream: logs,
   });
 
@@ -122,6 +130,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     mailer,
     background,
     registerConfirmed,
+    calendars,
+    calendar,
     ...services,
   };
 }

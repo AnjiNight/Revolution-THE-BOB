@@ -112,6 +112,8 @@
   color: var(--muted);
   font-size: 0.9rem;
   font-weight: 500;
+  /* Três itens na Área do colaborador (SPEC-005): "Meu perfil" não quebra em duas linhas. */
+  white-space: nowrap;
   transition:
     background-color 0.4s var(--ease-premium),
     color 0.4s var(--ease-premium);
@@ -552,6 +554,32 @@
 
 .profile-panel .terms-notice {
   margin-top: 1.25rem;
+}
+
+/* ---------- Início do colaborador: aviso do calendário (SPEC-005) ---------- */
+
+.calendar-reminder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1rem 1rem 1.15rem;
+  border-left: 3px solid var(--warn);
+  border-radius: 14px;
+  background: var(--warn-soft);
+  line-height: 1.5;
+}
+
+.calendar-reminder ul {
+  display: flex;
+  flex: 1 1 22rem;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* ---------- Telas estreitas (a janela vai até 480px de largura) ---------- */

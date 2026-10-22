@@ -13,6 +13,8 @@ import type { ProfileService } from './modules/identity/application/profile-serv
 import { registerAuthRoutes } from './modules/identity/controllers/auth-routes.js';
 import { registerPasswordResetRoutes } from './modules/identity/controllers/password-reset-routes.js';
 import { registerProfileRoutes } from './modules/identity/controllers/profile-routes.js';
+import type { CalendarService } from './modules/market-data/application/calendar-service.js';
+import { registerCalendarRoutes } from './modules/market-data/controllers/calendar-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { HttpError } from './shared/http/http-error.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
@@ -26,6 +28,8 @@ export interface AppDependencies {
   passwordReset: PasswordResetService;
   accountData: AccountDataService;
   accessTokens: AccessTokenService;
+  /** SPEC-005: calendário de pregão (módulo Dados de Mercado). */
+  calendar: CalendarService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -66,6 +70,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     accessTokens: deps.accessTokens,
     rateLimitPerMinute: deps.config.authRateLimitPerMinute,
   });
+  registerCalendarRoutes(app, { calendar: deps.calendar, accessTokens: deps.accessTokens });
 
   return app;
 }

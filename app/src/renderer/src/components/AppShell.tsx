@@ -8,18 +8,29 @@ import { ServerStatusPanel } from './ServerStatusPanel';
 
 interface AppShellProps {
   user: PublicUser;
-  current: 'home' | 'profile';
+  current: 'home' | 'profile' | 'calendar';
   onHome: () => void;
   onProfile: () => void;
+  /** SPEC-005: só na Área do colaborador. */
+  onCalendar: () => void;
   onLogout: () => void;
   children: ReactNode;
 }
 
 /**
- * Moldura das telas depois do login (Início e Meu perfil): a mesma navegação flutuante da
- * página de entrada, com a pessoa conectada e o botão Sair, e a situação do servidor no rodapé.
+ * Moldura das telas depois do login (Início, Meu perfil e, para o colaborador, o Calendário): a
+ * mesma navegação flutuante da página de entrada, com a pessoa conectada e o botão Sair, e a
+ * situação do servidor no rodapé.
  */
-export function AppShell({ user, current, onHome, onProfile, onLogout, children }: AppShellProps) {
+export function AppShell({
+  user,
+  current,
+  onHome,
+  onProfile,
+  onCalendar,
+  onLogout,
+  children,
+}: AppShellProps) {
   const { t } = useTranslation();
   const ariaCurrent = (view: AppShellProps['current']) => (current === view ? 'page' : undefined);
 
@@ -44,6 +55,13 @@ export function AppShell({ user, current, onHome, onProfile, onLogout, children 
                 {t('shell.home')}
               </button>
             </li>
+            {user.role === 'collaborator' && (
+              <li>
+                <button type="button" aria-current={ariaCurrent('calendar')} onClick={onCalendar}>
+                  {t('shell.calendar')}
+                </button>
+              </li>
+            )}
             <li>
               <button type="button" aria-current={ariaCurrent('profile')} onClick={onProfile}>
                 {t('home.profile')}
