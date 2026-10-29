@@ -4,6 +4,7 @@ import {
   validateAssetUpdate,
   validateNewAsset,
   type AssetClass,
+  type AssetHistory,
   type AssetStatusFilter,
   type AssetUpdateInput,
   type CatalogAsset,
@@ -16,6 +17,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError, ClientResult } from '../../../shared/auth-ipc';
 import '../assets.css';
+import { formatCalendarDay, formatYears } from '../format';
 import { useAssetQuery } from '../useAssetQuery';
 import {
   AssetFilters,
@@ -140,6 +142,7 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
 
   const activeCount = data?.activeCount ?? 0;
   const overCapacity = activeCount > FREE_COLLECTION_CAPACITY;
+  const yearsWithoutCalendar = data?.historyYearsWithoutCalendar ?? [];
   const filtered = hasFilters(filters) || status !== 'all';
 
   return (
@@ -159,6 +162,14 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
               <p className="catalog-capacity">
                 <Warning weight="fill" aria-hidden="true" />
                 {t('catalog.capacityWarning', { limit: FREE_COLLECTION_CAPACITY })}
+              </p>
+            )}
+            {yearsWithoutCalendar.length > 0 && (
+              <p className="catalog-capacity">
+                <Warning weight="fill" aria-hidden="true" />
+                {t('catalog.historyWaitingCalendar', {
+                  years: formatYears(yearsWithoutCalendar),
+                })}
               </p>
             )}
           </div>
@@ -282,6 +293,7 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
                       <td>
                         <span className="asset-ticker">{asset.ticker}</span>
                         <span className="asset-name">{asset.name}</span>
+                        <HistoryLine history={asset.history} />
                         <span className={`class-badge class-${asset.class} narrow-only`}>
                           {t(`assets.class.${asset.class}`)}
                         </span>
@@ -379,6 +391,25 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
       </section>
     </div>
   );
+}
+
+/** Situação do histórico de cotações do ativo (SPEC-008 §5.3). */
+function HistoryLine({ history }: { history: AssetHistory }) {
+  const { t, i18n } = useTranslation();
+  if (history.status === 'loaded' && history.from && history.to) {
+    return (
+      <span className="asset-history">
+        {t('catalog.historyLoaded', {
+          from: formatCalendarDay(history.from, i18n.language),
+          to: formatCalendarDay(history.to, i18n.language),
+        })}
+      </span>
+    );
+  }
+  if (history.status === 'not_found') {
+    return <span className="asset-history is-warn">{t('catalog.historyNotFound')}</span>;
+  }
+  return <span className="asset-history">{t('catalog.historyPending')}</span>;
 }
 
 /**

@@ -34,6 +34,26 @@ export function formatCalendarDay(date: IsoDate, language: string): string {
   );
 }
 
+/**
+ * Lista de anos em ordem, juntando os seguidos: [2016, 2017, 2018, 2021] → "2016–2018, 2021"
+ * (SPEC-008: anos do histórico que esperam o calendário).
+ */
+export function formatYears(years: readonly number[]): string {
+  const sorted = [...years].sort((a, b) => a - b);
+  const parts: string[] = [];
+  for (let i = 0; i < sorted.length;) {
+    const first = sorted[i] as number;
+    let last = first;
+    while (sorted[i + 1] === last + 1) {
+      i += 1;
+      last = sorted[i] as number;
+    }
+    parts.push(last === first ? String(first) : `${first}–${last}`);
+    i += 1;
+  }
+  return parts.join(', ');
+}
+
 /** Dia da semana de um dia do calendário: "segunda-feira", "Monday". */
 export function formatWeekday(date: IsoDate, language: string): string {
   return new Intl.DateTimeFormat(language, { weekday: 'long', timeZone: 'UTC' }).format(

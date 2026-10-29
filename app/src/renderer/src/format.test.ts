@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCalendarDay, formatDate, formatWeekday, initials } from './format';
+import { formatCalendarDay, formatDate, formatWeekday, formatYears, initials } from './format';
 
 describe('initials', () => {
   it.each([
@@ -31,5 +31,14 @@ describe('dias do calendário (SPEC-005)', () => {
     expect(formatCalendarDay('2026-01-01', 'en')).toBe('Jan 1, 2026');
     expect(formatWeekday('2026-02-16', 'pt-BR')).toBe('segunda-feira');
     expect(formatWeekday('2026-01-01', 'en')).toBe('Thursday');
+  });
+});
+
+describe('formatYears (SPEC-008)', () => {
+  it('junta os anos seguidos e separa os outros', () => {
+    expect(formatYears([2016, 2017, 2018, 2019])).toBe('2016–2019');
+    expect(formatYears([2021, 2016, 2017, 2024])).toBe('2016–2017, 2021, 2024');
+    expect(formatYears([2026])).toBe('2026');
+    expect(formatYears([])).toBe('');
   });
 });

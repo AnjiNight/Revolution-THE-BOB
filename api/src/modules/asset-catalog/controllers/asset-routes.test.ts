@@ -337,6 +337,44 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
       const active = await call('GET', `${ASSET_PATHS.catalog}?status=active&q=mxrf`, collaborator);
       expect(active.json<CatalogListResult>().assets.map((a) => a.ticker)).toEqual(['MXRF11']);
     });
+
+    it('mostra a situação do histórico de cotações e os anos sem calendário (SPEC-008, CA10)', async () => {
+      const stock = await create(petr4);
+      const fii = await create(mxrf11);
+      await t.calendar.publish(2026, { nonTradingDays: [] }, 'colab');
+      await t.quotes.save(
+        [
+          {
+            assetId: stock.id,
+            date: '2026-01-02',
+            open: '30.000000',
+            high: '31.000000',
+            low: '29.000000',
+            close: '30.500000',
+            average: '30.200000',
+            trades: 10,
+            volume: '1000.00',
+          },
+        ],
+        'b3_cotahist',
+      );
+
+      const res = await call('GET', ASSET_PATHS.catalog, collaborator);
+      const list = res.json<CatalogListResult>();
+      expect(list.assets.find((a) => a.id === stock.id)?.history).toEqual({
+        status: 'loaded',
+        from: '2026-01-02',
+        to: '2026-01-02',
+      });
+      expect(list.assets.find((a) => a.id === fii.id)?.history).toEqual({
+        status: 'pending',
+        from: null,
+        to: null,
+      });
+      expect(list.historyYearsWithoutCalendar).toEqual([
+        2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025,
+      ]);
+    });
   });
 
   it('lista fixa de setores e segmentos para qualquer pessoa conectada', async () => {

@@ -88,6 +88,8 @@ O colaborador entra pela **Área do colaborador**, na tela de login.
 
 **Catálogo de ativos** ([SPEC-006](specs/SPEC-006.md)): a busca do usuário só mostra os ativos que a equipe cadastrou. Na Área do colaborador, abra **Ativos** e use **Novo ativo** (ticker, nome, classe Ação ou FII e setor ou segmento). A classe não muda depois do cadastro, e ativo nunca é apagado: é desativado. Cada mudança no catálogo e cada publicação do calendário ficam no registro de auditoria.
 
+**Histórico de cotações** ([SPEC-008](specs/SPEC-008.md)): o processador (`npm run dev:worker`) carrega o fechamento diário dos ativos do catálogo a partir dos arquivos públicos da B3, desde 2016. Ativo novo ganha o histórico em até 15 minutos; os pregões que faltam são buscados todo dia às 08:00. Só entram os anos com calendário publicado: publique de 2016 até o ano atual (a tela **Ativos** do colaborador avisa quais faltam). Os arquivos anuais (uns 60 a 90 MB cada) ficam guardados em `api/.cache/b3`.
+
 ### Login com Google (opcional)
 
 O botão "Continuar com o Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)). O login abre o navegador do sistema: se a pessoa já estiver conectada ao Google lá, basta escolher a conta.

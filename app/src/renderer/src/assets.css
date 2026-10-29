@@ -206,6 +206,18 @@
   overflow-wrap: anywhere;
 }
 
+/* SPEC-008: situação do histórico de cotações, embaixo do nome. */
+.asset-history {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.asset-history.is-warn {
+  color: var(--warn);
+}
+
 .class-badge {
   display: inline-flex;
   padding: 0.15rem 0.6rem;

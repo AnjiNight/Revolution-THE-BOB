@@ -59,6 +59,8 @@ const configSchema = z
       .int({ error: 'WORKER_HEARTBEAT_SECONDS deve ser um número inteiro' })
       .min(1, { error: 'WORKER_HEARTBEAT_SECONDS deve ser maior que zero' })
       .default(60),
+    /** Pasta onde o processador guarda os arquivos anuais da B3 de anos fechados (SPEC-008). */
+    B3_CACHE_DIR: z.string().trim().min(1).default('.cache/b3'),
   })
   .refine((c) => c.NODE_ENV !== 'production' || !c.JWT_SECRET.includes('troque'), {
     error: 'o JWT_SECRET de exemplo não pode ser usado em produção',
@@ -98,6 +100,7 @@ export interface AppConfig {
   /** null quando o SMTP não está configurado: a recuperação de senha fica desligada. */
   smtp: SmtpConfig | null;
   workerHeartbeatSeconds: number;
+  b3CacheDir: string;
 }
 
 export class ConfigError extends Error {
@@ -137,5 +140,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         }
       : null,
     workerHeartbeatSeconds: c.WORKER_HEARTBEAT_SECONDS,
+    b3CacheDir: c.B3_CACHE_DIR,
   };
 }

@@ -8,4 +8,6 @@ coverage/
 .env.*
 !.env.example
 api/src/generated/
+# Arquivos anuais da B3 baixados pelo processador (SPEC-008)
+.cache/
 .DS_Store

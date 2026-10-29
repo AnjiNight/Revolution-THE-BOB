@@ -454,7 +454,7 @@
     "choose": "Choose…",
     "create": "Add asset",
     "save": "Save",
-    "created": "{{ticker}} added.",
+    "created": "{{ticker}} added. Its quote history will be loaded in a few minutes.",
     "updated": "{{ticker}} updated.",
     "unchanged": "Nothing changed in {{ticker}}.",
     "deactivated": "{{ticker}} deactivated.",
@@ -471,6 +471,10 @@
     "inactive": "Deactivated",
     "empty": "No assets match these filters.",
     "emptyCatalog": "No assets yet. Start with \"New asset\".",
-    "listLabel": "Catalog assets"
+    "listLabel": "Catalog assets",
+    "historyPending": "History: loading…",
+    "historyLoaded": "History from {{from}} to {{to}}",
+    "historyNotFound": "History: not found in the B3 files",
+    "historyWaitingCalendar": "Quote history for {{years}} is only loaded after the trading calendar for those years is published (in Calendar)."
   }
 }

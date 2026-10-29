@@ -136,11 +136,36 @@ export interface AssetSearchResult {
   hasMore: boolean;
 }
 
+/** Primeiro ano do histórico de cotações carregado dos arquivos da B3 (SPEC-008, OPEN-05). */
+export const HISTORY_START_YEAR = 2016;
+
+/**
+ * Situação do histórico de cotações de um ativo (SPEC-008): `pending` enquanto o processador não
+ * leu os arquivos da B3; `loaded` com o primeiro e o último pregão guardados; `not_found` quando
+ * todos os anos foram lidos e o ticker não apareceu em nenhum.
+ */
+export interface AssetHistory {
+  status: 'pending' | 'loaded' | 'not_found';
+  /** AAAA-MM-DD; `null` sem nenhuma cotação. */
+  from: string | null;
+  to: string | null;
+}
+
+/** Ativo na lista do colaborador: com a situação do histórico de cotações. */
+export interface CatalogListAsset extends CatalogAsset {
+  history: AssetHistory;
+}
+
 /** Corpo de `GET /api/collaborator/assets`. */
 export interface CatalogListResult {
-  assets: CatalogAsset[];
+  assets: CatalogListAsset[];
   /** Ativos ativos no catálogo inteiro, sem filtro (aviso acima de 50, DA16). */
   activeCount: number;
+  /**
+   * Anos da janela do histórico (desde 2016) sem calendário de pregão publicado: as cotações deles
+   * só são carregadas depois da publicação (SPEC-008 §4).
+   */
+  historyYearsWithoutCalendar: number[];
 }
 
 /** Erros das rotas do catálogo. */

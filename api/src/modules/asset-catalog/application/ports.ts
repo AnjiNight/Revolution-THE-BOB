@@ -1,4 +1,4 @@
-import type { AssetClass, AssetStatusFilter, SectorCode } from '@simulador/shared';
+import type { AssetClass, AssetHistory, AssetStatusFilter, SectorCode } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type { StoredAsset } from '../domain/asset.js';
 
@@ -18,6 +18,14 @@ export interface AssetModification {
   changes: AssetChanges;
   updatedAt: Date;
   audit: AuditEntry;
+}
+
+/**
+ * Situação do histórico de cotações (SPEC-008), que o módulo Dados de Mercado fornece. O catálogo
+ * só mostra; não sabe de cotações.
+ */
+export interface AssetHistoryReader {
+  overview(): Promise<{ byAsset: Map<string, AssetHistory>; yearsWithoutCalendar: number[] }>;
 }
 
 export interface AssetRepository {

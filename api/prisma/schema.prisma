@@ -178,8 +178,104 @@ model Ativo {
 
   setorAtivo Setor @relation(fields: [classe, setor], references: [classe, codigo], onDelete: Restrict, onUpdate: Restrict)
 
+  cotacoes        CotacaoDiaria[]
+  cargasHistorico CargaHistorico[]
+
   @@index([classe, setor])
   @@map("ativo")
+}
+
+/// De onde veio a cotação (SPEC-008). Quando as duas fontes têm o mesmo dia, vale a B3 (DA18).
+enum FonteCotacao {
+  b3_cotahist
+  brapi
+
+  @@map("fonte_cotacao")
+}
+
+/// Fechamento de um pregão (SPEC-008). Preços como a fonte publica, sem ajuste por proventos
+/// (OPEN-06), já divididos pelo fator de cotação. Fim de semana e preços fora da faixa do dia são
+/// recusados (CHECK na migração).
+model CotacaoDiaria {
+  ativoId    String       @map("ativo_id") @db.Uuid
+  data       DateTime     @db.Date
+  abertura   Decimal      @db.Decimal(18, 6)
+  maxima     Decimal      @db.Decimal(18, 6)
+  minima     Decimal      @db.Decimal(18, 6)
+  fechamento Decimal      @db.Decimal(18, 6)
+  precoMedio Decimal      @map("preco_medio") @db.Decimal(18, 6)
+  negocios   Int
+  volume     Decimal      @db.Decimal(20, 2)
+  fonte      FonteCotacao
+  gravadoEm  DateTime     @default(now()) @map("gravado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, data])
+  @@map("cotacao_diaria")
+}
+
+/// Ano do arquivo anual da B3 já lido para um ativo, mesmo sem nenhuma cotação dele (SPEC-008):
+/// a carga retroativa não lê esse ano de novo para esse ativo.
+model CargaHistorico {
+  ativoId     String   @map("ativo_id") @db.Uuid
+  ano         Int      @db.SmallInt
+  carregadaEm DateTime @map("carregada_em") @db.Timestamptz(3)
+  registros   Int
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, ano])
+  @@map("carga_historico")
+}
+
+/// Tarefas de ingestão do processador (DA07, DA14). As SPECs 007, 009 e 027 acrescentam as suas.
+enum TarefaIngestao {
+  historico_retroativo
+  fechamento_diario
+
+  @@map("tarefa_ingestao")
+}
+
+enum SituacaoExecucao {
+  sucesso
+  parcial
+  falha
+  aguardando_publicacao
+
+  @@map("situacao_execucao")
+}
+
+/// Uma execução de tarefa de ingestão (SPEC-008, DA14). Sem "terminada_em", está em andamento.
+model ExecucaoTarefa {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tarefa         TarefaIngestao
+  iniciadaEm     DateTime          @map("iniciada_em") @db.Timestamptz(3)
+  terminadaEm    DateTime?         @map("terminada_em") @db.Timestamptz(3)
+  situacao       SituacaoExecucao?
+  registros      Int               @default(0)
+  ativosAfetados Int               @default(0) @map("ativos_afetados")
+  periodoInicio  DateTime?         @map("periodo_inicio") @db.Date
+  periodoFim     DateTime?         @map("periodo_fim") @db.Date
+
+  erros ErroExecucao[]
+
+  @@index([tarefa, iniciadaEm])
+  @@map("execucao_tarefa")
+}
+
+/// Problema encontrado numa execução: linha inválida, dia sem pregão, arquivo que não baixou.
+model ErroExecucao {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  execucaoId String    @map("execucao_id") @db.Uuid
+  ativoId    String?   @map("ativo_id") @db.Uuid
+  data       DateTime? @db.Date
+  mensagem   String    @db.VarChar(500)
+
+  execucao ExecucaoTarefa @relation(fields: [execucaoId], references: [id], onDelete: Cascade)
+
+  @@index([execucaoId])
+  @@map("erro_execucao")
 }
 
 /// O que a equipe fez (SPEC-006, RNF15).

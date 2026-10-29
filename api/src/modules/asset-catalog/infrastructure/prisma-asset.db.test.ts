@@ -33,7 +33,8 @@ describe.skipIf(!url)('catálogo de ativos no PostgreSQL', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE ativo');
+    // CASCADE: o histórico de cotações (SPEC-008) aponta para o ativo.
+    await prisma.$executeRawUnsafe('TRUNCATE TABLE ativo CASCADE');
     collaborator = randomUUID();
   });
 

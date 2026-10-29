@@ -20,7 +20,11 @@ import {
   InMemoryUserRepository,
 } from '../modules/identity/testing/fakes.js';
 import { CalendarService } from '../modules/market-data/application/calendar-service.js';
-import { InMemoryCalendarRepository } from '../modules/market-data/testing/fakes.js';
+import { HistoryStatusService } from '../modules/market-data/application/history-status-service.js';
+import {
+  InMemoryCalendarRepository,
+  InMemoryQuoteRepository,
+} from '../modules/market-data/testing/fakes.js';
 
 export const TEST_JWT_SECRET = 'segredo-de-teste-com-mais-de-32-caracteres';
 
@@ -74,8 +78,17 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   const audit = new InMemoryAuditTrail();
   const calendars = new InMemoryCalendarRepository(audit);
   const assets = new InMemoryAssetRepository(audit);
+  // Histórico de cotações (SPEC-008) sobre o mesmo catálogo em memória.
+  const quotes = new InMemoryQuoteRepository(() =>
+    assets.assets.map((asset) => ({ id: asset.id, ticker: asset.ticker })),
+  );
   const catalog = new AssetCatalogService({
     assets,
+    history: new HistoryStatusService({
+      quotes,
+      calendars,
+      ...(options.clock ? { clock: options.clock } : {}),
+    }),
     ...(options.clock ? { clock: options.clock } : {}),
   });
   const calendar = new CalendarService({
@@ -145,6 +158,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     calendar,
     audit,
     assets,
+    quotes,
     catalog,
     ...services,
   };

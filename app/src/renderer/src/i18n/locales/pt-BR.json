@@ -454,7 +454,7 @@
     "choose": "Escolha…",
     "create": "Cadastrar",
     "save": "Salvar",
-    "created": "{{ticker}} cadastrado.",
+    "created": "{{ticker}} cadastrado. O histórico de cotações dele será carregado em alguns minutos.",
     "updated": "{{ticker}} atualizado.",
     "unchanged": "Nada mudou em {{ticker}}.",
     "deactivated": "{{ticker}} desativado.",
@@ -471,6 +471,10 @@
     "inactive": "Desativado",
     "empty": "Nenhum ativo com esses filtros.",
     "emptyCatalog": "Nenhum ativo cadastrado ainda. Comece por \"Novo ativo\".",
-    "listLabel": "Ativos do catálogo"
+    "listLabel": "Ativos do catálogo",
+    "historyPending": "Histórico: carregando…",
+    "historyLoaded": "Histórico de {{from}} a {{to}}",
+    "historyNotFound": "Histórico: não encontrado nos arquivos da B3",
+    "historyWaitingCalendar": "O histórico de cotações de {{years}} só é carregado depois que o calendário de pregão desses anos for publicado (em Calendário)."
   }
 }

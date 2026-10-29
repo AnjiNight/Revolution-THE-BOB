@@ -22,7 +22,12 @@ describe('loadConfig (CA08)', () => {
       googleClientId: null,
       smtp: null,
       workerHeartbeatSeconds: 60,
+      b3CacheDir: '.cache/b3',
     });
+  });
+
+  it('pasta dos arquivos da B3 pode ser trocada (SPEC-008)', () => {
+    expect(loadConfig({ ...base, B3_CACHE_DIR: 'D:/b3' }).b3CacheDir).toBe('D:/b3');
   });
 
   it('converte números vindos de texto', () => {

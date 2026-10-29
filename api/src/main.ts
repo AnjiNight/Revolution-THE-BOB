@@ -16,7 +16,14 @@ import { PrismaRefreshTokenRepository } from './modules/identity/infrastructure/
 import { PrismaUserRepository } from './modules/identity/infrastructure/prisma-user-repository.js';
 import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-sender.js';
 import { CalendarService } from './modules/market-data/application/calendar-service.js';
+import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
+import { HistoryStatusService } from './modules/market-data/application/history-status-service.js';
+import { B3CotahistSource } from './modules/market-data/infrastructure/b3-cotahist-source.js';
 import { PrismaCalendarRepository } from './modules/market-data/infrastructure/prisma-calendar-repository.js';
+import {
+  PrismaQuoteRepository,
+  PrismaTaskRunRepository,
+} from './modules/market-data/infrastructure/prisma-quote-repository.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 import { readVersion } from './version.js';
@@ -38,6 +45,7 @@ async function main(): Promise<void> {
   const version = readVersion();
   const prisma = createPrismaClient(config.databaseUrl);
   const probe = new PrismaDatabaseProbe(prisma);
+  const calendars = new PrismaCalendarRepository(prisma);
 
   let shutdown: () => Promise<void>;
 
@@ -67,8 +75,11 @@ async function main(): Promise<void> {
       passwordReset,
       accountData,
       accessTokens,
-      calendar: new CalendarService({ calendars: new PrismaCalendarRepository(prisma) }),
-      catalog: new AssetCatalogService({ assets: new PrismaAssetRepository(prisma) }),
+      calendar: new CalendarService({ calendars }),
+      catalog: new AssetCatalogService({
+        assets: new PrismaAssetRepository(prisma),
+        history: new HistoryStatusService({ quotes: new PrismaQuoteRepository(prisma), calendars }),
+      }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -77,6 +88,12 @@ async function main(): Promise<void> {
   } else {
     const logger = pino(loggerOptions(config.logLevel));
     const users = new PrismaUserRepository(prisma);
+    const history = new HistoryIngestion({
+      source: new B3CotahistSource({ cacheDir: config.b3CacheDir }),
+      quotes: new PrismaQuoteRepository(prisma),
+      runs: new PrismaTaskRunRepository(prisma),
+      calendars,
+    });
     const worker = startWorker({
       logger,
       probe,
@@ -86,6 +103,19 @@ async function main(): Promise<void> {
         {
           name: 'limpeza de contas não confirmadas',
           run: () => deleteExpiredPendingAccounts(users, new Date()),
+        },
+      ],
+      // SPEC-008: histórico de ativo novo a cada 15 minutos; pregões que faltam às 08:00.
+      scheduledTasks: [
+        {
+          name: 'histórico retroativo',
+          run: async () => (await history.loadRetroactive())?.records ?? 0,
+          everyMinutes: 15,
+        },
+        {
+          name: 'fechamento diário',
+          run: async () => (await history.updateDaily())?.records ?? 0,
+          dailyAtHour: 8,
         },
       ],
     });

@@ -22,6 +22,7 @@
 | 1.12 | SPEC-034 detalhada ([SPEC-034.md](SPEC-034.md)), aprovada e implementada: OPEN-04 resolvida (JSON versionado, baixado pelo app) e regra da OPEN-40 decidida (backups e logs por no máximo 30 dias) |
 | 1.13 | SPEC-005 detalhada ([SPEC-005.md](SPEC-005.md)), aprovada e implementada; OPEN-01 resolvida (calendário oficial da B3, conferido e publicado pelo colaborador, com sugestão automática) |
 | 1.14 | SPEC-006 detalhada ([SPEC-006.md](SPEC-006.md)), aprovada e implementada, com o registro de auditoria (RNF15) que passa a valer também para o calendário da SPEC-005; OPEN-41 resolvida (busca só no catálogo da equipe) |
+| 1.15 | SPEC-008 detalhada ([SPEC-008.md](SPEC-008.md)), aprovada e implementada; DA18 aceita; OPEN-05 resolvida (histórico desde 2016); proventos (OPEN-06) fora da SPEC-008; ativo desativado continua sendo coletado |
 
 ---
 
@@ -256,7 +257,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-02 | Hospedagem (servidor, processador, banco com backup diário, cache) e serviço de e-mail | PE13 | 001, 004 |
 | OPEN-03 | ✅ **Resolvida na [SPEC-002](SPEC-002.md):** o perfil passa a se chamar **colaborador**; colaborador nunca se cadastra pelo app, a equipe cria a conta com `npm run colaborador:criar` (senha forte gerada) e ele entra pela Área do colaborador | Lacuna | 002, 006, 011 |
 | OPEN-04 | Formato, conteúdo e forma de entrega da exportação de dados pessoais | RF06 | 034 |
-| OPEN-05 | Aprovação de DA18 (histórico pelos arquivos da B3, hoje **Proposta**) e tamanho da janela histórica carregada | DA18, PE04 | 008, 016 |
+| OPEN-05 | ✅ **Resolvida na [SPEC-008](SPEC-008.md):** DA18 aceita (histórico pelos arquivos COTAHIST da B3), carregado desde o primeiro pregão de 2016 | DA18, PE04 | 008, 016 |
 | OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo) | PE05, DA22 | 008, 014, 016, 019 |
 | OPEN-07 | Termos da brapi para redistribuir cotações | PE02 | 009, 026 |
 | OPEN-08 | Compra/venda na carteira ao vivo com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
@@ -494,6 +495,8 @@ Visão geral por fase:
 
 #### SPEC-008 — Carga do histórico diário de cotações
 
+📄 Detalhada em [SPEC-008.md](SPEC-008.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Carregar o histórico de fechamento diário dos ativos do catálogo (ações e FIIs), inclusive a carga retroativa quando um ativo é cadastrado, com regra de precedência entre fontes. **Estabelece o padrão de ingestão** (adaptador, idempotência, novas tentativas e execução registrada) reutilizado pelas demais ingestões (007, 009, 027) |
@@ -504,10 +507,10 @@ Visão geral por fase:
 | Caso de uso / fluxo | UC: Consultar cotação (lado do sistema) |
 | Entidades | COTACAO, ATIVO, EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
 | Drivers | FAS03, QA02, QA08, QA12, PA03, RES03, RES07, PRE03 |
-| ADRs | DA06, DA07, DA14, DA18 (Proposta) |
+| ADRs | DA06, DA07, DA14, DA18 |
 | Depende de | SPEC-001, SPEC-005, SPEC-006 |
 | Posição | Primeira ingestão: define o padrão usado pelas outras. Precede tudo que olha para o passado (010, 016, 019, 031) |
-| Em aberto | **OPEN-05 (bloqueante: DA18 não aprovado)**, OPEN-06, OPEN-40, OPEN-48 |
+| Em aberto | OPEN-06 (fora da Spec: preços sem ajuste), OPEN-40, OPEN-48 (OPEN-05 resolvida) |
 | Prioridade derivada | Must |
 
 #### SPEC-009 — Cotações do pregão (nível gratuito) e fechamento diário
@@ -1115,7 +1118,7 @@ Observações:
 - **034** vem logo após a identidade; as Specs seguintes do caminho que criam dados do usuário (012–015) entregam a sua parte da exportação e da exclusão.
 - **008** estabelece o padrão de ingestão; **007** (CDI, *Should*) fica fora do caminho e é feita junto com o benchmark (020).
 - **019** cobre a carteira ao vivo; a carteira histórica (016) fica fora do caminho mínimo.
-- Dentro desse caminho, **008** (OPEN-05) depende de decisão em aberto.
+- Dentro desse caminho, nenhuma Spec depende mais de decisão em aberto (OPEN-05 resolvida na SPEC-008).
 
 ### 3.3 Specs bloqueadas por decisão
 
@@ -1123,7 +1126,6 @@ Estas Specs **não devem ser detalhadas** antes de a equipe decidir os itens ind
 
 | Spec | Decisão bloqueante |
 |---|---|
-| SPEC-008 | OPEN-05 — aprovar DA18 (fonte do histórico) |
 | SPEC-023 | OPEN-22 — significado de "simulação" |
 | SPEC-027 | OPEN-28 — autorização da fonte pai |
 | SPEC-030 | OPEN-32 — RFs das fontes do usuário |

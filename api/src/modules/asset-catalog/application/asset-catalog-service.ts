@@ -3,6 +3,7 @@ import {
   ASSET_SEARCH_LIMIT,
   isSectorOf,
   SECTOR_OPTIONS,
+  type AssetHistory,
   type AssetSearchQuery,
   type AssetSearchResult,
   type AssetUpdate,
@@ -16,10 +17,19 @@ import type { AuditAction, AuditEntry, JsonValue } from '../../audit/application
 import { searchAssets } from '../domain/asset-search.js';
 import { isActive, toCatalogAsset, toPublicAsset, type StoredAsset } from '../domain/asset.js';
 import { AssetNotFoundError, AssetValidationError } from '../domain/errors.js';
-import type { AssetChanges, AssetModification, AssetRepository } from './ports.js';
+import type {
+  AssetChanges,
+  AssetHistoryReader,
+  AssetModification,
+  AssetRepository,
+} from './ports.js';
+
+const PENDING_HISTORY: AssetHistory = { status: 'pending', from: null, to: null };
 
 export interface AssetCatalogServiceDeps {
   assets: AssetRepository;
+  /** Situação do histórico de cotações (SPEC-008). Sem ela, todos aparecem como "carregando". */
+  history?: AssetHistoryReader;
   clock?: () => Date;
   newId?: () => string;
 }
@@ -48,17 +58,28 @@ export class AssetCatalogService {
     return { assets: found.assets.map(toPublicAsset), hasMore: found.hasMore };
   }
 
-  /** Colaborador: todos os que passam nos filtros, inclusive desativados, e o total de ativos. */
+  /**
+   * Colaborador: todos os que passam nos filtros, inclusive desativados, com a situação do
+   * histórico de cotações (SPEC-008), e o total de ativos.
+   */
   async catalog(query: CatalogQuery): Promise<CatalogListResult> {
-    const [candidates, activeCount] = await Promise.all([
+    const [candidates, activeCount, history] = await Promise.all([
       this.deps.assets.list({
         status: query.status,
         assetClass: query.class,
         sector: query.sector,
       }),
       this.deps.assets.countActive(),
+      this.deps.history?.overview(),
     ]);
-    return { assets: searchAssets(candidates, query.q).assets.map(toCatalogAsset), activeCount };
+    return {
+      assets: searchAssets(candidates, query.q).assets.map((asset) => ({
+        ...toCatalogAsset(asset),
+        history: history?.byAsset.get(asset.id) ?? PENDING_HISTORY,
+      })),
+      activeCount,
+      historyYearsWithoutCalendar: history?.yearsWithoutCalendar ?? [],
+    };
   }
 
   sectors(): readonly SectorOption[] {
