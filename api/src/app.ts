@@ -2,12 +2,21 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { DestinationStream } from 'pino';
+import type { AssetCatalogService } from './modules/asset-catalog/application/asset-catalog-service.js';
+import { registerAssetRoutes } from './modules/asset-catalog/controllers/asset-routes.js';
 import type { AppConfig } from './config.js';
 import type { DatabaseProbe } from './modules/health/application/get-health.js';
 import { registerHealthRoutes } from './modules/health/controllers/health-routes.js';
+import type { AccountDataService } from './modules/identity/application/account-data-service.js';
 import type { AuthService } from './modules/identity/application/auth-service.js';
+import type { PasswordResetService } from './modules/identity/application/password-reset-service.js';
 import type { AccessTokenService } from './modules/identity/application/ports.js';
+import type { ProfileService } from './modules/identity/application/profile-service.js';
 import { registerAuthRoutes } from './modules/identity/controllers/auth-routes.js';
+import { registerPasswordResetRoutes } from './modules/identity/controllers/password-reset-routes.js';
+import { registerProfileRoutes } from './modules/identity/controllers/profile-routes.js';
+import type { CalendarService } from './modules/market-data/application/calendar-service.js';
+import { registerCalendarRoutes } from './modules/market-data/controllers/calendar-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { HttpError } from './shared/http/http-error.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
@@ -17,7 +26,14 @@ export interface AppDependencies {
   probe: DatabaseProbe;
   version: string;
   auth: AuthService;
+  profile: ProfileService;
+  passwordReset: PasswordResetService;
+  accountData: AccountDataService;
   accessTokens: AccessTokenService;
+  /** SPEC-005: calendário de pregão (módulo Dados de Mercado). */
+  calendar: CalendarService;
+  /** SPEC-006: catálogo de ativos. */
+  catalog: AssetCatalogService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -46,9 +62,20 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
   registerHealthRoutes(app, { probe: deps.probe, version: deps.version });
   registerAuthRoutes(app, {
     auth: deps.auth,
+    rateLimitPerMinute: deps.config.authRateLimitPerMinute,
+  });
+  registerPasswordResetRoutes(app, {
+    passwordReset: deps.passwordReset,
+    rateLimitPerMinute: deps.config.authRateLimitPerMinute,
+  });
+  registerProfileRoutes(app, {
+    profile: deps.profile,
+    accountData: deps.accountData,
     accessTokens: deps.accessTokens,
     rateLimitPerMinute: deps.config.authRateLimitPerMinute,
   });
+  registerCalendarRoutes(app, { calendar: deps.calendar, accessTokens: deps.accessTokens });
+  registerAssetRoutes(app, { catalog: deps.catalog, accessTokens: deps.accessTokens });
 
   return app;
 }

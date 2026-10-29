@@ -42,24 +42,137 @@
     "goToCollaborator": "Collaborator area",
     "collaboratorTitle": "Collaborator area",
     "collaboratorNote": "Collaborator access is created by the team. It is not possible to sign up here.",
-    "backToLogin": "Back to user sign-in"
+    "backToLogin": "Back to user sign-in",
+    "forgotPassword": "Forgot your password?",
+    "accountDeleted": "Your account was deleted. Your data was erased."
+  },
+  "reset": {
+    "title": "Reset password",
+    "intro": "Enter your account email. We'll send you a code to create a new password.",
+    "sendCode": "Send code",
+    "codeSent": "If there is an account for {{email}}, we sent a code to that address. It is valid for 15 minutes.",
+    "code": "Code",
+    "codeHint": "8 letters and numbers, like K7QM-4XPD.",
+    "newPassword": "New password",
+    "submit": "Reset password",
+    "resend": "Resend code",
+    "resendIn": "Resend code in {{seconds}} s",
+    "resent": "We sent a new code. Always use the latest one.",
+    "otherEmail": "Use another email",
+    "back": "Back to sign in",
+    "backCollaborator": "Back to the collaborator area",
+    "done": "Password reset. Sign in with your new password."
+  },
+  "confirm": {
+    "title": "Confirm your email",
+    "sent": "We sent a code to {{email}}. It is valid for 15 minutes.",
+    "pendingLogin": "Your account is not confirmed yet. We sent a new code to {{email}}.",
+    "submit": "Confirm and sign in",
+    "fixEmail": "Fix email"
   },
   "home": {
     "greeting": "Hello, {{name}}!",
-    "role": {
-      "user": "Profile: user",
-      "collaborator": "Profile: collaborator"
-    },
-    "next": "Your account is ready. Simulation portfolios arrive in the next versions.",
+    "next": "Your account is ready. You can already search stocks and REITs (FIIs); simulation portfolios are coming in future versions.",
     "logout": "Sign out",
-    "collaboratorNext": "Team tools (asset management and data collection monitoring) arrive in the next versions."
+    "collaboratorNext": "Keep the trading calendar and the asset catalog up to date. Data collection monitoring is coming in future versions.",
+    "profile": "My profile",
+    "upcomingTitle": "What is coming",
+    "soon": "Coming soon",
+    "collabTools": {
+      "ingestion": {
+        "title": "Data collection monitoring",
+        "text": "See the runs and failures of quote and news collection, and run them again when needed."
+      }
+    },
+    "calendarReminder": {
+      "missing": "The {{year}} trading calendar hasn't been published. Until it is, entries dated in that year are blocked.",
+      "nextYear": "The {{year}} trading calendar hasn't been published yet. Publish it by December 31.",
+      "open": "Open the calendar"
+    },
+    "availableTitle": "Available now",
+    "open": "Open",
+    "tools": {
+      "search": {
+        "title": "Search assets",
+        "text": "Find stocks and REITs (FIIs) by ticker, name, sector or segment."
+      },
+      "calendar": {
+        "title": "Trading calendar",
+        "text": "Publish the weekdays when B3 is closed, checked against B3's official calendar."
+      },
+      "assets": {
+        "title": "Asset catalog",
+        "text": "Add and maintain the stocks and REITs (FIIs) users find in the search."
+      }
+    }
+  },
+  "profile": {
+    "title": "My profile",
+    "signInMethods": "Sign-in methods",
+    "methodPassword": "Email and password",
+    "createdAt": "Account created on",
+    "nameSection": "Name",
+    "emailSection": "Email",
+    "newEmail": "Email",
+    "passwordSection": "Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "saved": "Changes saved.",
+    "passwordChanged": "Password changed. Other sessions of this account were signed out.",
+    "googleOnly": "This account signs in with Google ({{email}}). Email and password are managed by Google.",
+    "consentsSection": "Consents",
+    "withdrawConsent": "To withdraw consent, delete your account in Your data.",
+    "termsUpdated": "The terms of use and privacy policy have changed. Read the summary and accept the new version.",
+    "subtitle": "Your sign-in details and consent history.",
+    "roleName": {
+      "user": "User",
+      "collaborator": "Collaborator"
+    },
+    "editName": "Edit name",
+    "saveName": "Save name",
+    "editEmail": "Change email",
+    "saveEmail": "Save email",
+    "editPassword": "Change password",
+    "savePassword": "Save new password",
+    "passwordSummary": "Used to sign in with email and password.",
+    "googleAccount": "Google account",
+    "consentTitle": "Terms of use and privacy policy",
+    "consentMeta": "Version {{version}}, accepted on {{date}}",
+    "consentCurrent": "Current",
+    "confirmEmail": "Confirm email",
+    "emailCodeSent": "We sent a code to {{email}}. Your email only changes after you confirm it.",
+    "pendingEmail": "Waiting for confirmation: {{email}}",
+    "emailChanged": "Email changed. The old address received a notice.",
+    "data": {
+      "title": "Your data",
+      "intro": "Download a copy of everything the app keeps about you, or delete your account.",
+      "export": "Download my data",
+      "exported": "File saved.",
+      "delete": "Delete my account",
+      "deleteWarning": "This erases your account, your consents and your sessions. It cannot be undone.",
+      "sendCode": "Send code to {{email}}",
+      "codeSent": "We sent a code to {{email}}. It is valid for 15 minutes.",
+      "confirmDelete": "Delete my account forever",
+      "collaboratorNote": "Collaborator accounts are deleted by the team."
+    }
   },
   "fieldErrors": {
     "required": "Required field.",
     "too_short": "Too short.",
     "too_long": "Too long.",
     "invalid_email": "Enter a valid email.",
-    "terms_not_accepted": "You must accept the terms to continue."
+    "terms_not_accepted": "You must accept the terms to continue.",
+    "same_password": "The new password must be different from the current one.",
+    "invalid_version": "Outdated terms version. Reload the screen.",
+    "invalid_code": "The code has 8 letters and numbers, like K7QM-4XPD.",
+    "invalid_date": "Enter a valid date.",
+    "wrong_year": "The date must be in the selected year.",
+    "weekend": "Weekends never have trading and are not listed.",
+    "duplicate": "This date is already on the list.",
+    "invalid_ticker": "Use the B3 code: 4 characters and 1 or 2 digits, like PETR4 or MXRF11.",
+    "invalid_option": "Choose an option from the list.",
+    "wrong_class": "This option doesn't belong to the asset's class.",
+    "immutable": "The class can't be changed after the asset is created."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -76,7 +189,20 @@
     "google_login_unavailable": "Sign in with Google is not available.",
     "google_token_invalid": "Could not confirm the Google sign-in. Try again.",
     "google_email_not_verified": "Google did not confirm this email.",
-    "google_cancelled": "Google sign-in cancelled."
+    "google_cancelled": "Google sign-in cancelled.",
+    "invalid_password": "Incorrect current password.",
+    "email_change_not_allowed": "This account email comes from Google and cannot be changed here.",
+    "password_change_not_allowed": "This account signs in with Google and has no password.",
+    "invalid_reset_code": "Invalid or expired code. Check the code or ask for a new one.",
+    "password_reset_unavailable": "Password reset is not available on this server.",
+    "email_not_confirmed": "Confirm your email to sign in.",
+    "invalid_confirmation_code": "Invalid or expired code. Check the code or ask for a new one.",
+    "email_confirmation_unavailable": "Email confirmation is not available on this server.",
+    "deletion_not_allowed": "Collaborator accounts are deleted by the team.",
+    "forbidden": "This area is for the team only.",
+    "calendar_not_published": "The team hasn't published the trading calendar for that year yet. Without it, the app doesn't know which days the exchange was open.",
+    "ticker_in_use": "Another asset already uses this ticker.",
+    "asset_not_found": "This asset no longer exists. The list has been refreshed."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -204,5 +330,151 @@
       "project": "Computer Engineering, Universidade Presbiteriana Mackenzie.",
       "team": "Luís Gustavo Sampaio Coêlho and Nicoly Araujo de Paschoa"
     }
+  },
+  "shell": {
+    "skip": "Skip to content",
+    "navLabel": "App navigation",
+    "home": "Home",
+    "calendar": "Calendar",
+    "assets": "Assets",
+    "logoutLabel": "Sign out of your account"
+  },
+  "calendar": {
+    "title": "Trading calendar",
+    "subtitle": "The weekdays when B3 is closed. Until a year is published, the app doesn't accept dates in it.",
+    "year": "Year",
+    "published": "Published on {{date}}",
+    "notPublished": "Not published",
+    "b3Note": "Check against B3's official calendar before publishing. B3 releases next year's calendar in early December.",
+    "loadSuggestion": "Load suggestion",
+    "suggestionLoaded": "Suggestion loaded. Check each day against B3's calendar.",
+    "suggested": "Suggestion",
+    "listTitle": "Non-trading days in {{year}}",
+    "count": "Days on the list: {{count}}",
+    "empty": "No days on the list. Load the suggestion or add the days.",
+    "weekendNote": "Saturdays and Sundays never have trading and don't need to be listed.",
+    "date": "Date",
+    "reason": "Reason",
+    "actions": "Actions",
+    "remove": "Remove",
+    "removeLabel": "Remove {{date}} ({{reason}})",
+    "addTitle": "Add a day",
+    "reasonHint": "As in B3's calendar, for example \"Carnival\".",
+    "add": "Add",
+    "unsaved": "There are unpublished changes.",
+    "yearLocked": "Publish or discard the changes to switch years.",
+    "discard": "Discard changes",
+    "publish": "Publish {{year}}",
+    "confirmText": "The list replaces the previous one and takes effect immediately for everyone: any weekday not on it counts as a trading day.",
+    "confirm": "Publish now",
+    "publishedOk": "{{year}} calendar published."
+  },
+  "assets": {
+    "title": "Assets",
+    "subtitle": "Search stocks and Brazilian REITs (FIIs) to study and simulate.",
+    "catalogNote": "The catalog has the assets chosen by the team.",
+    "searchLabel": "Search by ticker or name",
+    "searchHint": "For example: PETR4, Itaú or logistics.",
+    "classFilter": "Class",
+    "allClasses": "All",
+    "sectorFilter": "Sector or segment",
+    "allSectors": "All",
+    "clear": "Clear filters",
+    "resultCount": "Assets found: {{count}}",
+    "searching": "Searching…",
+    "hasMore": "Showing the first 50. Refine the search to see the others.",
+    "empty": "No assets match this search.",
+    "emptyCatalog": "The catalog is still empty. The team is adding the assets.",
+    "listLabel": "Asset search results",
+    "columns": {
+      "asset": "Asset",
+      "class": "Class",
+      "sector": "Sector or segment",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "class": {
+      "stock": "Stock",
+      "fii": "REIT (FII)"
+    },
+    "classPlural": {
+      "stock": "Stocks",
+      "fii": "REITs (FIIs)"
+    },
+    "sectorLabel": {
+      "stock": "Sector",
+      "fii": "Segment"
+    },
+    "sectors": {
+      "stock": {
+        "bens_industriais": "Industrials",
+        "comunicacoes": "Communications",
+        "consumo_ciclico": "Consumer discretionary",
+        "consumo_nao_ciclico": "Consumer staples",
+        "financeiro": "Financials",
+        "materiais_basicos": "Basic materials",
+        "petroleo_gas_biocombustiveis": "Oil, gas and biofuels",
+        "saude": "Health care",
+        "tecnologia_informacao": "Information technology",
+        "utilidade_publica": "Utilities",
+        "outros": "Other"
+      },
+      "fii": {
+        "lajes_corporativas": "Office buildings",
+        "logistica": "Logistics",
+        "shoppings": "Shopping malls",
+        "recebiveis": "Real estate receivables",
+        "fundo_de_fundos": "Fund of funds",
+        "hibrido": "Hybrid",
+        "residencial": "Residential",
+        "hoteis": "Hotels",
+        "renda_urbana": "Urban income",
+        "desenvolvimento": "Development",
+        "outros": "Other"
+      }
+    }
+  },
+  "catalog": {
+    "title": "Asset catalog",
+    "subtitle": "The assets users find in the search. Assets are never deleted, only deactivated. Every change is logged.",
+    "statusFilter": "Status",
+    "statusAll": "All",
+    "statusActive": "Active",
+    "statusInactive": "Deactivated",
+    "activeCount": "Active assets in the catalog: {{count}}",
+    "capacityWarning": "The free quote collection supports about {{limit}} assets. Above that, deactivate some or use a paid quote plan.",
+    "new": "New asset",
+    "newTitle": "New asset",
+    "editTitle": "Edit {{ticker}}",
+    "ticker": "Ticker",
+    "tickerHint": "B3 code, like PETR4 or MXRF11.",
+    "name": "Name",
+    "class": "Class",
+    "classHint": "The class can't be changed after the asset is created.",
+    "choose": "Choose…",
+    "create": "Add asset",
+    "save": "Save",
+    "created": "{{ticker}} added. Its quote history will be loaded in a few minutes.",
+    "updated": "{{ticker}} updated.",
+    "unchanged": "Nothing changed in {{ticker}}.",
+    "deactivated": "{{ticker}} deactivated.",
+    "reactivated": "{{ticker}} reactivated.",
+    "edit": "Edit",
+    "editLabel": "Edit {{ticker}}",
+    "deactivate": "Deactivate",
+    "deactivateLabel": "Deactivate {{ticker}}",
+    "reactivate": "Reactivate",
+    "reactivateLabel": "Reactivate {{ticker}}",
+    "deactivateConfirm": "{{ticker}} disappears from the search and can't be bought anymore. Anyone who already holds it still sees it and can sell.",
+    "confirmDeactivate": "Deactivate now",
+    "active": "Active",
+    "inactive": "Deactivated",
+    "empty": "No assets match these filters.",
+    "emptyCatalog": "No assets yet. Start with \"New asset\".",
+    "listLabel": "Catalog assets",
+    "historyPending": "History: loading…",
+    "historyLoaded": "History from {{from}} to {{to}}",
+    "historyNotFound": "History: not found in the B3 files",
+    "historyWaitingCalendar": "Quote history for {{years}} is only loaded after the trading calendar for those years is published (in Calendar)."
   }
 }

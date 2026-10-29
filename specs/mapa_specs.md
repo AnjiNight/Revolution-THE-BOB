@@ -17,6 +17,12 @@
 | 1.7 | SPEC-001 detalhada ([SPEC-001.md](SPEC-001.md)); OPEN-39 resolvida pela convenção de `down.sql` |
 | 1.8 | SPEC-002 detalhada ([SPEC-002.md](SPEC-002.md)); OPEN-03 resolvida: promoção a administrador por comando no servidor |
 | 1.9 | Perfil "administrador" renomeado para **colaborador**, com conta criada só pela equipe e Área do colaborador; login com Google para usuários ([DA24](../adr/DA24-login-com-google.md)) |
+| 1.10 | SPEC-001, SPEC-002 e SPEC-003 marcadas como implementadas; SPEC-004 detalhada ([SPEC-004.md](SPEC-004.md)), aprovada e implementada; parte de e-mail da OPEN-02 resolvida (envio por SMTP; o provedor sai junto com a hospedagem) |
+| 1.11 | Nova SPEC-039 (confirmação de e-mail, RF43 e RB23 da versão 1.7 dos requisitos), na Fase 1, logo depois da SPEC-004; aprovada e implementada |
+| 1.12 | SPEC-034 detalhada ([SPEC-034.md](SPEC-034.md)), aprovada e implementada: OPEN-04 resolvida (JSON versionado, baixado pelo app) e regra da OPEN-40 decidida (backups e logs por no máximo 30 dias) |
+| 1.13 | SPEC-005 detalhada ([SPEC-005.md](SPEC-005.md)), aprovada e implementada; OPEN-01 resolvida (calendário oficial da B3, conferido e publicado pelo colaborador, com sugestão automática) |
+| 1.14 | SPEC-006 detalhada ([SPEC-006.md](SPEC-006.md)), aprovada e implementada, com o registro de auditoria (RNF15) que passa a valer também para o calendário da SPEC-005; OPEN-41 resolvida (busca só no catálogo da equipe) |
+| 1.15 | SPEC-008 detalhada ([SPEC-008.md](SPEC-008.md)), aprovada e implementada; DA18 aceita; OPEN-05 resolvida (histórico desde 2016); proventos (OPEN-06) fora da SPEC-008; ativo desativado continua sendo coletado |
 
 ---
 
@@ -251,7 +257,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-02 | Hospedagem (servidor, processador, banco com backup diário, cache) e serviço de e-mail | PE13 | 001, 004 |
 | OPEN-03 | ✅ **Resolvida na [SPEC-002](SPEC-002.md):** o perfil passa a se chamar **colaborador**; colaborador nunca se cadastra pelo app, a equipe cria a conta com `npm run colaborador:criar` (senha forte gerada) e ele entra pela Área do colaborador | Lacuna | 002, 006, 011 |
 | OPEN-04 | Formato, conteúdo e forma de entrega da exportação de dados pessoais | RF06 | 034 |
-| OPEN-05 | Aprovação de DA18 (histórico pelos arquivos da B3, hoje **Proposta**) e tamanho da janela histórica carregada | DA18, PE04 | 008, 016 |
+| OPEN-05 | ✅ **Resolvida na [SPEC-008](SPEC-008.md):** DA18 aceita (histórico pelos arquivos COTAHIST da B3), carregado desde o primeiro pregão de 2016 | DA18, PE04 | 008, 016 |
 | OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo) | PE05, DA22 | 008, 014, 016, 019 |
 | OPEN-07 | Termos da brapi para redistribuir cotações | PE02 | 009, 026 |
 | OPEN-08 | Compra/venda na carteira ao vivo com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
@@ -287,7 +293,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
 | OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
 | OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
-| OPEN-41 | Busca de ativos: só no catálogo curado ou em qualquer ticker da B3 | INC-09 | 006 |
+| OPEN-41 | ✅ **Resolvida na [SPEC-006](SPEC-006.md):** a busca procura só nos ativos ativos do catálogo da equipe | INC-09 | 006 |
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
 | OPEN-44 | Aprovar no modelo conceitual as entidades previstas na arquitetura §9 | INC-05 | Várias (marcadas com `†`) |
@@ -321,7 +327,7 @@ Visão geral por fase:
 
 #### SPEC-001 — Esqueleto executável cliente–servidor–processador
 
-📄 Detalhada em [SPEC-001.md](SPEC-001.md) — em implementação.
+📄 Detalhada em [SPEC-001.md](SPEC-001.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -345,7 +351,7 @@ Visão geral por fase:
 
 #### SPEC-002 — Cadastro, autenticação e sessão
 
-📄 Detalhada em [SPEC-002.md](SPEC-002.md) — em implementação.
+📄 Detalhada em [SPEC-002.md](SPEC-002.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -365,6 +371,8 @@ Visão geral por fase:
 
 #### SPEC-003 — Perfil do usuário e consentimento
 
+📄 Detalhada em [SPEC-003.md](SPEC-003.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário consulta e edita seus dados de perfil e consulta/altera seus consentimentos |
@@ -383,6 +391,8 @@ Visão geral por fase:
 
 #### SPEC-004 — Recuperação de senha por e-mail
 
+📄 Detalhada em [SPEC-004.md](SPEC-004.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário que esqueceu a senha recebe por e-mail um meio de redefini-la |
@@ -396,10 +406,32 @@ Visão geral por fase:
 | ADRs | DA05 (dependência de serviço de e-mail) |
 | Depende de | SPEC-002 |
 | Posição | Separada da 002 porque depende de integração externa ainda não escolhida (OPEN-02) e tem validação própria; não bloqueia nenhuma Spec seguinte |
-| Em aberto | OPEN-02 |
+| Em aberto | OPEN-02 (parte do e-mail resolvida na SPEC-004: SMTP; o provedor sai junto com a hospedagem) |
+| Prioridade derivada | Should |
+
+#### SPEC-039 — Confirmação de e-mail
+
+📄 Detalhada em [SPEC-039.md](SPEC-039.md) — implementada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Conta com e-mail e senha só é liberada depois de a pessoa confirmar o e-mail com um código; a troca de e-mail no perfil também exige o código no endereço novo; contas não confirmadas são apagadas em 7 dias |
+| Valor | **Usuário:** não perde a conta por erro de digitação; ninguém cria conta com o e-mail dele. **Sistema:** não guarda dado de terceiros (LGPD) e fecha o sequestro de conta pelo login com Google |
+| RF | RF43 (novo, Requisitos v1.7); muda RF01 e RF05 |
+| RB | RB01, RB04, RB23 (nova) |
+| RNF | RNF07, RNF10, RNF11, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Cadastrar conta; UC: Gerenciar perfil e consentimento (confirmação fora do diagrama, ver OPEN-43) |
+| Entidades | USUARIO (`email_confirmado_em`, `email_pendente`); CODIGO_EMAIL (generaliza a tabela da SPEC-004) |
+| Drivers | FAS07, QA06, QA07, RES05 |
+| ADRs | DA05, DA13, DA24 |
+| Depende de | SPEC-002, SPEC-003, SPEC-004 (reaproveita o envio de e-mail e o código) |
+| Posição | Logo depois da SPEC-004, que criou o envio de e-mail e o mecanismo de código; muda comportamentos entregues pelas SPECs 002 e 003 |
+| Em aberto | Textos dos e-mails (revisar no Pull Request) |
 | Prioridade derivada | Should |
 
 #### SPEC-034 — Exportação e exclusão de dados pessoais
+
+📄 Detalhada em [SPEC-034.md](SPEC-034.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -414,7 +446,7 @@ Visão geral por fase:
 | ADRs | DA08, DA13, DA19 |
 | Depende de | SPEC-002 |
 | Posição | **Antecipada** (versão 1.3 do mapa): fica logo depois da identidade, e o mecanismo de exportação e exclusão passa a existir antes de qualquer outro dado pessoal. Regra para as Specs seguintes: **toda Spec que crie dado do usuário inclui, nos seus critérios de aceitação, a exportação e a exclusão desse dado** — hoje 012, 013, 014, 015, 016, 023, 025, 030 e 032. Assim a 034 não precisa esperar Specs que não são *Must* |
-| Em aberto | OPEN-04, OPEN-15, OPEN-40 |
+| Em aberto | OPEN-04 resolvida; OPEN-40 com regra decidida (30 dias), configurar na hospedagem; OPEN-15 fica com a SPEC-012 |
 | Prioridade derivada | Must |
 
 ---
@@ -422,6 +454,8 @@ Visão geral por fase:
 ### Fase 2 — Dados de mercado
 
 #### SPEC-005 — Calendário de pregão
+
+📄 Detalhada em [SPEC-005.md](SPEC-005.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -436,10 +470,12 @@ Visão geral por fase:
 | ADRs | DA07 (tarefa anual com revisão manual), DA10 |
 | Depende de | SPEC-002 (perfil colaborador) |
 | Posição | Usada por 007, 008, 009, pelas Specs de lançamento e pelos cenários (031) |
-| Em aberto | OPEN-01 |
+| Em aberto | OPEN-01 resolvida na SPEC-005 |
 | Prioridade derivada | Técnica de regra (habilita os Must) |
 
 #### SPEC-006 — Catálogo de ativos: manutenção e busca
+
+📄 Detalhada em [SPEC-006.md](SPEC-006.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -454,10 +490,12 @@ Visão geral por fase:
 | ADRs | DA12, DA16 (catálogo curado de ~40–50 ativos, divididos entre ações e FIIs), DA22, DA23 |
 | Depende de | SPEC-002 |
 | Posição | O ativo é referenciado por cotações, lançamentos e notícias; precisa existir antes da ingestão |
-| Em aberto | OPEN-03, OPEN-41 |
+| Em aberto | OPEN-03 e OPEN-41 resolvidas (SPEC-002 e SPEC-006) |
 | Prioridade derivada | Must (RF07); Should (RF39) |
 
 #### SPEC-008 — Carga do histórico diário de cotações
+
+📄 Detalhada em [SPEC-008.md](SPEC-008.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -469,10 +507,10 @@ Visão geral por fase:
 | Caso de uso / fluxo | UC: Consultar cotação (lado do sistema) |
 | Entidades | COTACAO, ATIVO, EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
 | Drivers | FAS03, QA02, QA08, QA12, PA03, RES03, RES07, PRE03 |
-| ADRs | DA06, DA07, DA14, DA18 (Proposta) |
+| ADRs | DA06, DA07, DA14, DA18 |
 | Depende de | SPEC-001, SPEC-005, SPEC-006 |
 | Posição | Primeira ingestão: define o padrão usado pelas outras. Precede tudo que olha para o passado (010, 016, 019, 031) |
-| Em aberto | **OPEN-05 (bloqueante: DA18 não aprovado)**, OPEN-06, OPEN-40, OPEN-48 |
+| Em aberto | OPEN-06 (fora da Spec: preços sem ajuste), OPEN-40, OPEN-48 (OPEN-05 resolvida) |
 | Prioridade derivada | Must |
 
 #### SPEC-009 — Cotações do pregão (nível gratuito) e fechamento diário
@@ -1066,7 +1104,7 @@ Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora.
 | RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
 
-Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
+Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002; RF43, da versão 1.7, pela SPEC-039). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
 
 ### 3.2 Caminho mínimo (requisitos Must)
 
@@ -1080,7 +1118,7 @@ Observações:
 - **034** vem logo após a identidade; as Specs seguintes do caminho que criam dados do usuário (012–015) entregam a sua parte da exportação e da exclusão.
 - **008** estabelece o padrão de ingestão; **007** (CDI, *Should*) fica fora do caminho e é feita junto com o benchmark (020).
 - **019** cobre a carteira ao vivo; a carteira histórica (016) fica fora do caminho mínimo.
-- Dentro desse caminho, **008** (OPEN-05) depende de decisão em aberto.
+- Dentro desse caminho, nenhuma Spec depende mais de decisão em aberto (OPEN-05 resolvida na SPEC-008).
 
 ### 3.3 Specs bloqueadas por decisão
 
@@ -1088,7 +1126,6 @@ Estas Specs **não devem ser detalhadas** antes de a equipe decidir os itens ind
 
 | Spec | Decisão bloqueante |
 |---|---|
-| SPEC-008 | OPEN-05 — aprovar DA18 (fonte do histórico) |
 | SPEC-023 | OPEN-22 — significado de "simulação" |
 | SPEC-027 | OPEN-28 — autorização da fonte pai |
 | SPEC-030 | OPEN-32 — RFs das fontes do usuário |

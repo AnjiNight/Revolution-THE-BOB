@@ -40,7 +40,7 @@ Cada item tem um status:
 |---|---|---|---|---|
 | Cotações de ações e FIIs durante o pregão (plano gratuito) | **brapi**, plano gratuito | [DA16](adr/DA16-cotacoes-por-plano.md) | Definida | Atraso de ~30 min; 15.000 requisições/mês; 1 ticker por chamada; 3 meses de histórico; confirmar a cobertura dos FIIs do catálogo |
 | Cotações de ações e FIIs (plano assinante) | **brapi** Startup ou Pro, ou outro provedor pago | DA16 | Em aberto | Pago; atraso de 15 ou 5 min; quem paga? |
-| Histórico diário de ações e FIIs | **Séries históricas da B3 (COTAHIST)** | [DA18](adr/DA18-historico-cotacoes-arquivos-b3.md) | Sugerida | Arquivos grandes, formato posicional; preços não ajustados |
+| Histórico diário de ações e FIIs | **Séries históricas da B3 (COTAHIST)** | [DA18](adr/DA18-historico-cotacoes-arquivos-b3.md) | Definida ([SPEC-008](specs/SPEC-008.md)) | Desde 2016; arquivos grandes, formato posicional; preços não ajustados |
 | Proventos e eventos corporativos | — | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md), [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Em aberto | Necessário para a carteira histórica e, principalmente, para os rendimentos mensais dos FIIs |
 | Ibovespa (benchmark, RF16) | brapi para o recente; histórico a definir | RF16 | Em aberto | Verificar a disponibilidade do índice no plano gratuito |
 | IFIX (benchmark de FIIs — evolução, [DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)) | A definir | — | Adiada | Mesma pendência de fonte histórica do Ibovespa |
@@ -75,6 +75,7 @@ Todos com status **Sugerida**.
 | Autenticação | `fast-jwt` (token de acesso HS256, 15 min) + token de renovação opaco, guardado só como hash, trocado a cada uso | DA05 | ✅ Definida na SPEC-002. Usamos o `fast-jwt` direto em vez do `@fastify/jwt`, para o domínio não depender do Fastify |
 | Limite de tentativas | `@fastify/rate-limit` (10/min por IP nas rotas de `/api/auth`) | RNF10 | ✅ Definida na SPEC-002 |
 | Login com Google | OAuth 2.0 com PKCE no processo principal do Electron (navegador do sistema + `127.0.0.1`); `jose` no servidor para verificar o ID token com as chaves públicas do Google | DA24, RF41 | ✅ Definida na SPEC-002. Exige um client ID "Aplicativo para computador" no Google Cloud |
+| Envio de e-mail | SMTP com `nodemailer`; **Mailpit** no `docker compose` para desenvolvimento (nada sai para a internet) | RF03, [SPEC-004](specs/SPEC-004.md) | ✅ Definida na SPEC-004. Qualquer provedor com SMTP serve, trocando só a configuração; em produção, só com TLS e **obrigatório** (a confirmação de e-mail da [SPEC-039](specs/SPEC-039.md) depende dele). O provedor sai junto com a hospedagem (seção 5) |
 | Fila e agendador de tarefas | `BullMQ` (sobre o Redis) ou `pg-boss` (sobre o PostgreSQL) | [DA07](adr/DA07-ingestao-assincrona.md), [DA14](adr/DA14-registro-execucoes-logs.md) | O `pg-boss` evita depender do Redis para as tarefas |
 | Gráfico de preço com notícias | TradingView Lightweight Charts | Gráfico Notícias × Preço (Visão §19) | Permite marcadores no eixo do tempo |
 | Gráficos de carteira | Recharts | RF17, RF18 | — |
@@ -90,8 +91,8 @@ Todos com status **Sugerida**.
 
 | Item | Opções | Critérios | Relacionado |
 |---|---|---|---|
-| Hospedagem (servidor, processador de tarefas, PostgreSQL com backup diário, Redis) | Provedores com camada gratuita | Processador de tarefas sempre ligado durante o pregão; **backup diário** (RNF02); servidor que não hiberne durante o pregão | RES03, RNF02, RNF21 |
-| Serviço de e-mail (recuperação de senha) | Provedores com camada gratuita | Volume pequeno | RF03 |
+| Hospedagem (servidor, processador de tarefas, PostgreSQL com backup diário, Redis) | Provedores com camada gratuita | Processador de tarefas sempre ligado durante o pregão; **backup diário** (RNF02); servidor que não hiberne durante o pregão; **backups e logs guardados por no máximo 30 dias**, para os dados de uma conta excluída sumirem de todas as cópias no prazo da RB04 ([SPEC-034](specs/SPEC-034.md), OPEN-40) | RES03, RNF02, RNF21, RB04 |
+| Provedor de e-mail (recuperação de senha) | Provedores com camada gratuita que ofereçam SMTP | Volume pequeno; endereço de envio com domínio próprio (menos chance de spam). O código já envia por SMTP ([SPEC-004](specs/SPEC-004.md)): falta só escolher o provedor, junto com a hospedagem | RF03 |
 | Implementação do modelo de IA | API de modelo de linguagem (custo por notícia) × modelo aberto em português ajustado localmente × combinação | Custo zero, qualidade em português financeiro, hardware disponível para treino | [DA20](adr/DA20-modelo-ia-noticias.md) |
 | Provedor de cotações do assinante e quem paga | brapi Startup/Pro; chave gratuita na versão acadêmica | Custo, termos de redistribuição | [DA16](adr/DA16-cotacoes-por-plano.md) |
 | Fonte pai de notícias | Investidor10 com autorização × fatos relevantes da CVM (dados abertos) | Licença de uso, histórico disponível | [DA19](adr/DA19-fontes-de-noticias.md) |

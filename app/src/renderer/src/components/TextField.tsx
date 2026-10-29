@@ -4,12 +4,17 @@ import { useTranslation } from 'react-i18next';
 
 interface TextFieldProps {
   label: string;
-  type: 'text' | 'email' | 'password';
+  type: 'text' | 'email' | 'password' | 'date';
   value: string;
   onChange: (value: string) => void;
   autoComplete: string;
   error?: FieldErrorCode | undefined;
   hint?: string;
+  /** Padrão: desligado para e-mail. Códigos (SPEC-004) também desligam. */
+  spellCheck?: boolean;
+  /** Limites de um campo de data (AAAA-MM-DD), como o ano do calendário (SPEC-005). */
+  min?: string;
+  max?: string;
 }
 
 /** Campo com rótulo, dica e mensagem de erro ligados por acessibilidade (RNF18). */
@@ -21,6 +26,9 @@ export function TextField({
   autoComplete,
   error,
   hint,
+  spellCheck,
+  min,
+  max,
 }: TextFieldProps) {
   const { t } = useTranslation();
   const id = useId();
@@ -38,7 +46,9 @@ export function TextField({
         name={autoComplete}
         value={value}
         autoComplete={autoComplete}
-        spellCheck={type === 'email' ? false : undefined}
+        min={min}
+        max={max}
+        spellCheck={spellCheck ?? (type === 'email' ? false : undefined)}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}

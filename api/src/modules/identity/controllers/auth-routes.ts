@@ -1,26 +1,25 @@
 import {
   AUTH_PATHS,
+  emailConfirmationResendSchema,
+  emailConfirmationSchema,
   googleLoginSchema,
   loginSchema,
   refreshSchema,
   registerSchema,
 } from '@simulador/shared';
 import type { FastifyInstance } from 'fastify';
-import { DomainError } from '../../../shared/domain/domain-error.js';
+import { domainErrorRunner, type DomainErrorTable } from '../../../shared/http/domain-errors.js';
 import { HttpError } from '../../../shared/http/http-error.js';
 import { parseBody } from '../../../shared/http/validation.js';
 import type { AuthService } from '../application/auth-service.js';
-import type { AccessTokenService } from '../application/ports.js';
-import { makeAuthenticate, requireAuth } from './authenticate.js';
 
 export interface AuthRoutesOptions {
   auth: AuthService;
-  accessTokens: AccessTokenService;
   /** Limite de requisições por minuto e por IP em cada rota de /api/auth (RNF10). */
   rateLimitPerMinute: number;
 }
 
-const DOMAIN_ERROR_HTTP: Record<string, { status: number; message: string }> = {
+const DOMAIN_ERROR_HTTP: DomainErrorTable = {
   email_in_use: { status: 409, message: 'Este e-mail já está em uso.' },
   invalid_credentials: { status: 401, message: 'E-mail ou senha incorretos.' },
   invalid_refresh_token: { status: 401, message: 'Sessão expirada. Entre novamente.' },
@@ -31,19 +30,35 @@ const DOMAIN_ERROR_HTTP: Record<string, { status: number; message: string }> = {
     status: 403,
     message: 'O Google não confirmou este e-mail.',
   },
+  unauthorized: { status: 401, message: 'Autenticação necessária.' },
+  invalid_password: { status: 401, message: 'Senha atual incorreta.' },
+  email_change_not_allowed: {
+    status: 403,
+    message: 'O e-mail desta conta vem do Google e não pode ser trocado aqui.',
+  },
+  password_change_not_allowed: {
+    status: 403,
+    message: 'Esta conta entra pelo Google e não tem senha.',
+  },
+  invalid_reset_code: { status: 400, message: 'Código inválido ou vencido.' },
+  email_not_confirmed: { status: 403, message: 'Confirme o e-mail antes de entrar.' },
+  invalid_confirmation_code: { status: 400, message: 'Código inválido ou vencido.' },
+  deletion_not_allowed: {
+    status: 403,
+    message: 'A exclusão de contas de colaborador é feita pela equipe.',
+  },
+  email_confirmation_unavailable: {
+    status: 503,
+    message: 'A confirmação de e-mail não está disponível neste servidor.',
+  },
+  password_reset_unavailable: {
+    status: 503,
+    message: 'A recuperação de senha não está disponível neste servidor.',
+  },
 };
 
-async function run<T>(action: () => Promise<T>): Promise<T> {
-  try {
-    return await action();
-  } catch (error) {
-    const mapped = error instanceof DomainError ? DOMAIN_ERROR_HTTP[error.code] : undefined;
-    if (error instanceof DomainError && mapped) {
-      throw new HttpError(mapped.status, error.code, mapped.message);
-    }
-    throw error;
-  }
-}
+/** Converte erros do domínio de identidade em respostas HTTP. */
+export const run = domainErrorRunner(DOMAIN_ERROR_HTTP);
 
 export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOptions): void {
   const { auth } = options;
@@ -51,20 +66,34 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
     config: { rateLimit: { max: options.rateLimitPerMinute, timeWindow: '1 minute' } },
   };
 
+  // SPEC-039: a conta nasce pendente; a sessão só vem depois da confirmação do e-mail.
   app.post(AUTH_PATHS.register, limited, async (request, reply) => {
     const input = parseBody(registerSchema, request.body);
-    return reply.status(201).send(await run(() => auth.register(input)));
+    await run(() => auth.register(input, request.log));
+    return reply.status(202).send();
+  });
+
+  app.post(AUTH_PATHS.emailConfirmationConfirm, limited, async (request, reply) => {
+    const input = parseBody(emailConfirmationSchema, request.body);
+    return reply.send(await run(() => auth.confirmEmail(input, request.log)));
+  });
+
+  // Sempre 202 e sem corpo: a resposta não diz se existe conta pendente com esse e-mail.
+  app.post(AUTH_PATHS.emailConfirmationResend, limited, async (request, reply) => {
+    const input = parseBody(emailConfirmationResendSchema, request.body);
+    await run(() => auth.resendConfirmation(input, request.log));
+    return reply.status(202).send();
   });
 
   app.post(AUTH_PATHS.login, limited, async (request, reply) => {
     const input = parseBody(loginSchema, request.body);
-    return reply.send(await run(() => auth.login(input, 'user')));
+    return reply.send(await run(() => auth.login(input, 'user', request.log)));
   });
 
   // Área do colaborador: tela própria, só aceita contas criadas pela equipe (SPEC-002 §4).
   app.post(AUTH_PATHS.collaboratorLogin, limited, async (request, reply) => {
     const input = parseBody(loginSchema, request.body);
-    return reply.send(await run(() => auth.login(input, 'collaborator')));
+    return reply.send(await run(() => auth.login(input, 'collaborator', request.log)));
   });
 
   app.post(AUTH_PATHS.google, limited, async (request, reply) => {
@@ -85,14 +114,4 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
     await auth.logout(refreshToken);
     return reply.status(204).send();
   });
-
-  app.get(
-    AUTH_PATHS.me,
-    { preHandler: makeAuthenticate(options.accessTokens) },
-    async (request, reply) => {
-      const user = await auth.currentUser(requireAuth(request).userId);
-      if (!user) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');
-      return reply.send({ user });
-    },
-  );
 }

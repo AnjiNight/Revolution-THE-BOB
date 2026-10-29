@@ -20,6 +20,19 @@ export function makeAuthenticate(accessTokens: AccessTokenService) {
   };
 }
 
+/**
+ * preHandler das rotas da equipe, depois de `authenticate`: 403 para quem não é colaborador
+ * (DA12: conferido no servidor, não só escondido na interface).
+ */
+export async function requireCollaborator(
+  request: FastifyRequest,
+  _reply: FastifyReply,
+): Promise<void> {
+  if (requireAuth(request).role !== 'collaborator') {
+    throw new HttpError(403, 'forbidden', 'Esta área é só da equipe.');
+  }
+}
+
 /** Claims do usuário autenticado; só use em rotas com o preHandler `authenticate`. */
 export function requireAuth(request: FastifyRequest): AccessTokenClaims {
   if (!request.auth) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');

@@ -68,6 +68,7 @@ Pré-requisitos: **Node.js 22** e **Docker** (para o PostgreSQL local).
 npm install                     # instala os três pacotes
 cp .env.example api/.env        # configuração do servidor
 npm run db:up                   # sobe o PostgreSQL 16 (docker compose)
+npm run mail:up                 # sobe o Mailpit, que recebe os e-mails (http://localhost:8025)
 npm run db:migrate              # aplica as migrações
 
 npm run dev:api                 # servidor em http://localhost:3333
@@ -83,6 +84,12 @@ npm run colaborador:criar --workspace api -- --nome "Nome Sobrenome" --email pes
 
 O colaborador entra pela **Área do colaborador**, na tela de login.
 
+**Calendário de pregão** ([SPEC-005](specs/SPEC-005.md)): enquanto um ano não é publicado, o app recusa datas dele. Na Área do colaborador, abra **Calendário**, clique em **Carregar sugestão**, confira com o calendário oficial da B3 e clique em **Publicar**. O ano seguinte deve ser publicado até 31 de dezembro (o Início do colaborador avisa desde 1º de dezembro).
+
+**Catálogo de ativos** ([SPEC-006](specs/SPEC-006.md)): a busca do usuário só mostra os ativos que a equipe cadastrou. Na Área do colaborador, abra **Ativos** e use **Novo ativo** (ticker, nome, classe Ação ou FII e setor ou segmento). A classe não muda depois do cadastro, e ativo nunca é apagado: é desativado. Cada mudança no catálogo e cada publicação do calendário ficam no registro de auditoria.
+
+**Histórico de cotações** ([SPEC-008](specs/SPEC-008.md)): o processador (`npm run dev:worker`) carrega o fechamento diário dos ativos do catálogo a partir dos arquivos públicos da B3, desde 2016. Ativo novo ganha o histórico em até 15 minutos; os pregões que faltam são buscados todo dia às 08:00. Só entram os anos com calendário publicado: publique de 2016 até o ano atual (a tela **Ativos** do colaborador avisa quais faltam). Os arquivos anuais (uns 60 a 90 MB cada) ficam guardados em `api/.cache/b3`.
+
 ### Login com Google (opcional)
 
 O botão "Continuar com o Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)). O login abre o navegador do sistema: se a pessoa já estiver conectada ao Google lá, basta escolher a conta.
@@ -94,6 +101,24 @@ O botão "Continuar com o Google" só aparece quando o app e o servidor têm o c
 5. Reinicie o servidor e o app.
 
 Para o login terminar, o servidor e o banco precisam estar rodando (seção anterior).
+
+### E-mail: confirmação de cadastro, recuperação de senha e exclusão de conta
+
+O app manda códigos de 8 caracteres por e-mail, que a pessoa digita no próprio app:
+
+- **Confirmação de e-mail** ([SPEC-039](specs/SPEC-039.md)): quem se cadastra com e-mail e senha só entra depois de digitar o código; a troca de e-mail no Meu perfil também pede o código do endereço novo. Contas nunca confirmadas são apagadas em 7 dias pelo processador (`npm run dev:worker`).
+- **"Esqueci minha senha"** ([SPEC-004](specs/SPEC-004.md)).
+- **Excluir minha conta** ([SPEC-034](specs/SPEC-034.md)), em Meu perfil → Seus dados: a conta e todos os dados são apagados na hora, depois do código. Na mesma seção, **"Baixar meus dados"** salva um arquivo JSON com tudo o que o app guarda sobre a pessoa (LGPD).
+
+O servidor envia e-mail por SMTP. Sem `SMTP_HOST` no `api/.env`, o cadastro com senha, a troca de e-mail, a recuperação e a exclusão de conta ficam desligados (o login com Google e a exportação continuam); em produção, o SMTP é obrigatório.
+
+No desenvolvimento, os e-mails vão para o **Mailpit**, que roda no Docker e não manda nada para a internet:
+
+```bash
+npm run mail:up                 # sobe o Mailpit (docker compose)
+```
+
+A caixa de entrada fica em http://localhost:8025. O `.env.example` já vem apontando para ele (`SMTP_HOST=localhost`, `SMTP_PORT=1025`). Em produção, basta trocar essas variáveis pelas do provedor de e-mail escolhido.
 
 Testes contra o PostgreSQL real rodam quando `TEST_DATABASE_URL` aponta para um banco com as migrações aplicadas (atenção: apagam os dados de identidade desse banco). No GitHub Actions eles rodam sempre.
 

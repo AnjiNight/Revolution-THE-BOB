@@ -8,19 +8,32 @@ import {
 import { useId, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { emailLocale } from '../format';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { TextField } from './TextField';
 
 interface RegisterFormProps {
+  /** Dados já digitados (ex.: voltou da confirmação para corrigir o e-mail). */
+  initialName?: string | undefined;
+  initialEmail?: string | undefined;
+  /** SPEC-039: conta criada pendente; o app mostra a tela de confirmação do e-mail. */
+  onRegistered: (email: string, name: string) => void;
+  /** Entrou com o Google (a conta já nasce confirmada). */
   onSuccess: (user: PublicUser) => void;
   onGoToLogin: () => void;
 }
 
-export function RegisterForm({ onSuccess, onGoToLogin }: RegisterFormProps) {
-  const { t } = useTranslation();
+export function RegisterForm({
+  initialName,
+  initialEmail,
+  onRegistered,
+  onSuccess,
+  onGoToLogin,
+}: RegisterFormProps) {
+  const { t, i18n } = useTranslation();
   const termsId = useId();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(initialName ?? '');
+  const [email, setEmail] = useState(initialEmail ?? '');
   const [password, setPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [fields, setFields] = useState<FieldErrors>({});
@@ -29,7 +42,13 @@ export function RegisterForm({ onSuccess, onGoToLogin }: RegisterFormProps) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const checked = validate(registerSchema, { name, email, password, acceptedTerms });
+    const checked = validate(registerSchema, {
+      name,
+      email,
+      password,
+      acceptedTerms,
+      locale: emailLocale(i18n.language),
+    });
     if (!checked.success) {
       setFields(checked.fields);
       setError(undefined);
@@ -39,7 +58,7 @@ export function RegisterForm({ onSuccess, onGoToLogin }: RegisterFormProps) {
     setSubmitting(true);
     const result = await window.api.auth.register(checked.data);
     setSubmitting(false);
-    if (result.ok) return onSuccess(result.user);
+    if (result.ok) return onRegistered(checked.data.email, checked.data.name);
     setError(result.error);
     setFields(result.fields ?? {});
   };

@@ -1,0 +1,285 @@
+/*
+ * Calendário de pregão (SPEC-005), na Área do colaborador. Mesma base das telas depois do login
+ * (shell.css): cartão do perfil, pílulas e selos. Âmbar só para estado (não publicado, alterações).
+ */
+
+.calendar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.calendar-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.calendar-year {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 9rem;
+}
+
+.calendar-year label {
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.calendar-year select {
+  padding-right: 0.5rem;
+  cursor: pointer;
+}
+
+.calendar-year select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.calendar-unsaved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 0.9rem 0.75rem 1.15rem;
+  border-left: 3px solid var(--warn);
+  border-radius: 14px;
+  background: var(--warn-soft);
+}
+
+.calendar-unsaved p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.calendar-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.calendar-note svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--accent);
+  font-size: 1.05rem;
+}
+
+.calendar-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.calendar-empty {
+  margin: 0;
+  padding: 1.5rem 1rem;
+  border-radius: 14px;
+  background: var(--surface-sunken);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---------- Lista de dias sem pregão ---------- */
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.calendar-table th {
+  padding: 0 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.calendar-table td {
+  padding: 0.7rem 0.75rem 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.calendar-table th:first-child,
+.calendar-table td:first-child {
+  width: 11rem;
+}
+
+.calendar-table tr.has-error td {
+  background: var(--error-soft);
+}
+
+.calendar-table tr.has-error td:first-child {
+  box-shadow: inset 3px 0 0 var(--error);
+  padding-left: 0.75rem;
+}
+
+.calendar-date {
+  display: block;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-weekday {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.calendar-reason {
+  overflow-wrap: anywhere;
+}
+
+.suggestion-badge {
+  margin-left: 0.5rem;
+  padding-block: 0.1rem;
+  vertical-align: 0.05rem;
+  font-size: 0.7rem;
+}
+
+.calendar-table .field-error {
+  display: block;
+  margin-top: 0.3rem;
+}
+
+.calendar-row-actions {
+  width: 2.75rem;
+  text-align: right;
+}
+
+.calendar-table td.calendar-row-actions {
+  padding-right: 0;
+}
+
+button.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+button.icon-button:hover:not(:disabled) {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+button.icon-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.calendar-weekend-note {
+  margin-top: -0.5rem;
+}
+
+/* ---------- Adicionar dia ---------- */
+
+.calendar-add {
+  padding: 1rem 1.15rem 1.15rem;
+  border-radius: 18px;
+  background: var(--surface-sunken);
+}
+
+.calendar-add h3 {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.calendar-add-fields {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+/* Botão alinhado aos campos, abaixo dos rótulos. */
+button.calendar-add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1.65rem 0 0;
+  white-space: nowrap;
+}
+
+/* ---------- Publicar ---------- */
+
+.calendar-publish {
+  display: flex;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.calendar-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 1.15rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+
+.calendar-confirm p {
+  margin: 0;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.calendar-panel > .form-success:not(:empty) {
+  margin-top: -0.25rem;
+}
+
+.calendar-panel > .form-success:empty {
+  display: none;
+}
+
+/* Recebe o foco depois de publicar (o botão "Publicar" fica desativado). */
+.calendar-panel > .form-success:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* ---------- Janela estreita (até 480px) ---------- */
+
+@media (max-width: 640px) {
+  .calendar-add-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  button.calendar-add-button {
+    justify-self: start;
+    margin-top: 0;
+  }
+
+  .calendar-table th:first-child,
+  .calendar-table td:first-child {
+    width: 8.5rem;
+  }
+}

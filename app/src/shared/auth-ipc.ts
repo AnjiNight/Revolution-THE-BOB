@@ -1,28 +1,109 @@
 import type {
+  AccountDeletionConfirmInput,
+  AccountDeletionRequestInput,
+  AssetSearchQuery,
+  AssetUpdateInput,
   AuthErrorCode,
+  CalendarErrorCode,
+  CalendarPublication,
+  CatalogErrorCode,
+  CatalogQuery,
+  ChangeEmailInput,
+  ChangePasswordInput,
+  ConfirmEmailChangeInput,
+  EmailConfirmationInput,
+  EmailConfirmationResendInput,
   FieldErrors,
   LoginInput,
+  NewAssetInput,
+  PasswordResetConfirmInput,
+  PasswordResetRequestInput,
   PublicUser,
   RegisterInput,
+  UpdateNameInput,
 } from '@simulador/shared';
 
 /** Canais IPC de autenticação entre a interface e o processo principal. */
 export const AUTH_CHANNELS = {
   getSession: 'auth:get-session',
   register: 'auth:register',
+  confirmEmail: 'auth:confirm-email',
+  resendConfirmation: 'auth:resend-confirmation',
   login: 'auth:login',
   collaboratorLogin: 'auth:collaborator-login',
   googleAvailable: 'auth:google-available',
   googleSignIn: 'auth:google-sign-in',
   googleAcceptTerms: 'auth:google-accept-terms',
   logout: 'auth:logout',
+  passwordResetRequest: 'auth:password-reset-request',
+  passwordResetConfirm: 'auth:password-reset-confirm',
+} as const;
+
+/** Canais IPC do perfil (SPEC-003; troca de e-mail em duas etapas na SPEC-039). */
+export const PROFILE_CHANNELS = {
+  get: 'profile:get',
+  updateName: 'profile:update-name',
+  changeEmail: 'profile:change-email',
+  confirmEmailChange: 'profile:confirm-email-change',
+  changePassword: 'profile:change-password',
+  listConsents: 'profile:list-consents',
+  acceptTerms: 'profile:accept-terms',
+  /** SPEC-034: dados pessoais. */
+  exportData: 'profile:export-data',
+  requestDeletion: 'profile:request-deletion',
+  confirmDeletion: 'profile:confirm-deletion',
+} as const;
+
+/** Canais IPC do calendário de pregão (SPEC-005); sugestão e publicação só para colaborador. */
+export const CALENDAR_CHANNELS = {
+  getYear: 'calendar:get-year',
+  suggestion: 'calendar:suggestion',
+  publish: 'calendar:publish',
+} as const;
+
+/** Canais IPC do catálogo de ativos (SPEC-006); manutenção só para colaborador. */
+export const ASSET_CHANNELS = {
+  search: 'assets:search',
+  catalog: 'assets:catalog',
+  create: 'assets:create',
+  update: 'assets:update',
+  deactivate: 'assets:deactivate',
+  reactivate: 'assets:reactivate',
 } as const;
 
 /** Erros que a interface sabe traduzir. */
 export type ClientAuthError =
-  AuthErrorCode | 'server_unavailable' | 'invalid_url' | 'unexpected' | 'google_cancelled';
+  | AuthErrorCode
+  | CalendarErrorCode
+  | CatalogErrorCode
+  | 'server_unavailable'
+  | 'invalid_url'
+  | 'unexpected'
+  | 'google_cancelled';
 
 export type AuthResult =
   { ok: true; user: PublicUser } | { ok: false; error: ClientAuthError; fields?: FieldErrors };
 
-export type { LoginInput, RegisterInput };
+/** Resultado genérico das chamadas do perfil. */
+export type ClientResult<T> =
+  { ok: true; data: T } | { ok: false; error: ClientAuthError; fields?: FieldErrors };
+
+export type {
+  AccountDeletionConfirmInput,
+  AccountDeletionRequestInput,
+  AssetSearchQuery,
+  AssetUpdateInput,
+  CalendarPublication,
+  CatalogQuery,
+  ChangeEmailInput,
+  ChangePasswordInput,
+  ConfirmEmailChangeInput,
+  EmailConfirmationInput,
+  EmailConfirmationResendInput,
+  LoginInput,
+  NewAssetInput,
+  PasswordResetConfirmInput,
+  PasswordResetRequestInput,
+  RegisterInput,
+  UpdateNameInput,
+};

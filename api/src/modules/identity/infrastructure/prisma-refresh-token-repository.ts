@@ -3,7 +3,9 @@ import type {
   NewRefreshToken,
   RefreshTokenRepository,
   StoredRefreshToken,
+  StoredSession,
 } from '../application/ports.js';
+import { summarizeSessions } from '../application/session-summary.js';
 
 export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -42,6 +44,29 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
       where: { familia: family, revogadoEm: null },
       data: { revogadoEm: at },
     });
+  }
+
+  async revokeAllForUser(userId: string, at: Date): Promise<void> {
+    await this.prisma.tokenRenovacao.updateMany({
+      where: { usuarioId: userId, revogadoEm: null },
+      data: { revogadoEm: at },
+    });
+  }
+
+  async listSessions(userId: string): Promise<StoredSession[]> {
+    const rows = await this.prisma.tokenRenovacao.findMany({
+      where: { usuarioId: userId },
+      orderBy: { criadoEm: 'asc' },
+      select: { familia: true, criadoEm: true, expiraEm: true, revogadoEm: true },
+    });
+    return summarizeSessions(
+      rows.map((row) => ({
+        family: row.familia,
+        createdAt: row.criadoEm,
+        expiresAt: row.expiraEm,
+        revokedAt: row.revogadoEm,
+      })),
+    );
   }
 }
 

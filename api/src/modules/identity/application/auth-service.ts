@@ -4,6 +4,8 @@ import {
   normalizeEmail,
   TERMS_VERSION,
   type AuthSession,
+  type EmailConfirmationInput,
+  type EmailConfirmationResend,
   type GoogleLoginInput,
   type LoginInput,
   type PublicUser,
@@ -12,6 +14,8 @@ import {
   type TokenPair,
 } from '@simulador/shared';
 import {
+  EmailInUseError,
+  EmailNotConfirmedError,
   GoogleEmailNotVerifiedError,
   GoogleTokenInvalidError,
   InvalidCredentialsError,
@@ -19,14 +23,17 @@ import {
   TermsRequiredError,
   WrongAccountTypeError,
 } from '../domain/errors.js';
-import { toPublicUser, type User } from '../domain/user.js';
-import type {
-  AccessTokenService,
-  Clock,
-  GoogleIdentityVerifier,
-  PasswordHasher,
-  RefreshTokenRepository,
-  UserRepository,
+import { accountState, toPublicUser, type User } from '../domain/user.js';
+import type { EmailConfirmationService } from './email-confirmation-service.js';
+import {
+  SILENT_LOG,
+  type AccessTokenService,
+  type Clock,
+  type GoogleIdentityVerifier,
+  type PasswordHasher,
+  type RefreshTokenRepository,
+  type TaskLog,
+  type UserRepository,
 } from './ports.js';
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.js';
 
@@ -36,6 +43,8 @@ export interface AuthServiceDeps {
   hasher: PasswordHasher;
   accessTokens: AccessTokenService;
   refreshTokenTtlDays: number;
+  /** SPEC-039: código de confirmação do cadastro com e-mail e senha. */
+  confirmations: EmailConfirmationService;
   /** Ausente quando o login com Google não está configurado. */
   google?: GoogleIdentityVerifier;
   clock?: Clock;
@@ -43,7 +52,7 @@ export interface AuthServiceDeps {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Casos de uso de cadastro, login e sessão (SPEC-002). */
+/** Casos de uso de cadastro, login e sessão (SPEC-002), com a confirmação de e-mail (SPEC-039). */
 export class AuthService {
   private readonly clock: Clock;
 
@@ -55,25 +64,53 @@ export class AuthService {
     return this.deps.google !== undefined;
   }
 
-  /** RF01: cria a conta de usuário, registra o consentimento e já inicia a sessão. */
-  async register(input: RegisterInput): Promise<AuthSession> {
-    const passwordHash = await this.deps.hasher.hash(input.password);
+  /**
+   * RF01 + SPEC-039: cria a conta de usuário **pendente**, registra o consentimento e envia o
+   * código de confirmação. Não abre sessão: a pessoa só entra depois de confirmar o e-mail.
+   * Um cadastro nunca confirmado com o mesmo e-mail é substituído; uma conta confirmada, não.
+   */
+  async register(input: RegisterInput, log: TaskLog = SILENT_LOG): Promise<void> {
+    this.deps.confirmations.assertEnabled();
+    const existing = await this.deps.users.findByEmail(input.email);
+    if (existing) {
+      if (accountState(existing, this.clock()) === 'active') throw new EmailInUseError();
+      await this.deps.users.deleteUnconfirmed(existing.id);
+    }
     const user = await this.deps.users.create({
       name: input.name,
       email: input.email,
       role: 'user',
-      passwordHash,
+      passwordHash: await this.deps.hasher.hash(input.password),
       googleSub: null,
       termsVersion: TERMS_VERSION,
+      emailConfirmedAt: null,
     });
-    return this.startSession(user);
+    this.deps.confirmations.sendSignupCode(user, input.locale ?? 'pt-BR', log);
+  }
+
+  /** SPEC-039: código certo libera a conta e abre a sessão. */
+  async confirmEmail(
+    input: EmailConfirmationInput,
+    log: TaskLog = SILENT_LOG,
+  ): Promise<AuthSession> {
+    return this.startSession(await this.deps.confirmations.confirmSignup(input, log));
+  }
+
+  /** SPEC-039: "Reenviar código" na tela de confirmação. */
+  resendConfirmation(input: EmailConfirmationResend, log: TaskLog = SILENT_LOG): Promise<void> {
+    return this.deps.confirmations.resend(input, log);
   }
 
   /**
    * RF02: e-mail e senha. Cada tela aceita só o seu tipo de conta (usuário ou colaborador).
    * O tipo só é revelado depois de a senha estar certa, para não expor quem tem conta.
+   * SPEC-039: conta pendente, com a senha certa, recebe um código novo e `email_not_confirmed`.
    */
-  async login(input: LoginInput, accountType: Role): Promise<AuthSession> {
+  async login(
+    input: LoginInput,
+    accountType: Role,
+    log: TaskLog = SILENT_LOG,
+  ): Promise<AuthSession> {
     const user = await this.deps.users.findByEmail(input.email);
     if (!user?.passwordHash) {
       await this.deps.hasher.verifyDummy(input.password);
@@ -83,6 +120,13 @@ export class AuthService {
       throw new InvalidCredentialsError();
     }
     if (user.role !== accountType) throw new WrongAccountTypeError();
+    const state = accountState(user, this.clock());
+    // Pendente há mais de 7 dias: para o app, a conta já não existe (RB23).
+    if (state === 'expired') throw new InvalidCredentialsError();
+    if (state === 'pending') {
+      this.deps.confirmations.sendSignupCode(user, input.locale ?? 'pt-BR', log);
+      throw new EmailNotConfirmedError();
+    }
     return this.startSession(user);
   }
 
@@ -103,12 +147,15 @@ export class AuthService {
 
     const email = normalizeEmail(identity.email);
     const existing = await this.deps.users.findByEmail(email);
-    if (existing) {
+    if (existing && accountState(existing, this.clock()) === 'active') {
       if (existing.role !== 'user') throw new WrongAccountTypeError();
       return this.startSession(await this.deps.users.linkGoogle(existing.id, identity.sub));
     }
 
     if (input.acceptedTerms !== true) throw new TermsRequiredError();
+    // SPEC-039: um cadastro nunca confirmado com este e-mail é descartado, junto com a senha que
+    // alguém escolheu. Ligar as contas deixaria essa senha valendo na conta do dono do e-mail.
+    if (existing) await this.deps.users.deleteUnconfirmed(existing.id);
     const user = await this.deps.users.create({
       name: identity.name.trim().slice(0, NAME_MAX) || email.split('@')[0] || 'Usuário',
       email,
@@ -116,6 +163,8 @@ export class AuthService {
       passwordHash: null,
       googleSub: identity.sub,
       termsVersion: TERMS_VERSION,
+      // O Google só entrega e-mail verificado (conferido acima): a conta nasce confirmada.
+      emailConfirmedAt: this.clock(),
     });
     return this.startSession(user);
   }
@@ -165,7 +214,8 @@ export class AuthService {
     return user ? toPublicUser(user) : null;
   }
 
-  private async startSession(user: User): Promise<AuthSession> {
+  /** Abre uma sessão nova (nova família de tokens). Também usado após a troca de senha. */
+  async startSession(user: User): Promise<AuthSession> {
     const refresh = generateRefreshToken();
     await this.deps.refreshTokens.create({
       userId: user.id,
