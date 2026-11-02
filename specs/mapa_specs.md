@@ -24,6 +24,7 @@
 | 1.14 | SPEC-006 detalhada ([SPEC-006.md](SPEC-006.md)), aprovada e implementada, com o registro de auditoria (RNF15) que passa a valer também para o calendário da SPEC-005; OPEN-41 resolvida (busca só no catálogo da equipe) |
 | 1.15 | SPEC-008 detalhada ([SPEC-008.md](SPEC-008.md)), aprovada e implementada; DA18 aceita; OPEN-05 resolvida (histórico desde 2016); proventos (OPEN-06) fora da SPEC-008; ativo desativado continua sendo coletado |
 | 1.16 | SPEC-009 detalhada ([SPEC-009.md](SPEC-009.md)), aprovada e implementada; OPEN-07 resolvida (brapi usada para mostrar as cotações no próprio app, com fonte e horário, sem repassar os dados); cotações do pregão guardadas por 30 dias (OPEN-40); cotação de FII pela brapi conferida no plano gratuito (OPEN-48) |
+| 1.17 | Nova SPEC-040 (catálogo completo da B3, com logos), na Fase 2, logo depois da SPEC-009: pedida pelo Luís em 02/11/2026 ([SPEC-040.md](SPEC-040.md)), escrita e aguardando o teste da rota de lista da brapi e a aprovação; muda as SPECs 006 e 009 e a premissa de catálogo curado da DA16 |
 
 ---
 
@@ -313,7 +314,7 @@ Visão geral por fase:
 |---|---|---|
 | 0 — Fundação | 001 | Estrutura executável |
 | 1 — Conta e acesso | 002–004, 034 | Usuário identificado e seguro; exportação e exclusão de dados desde o início |
-| 2 — Dados de mercado | 005–011 | Calendário, catálogo, indexadores, cotações, ficha do ativo, monitoramento |
+| 2 — Dados de mercado | 005–011, 040 | Calendário, catálogo, indexadores, cotações, ficha do ativo, monitoramento |
 | 3 — Núcleo da carteira | 012–016 | Carteiras e lançamentos (ao vivo e histórica) |
 | 4 — Renda fixa | ⏸ Adiada (DA22) | Ver "Fase futura — Renda fixa" ao fim desta seção |
 | 5 — Acompanhamento | 019–023 | Rentabilidade, benchmarks, distribuição, comparação, simulações |
@@ -533,6 +534,26 @@ Visão geral por fase:
 | Posição | Pré-condição da compra e venda ao vivo (014) |
 | Em aberto | OPEN-48 (falta a fonte histórica) (OPEN-07 resolvida; parte da OPEN-40 decidida: 30 dias) |
 | Prioridade derivada | Must |
+
+#### SPEC-040 — Catálogo completo da B3, com logos
+
+📄 Detalhada em [SPEC-040.md](SPEC-040.md) — escrita, aguardando o teste da rota de lista (03/11/2026) e a aprovação.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Importar todo dia as ações, units e FIIs negociados na B3 nos últimos 3 meses, com classificação sugerida (a revisar pelo colaborador) e logo; desativar e reativar automaticamente; coletar o preço do pregão de todos dentro da cota gratuita |
+| Valor | **Usuário:** encontra qualquer ativo da bolsa e o reconhece pelo logo. **Equipe:** não cadastra mais de mil ativos à mão |
+| RF | RF07, RF09, RF39 |
+| RB | RB22 |
+| RNF | RNF04, RNF12, RNF13, RNF15, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Buscar ativo; UC: Consultar cotação; P03 |
+| Entidades | ATIVO (origem, classificação conferida, desativação automática), NEGOCIACAO_B3†, LOGO_ATIVO†, REGISTRO_AUDITORIA |
+| Drivers | OBJ02, FAS03, FAS10, QA02, QA04, PA03, RES03, RES07 |
+| ADRs | DA06, DA07, DA13, DA14, DA16 (muda a premissa de catálogo curado), DA18, DA22, DA23 |
+| Depende de | SPEC-006, SPEC-008, SPEC-009 |
+| Posição | Logo depois da SPEC-009, antes da ficha do ativo (010), que mostra o logo |
+| Em aberto | Teste da rota de lista da brapi (plano A ou B da coleta); termos da brapi para os logos |
+| Prioridade derivada | Should |
 
 #### SPEC-007 — Ingestão da série do CDI
 
@@ -1102,9 +1123,9 @@ Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora.
 | RF04 | 036 | RF14 | 014, 019 | RF24 | ⏸ adiado | RF34 | ⏸ adiado |
 | RF05 | 003 | RF15 | 019 | RF25 | ⏸ adiado | RF35 | 033 |
 | RF06 | 034 | RF16 | 020 | RF26 | 027 | RF36 | 032 |
-| RF07 | 006 | RF17 | 019 | RF27 | 028 | RF37 | 032 |
+| RF07 | 006, 040 | RF17 | 019 | RF27 | 028 | RF37 | 032 |
 | RF08 | 010 | RF18 | 021 | RF28 | 028 | RF38 | 035 |
-| RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006 |
+| RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006, 040 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
 
 Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002; RF43, da versão 1.7, pela SPEC-039). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
