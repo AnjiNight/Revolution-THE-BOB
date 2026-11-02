@@ -9,6 +9,8 @@ import type {
   QuoteRepository,
   QuoteSource,
   RunResult,
+  RunSummary,
+  TaskRunReader,
   TaskRunRepository,
 } from '../application/ports.js';
 
@@ -49,6 +51,8 @@ export class PrismaQuoteRepository implements QuoteRepository {
 
   async quoteRanges(): Promise<Map<string, QuoteRange>> {
     const rows = await this.prisma.cotacaoDiaria.groupBy({
+      // Só o que veio da B3: o fechamento provisório da brapi (SPEC-009) não conta.
+      where: { fonte: 'b3_cotahist' },
       by: ['ativoId'],
       _min: { data: true },
       _max: { data: true },
@@ -117,7 +121,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
 }
 
 /** Registro das execuções de ingestão (DA14) no PostgreSQL. */
-export class PrismaTaskRunRepository implements TaskRunRepository {
+export class PrismaTaskRunRepository implements TaskRunRepository, TaskRunReader {
   constructor(private readonly prisma: PrismaClient) {}
 
   async start(task: IngestionTask, at: Date): Promise<string> {
@@ -139,6 +143,10 @@ export class PrismaTaskRunRepository implements TaskRunRepository {
           ativosAfetados: result.affectedAssets,
           periodoInicio: result.periodStart ? fromIsoDate(result.periodStart) : null,
           periodoFim: result.periodEnd ? fromIsoDate(result.periodEnd) : null,
+          consultas: result.requests ?? 0,
+          cotaRestante: result.quota?.remaining ?? null,
+          cotaLimite: result.quota?.limit ?? null,
+          cotaRenovaEm: result.quota?.resetsAt ?? null,
         },
       }),
       this.prisma.erroExecucao.createMany({
@@ -150,5 +158,37 @@ export class PrismaTaskRunRepository implements TaskRunRepository {
         })),
       }),
     ]);
+  }
+
+  async lastRun(task: IngestionTask): Promise<RunSummary | null> {
+    const row = await this.prisma.execucaoTarefa.findFirst({
+      where: { tarefa: task },
+      orderBy: { iniciadaEm: 'desc' },
+    });
+    if (!row) return null;
+    return {
+      startedAt: row.iniciadaEm,
+      finishedAt: row.terminadaEm,
+      status: row.situacao,
+      requests: row.consultas,
+      quota:
+        row.cotaRestante !== null && row.cotaLimite !== null && row.cotaRenovaEm !== null
+          ? { remaining: row.cotaRestante, limit: row.cotaLimite, resetsAt: row.cotaRenovaEm }
+          : null,
+    };
+  }
+
+  async requestsSince(task: IngestionTask, since: Date): Promise<number> {
+    const total = await this.prisma.execucaoTarefa.aggregate({
+      where: { tarefa: task, iniciadaEm: { gte: since } },
+      _sum: { consultas: true },
+    });
+    return total._sum.consultas ?? 0;
+  }
+
+  runsSince(task: IngestionTask, since: Date): Promise<number> {
+    return this.prisma.execucaoTarefa.count({
+      where: { tarefa: task, iniciadaEm: { gte: since } },
+    });
   }
 }

@@ -21,9 +21,13 @@ import {
 } from '../modules/identity/testing/fakes.js';
 import { CalendarService } from '../modules/market-data/application/calendar-service.js';
 import { HistoryStatusService } from '../modules/market-data/application/history-status-service.js';
+import { IntradayCollection } from '../modules/market-data/application/intraday-collection.js';
 import {
+  FakeQuoteSource,
   InMemoryCalendarRepository,
+  InMemoryIntradayQuoteRepository,
   InMemoryQuoteRepository,
+  InMemoryTaskRuns,
 } from '../modules/market-data/testing/fakes.js';
 
 export const TEST_JWT_SECRET = 'segredo-de-teste-com-mais-de-32-caracteres';
@@ -82,6 +86,29 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   const quotes = new InMemoryQuoteRepository(() =>
     assets.assets.map((asset) => ({ id: asset.id, ticker: asset.ticker })),
   );
+  // Cotações do pregão (SPEC-009) com uma "brapi" em memória, sobre o mesmo catálogo.
+  const clock = options.clock ?? (() => new Date());
+  const quoteSource = new FakeQuoteSource(clock);
+  const intradayQuotes = new InMemoryIntradayQuoteRepository(
+    () =>
+      assets.assets.map((asset) => ({
+        id: asset.id,
+        ticker: asset.ticker,
+        active: asset.deactivatedAt === null,
+      })),
+    quotes,
+  );
+  const runs = new InMemoryTaskRuns();
+  const intraday = new IntradayCollection({
+    source: quoteSource,
+    quotes: intradayQuotes,
+    daily: quotes,
+    runs,
+    calendars,
+    monthlyQuota: 15_000,
+    clock,
+    sleep: () => Promise.resolve(),
+  });
   const catalog = new AssetCatalogService({
     assets,
     history: new HistoryStatusService({
@@ -89,6 +116,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
       calendars,
       ...(options.clock ? { clock: options.clock } : {}),
     }),
+    quotes: intraday,
     ...(options.clock ? { clock: options.clock } : {}),
   });
   const calendar = new CalendarService({
@@ -160,6 +188,10 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     assets,
     quotes,
     catalog,
+    quoteSource,
+    intradayQuotes,
+    runs,
+    intraday,
     ...services,
   };
 }

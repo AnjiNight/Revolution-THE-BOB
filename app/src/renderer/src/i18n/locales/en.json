@@ -391,7 +391,8 @@
       "class": "Class",
       "sector": "Sector or segment",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "price": "Last price"
     },
     "class": {
       "stock": "Stock",
@@ -432,6 +433,12 @@
         "desenvolvimento": "Development",
         "outros": "Other"
       }
+    },
+    "quote": {
+      "none": "No quote yet",
+      "today": "Quote at {{time}} (up to {{delay}} min delay)",
+      "otherDay": "Quote from {{date}} at {{time}}",
+      "note": "Quotes from brapi, delayed by up to {{delay}} minutes. Not real-time."
     }
   },
   "catalog": {
@@ -475,6 +482,18 @@
     "historyPending": "History: loading…",
     "historyLoaded": "History from {{from}} to {{to}}",
     "historyNotFound": "History: not found in the B3 files",
-    "historyWaitingCalendar": "Quote history for {{years}} is only loaded after the trading calendar for those years is published (in Calendar)."
+    "historyWaitingCalendar": "Quote history for {{years}} is only loaded after the trading calendar for those years is published (in Calendar).",
+    "quotes": {
+      "lastRun": "Trading quotes: last collection {{when}}",
+      "never": "Trading quotes: no collection yet",
+      "whenToday": "at {{time}}",
+      "whenOther": "on {{date}} at {{time}}",
+      "usage": "every {{interval}} min · {{used}} of {{quota}} requests in the brapi cycle",
+      "noToken": "No brapi token on the server: only PETR4, MGLU3, VALE3 and ITUB4 get quotes. Each team member generates their own token (see the README).",
+      "exhausted": "The brapi quota ran out: quotes come back {{when}}.",
+      "exhaustedUnknown": "The brapi quota ran out: quotes come back when it renews.",
+      "slower": "So the quota lasts until the end of the cycle, quotes are fetched every {{interval}} minutes.",
+      "lastFailed": "The last collection had failures. The details are in the run log."
+    }
   }
 }

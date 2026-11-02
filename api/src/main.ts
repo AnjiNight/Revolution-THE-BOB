@@ -17,8 +17,11 @@ import { PrismaUserRepository } from './modules/identity/infrastructure/prisma-u
 import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-sender.js';
 import { CalendarService } from './modules/market-data/application/calendar-service.js';
 import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
+import { IntradayCollection } from './modules/market-data/application/intraday-collection.js';
 import { HistoryStatusService } from './modules/market-data/application/history-status-service.js';
 import { B3CotahistSource } from './modules/market-data/infrastructure/b3-cotahist-source.js';
+import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
+import { PrismaIntradayQuoteRepository } from './modules/market-data/infrastructure/prisma-intraday-quote-repository.js';
 import { PrismaCalendarRepository } from './modules/market-data/infrastructure/prisma-calendar-repository.js';
 import {
   PrismaQuoteRepository,
@@ -48,6 +51,16 @@ async function main(): Promise<void> {
   const calendars = new PrismaCalendarRepository(prisma);
 
   let shutdown: () => Promise<void>;
+
+  // SPEC-009: cotações do pregão pela brapi. O servidor só lê; o processador coleta.
+  const intraday = new IntradayCollection({
+    source: new BrapiQuoteSource({ token: config.brapi.token, baseUrl: config.brapi.baseUrl }),
+    quotes: new PrismaIntradayQuoteRepository(prisma),
+    daily: new PrismaQuoteRepository(prisma),
+    runs: new PrismaTaskRunRepository(prisma),
+    calendars,
+    monthlyQuota: config.brapi.monthlyQuota,
+  });
 
   if (mode === 'server') {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
@@ -79,6 +92,7 @@ async function main(): Promise<void> {
       catalog: new AssetCatalogService({
         assets: new PrismaAssetRepository(prisma),
         history: new HistoryStatusService({ quotes: new PrismaQuoteRepository(prisma), calendars }),
+        quotes: intraday,
       }),
     });
     await app.listen({ host: config.host, port: config.port });
@@ -104,6 +118,8 @@ async function main(): Promise<void> {
           name: 'limpeza de contas não confirmadas',
           run: () => deleteExpiredPendingAccounts(users, new Date()),
         },
+        // SPEC-009 (OPEN-40): cotações do pregão ficam 30 dias.
+        { name: 'limpeza das cotações do pregão', run: () => intraday.cleanup() },
       ],
       // SPEC-008: histórico de ativo novo a cada 15 minutos; pregões que faltam às 08:00.
       scheduledTasks: [
@@ -116,6 +132,12 @@ async function main(): Promise<void> {
           name: 'fechamento diário',
           run: async () => (await history.updateDaily())?.records ?? 0,
           dailyAtHour: 8,
+        },
+        // SPEC-009: confere a cada 5 minutos se chegou a hora de uma coleta do pregão.
+        {
+          name: 'cotações do pregão',
+          run: async () => (await intraday.collect())?.records ?? 0,
+          everyMinutes: 5,
         },
       ],
     });

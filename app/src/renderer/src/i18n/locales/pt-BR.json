@@ -391,7 +391,8 @@
       "class": "Classe",
       "sector": "Setor ou segmento",
       "status": "Situação",
-      "actions": "Ações"
+      "actions": "Ações",
+      "price": "Último preço"
     },
     "class": {
       "stock": "Ação",
@@ -432,6 +433,12 @@
         "desenvolvimento": "Desenvolvimento",
         "outros": "Outros"
       }
+    },
+    "quote": {
+      "none": "Sem cotação ainda",
+      "today": "Cotação das {{time}} (atraso de até {{delay}} min)",
+      "otherDay": "Cotação de {{date}} às {{time}}",
+      "note": "Cotações da brapi, com atraso de até {{delay}} minutos. Não são em tempo real."
     }
   },
   "catalog": {
@@ -475,6 +482,18 @@
     "historyPending": "Histórico: carregando…",
     "historyLoaded": "Histórico de {{from}} a {{to}}",
     "historyNotFound": "Histórico: não encontrado nos arquivos da B3",
-    "historyWaitingCalendar": "O histórico de cotações de {{years}} só é carregado depois que o calendário de pregão desses anos for publicado (em Calendário)."
+    "historyWaitingCalendar": "O histórico de cotações de {{years}} só é carregado depois que o calendário de pregão desses anos for publicado (em Calendário).",
+    "quotes": {
+      "lastRun": "Cotações do pregão: última coleta {{when}}",
+      "never": "Cotações do pregão: nenhuma coleta ainda",
+      "whenToday": "às {{time}}",
+      "whenOther": "em {{date}} às {{time}}",
+      "usage": "a cada {{interval}} min · {{used}} de {{quota}} consultas no ciclo da brapi",
+      "noToken": "Sem token da brapi no servidor: só PETR4, MGLU3, VALE3 e ITUB4 recebem cotação. Cada pessoa da equipe gera o próprio token (veja o README).",
+      "exhausted": "A cota da brapi acabou: as cotações voltam {{when}}.",
+      "exhaustedUnknown": "A cota da brapi acabou: as cotações voltam quando ela renovar.",
+      "slower": "Para a cota durar até o fim do ciclo, as cotações são buscadas a cada {{interval}} minutos.",
+      "lastFailed": "A última coleta teve falhas. Os detalhes ficam no registro de execuções."
+    }
   }
 }

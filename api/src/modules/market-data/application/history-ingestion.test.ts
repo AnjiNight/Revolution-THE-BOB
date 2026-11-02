@@ -95,7 +95,11 @@ describe('carga do histórico (SPEC-008)', () => {
         errors: [],
       });
       expect(runs.runs).toEqual([
-        { id: 'run-1', task: 'historico_retroativo', result: expect.objectContaining(result) },
+        expect.objectContaining({
+          id: 'run-1',
+          task: 'historico_retroativo',
+          result: expect.objectContaining(result),
+        }),
       ]);
     });
 
@@ -220,6 +224,45 @@ describe('carga do histórico (SPEC-008)', () => {
       });
       expect(runs.runs.at(-1)?.task).toBe('fechamento_diario');
       expect(await ingestion.updateDaily()).toBeNull();
+    });
+
+    it('fechamento provisório da brapi não faz a B3 pular o dia, e a B3 substitui (SPEC-009)', async () => {
+      const provisional = (assetId: string, date: string) => ({
+        assetId,
+        date,
+        open: '9.000000',
+        high: '9.000000',
+        low: '9.000000',
+        close: '9.000000',
+        average: null,
+        trades: null,
+        volume: null,
+      });
+      await quotes.save(
+        ['2026-10-26', '2026-10-27', '2026-10-28'].flatMap((date) => [
+          provisional(PETR4.id, date),
+          provisional(MXRF11.id, date),
+        ]),
+        'brapi',
+      );
+      source.dailyFiles.set('2026-10-26', [q('PETR4', '2026-10-26', 3700)]);
+      source.dailyFiles.set('2026-10-27', [q('PETR4', '2026-10-27'), q('MXRF11', '2026-10-27')]);
+      source.dailyFiles.set('2026-10-28', [q('PETR4', '2026-10-28'), q('MXRF11', '2026-10-28')]);
+
+      await ingestion.updateDaily();
+
+      // O último pregão da B3 continua sendo 23/10 (PETR4): a janela começa no dia 26.
+      expect(source.requests).toEqual(['D2026-10-26', 'D2026-10-27', 'D2026-10-28']);
+      expect(quotes.closesOf(PETR4.id).slice(-3)).toEqual([
+        ['2026-10-26', '37.000000'],
+        ['2026-10-27', '10.000000'],
+        ['2026-10-28', '10.000000'],
+      ]);
+      // Todos os provisórios foram trocados pela B3 (o de MXRF11 em 26/10 nem entrou: a B3 já
+      // tinha esse dia, da carga anual).
+      expect([...quotes.quotes.values()].every((quote) => quote.source === 'b3_cotahist')).toBe(
+        true,
+      );
     });
 
     it('arquivo do dia ainda não publicado: para ali, sem erro (CA07)', async () => {

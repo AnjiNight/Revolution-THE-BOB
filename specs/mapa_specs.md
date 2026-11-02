@@ -23,6 +23,7 @@
 | 1.13 | SPEC-005 detalhada ([SPEC-005.md](SPEC-005.md)), aprovada e implementada; OPEN-01 resolvida (calendário oficial da B3, conferido e publicado pelo colaborador, com sugestão automática) |
 | 1.14 | SPEC-006 detalhada ([SPEC-006.md](SPEC-006.md)), aprovada e implementada, com o registro de auditoria (RNF15) que passa a valer também para o calendário da SPEC-005; OPEN-41 resolvida (busca só no catálogo da equipe) |
 | 1.15 | SPEC-008 detalhada ([SPEC-008.md](SPEC-008.md)), aprovada e implementada; DA18 aceita; OPEN-05 resolvida (histórico desde 2016); proventos (OPEN-06) fora da SPEC-008; ativo desativado continua sendo coletado |
+| 1.16 | SPEC-009 detalhada ([SPEC-009.md](SPEC-009.md)), aprovada e implementada; OPEN-07 resolvida (brapi usada para mostrar as cotações no próprio app, com fonte e horário, sem repassar os dados); cotações do pregão guardadas por 30 dias (OPEN-40); cotação de FII pela brapi conferida no plano gratuito (OPEN-48) |
 
 ---
 
@@ -259,7 +260,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-04 | Formato, conteúdo e forma de entrega da exportação de dados pessoais | RF06 | 034 |
 | OPEN-05 | ✅ **Resolvida na [SPEC-008](SPEC-008.md):** DA18 aceita (histórico pelos arquivos COTAHIST da B3), carregado desde o primeiro pregão de 2016 | DA18, PE04 | 008, 016 |
 | OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo) | PE05, DA22 | 008, 014, 016, 019 |
-| OPEN-07 | Termos da brapi para redistribuir cotações | PE02 | 009, 026 |
+| OPEN-07 | ✅ **Resolvida na [SPEC-009](SPEC-009.md):** a brapi é usada só para mostrar as cotações no próprio app, com fonte e horário, nunca "tempo real" e sem repassar os dados a terceiros | PE02 | 009, 026 |
 | OPEN-08 | Compra/venda na carteira ao vivo com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
 | OPEN-09 | Reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
 | OPEN-10 | RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
@@ -292,7 +293,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
 | OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
 | OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
-| OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
+| OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias. Decidido: backups e logs por no máximo 30 dias ([SPEC-034](SPEC-034.md)); cotações do pregão por 30 dias ([SPEC-009](SPEC-009.md)) | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
 | OPEN-41 | ✅ **Resolvida na [SPEC-006](SPEC-006.md):** a busca procura só nos ativos ativos do catálogo da equipe | INC-09 | 006 |
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
@@ -300,7 +301,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-45 | Com interface em inglês, notícias (em português, PRE04) e textos gerados continuam em português? | RF38 × PRE04 | 035 |
 | OPEN-46 | ✅ **Resolvida (DA23):** FIIs comparados com CDI e Ibovespa no escopo atual; IFIX como evolução | DA22, DA23 | 020 |
 | OPEN-47 | ✅ **Resolvida (DA23):** ações classificadas por setor e FIIs por segmento | DA22, DA23 | 006, 021 |
-| OPEN-48 | Confirmar que as fontes de cotação (atual e histórica) cobrem os FIIs do catálogo | DA22 | 008, 009 |
+| OPEN-48 | Confirmar que as fontes de cotação (atual e histórica) cobrem os FIIs do catálogo. Atual: ✅ a brapi devolve FII no plano gratuito ([SPEC-009](SPEC-009.md)) | DA22 | 008, 009 |
 
 ---
 
@@ -515,6 +516,8 @@ Visão geral por fase:
 
 #### SPEC-009 — Cotações do pregão (nível gratuito) e fechamento diário
 
+📄 Detalhada em [SPEC-009.md](SPEC-009.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Coletar cotações de ações e FIIs a cada ~30 min apenas em horário de pregão e para ativos do catálogo, e o fechamento após o pregão; cada cotação guarda data, hora, fonte e nível; em caso de falha, mantém o último dado válido |
@@ -528,7 +531,7 @@ Visão geral por fase:
 | ADRs | DA06, DA07, DA08, DA14, DA16 |
 | Depende de | SPEC-005, SPEC-006, SPEC-008 (padrão de ingestão) |
 | Posição | Pré-condição da compra e venda ao vivo (014) |
-| Em aberto | OPEN-07, OPEN-40, OPEN-48 |
+| Em aberto | OPEN-48 (falta a fonte histórica) (OPEN-07 resolvida; parte da OPEN-40 decidida: 30 dias) |
 | Prioridade derivada | Must |
 
 #### SPEC-007 — Ingestão da série do CDI

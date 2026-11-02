@@ -111,6 +111,26 @@ export function normalizeSearchText(text: string): string {
     .trim();
 }
 
+/**
+ * Última cotação do pregão de um ativo (SPEC-009), do nível gratuito: atraso de até 30 minutos.
+ * Nunca é "tempo real" (DA16).
+ */
+export interface AssetQuote {
+  /** Decimal em texto (RNF12). */
+  price: string;
+  /** Variação em relação ao fechamento do pregão anterior, em %, com 2 casas; `null` sem referência. */
+  change: string | null;
+  /** Horário da cotação informado pela fonte (ISO 8601). */
+  at: string;
+  source: 'brapi';
+}
+
+/** Atraso máximo das cotações do nível gratuito (DA16), mostrado junto do horário. */
+export const FREE_QUOTE_DELAY_MINUTES = 30;
+
+/** Tickers que a brapi responde sem token (só para testar). */
+export const BRAPI_FREE_TICKERS = ['PETR4', 'MGLU3', 'VALE3', 'ITUB4'] as const;
+
 /** Ativo como o usuário vê na busca. */
 export interface Asset {
   id: string;
@@ -118,6 +138,8 @@ export interface Asset {
   name: string;
   class: AssetClass;
   sector: SectorCode;
+  /** SPEC-009: última cotação do pregão; `null` enquanto não houver nenhuma. */
+  quote: AssetQuote | null;
 }
 
 /** Ativo como o colaborador vê no catálogo: com a situação e as datas. */
@@ -156,6 +178,23 @@ export interface CatalogListAsset extends CatalogAsset {
   history: AssetHistory;
 }
 
+/** Situação da coleta das cotações do pregão (SPEC-009 §5.3), na tela do colaborador. */
+export interface QuoteCollectionStatus {
+  /** Última coleta feita (ISO 8601) e como terminou; `null` antes da primeira. */
+  lastRunAt: string | null;
+  lastStatus: 'sucesso' | 'parcial' | 'falha' | 'cota_esgotada' | null;
+  /** De quanto em quanto tempo o processador está buscando, pela regra da cota (30 no mínimo). */
+  intervalMinutes: number;
+  /** Consultas já usadas e o tamanho da cota no ciclo atual do plano da brapi. */
+  requestsUsed: number;
+  quota: number;
+  /** Quando a cota renova (ISO 8601), se a brapi informou. */
+  quotaResetsAt: string | null;
+  quotaExhausted: boolean;
+  /** Sem token, só os tickers de teste da brapi recebem cotação. */
+  tokenConfigured: boolean;
+}
+
 /** Corpo de `GET /api/collaborator/assets`. */
 export interface CatalogListResult {
   assets: CatalogListAsset[];
@@ -166,6 +205,8 @@ export interface CatalogListResult {
    * só são carregadas depois da publicação (SPEC-008 §4).
    */
   historyYearsWithoutCalendar: number[];
+  /** SPEC-009: situação da coleta das cotações do pregão. */
+  quoteCollection: QuoteCollectionStatus;
 }
 
 /** Erros das rotas do catálogo. */

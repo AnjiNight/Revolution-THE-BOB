@@ -61,6 +61,20 @@ const configSchema = z
       .default(60),
     /** Pasta onde o processador guarda os arquivos anuais da B3 de anos fechados (SPEC-008). */
     B3_CACHE_DIR: z.string().trim().min(1).default('.cache/b3'),
+    /** Token da brapi (SPEC-009), pessoal. Sem ele, só os tickers de teste recebem cotação. */
+    BRAPI_TOKEN: z.string().trim().optional(),
+    /** Consultas por ciclo do plano, para quando a brapi não informa a cota (sem token). */
+    BRAPI_MONTHLY_QUOTA: z.coerce
+      .number({ error: 'BRAPI_MONTHLY_QUOTA deve ser um número' })
+      .int({ error: 'BRAPI_MONTHLY_QUOTA deve ser um número inteiro' })
+      .min(1, { error: 'BRAPI_MONTHLY_QUOTA deve ser maior que zero' })
+      .default(15_000),
+    /** Endereço da brapi; só muda nos testes de ponta a ponta. */
+    BRAPI_BASE_URL: z
+      .string()
+      .trim()
+      .regex(/^https?:\/\//, 'BRAPI_BASE_URL deve começar com http:// ou https://')
+      .default('https://brapi.dev'),
   })
   .refine((c) => c.NODE_ENV !== 'production' || !c.JWT_SECRET.includes('troque'), {
     error: 'o JWT_SECRET de exemplo não pode ser usado em produção',
@@ -101,6 +115,8 @@ export interface AppConfig {
   smtp: SmtpConfig | null;
   workerHeartbeatSeconds: number;
   b3CacheDir: string;
+  /** SPEC-009: cotações do pregão pela brapi. */
+  brapi: { token: string | null; monthlyQuota: number; baseUrl: string };
 }
 
 export class ConfigError extends Error {
@@ -141,5 +157,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       : null,
     workerHeartbeatSeconds: c.WORKER_HEARTBEAT_SECONDS,
     b3CacheDir: c.B3_CACHE_DIR,
+    brapi: {
+      token: c.BRAPI_TOKEN || null,
+      monthlyQuota: c.BRAPI_MONTHLY_QUOTA,
+      baseUrl: c.BRAPI_BASE_URL,
+    },
   };
 }

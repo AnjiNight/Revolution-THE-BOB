@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { formatCalendarDay, formatDate, formatWeekday, formatYears, initials } from './format';
+import {
+  formatCalendarDay,
+  formatChange,
+  formatDate,
+  formatMoney,
+  formatWeekday,
+  formatYears,
+  initials,
+  quoteMoment,
+} from './format';
 
 describe('initials', () => {
   it.each([
@@ -40,5 +49,35 @@ describe('formatYears (SPEC-008)', () => {
     expect(formatYears([2021, 2016, 2017, 2024])).toBe('2016–2017, 2021, 2024');
     expect(formatYears([2026])).toBe('2026');
     expect(formatYears([])).toBe('');
+  });
+});
+
+describe('cotações (SPEC-009)', () => {
+  it('preço em reais no formato do idioma', () => {
+    expect(formatMoney('52.71', 'pt-BR')).toMatch(/^R\$\s52,71$/);
+    expect(formatMoney('1234.5', 'pt-BR')).toMatch(/^R\$\s1\.234,50$/);
+    expect(formatMoney('52.71', 'en')).toBe('R$52.71');
+  });
+
+  it('variação com sinal, inclusive o de menos', () => {
+    expect(formatChange('1.23', 'pt-BR')).toBe('+1,23%');
+    expect(formatChange('-0.85', 'pt-BR')).toMatch(/^[-−]0,85%$/);
+    expect(formatChange('0.00', 'pt-BR')).toBe('0,00%');
+    expect(formatChange('0.98', 'en')).toBe('+0.98%');
+  });
+
+  it('horário de Brasília; de outro dia, com a data', () => {
+    const now = new Date('2026-11-03T15:00:00Z'); // 12h em Brasília
+    expect(quoteMoment('2026-11-03T14:31:30Z', 'pt-BR', now)).toEqual({
+      today: true,
+      time: '11:31',
+      date: '03/11',
+    });
+    // 23h de 30/10 em Brasília (já 31/10 em UTC) é de outro dia.
+    expect(quoteMoment('2026-10-31T02:00:00Z', 'pt-BR', now)).toMatchObject({
+      today: false,
+      time: '23:00',
+      date: '30/10',
+    });
   });
 });

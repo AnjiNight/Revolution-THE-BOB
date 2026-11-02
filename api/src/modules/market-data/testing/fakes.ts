@@ -1,20 +1,31 @@
-import type { IsoDate, NonTradingDay } from '@simulador/shared';
+import { isoDateInBrasilia, type IsoDate, type NonTradingDay } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import { InMemoryAuditTrail } from '../../audit/testing/fakes.js';
-import type {
-  CalendarRepository,
-  CotahistSource,
-  DailyQuote,
-  HistoryAsset,
-  IngestionTask,
-  LoadedYear,
-  NewCalendarPublication,
-  QuoteRange,
-  QuoteRepository,
-  QuoteSource,
-  RunResult,
-  StoredCalendarYear,
-  TaskRunRepository,
+import {
+  QuoteSourceError,
+  type CalendarRepository,
+  type CotahistSource,
+  type DailyQuote,
+  type HistoryAsset,
+  type IngestionTask,
+  type IntradayQuote,
+  type IntradayQuoteRepository,
+  type IntradayQuoteSource,
+  type LatestIntradayQuote,
+  type LoadedYear,
+  type NewCalendarPublication,
+  type QuoteLevel,
+  type QuoteRange,
+  type QuoteRepository,
+  type QuoteSource,
+  type QuoteSourceErrorKind,
+  type QuoteUsage,
+  type RunResult,
+  type RunSummary,
+  type SourceQuote,
+  type StoredCalendarYear,
+  type TaskRunReader,
+  type TaskRunRepository,
 } from '../application/ports.js';
 import { cotahistFile, type CotahistLineFields } from './cotahist-fixtures.js';
 
@@ -78,6 +89,8 @@ export class InMemoryQuoteRepository implements QuoteRepository {
   quoteRanges(): Promise<Map<string, QuoteRange>> {
     const ranges = new Map<string, QuoteRange>();
     for (const quote of this.quotes.values()) {
+      // Só o que veio da B3 (SPEC-009): o provisório da brapi não conta.
+      if (quote.source !== 'b3_cotahist') continue;
       const range = ranges.get(quote.assetId);
       ranges.set(quote.assetId, {
         from: range && range.from < quote.date ? range.from : quote.date,
@@ -116,19 +129,177 @@ export class InMemoryQuoteRepository implements QuoteRepository {
   }
 }
 
-export class InMemoryTaskRuns implements TaskRunRepository {
-  readonly runs: Array<{ id: string; task: IngestionTask; result: RunResult | null }> = [];
+export class InMemoryTaskRuns implements TaskRunRepository, TaskRunReader {
+  readonly runs: Array<{
+    id: string;
+    task: IngestionTask;
+    startedAt: Date;
+    finishedAt: Date | null;
+    result: RunResult | null;
+  }> = [];
 
-  start(task: IngestionTask): Promise<string> {
+  start(task: IngestionTask, at: Date = new Date()): Promise<string> {
     const id = `run-${this.runs.length + 1}`;
-    this.runs.push({ id, task, result: null });
+    this.runs.push({ id, task, startedAt: at, finishedAt: null, result: null });
     return Promise.resolve(id);
   }
 
-  finish(id: string, result: RunResult): Promise<void> {
+  finish(id: string, result: RunResult, at: Date = new Date()): Promise<void> {
     const run = this.runs.find((item) => item.id === id);
-    if (run) run.result = result;
+    if (run) {
+      run.result = result;
+      run.finishedAt = at;
+    }
     return Promise.resolve();
+  }
+
+  lastRun(task: IngestionTask): Promise<RunSummary | null> {
+    const run = this.runs.filter((item) => item.task === task).at(-1);
+    if (!run) return Promise.resolve(null);
+    return Promise.resolve({
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt,
+      status: run.result?.status ?? null,
+      requests: run.result?.requests ?? 0,
+      quota: run.result?.quota ?? null,
+    });
+  }
+
+  requestsSince(task: IngestionTask, since: Date): Promise<number> {
+    return Promise.resolve(
+      this.of(task, since).reduce((sum, run) => sum + (run.result?.requests ?? 0), 0),
+    );
+  }
+
+  runsSince(task: IngestionTask, since: Date): Promise<number> {
+    return Promise.resolve(this.of(task, since).length);
+  }
+
+  private of(task: IngestionTask, since: Date) {
+    return this.runs.filter((run) => run.task === task && run.startedAt >= since);
+  }
+}
+
+/** Cotações do pregão em memória; o fechamento guardado vem do histórico em memória. */
+export class InMemoryIntradayQuoteRepository implements IntradayQuoteRepository {
+  /** Chave `ativo|horário|nível`. */
+  readonly quotes = new Map<string, IntradayQuote>();
+
+  constructor(
+    private readonly catalog: () => Array<HistoryAsset & { active: boolean }>,
+    private readonly daily: InMemoryQuoteRepository,
+  ) {}
+
+  activeAssets(): Promise<HistoryAsset[]> {
+    return Promise.resolve(
+      this.catalog()
+        .filter((asset) => asset.active)
+        .map(({ id, ticker }) => ({ id, ticker }))
+        .sort((a, b) => a.ticker.localeCompare(b.ticker)),
+    );
+  }
+
+  save(quotes: IntradayQuote[]): Promise<number> {
+    let saved = 0;
+    for (const quote of quotes) {
+      const key = `${quote.assetId}|${quote.at.toISOString()}|${quote.level}`;
+      if (this.quotes.has(key)) continue;
+      this.quotes.set(key, { ...quote });
+      saved += 1;
+    }
+    return Promise.resolve(saved);
+  }
+
+  latest(level: QuoteLevel): Promise<Map<string, LatestIntradayQuote>> {
+    const latest = new Map<string, LatestIntradayQuote>();
+    for (const quote of this.quotes.values()) {
+      if (quote.level !== level) continue;
+      const current = latest.get(quote.assetId);
+      if (current && current.at >= quote.at) continue;
+      latest.set(quote.assetId, {
+        ...quote,
+        storedPreviousClose: this.closeBefore(quote.assetId, isoDateInBrasilia(quote.at)),
+      });
+    }
+    return Promise.resolve(latest);
+  }
+
+  closesBefore(date: string): Promise<Map<string, string>> {
+    const closes = new Map<string, string>();
+    for (const quote of this.daily.quotes.values()) {
+      if (quote.date >= date || closes.has(quote.assetId)) continue;
+      const close = this.closeBefore(quote.assetId, date);
+      if (close) closes.set(quote.assetId, close);
+    }
+    return Promise.resolve(closes);
+  }
+
+  deleteBefore(instant: Date): Promise<number> {
+    let deleted = 0;
+    for (const [key, quote] of this.quotes) {
+      if (quote.at < instant) {
+        this.quotes.delete(key);
+        deleted += 1;
+      }
+    }
+    return Promise.resolve(deleted);
+  }
+
+  private closeBefore(assetId: string, date: string): string | null {
+    const previous = [...this.daily.quotes.values()]
+      .filter((quote) => quote.assetId === assetId && quote.date < date)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    return previous?.close ?? null;
+  }
+}
+
+type FakeAnswer =
+  Partial<Omit<SourceQuote, 'usage'>> | { error: QuoteSourceErrorKind; usage?: QuoteUsage };
+
+/**
+ * "brapi" em memória: uma resposta por ticker (ou uma lista, uma por consulta). Ticker sem
+ * resposta é "não encontrado". Conta as consultas e devolve a cota que restaria.
+ */
+export class FakeQuoteSource implements IntradayQuoteSource {
+  readonly answers = new Map<string, FakeAnswer | FakeAnswer[]>();
+  readonly requests: string[] = [];
+  usage: QuoteUsage | null = null;
+
+  constructor(
+    private readonly clock: () => Date,
+    readonly tokenConfigured = true,
+  ) {}
+
+  quote(ticker: string): Promise<SourceQuote> {
+    this.requests.push(ticker);
+    if (this.usage)
+      this.usage = { ...this.usage, remaining: Math.max(0, this.usage.remaining - 1) };
+    const stored = this.answers.get(ticker);
+    const answer = Array.isArray(stored) ? stored.shift() : stored;
+    if (!answer) {
+      return Promise.reject(
+        new QuoteSourceError('not_found', 'ticker não encontrado na brapi (404)'),
+      );
+    }
+    if ('error' in answer) {
+      return Promise.reject(
+        new QuoteSourceError(
+          answer.error,
+          `falha simulada: ${answer.error}`,
+          answer.usage ?? this.usage,
+        ),
+      );
+    }
+    return Promise.resolve({
+      price: '10.00',
+      at: this.clock(),
+      open: null,
+      high: null,
+      low: null,
+      previousClose: null,
+      ...answer,
+      usage: this.usage,
+    });
   }
 }
 

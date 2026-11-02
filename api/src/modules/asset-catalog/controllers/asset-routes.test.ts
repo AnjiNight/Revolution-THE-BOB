@@ -11,6 +11,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from '../../../testing/test-app.js';
 import { createCollaborator } from '../../identity/application/create-collaborator.js';
+import { suggestNonTradingDays } from '../../market-data/domain/calendar-suggestion.js';
 
 type TestApp = Awaited<ReturnType<typeof buildTestApp>>;
 
@@ -84,6 +85,7 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
         name: 'Petrobras PN',
         class: 'stock',
         sector: 'petroleo_gas_biocombustiveis',
+        quote: null,
         active: true,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -293,6 +295,7 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
             name: 'Maxi Renda FII',
             class: 'fii',
             sector: 'recebiveis',
+            quote: null,
           },
         ],
         hasMore: false,
@@ -464,6 +467,57 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
       await call('POST', ASSET_PATHS.catalog, collaborator, { ...petr4, name: 'Duplicado' });
       await call('POST', ASSET_PATHS.catalog, collaborator, { ...mxrf11, sector: 'financeiro' });
       expect(t.audit.entries.map((e) => e.action)).toEqual(['asset_created']);
+    });
+  });
+
+  describe('cotações do pregão (SPEC-009, CA09, CA10)', () => {
+    beforeEach(async () => {
+      // Quinta, 22/10/2026, 12h em Brasília: pregão aberto.
+      await t.calendar.publish(
+        2026,
+        { nonTradingDays: suggestNonTradingDays(2026) },
+        collaborator.user.id,
+      );
+      await create(petr4);
+      await create(mxrf11);
+      t.quoteSource.answers.set('PETR4', {
+        price: '38.52',
+        at: new Date('2026-10-22T14:31:00Z'),
+        previousClose: '38.06',
+      });
+      t.quoteSource.answers.set('MXRF11', { error: 'not_found' });
+    });
+
+    it('a busca do usuário mostra a última cotação, com a variação e o horário', async () => {
+      await t.intraday.collect();
+      const { assets } = await search();
+      expect(assets.find((asset) => asset.ticker === 'PETR4')?.quote).toEqual({
+        price: '38.52',
+        change: '1.21',
+        at: '2026-10-22T14:31:00.000Z',
+        source: 'brapi',
+      });
+      // Sem cotação ainda: quote vazio, e a tela mostra "Sem cotação ainda".
+      expect(assets.find((asset) => asset.ticker === 'MXRF11')?.quote).toBeNull();
+    });
+
+    it('a lista do colaborador traz a cotação e a situação da coleta', async () => {
+      await t.intraday.collect();
+      const res = await call('GET', ASSET_PATHS.catalog, collaborator);
+      const body = res.json<CatalogListResult>();
+      expect(body.assets.find((asset) => asset.ticker === 'PETR4')?.quote).toMatchObject({
+        price: '38.52',
+      });
+      expect(body.quoteCollection).toEqual({
+        lastRunAt: now.toISOString(),
+        lastStatus: 'parcial',
+        intervalMinutes: 30,
+        requestsUsed: 2,
+        quota: 15_000,
+        quotaResetsAt: null,
+        quotaExhausted: false,
+        tokenConfigured: true,
+      });
     });
   });
 });

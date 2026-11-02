@@ -180,6 +180,7 @@ model Ativo {
 
   cotacoes        CotacaoDiaria[]
   cargasHistorico CargaHistorico[]
+  cotacoesPregao  CotacaoPregao[]
 
   @@index([classe, setor])
   @@map("ativo")
@@ -195,7 +196,8 @@ enum FonteCotacao {
 
 /// Fechamento de um pregão (SPEC-008). Preços como a fonte publica, sem ajuste por proventos
 /// (OPEN-06), já divididos pelo fator de cotação. Fim de semana e preços fora da faixa do dia são
-/// recusados (CHECK na migração).
+/// recusados (CHECK na migração). Preço médio, negócios e volume só ficam vazios no fechamento
+/// provisório da brapi (SPEC-009), que a B3 substitui no dia seguinte.
 model CotacaoDiaria {
   ativoId    String       @map("ativo_id") @db.Uuid
   data       DateTime     @db.Date
@@ -203,9 +205,9 @@ model CotacaoDiaria {
   maxima     Decimal      @db.Decimal(18, 6)
   minima     Decimal      @db.Decimal(18, 6)
   fechamento Decimal      @db.Decimal(18, 6)
-  precoMedio Decimal      @map("preco_medio") @db.Decimal(18, 6)
-  negocios   Int
-  volume     Decimal      @db.Decimal(20, 2)
+  precoMedio Decimal?     @map("preco_medio") @db.Decimal(18, 6)
+  negocios   Int?
+  volume     Decimal?     @db.Decimal(20, 2)
   fonte      FonteCotacao
   gravadoEm  DateTime     @default(now()) @map("gravado_em") @db.Timestamptz(3)
 
@@ -229,10 +231,11 @@ model CargaHistorico {
   @@map("carga_historico")
 }
 
-/// Tarefas de ingestão do processador (DA07, DA14). As SPECs 007, 009 e 027 acrescentam as suas.
+/// Tarefas de ingestão do processador (DA07, DA14). As SPECs 007 e 027 acrescentam as suas.
 enum TarefaIngestao {
   historico_retroativo
   fechamento_diario
+  cotacao_pregao
 
   @@map("tarefa_ingestao")
 }
@@ -242,6 +245,7 @@ enum SituacaoExecucao {
   parcial
   falha
   aguardando_publicacao
+  cota_esgotada
 
   @@map("situacao_execucao")
 }
@@ -257,6 +261,11 @@ model ExecucaoTarefa {
   ativosAfetados Int               @default(0) @map("ativos_afetados")
   periodoInicio  DateTime?         @map("periodo_inicio") @db.Date
   periodoFim     DateTime?         @map("periodo_fim") @db.Date
+  /// SPEC-009: consultas feitas à fonte e a cota que ela informou por último (ciclo da brapi).
+  consultas      Int               @default(0)
+  cotaRestante   Int?              @map("cota_restante")
+  cotaLimite     Int?              @map("cota_limite")
+  cotaRenovaEm   DateTime?         @map("cota_renova_em") @db.Timestamptz(3)
 
   erros ErroExecucao[]
 
@@ -276,6 +285,36 @@ model ErroExecucao {
 
   @@index([execucaoId])
   @@map("erro_execucao")
+}
+
+/// Nível da cotação (DA16): o gratuito tem atraso de ~30 minutos; o assinante vem na SPEC-026.
+enum NivelCotacao {
+  gratuito
+  assinante
+
+  @@map("nivel_cotacao")
+}
+
+/// Cotação do pregão (SPEC-009): o preço do ativo no horário que a fonte informa. Guardada por 30
+/// dias (OPEN-40); o fechamento de cada dia fica em cotacao_diaria. Fim de semana e preço fora da
+/// faixa do dia são recusados (CHECK na migração).
+model CotacaoPregao {
+  ativoId            String       @map("ativo_id") @db.Uuid
+  momento            DateTime     @db.Timestamptz(3)
+  nivel              NivelCotacao
+  preco              Decimal      @db.Decimal(18, 6)
+  aberturaDia        Decimal?     @map("abertura_dia") @db.Decimal(18, 6)
+  maximaDia          Decimal?     @map("maxima_dia") @db.Decimal(18, 6)
+  minimaDia          Decimal?     @map("minima_dia") @db.Decimal(18, 6)
+  fechamentoAnterior Decimal?     @map("fechamento_anterior") @db.Decimal(18, 6)
+  fonte              FonteCotacao
+  coletadaEm         DateTime     @default(now()) @map("coletada_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, momento, nivel])
+  @@index([momento])
+  @@map("cotacao_pregao")
 }
 
 /// O que a equipe fez (SPEC-006, RNF15).

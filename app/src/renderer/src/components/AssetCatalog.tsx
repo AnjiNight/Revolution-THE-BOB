@@ -29,6 +29,7 @@ import {
   useSectorName,
   type AssetFilterState,
 } from './AssetFields';
+import { QuoteCollectionLine, QuoteText } from './QuoteText';
 import { SelectField } from './SelectField';
 import { TextField } from './TextField';
 
@@ -164,6 +165,7 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
                 {t('catalog.capacityWarning', { limit: FREE_COLLECTION_CAPACITY })}
               </p>
             )}
+            {data && <QuoteCollectionLine status={data.quoteCollection} />}
             {yearsWithoutCalendar.length > 0 && (
               <p className="catalog-capacity">
                 <Warning weight="fill" aria-hidden="true" />
@@ -270,6 +272,9 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
                   {t('assets.columns.class')}
                 </th>
                 <th scope="col">{t('assets.columns.sector')}</th>
+                <th scope="col" className="wide-only">
+                  {t('assets.columns.price')}
+                </th>
                 <th scope="col">{t('assets.columns.status')}</th>
                 <th scope="col">
                   <span className="visually-hidden">{t('assets.columns.actions')}</span>
@@ -297,6 +302,9 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
                         <span className={`class-badge class-${asset.class} narrow-only`}>
                           {t(`assets.class.${asset.class}`)}
                         </span>
+                        <span className="narrow-only quote-narrow">
+                          <QuoteText quote={asset.quote} />
+                        </span>
                       </td>
                       <td className="wide-only">
                         <span className={`class-badge class-${asset.class}`}>
@@ -304,6 +312,9 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
                         </span>
                       </td>
                       <td>{sectorName(asset.class, asset.sector)}</td>
+                      <td className="wide-only">
+                        <QuoteText quote={asset.quote} />
+                      </td>
                       <td>
                         <span
                           className={
@@ -354,7 +365,7 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
                     </tr>
                     {confirming === asset.id && (
                       <tr className="confirm-row">
-                        <td colSpan={5}>
+                        <td colSpan={6}>
                           <div className="asset-confirm">
                             <p>{t('catalog.deactivateConfirm', { ticker: asset.ticker })}</p>
                             <div className="form-actions">

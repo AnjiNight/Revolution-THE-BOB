@@ -90,6 +90,16 @@ O colaborador entra pela **Área do colaborador**, na tela de login.
 
 **Histórico de cotações** ([SPEC-008](specs/SPEC-008.md)): o processador (`npm run dev:worker`) carrega o fechamento diário dos ativos do catálogo a partir dos arquivos públicos da B3, desde 2016. Ativo novo ganha o histórico em até 15 minutos; os pregões que faltam são buscados todo dia às 08:00. Só entram os anos com calendário publicado: publique de 2016 até o ano atual (a tela **Ativos** do colaborador avisa quais faltam). Os arquivos anuais (uns 60 a 90 MB cada) ficam guardados em `api/.cache/b3`.
 
+### Token da brapi (cotações do pregão)
+
+As cotações do pregão ([SPEC-009](specs/SPEC-009.md)) vêm da [brapi](https://brapi.dev), no plano gratuito. **Cada pessoa da equipe gera o próprio token**: a cota de 15 mil consultas por mês é por chave, então dois computadores com o mesmo token gastam a mesma cota.
+
+1. Crie uma conta gratuita em [brapi.dev](https://brapi.dev) e gere um token no painel.
+2. No `api/.env`, preencha `BRAPI_TOKEN` com o **seu** token. O `api/.env` não vai para o Git; nunca coloque o token em commits nem mensagens.
+3. Sem token, só PETR4, MGLU3, VALE3 e ITUB4 recebem cotação, e a tela **Ativos** do colaborador avisa.
+
+**Cotações do pregão:** com o processador ligado (`npm run dev:worker`), em dia de pregão, ele busca o último preço dos ativos ativos do catálogo de 30 em 30 minutos, das 10h30 até meia hora depois do fechamento (horário de Brasília). O preço, a variação do dia e o horário aparecem na lista **Ativos**, sempre com o aviso de atraso de até 30 minutos (nunca "tempo real"). Se a cota não der para todos os ativos, o processador espaça as coletas sozinho e mantém a do fechamento; a tela **Ativos** do colaborador mostra a última coleta e o uso da cota. Cotações do pregão ficam guardadas por 30 dias.
+
 ### Login com Google (opcional)
 
 O botão "Continuar com o Google" só aparece quando o app e o servidor têm o client ID ([DA24](adr/DA24-login-com-google.md)). O login abre o navegador do sistema: se a pessoa já estiver conectada ao Google lá, basta escolher a conta.

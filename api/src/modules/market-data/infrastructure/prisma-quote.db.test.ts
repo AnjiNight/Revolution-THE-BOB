@@ -81,7 +81,7 @@ describe.skipIf(!url)('histórico de cotações no PostgreSQL', () => {
         assetId: row.ativoId,
         date: row.data.toISOString().slice(0, 10),
         close: row.fechamento.toFixed(6),
-        volume: row.volume.toFixed(2),
+        volume: row.volume?.toFixed(2) ?? null,
         source: row.fonte,
       }),
     );

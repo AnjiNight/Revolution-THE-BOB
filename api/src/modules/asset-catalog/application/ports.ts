@@ -1,4 +1,11 @@
-import type { AssetClass, AssetHistory, AssetStatusFilter, SectorCode } from '@simulador/shared';
+import type {
+  AssetClass,
+  AssetHistory,
+  AssetQuote,
+  AssetStatusFilter,
+  QuoteCollectionStatus,
+  SectorCode,
+} from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type { StoredAsset } from '../domain/asset.js';
 
@@ -26,6 +33,15 @@ export interface AssetModification {
  */
 export interface AssetHistoryReader {
   overview(): Promise<{ byAsset: Map<string, AssetHistory>; yearsWithoutCalendar: number[] }>;
+}
+
+/**
+ * Última cotação do pregão de cada ativo e situação da coleta (SPEC-009), também do módulo Dados
+ * de Mercado.
+ */
+export interface AssetQuoteReader {
+  latestQuotes(): Promise<Map<string, AssetQuote>>;
+  status(): Promise<QuoteCollectionStatus>;
 }
 
 export interface AssetRepository {

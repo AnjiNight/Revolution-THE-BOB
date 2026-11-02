@@ -1,4 +1,9 @@
-import type { EmailLocale, IsoDate } from '@simulador/shared';
+import {
+  CALENDAR_TIME_ZONE,
+  isoDateInBrasilia,
+  type EmailLocale,
+  type IsoDate,
+} from '@simulador/shared';
 
 /** Idioma dos e-mails que o servidor manda, a partir do idioma da interface (RNF20). */
 export function emailLocale(language: string): EmailLocale {
@@ -59,4 +64,48 @@ export function formatWeekday(date: IsoDate, language: string): string {
   return new Intl.DateTimeFormat(language, { weekday: 'long', timeZone: 'UTC' }).format(
     new Date(`${date}T00:00:00Z`),
   );
+}
+
+/** Preço em reais no formato do idioma: "R$ 52,71", "R$52.71" (SPEC-009). */
+export function formatMoney(value: string, language: string): string {
+  return new Intl.NumberFormat(language, {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value));
+}
+
+/** Variação do dia com sinal: "+1,23%", "-0,85%", "0,00%". O sinal não depende só da cor. */
+export function formatChange(change: string, language: string): string {
+  return new Intl.NumberFormat(language, {
+    style: 'percent',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    signDisplay: 'exceptZero',
+  }).format(Number(change) / 100);
+}
+
+/**
+ * Horário de uma cotação no horário de Brasília (PRE05): se é de hoje, só a hora; se é de outro
+ * dia, também a data ("30/10").
+ */
+export function quoteMoment(
+  at: string,
+  language: string,
+  now: Date = new Date(),
+): { today: boolean; time: string; date: string } {
+  const instant = new Date(at);
+  const timeZone = CALENDAR_TIME_ZONE;
+  return {
+    today: isoDateInBrasilia(instant) === isoDateInBrasilia(now),
+    time: new Intl.DateTimeFormat(language, {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone,
+    }).format(instant),
+    date: new Intl.DateTimeFormat(language, { day: '2-digit', month: '2-digit', timeZone }).format(
+      instant,
+    ),
+  };
 }

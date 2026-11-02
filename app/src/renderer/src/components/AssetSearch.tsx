@@ -1,4 +1,4 @@
-import type { Asset, AssetSearchQuery } from '@simulador/shared';
+import { FREE_QUOTE_DELAY_MINUTES, type Asset, type AssetSearchQuery } from '@simulador/shared';
 import { Info } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import {
   useSectorName,
   type AssetFilterState,
 } from './AssetFields';
+import { QuoteText } from './QuoteText';
 
 /**
  * Tela "Ativos" do usuário (SPEC-006 §5.3): busca por ticker ou nome e filtros de classe e de
@@ -60,14 +61,16 @@ export function AssetSearch({ onSessionExpired }: { onSessionExpired: () => void
 
         <p className="assets-note">
           <Info weight="fill" aria-hidden="true" />
-          {t('assets.catalogNote')}
+          <span>
+            {t('assets.catalogNote')} {t('assets.quote.note', { delay: FREE_QUOTE_DELAY_MINUTES })}
+          </span>
         </p>
       </section>
     </div>
   );
 }
 
-/** Ticker e nome, classe e setor ou segmento. */
+/** Ticker e nome, classe, setor ou segmento e o último preço (SPEC-009). */
 function AssetTable({ assets, busy }: { assets: Asset[]; busy: boolean }) {
   const { t } = useTranslation();
   const sectorName = useSectorName();
@@ -78,6 +81,9 @@ function AssetTable({ assets, busy }: { assets: Asset[]; busy: boolean }) {
           <th scope="col">{t('assets.columns.asset')}</th>
           <th scope="col">{t('assets.columns.class')}</th>
           <th scope="col">{t('assets.columns.sector')}</th>
+          <th scope="col" className="wide-only">
+            {t('assets.columns.price')}
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -86,6 +92,10 @@ function AssetTable({ assets, busy }: { assets: Asset[]; busy: boolean }) {
             <td>
               <span className="asset-ticker">{asset.ticker}</span>
               <span className="asset-name">{asset.name}</span>
+              {/* Janela estreita: o preço vai para baixo do nome. */}
+              <span className="narrow-only quote-narrow">
+                <QuoteText quote={asset.quote} />
+              </span>
             </td>
             <td>
               <span className={`class-badge class-${asset.class}`}>
@@ -93,6 +103,9 @@ function AssetTable({ assets, busy }: { assets: Asset[]; busy: boolean }) {
               </span>
             </td>
             <td>{sectorName(asset.class, asset.sector)}</td>
+            <td className="wide-only">
+              <QuoteText quote={asset.quote} />
+            </td>
           </tr>
         ))}
       </tbody>

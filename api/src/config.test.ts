@@ -23,7 +23,24 @@ describe('loadConfig (CA08)', () => {
       smtp: null,
       workerHeartbeatSeconds: 60,
       b3CacheDir: '.cache/b3',
+      brapi: { token: null, monthlyQuota: 15_000, baseUrl: 'https://brapi.dev' },
     });
+  });
+
+  it('token, cota e endereço da brapi (SPEC-009)', () => {
+    const config = loadConfig({
+      ...base,
+      BRAPI_TOKEN: ' meu-token ',
+      BRAPI_MONTHLY_QUOTA: '150000',
+      BRAPI_BASE_URL: 'http://127.0.0.1:9999',
+    });
+    expect(config.brapi).toEqual({
+      token: 'meu-token',
+      monthlyQuota: 150_000,
+      baseUrl: 'http://127.0.0.1:9999',
+    });
+    expect(() => loadConfig({ ...base, BRAPI_MONTHLY_QUOTA: '0' })).toThrow(/BRAPI_MONTHLY_QUOTA/);
+    expect(() => loadConfig({ ...base, BRAPI_BASE_URL: 'brapi.dev' })).toThrow(/BRAPI_BASE_URL/);
   });
 
   it('pasta dos arquivos da B3 pode ser trocada (SPEC-008)', () => {

@@ -11,6 +11,7 @@ import {
   type CatalogListResult,
   type CatalogQuery,
   type NewAsset,
+  type QuoteCollectionStatus,
   type SectorOption,
 } from '@simulador/shared';
 import type { AuditAction, AuditEntry, JsonValue } from '../../audit/application/audit.js';
@@ -21,15 +22,30 @@ import type {
   AssetChanges,
   AssetHistoryReader,
   AssetModification,
+  AssetQuoteReader,
   AssetRepository,
 } from './ports.js';
 
 const PENDING_HISTORY: AssetHistory = { status: 'pending', from: null, to: null };
 
+/** Sem o leitor de cotações (testes antigos): nenhuma coleta, cota cheia, sem token. */
+const NO_COLLECTION: QuoteCollectionStatus = {
+  lastRunAt: null,
+  lastStatus: null,
+  intervalMinutes: 30,
+  requestsUsed: 0,
+  quota: 15_000,
+  quotaResetsAt: null,
+  quotaExhausted: false,
+  tokenConfigured: false,
+};
+
 export interface AssetCatalogServiceDeps {
   assets: AssetRepository;
   /** Situação do histórico de cotações (SPEC-008). Sem ela, todos aparecem como "carregando". */
   history?: AssetHistoryReader;
+  /** Última cotação e situação da coleta (SPEC-009). Sem ele, nenhum ativo tem cotação. */
+  quotes?: AssetQuoteReader;
   clock?: () => Date;
   newId?: () => string;
 }
@@ -47,15 +63,21 @@ export class AssetCatalogService {
     this.newId = deps.newId ?? randomUUID;
   }
 
-  /** Usuário: só ativos ativos (OPEN-41), até 50 resultados. */
+  /** Usuário: só ativos ativos (OPEN-41), até 50 resultados, com a última cotação (SPEC-009). */
   async search(query: AssetSearchQuery): Promise<AssetSearchResult> {
-    const candidates = await this.deps.assets.list({
-      status: 'active',
-      assetClass: query.class,
-      sector: query.sector,
-    });
+    const [candidates, quotes] = await Promise.all([
+      this.deps.assets.list({
+        status: 'active',
+        assetClass: query.class,
+        sector: query.sector,
+      }),
+      this.deps.quotes?.latestQuotes(),
+    ]);
     const found = searchAssets(candidates, query.q, ASSET_SEARCH_LIMIT);
-    return { assets: found.assets.map(toPublicAsset), hasMore: found.hasMore };
+    return {
+      assets: found.assets.map((asset) => toPublicAsset(asset, quotes?.get(asset.id) ?? null)),
+      hasMore: found.hasMore,
+    };
   }
 
   /**
@@ -63,7 +85,7 @@ export class AssetCatalogService {
    * histórico de cotações (SPEC-008), e o total de ativos.
    */
   async catalog(query: CatalogQuery): Promise<CatalogListResult> {
-    const [candidates, activeCount, history] = await Promise.all([
+    const [candidates, activeCount, history, quotes, quoteCollection] = await Promise.all([
       this.deps.assets.list({
         status: query.status,
         assetClass: query.class,
@@ -71,14 +93,17 @@ export class AssetCatalogService {
       }),
       this.deps.assets.countActive(),
       this.deps.history?.overview(),
+      this.deps.quotes?.latestQuotes(),
+      this.deps.quotes?.status(),
     ]);
     return {
       assets: searchAssets(candidates, query.q).assets.map((asset) => ({
-        ...toCatalogAsset(asset),
+        ...toCatalogAsset(asset, quotes?.get(asset.id) ?? null),
         history: history?.byAsset.get(asset.id) ?? PENDING_HISTORY,
       })),
       activeCount,
       historyYearsWithoutCalendar: history?.yearsWithoutCalendar ?? [],
+      quoteCollection: quoteCollection ?? NO_COLLECTION,
     };
   }
 

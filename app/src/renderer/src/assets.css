@@ -396,6 +396,75 @@ button.table-action:hover:not(:disabled) {
   color: var(--accent);
 }
 
+/* ---------- Último preço (SPEC-009) ---------- */
+
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.quote-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+}
+
+.quote-price {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A variação traz o sinal (+/−): a cor só reforça (RNF18). */
+.quote-change {
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.quote-change.is-up {
+  color: var(--ok);
+}
+
+.quote-change.is-down {
+  color: var(--error);
+}
+
+.quote-change.is-flat,
+.quote-time,
+.quote-none {
+  color: var(--muted);
+}
+
+.quote-time,
+.quote-none {
+  font-size: 0.78rem;
+}
+
+.quote-collection {
+  margin-top: 0.35rem;
+}
+
+.quote-collection-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  max-width: 40rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.quote-collection-line svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--accent);
+}
+
 /* ---------- Janela estreita (até 480px) ---------- */
 
 @media (max-width: 720px) {
@@ -410,6 +479,11 @@ button.table-action:hover:not(:disabled) {
   .narrow-only {
     display: inline-flex;
     margin-top: 0.35rem;
+  }
+
+  /* O preço embaixo do nome ocupa a linha inteira. */
+  .quote-narrow.narrow-only {
+    display: block;
   }
 
   .row-actions {
