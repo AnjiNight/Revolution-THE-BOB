@@ -3,6 +3,7 @@ import { suggestNonTradingDays } from '../domain/calendar-suggestion.js';
 import { cotahistLine, type CotahistLineFields } from '../testing/cotahist-fixtures.js';
 import {
   FakeCotahistSource,
+  InMemoryB3Trades,
   InMemoryCalendarRepository,
   InMemoryQuoteRepository,
   InMemoryTaskRuns,
@@ -344,5 +345,113 @@ describe('carga do histórico (SPEC-008)', () => {
       expect(await quotes.save([{ ...quote, close: '38.900000' }], 'brapi')).toBe(0);
       expect(quotes.closesOf(PETR4.id)).toEqual([['2026-10-28', '38.510000']]);
     });
+  });
+});
+
+describe('quem negociou, para a importação do catálogo (SPEC-040)', () => {
+  let source: FakeCotahistSource;
+  let quotes: InMemoryQuoteRepository;
+  let trades: InMemoryB3Trades;
+  let calendars: InMemoryCalendarRepository;
+  let ingestion: HistoryIngestion;
+
+  beforeEach(async () => {
+    source = new FakeCotahistSource();
+    quotes = new InMemoryQuoteRepository();
+    trades = new InMemoryB3Trades();
+    calendars = new InMemoryCalendarRepository();
+    ingestion = new HistoryIngestion({
+      source,
+      quotes,
+      runs: new InMemoryTaskRuns(),
+      calendars,
+      trades,
+      clock: () => new Date('2026-10-29T12:00:00Z'),
+      sleep: () => Promise.resolve(),
+    });
+    await calendars.publish(
+      {
+        year: 2026,
+        publishedAt: new Date(),
+        publishedBy: 'colab',
+        nonTradingDays: suggestNonTradingDays(2026),
+      },
+      () => ({
+        at: new Date(),
+        collaboratorId: 'colab',
+        action: 'calendar_published',
+        entity: 'calendar_year',
+        entityId: '2026',
+        details: {},
+      }),
+    );
+    quotes.assets.push(PETR4);
+  });
+
+  it('a carga do histórico guarda o último pregão de todos os papéis do arquivo', async () => {
+    source.annualFiles.set(2026, [
+      q('PETR4', '2026-10-27'),
+      q('PETR4', '2026-10-28'),
+      q('ITUB4', '2026-10-26'), // não está no catálogo, mas negociou
+      { ...q('MXRF11', '2026-10-28'), codbdi: '12' },
+      { ...q('PETR4F', '2026-10-28'), market: '020' }, // fracionário: fica de fora
+    ]);
+    await ingestion.loadRetroactive();
+    expect([...trades.trades.values()]).toEqual([
+      { ticker: 'PETR4', assetClass: 'stock', lastTradingDay: '2026-10-28' },
+      { ticker: 'ITUB4', assetClass: 'stock', lastTradingDay: '2026-10-26' },
+      { ticker: 'MXRF11', assetClass: 'fii', lastTradingDay: '2026-10-28' },
+    ]);
+    // As cotações continuam só as do catálogo.
+    expect(quotes.quotes.size).toBe(2);
+  });
+
+  it('a atualização diária também guarda, e a data nunca volta', async () => {
+    trades.traded('ITUB4', '2026-10-28');
+    quotes.loaded.set(PETR4.id, new Set([2026]));
+    await quotes.save(
+      [
+        {
+          assetId: PETR4.id,
+          date: '2026-10-27',
+          open: '1',
+          high: '1',
+          low: '1',
+          close: '1',
+          average: '1',
+          trades: 1,
+          volume: '1',
+        },
+      ],
+      'b3_cotahist',
+    );
+    source.dailyFiles.set('2026-10-28', [q('PETR4', '2026-10-28'), q('VALE3', '2026-10-28')]);
+    await ingestion.updateDaily();
+    expect(trades.trades.get('VALE3')?.lastTradingDay).toBe('2026-10-28');
+    await trades.record(
+      [{ ticker: 'ITUB4', assetClass: 'stock', lastTradingDay: '2026-01-02' }],
+      new Date(),
+    );
+    expect(trades.trades.get('ITUB4')?.lastTradingDay).toBe('2026-10-28');
+  });
+
+  it('lê os arquivos anuais só para guardar quem negociou, sem gravar cotações', async () => {
+    source.annualFiles.set(2025, [q('ITUB4', '2025-12-30')]);
+    source.annualFiles.set(2026, [q('PETR4', '2026-10-28'), q('WEGE3', '2026-10-27')]);
+    expect(await ingestion.refreshTrades([2025, 2026])).toEqual([]);
+    expect(source.requests).toEqual(['A2025', 'A2026*']);
+    expect([...trades.trades.keys()].sort()).toEqual(['ITUB4', 'PETR4', 'WEGE3']);
+    expect(quotes.quotes.size).toBe(0);
+  });
+
+  it('arquivo não publicado ou fora do ar vira problema, e os outros anos são lidos', async () => {
+    source.annualFiles.set(2025, 'fail');
+    source.annualFiles.set(2026, [q('PETR4', '2026-10-28')]);
+    const problems = await ingestion.refreshTrades([2024, 2025, 2026]);
+    expect(problems).toEqual([
+      'arquivo anual de 2024 ainda não publicado pela B3',
+      'arquivo anual de 2025: B3 respondeu 503',
+    ]);
+    expect(trades.trades.has('PETR4')).toBe(true);
   });
 });

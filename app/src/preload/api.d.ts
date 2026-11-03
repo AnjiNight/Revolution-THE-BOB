@@ -73,7 +73,10 @@ export interface DesktopApi {
     /** Substitui a lista inteira do ano. */
     publish(year: number, input: CalendarPublication): Promise<ClientResult<TradingCalendarYear>>;
   };
-  /** Catálogo de ativos (SPEC-006). Busca para todos; o resto só colaborador (403 para usuário). */
+  /**
+   * Catálogo de ativos (SPECs 006 e 040). Busca e logos para todos; o resto só colaborador (403
+   * para usuário).
+   */
   assets: {
     /** Só ativos ativos, até 50 (`hasMore` avisa que há mais). */
     search(query: AssetSearchQuery): Promise<ClientResult<AssetSearchResult>>;
@@ -83,6 +86,10 @@ export interface DesktopApi {
     update(id: string, input: AssetUpdateInput): Promise<ClientResult<CatalogAsset>>;
     deactivate(id: string): Promise<ClientResult<CatalogAsset>>;
     reactivate(id: string): Promise<ClientResult<CatalogAsset>>;
+    /** SPEC-040: confere a classificação sugerida pela importação. */
+    confirmClassification(id: string): Promise<ClientResult<CatalogAsset>>;
+    /** SPEC-040: logo como `data:` URL; `null` sem logo próprio. */
+    logo(id: string): Promise<ClientResult<string | null>>;
   };
 }
 

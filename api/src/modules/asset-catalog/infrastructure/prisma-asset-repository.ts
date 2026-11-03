@@ -25,6 +25,9 @@ function toStored(row: Ativo): StoredAsset {
     createdAt: row.criadoEm,
     updatedAt: row.atualizadoEm,
     deactivatedAt: row.desativadoEm,
+    origin: row.origem === 'importacao' ? 'import' : 'team',
+    classificationReviewedAt: row.classificacaoConferidaEm,
+    autoDeactivated: row.desativadoAutomaticamente,
   };
 }
 
@@ -32,7 +35,7 @@ function isTickerViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
 
-/** Catálogo de ativos (SPEC-006) no PostgreSQL; cada alteração grava a auditoria junto. */
+/** Catálogo de ativos (SPEC-006 e 040) no PostgreSQL; cada alteração grava a auditoria junto. */
 export class PrismaAssetRepository implements AssetRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -43,6 +46,7 @@ export class PrismaAssetRepository implements AssetRepository {
         ...(filter.status === 'inactive' ? { desativadoEm: { not: null } } : {}),
         ...(filter.assetClass ? { classe: CLASS_TO_CLASSE[filter.assetClass] } : {}),
         ...(filter.sector ? { setor: filter.sector } : {}),
+        ...(filter.pendingReview ? { classificacaoConferidaEm: null } : {}),
       },
     });
     return rows.map(toStored);
@@ -50,6 +54,10 @@ export class PrismaAssetRepository implements AssetRepository {
 
   countActive(): Promise<number> {
     return this.prisma.ativo.count({ where: { desativadoEm: null } });
+  }
+
+  countPendingReview(): Promise<number> {
+    return this.prisma.ativo.count({ where: { classificacaoConferidaEm: null } });
   }
 
   async findById(id: string): Promise<StoredAsset | null> {
@@ -70,6 +78,9 @@ export class PrismaAssetRepository implements AssetRepository {
             criadoEm: asset.createdAt,
             atualizadoEm: asset.updatedAt,
             desativadoEm: asset.deactivatedAt,
+            origem: asset.origin === 'import' ? 'importacao' : 'equipe',
+            classificacaoConferidaEm: asset.classificationReviewedAt,
+            desativadoAutomaticamente: asset.autoDeactivated,
           },
         }),
         this.prisma.registroAuditoria.create({ data: auditRow(audit) }),
@@ -106,6 +117,12 @@ export class PrismaAssetRepository implements AssetRepository {
             ...(changes.name !== undefined ? { nome: changes.name } : {}),
             ...(changes.sector !== undefined ? { setor: changes.sector } : {}),
             ...(changes.deactivatedAt !== undefined ? { desativadoEm: changes.deactivatedAt } : {}),
+            ...(changes.classificationReviewedAt !== undefined
+              ? { classificacaoConferidaEm: changes.classificationReviewedAt }
+              : {}),
+            ...(changes.autoDeactivated !== undefined
+              ? { desativadoAutomaticamente: changes.autoDeactivated }
+              : {}),
             atualizadoEm: decision.updatedAt,
           },
         });

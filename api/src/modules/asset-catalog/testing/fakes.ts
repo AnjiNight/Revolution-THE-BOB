@@ -1,7 +1,7 @@
 import type { AuditEntry } from '../../audit/application/audit.js';
 import { InMemoryAuditTrail } from '../../audit/testing/fakes.js';
 import type { AssetFilter, AssetModification, AssetRepository } from '../application/ports.js';
-import { isActive, type StoredAsset } from '../domain/asset.js';
+import { isActive, isClassificationPending, type StoredAsset } from '../domain/asset.js';
 import { TickerInUseError } from '../domain/errors.js';
 
 /** Catálogo em memória para testes sem banco, com as mesmas regras do PostgreSQL. */
@@ -15,13 +15,18 @@ export class InMemoryAssetRepository implements AssetRepository {
       (asset) =>
         (filter.status === 'all' || (filter.status === 'active') === isActive(asset)) &&
         (filter.assetClass === undefined || asset.assetClass === filter.assetClass) &&
-        (filter.sector === undefined || asset.sector === filter.sector),
+        (filter.sector === undefined || asset.sector === filter.sector) &&
+        (!filter.pendingReview || isClassificationPending(asset)),
     );
     return Promise.resolve(found.map(copy));
   }
 
   countActive(): Promise<number> {
     return Promise.resolve(this.assets.filter(isActive).length);
+  }
+
+  countPendingReview(): Promise<number> {
+    return Promise.resolve(this.assets.filter(isClassificationPending).length);
   }
 
   findById(id: string): Promise<StoredAsset | null> {

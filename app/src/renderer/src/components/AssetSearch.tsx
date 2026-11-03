@@ -12,11 +12,13 @@ import {
   useSectorName,
   type AssetFilterState,
 } from './AssetFields';
+import { AssetLogo } from './AssetLogo';
 import { QuoteText } from './QuoteText';
 
 /**
- * Tela "Ativos" do usuário (SPEC-006 §5.3): busca por ticker ou nome e filtros de classe e de
- * setor ou segmento, só nos ativos ativos do catálogo da equipe (OPEN-41).
+ * Tela "Ativos" do usuário (SPEC-006 e 040, §5.3): busca por ticker ou nome e filtros de classe
+ * e de setor ou segmento, só nos ativos ativos do catálogo (OPEN-41). Sem texto, os mais negociados
+ * primeiro.
  */
 export function AssetSearch({ onSessionExpired }: { onSessionExpired: () => void }) {
   const { t } = useTranslation();
@@ -70,7 +72,7 @@ export function AssetSearch({ onSessionExpired }: { onSessionExpired: () => void
   );
 }
 
-/** Ticker e nome, classe, setor ou segmento e o último preço (SPEC-009). */
+/** Logo, ticker e nome, classe, setor ou segmento e o último preço (SPEC-009 e 040). */
 function AssetTable({ assets, busy }: { assets: Asset[]; busy: boolean }) {
   const { t } = useTranslation();
   const sectorName = useSectorName();
@@ -90,12 +92,17 @@ function AssetTable({ assets, busy }: { assets: Asset[]; busy: boolean }) {
         {assets.map((asset) => (
           <tr key={asset.id}>
             <td>
-              <span className="asset-ticker">{asset.ticker}</span>
-              <span className="asset-name">{asset.name}</span>
-              {/* Janela estreita: o preço vai para baixo do nome. */}
-              <span className="narrow-only quote-narrow">
-                <QuoteText quote={asset.quote} />
-              </span>
+              <div className="asset-identity">
+                <AssetLogo asset={asset} />
+                <div className="asset-identity-text">
+                  <span className="asset-ticker">{asset.ticker}</span>
+                  <span className="asset-name">{asset.name}</span>
+                  {/* Janela estreita: o preço vai para baixo do nome. */}
+                  <span className="narrow-only quote-narrow">
+                    <QuoteText quote={asset.quote} />
+                  </span>
+                </div>
+              </div>
             </td>
             <td>
               <span className={`class-badge class-${asset.class}`}>

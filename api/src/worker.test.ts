@@ -119,4 +119,12 @@ describe('msUntilBrasiliaHour', () => {
     expect(msUntilBrasiliaHour(new Date('2026-10-29T11:00:00Z'), 8)).toBe(24 * hour); // 08:00 em ponto
     expect(msUntilBrasiliaHour(new Date('2026-10-30T02:30:00Z'), 8)).toBe(8.5 * hour); // 23:30 de 29/10
   });
+
+  it('com minutos: a importação do catálogo às 08:30 (SPEC-040)', () => {
+    const minute = 60 * 1000;
+    expect(msUntilBrasiliaHour(new Date('2026-11-03T11:00:00Z'), 8, 30)).toBe(30 * minute); // 08:00
+    expect(msUntilBrasiliaHour(new Date('2026-11-03T11:45:00Z'), 8, 30)).toBe(
+      (24 * 60 - 15) * minute,
+    ); // 08:45: amanhã
+  });
 });

@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Aprovada pelo Luís em 22/10/2026 e implementada (ver §9) |
+| Status | Aprovada pelo Luís em 22/10/2026 e implementada (ver §9). **Mudada pela [SPEC-040](SPEC-040.md):** o catálogo passa a ter as ações e os FIIs da B3, importados todo dia, e o aviso acima de 50 ativos sai |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)) |
 | Prioridade | *Must* (RF07, busca); *Should* (RF39, cadastro), mas a busca precisa do cadastro para ter o que mostrar |
 | Depende de | [SPEC-002](SPEC-002.md) (conta de colaborador) |

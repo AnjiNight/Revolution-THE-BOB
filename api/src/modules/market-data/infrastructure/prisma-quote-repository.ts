@@ -10,6 +10,7 @@ import type {
   QuoteSource,
   RunResult,
   RunSummary,
+  RunTotals,
   TaskRunReader,
   TaskRunRepository,
 } from '../application/ports.js';
@@ -101,6 +102,19 @@ export class PrismaQuoteRepository implements QuoteRepository {
       WHERE EXCLUDED.fonte = 'b3_cotahist' OR cotacao_diaria.fonte <> 'b3_cotahist'`;
   }
 
+  /**
+   * SPEC-040: volume financeiro do último pregão da B3 de cada ativo, para a busca sem texto mostrar
+   * os mais negociados primeiro.
+   */
+  async lastVolumes(): Promise<Map<string, string>> {
+    const rows = await this.prisma.$queryRaw<Array<{ ativo_id: string; volume: string }>>`
+      SELECT DISTINCT ON (ativo_id) ativo_id, volume::text
+      FROM cotacao_diaria
+      WHERE fonte = 'b3_cotahist' AND volume IS NOT NULL
+      ORDER BY ativo_id, data DESC`;
+    return new Map(rows.map((row) => [row.ativo_id, row.volume]));
+  }
+
   async markYearsLoaded(years: LoadedYear[], at: Date): Promise<void> {
     if (years.length === 0) return;
     await this.prisma.$transaction(
@@ -147,6 +161,7 @@ export class PrismaTaskRunRepository implements TaskRunRepository, TaskRunReader
           cotaRestante: result.quota?.remaining ?? null,
           cotaLimite: result.quota?.limit ?? null,
           cotaRenovaEm: result.quota?.resetsAt ?? null,
+          ...(result.totals ? { totais: result.totals } : {}),
         },
       }),
       this.prisma.erroExecucao.createMany({
@@ -175,6 +190,8 @@ export class PrismaTaskRunRepository implements TaskRunRepository, TaskRunReader
         row.cotaRestante !== null && row.cotaLimite !== null && row.cotaRenovaEm !== null
           ? { remaining: row.cotaRestante, limit: row.cotaLimite, resetsAt: row.cotaRenovaEm }
           : null,
+      // Só o processador grava os totais, sempre como objeto.
+      totals: (row.totais as RunTotals | null) ?? null,
     };
   }
 

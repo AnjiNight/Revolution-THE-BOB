@@ -15,19 +15,19 @@ import { planCollection, type QuotaDecision } from '../domain/quota-plan.js';
 import { brasiliaInstant, collectionMinutes, dueCollection } from '../domain/trading-session.js';
 import {
   QuoteSourceError,
+  type AssetListing,
   type CalendarRepository,
-  type DailyQuote,
   type HistoryAsset,
   type IntradayQuote,
   type IntradayQuoteRepository,
-  type IntradayQuoteSource,
-  type QuoteRepository,
+  type ListedAsset,
+  type ListKind,
+  type QuoteListSource,
   type QuoteUsage,
   type RunError,
   type RunResult,
   type RunStatus,
   type RunSummary,
-  type SourceQuote,
   type TaskRunReader,
   type TaskRunRepository,
 } from './ports.js';
@@ -35,23 +35,23 @@ import {
 const TASK = 'cotacao_pregao' as const;
 /** Parte da cota que o plano não usa: testes, novas tentativas e consultas feitas à mão. */
 const RESERVE = 0.1;
-/** Espera antes da única nova tentativa de um ativo (erro de rede ou 5xx). */
+/** SPEC-040: cada coleta consulta a lista duas vezes (ações e FIIs), para todos os ativos. */
+const LIST_KINDS: readonly ListKind[] = ['stock', 'fii'];
+/** Espera antes da única nova tentativa de uma lista (erro de rede ou 5xx). */
 export const INTRADAY_RETRY_DELAY_MS = 10_000;
 /** Cotações do pregão guardadas por 30 dias (OPEN-40); o fechamento diário fica para sempre. */
 export const INTRADAY_RETENTION_DAYS = 30;
-/** Horário de cotação mais adiantado que o relógio do processador do que isto é recusado. */
-const FUTURE_TOLERANCE_MS = 5 * 60_000;
+/** Tickers do catálogo que não vieram na lista guardados na execução (o resto só conta). */
+const MISSING_TICKERS_SHOWN = 20;
 const MAX_STORED_ERRORS = 100;
 const DAY_MS = 24 * 60 * 60_000;
 
 export interface IntradayCollectionDeps {
-  source: IntradayQuoteSource;
+  source: QuoteListSource;
   quotes: IntradayQuoteRepository;
-  /** Fechamento diário (SPEC-008), onde vai o fechamento provisório. */
-  daily: Pick<QuoteRepository, 'save'>;
   runs: TaskRunRepository & TaskRunReader;
   calendars: CalendarRepository;
-  /** Cota do plano quando a fonte não informa (sem token, ou antes da primeira consulta). */
+  /** Cota do plano quando a fonte não informa (hoje, a lista não desconta da cota). */
   monthlyQuota: number;
   clock?: () => Date;
   sleep?: (ms: number) => Promise<void>;
@@ -62,15 +62,14 @@ export interface IntradayCollectionDeps {
 interface Moment {
   now: Date;
   today: IsoDate;
-  calendar: TradingCalendar;
-  slotIndex: number;
-  lastSlot: number;
   assets: HistoryAsset[];
 }
 
 /**
- * Cotações do pregão (SPEC-009): o processador chama `collect` a cada poucos minutos; a coleta só
- * acontece nos horários do pregão, em dia de pregão, e quando a regra da cota deixa.
+ * Cotações do pregão (SPEC-009 e 040): o processador chama `collect` a cada poucos minutos; a
+ * coleta só acontece nos horários do pregão, em dia de pregão, e quando a regra da cota deixa. Cada
+ * coleta lê a lista da brapi (ações e FIIs) e grava o preço de todos os ativos ativos, com o
+ * horário da coleta: a lista não traz o horário de cada preço.
  */
 export class IntradayCollection {
   private readonly clock: () => Date;
@@ -106,11 +105,10 @@ export class IntradayCollection {
 
     const assets = await this.deps.quotes.activeAssets();
     if (assets.length === 0) return null;
-    const decision = await this.decide(now, today, calendar, slotIndex, assets.length, last);
+    const decision = await this.decide(now, today, calendar, slotIndex, last);
     if (!decision.run) return null;
 
-    const lastSlot = collectionMinutes(today).length - 1;
-    return this.run({ now, today, calendar, slotIndex, lastSlot, assets });
+    return this.run({ now, today, assets });
   }
 
   /** Apaga as cotações do pregão com mais de 30 dias. */
@@ -136,7 +134,7 @@ export class IntradayCollection {
     return quotes;
   }
 
-  /** Situação da coleta para a tela do colaborador (SPEC-009 §5.3). */
+  /** Situação da coleta para a tela do colaborador (SPEC-009 e 040, §5.3). */
   async status(): Promise<QuoteCollectionStatus> {
     const now = this.clock();
     const today = isoDateInBrasilia(now);
@@ -150,14 +148,7 @@ export class IntradayCollection {
     const calendar = tradingCalendarOf(published);
     const decision =
       assets.length > 0
-        ? await this.decide(
-            now,
-            today,
-            calendar,
-            dueCollection(today, now) ?? 0,
-            assets.length,
-            last,
-          )
+        ? await this.decide(now, today, calendar, dueCollection(today, now) ?? 0, last)
         : null;
     const lastStatus = last?.status;
     return {
@@ -176,13 +167,14 @@ export class IntradayCollection {
       quotaExhausted:
         last?.status === 'cota_esgotada' && Boolean(last.quota && last.quota.resetsAt > now),
       tokenConfigured: this.deps.source.tokenConfigured,
+      quotaCounted: Boolean(last && (last.requests > 0 || last.quota)),
     };
   }
 
   /**
    * Cota que sobra no ciclo e quando ele acaba: a que a brapi informou na última resposta; se o
    * ciclo dela já virou, a cota cheia menos o que foi gasto desde então; sem nenhuma informação
-   * (sem token, ou antes da primeira consulta), a cota configurada menos o gasto do mês.
+   * (a lista não desconta da cota), a cota configurada menos o gasto do mês.
    */
   private async cycle(
     now: Date,
@@ -220,12 +212,15 @@ export class IntradayCollection {
     };
   }
 
+  /**
+   * Regra do intervalo (SPEC-009), agora contando as 2 consultas da lista por coleta. Enquanto a
+   * brapi não desconta a lista, sempre sobra cota; se um dia descontar, as coletas se espaçam.
+   */
   private async decide(
     now: Date,
     today: IsoDate,
     calendar: TradingCalendar,
     slotIndex: number,
-    assets: number,
     last: RunSummary | null,
   ): Promise<QuotaDecision> {
     const cycle = await this.cycle(now, today, last);
@@ -237,7 +232,7 @@ export class IntradayCollection {
     }
     const doneToday = await this.deps.runs.runsSince(TASK, brasiliaInstant(today, 0));
     return planCollection({
-      assets,
+      assets: LIST_KINDS.length,
       available: cycle.remaining - reserve,
       slotsPerDay,
       slotIndex,
@@ -248,30 +243,37 @@ export class IntradayCollection {
   private async run(moment: Moment): Promise<RunResult> {
     const { assets, today } = moment;
     return this.record(async (log) => {
+      const listed = new Map<string, ListedAsset>();
+      for (const kind of LIST_KINDS) {
+        const listing = await this.ask(kind, log);
+        if (listing === 'stop') break;
+        if (!listing) continue;
+        log.answered += 1;
+        for (const asset of listing.assets) listed.set(asset.ticker, asset);
+      }
+      if (log.answered === 0) return;
+
+      // Horário da coleta, em segundos inteiros: a lista não traz o horário de cada preço.
+      const at = new Date(Math.floor(moment.now.getTime() / 1000) * 1000);
       const previousCloses = await this.deps.quotes.closesBefore(today);
       const fresh: IntradayQuote[] = [];
-      let answered = 0;
-
       for (const asset of assets) {
-        const answer = await this.ask(asset, log);
-        if (answer === 'stop') break;
-        if (!answer) continue;
-        answered += 1;
-        const verdict = check(answer, moment, previousCloses.get(asset.id));
-        if (verdict === 'ignore') continue;
-        if (verdict !== 'ok') {
-          log.error(`${asset.ticker}: ${verdict}`, asset.id, today);
+        const item = listed.get(asset.ticker);
+        if (!item) {
+          log.missing.push(asset.ticker);
           continue;
         }
+        if (!item.price) continue;
+        if (isYesterdays(item, previousCloses.get(asset.id))) continue;
         fresh.push({
           assetId: asset.id,
-          at: answer.at,
+          at,
           level: 'gratuito',
-          price: answer.price,
-          open: answer.open,
-          high: answer.high,
-          low: answer.low,
-          previousClose: answer.previousClose,
+          price: item.price,
+          open: null,
+          high: null,
+          low: null,
+          previousClose: null,
           source: 'brapi',
         });
       }
@@ -279,28 +281,30 @@ export class IntradayCollection {
       const saved = await this.deps.quotes.save(fresh);
       log.records += saved;
       for (const quote of fresh) log.assets.add(quote.assetId);
-      log.answered = answered;
-
-      if (moment.slotIndex === moment.lastSlot && !log.stopped) {
-        log.records += await this.provisionalCloses(assets, today);
-      }
     }, today);
   }
 
   /**
-   * Consulta um ativo: uma nova tentativa em erro de rede ou 5xx. `'stop'` encerra a coleta (429
-   * ou cota esgotada); `null` é um ativo que falhou, e a coleta segue com os outros.
+   * Consulta uma lista: uma nova tentativa em erro de rede ou 5xx. `'stop'` encerra a coleta (429
+   * ou cota esgotada); `null` é uma lista que falhou, e a coleta segue com a outra.
    */
-  private async ask(asset: HistoryAsset, log: CollectionLog): Promise<SourceQuote | 'stop' | null> {
+  private async ask(kind: ListKind, log: CollectionLog): Promise<AssetListing | 'stop' | null> {
+    const label = kind === 'fii' ? 'lista de FIIs' : 'lista de ações';
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      log.requests += 1;
       try {
-        const answer = await this.deps.source.quote(asset.ticker);
-        if (answer.usage) log.usage = answer.usage;
-        return answer;
+        const listing = await this.deps.source.list(kind);
+        // Só conta na cota o que a brapi descontou (ela informa a cota nos cabeçalhos).
+        if (listing.usage) {
+          log.requests += listing.requests;
+          log.usage = listing.usage;
+        }
+        return listing;
       } catch (error) {
         if (!(error instanceof QuoteSourceError)) throw error;
-        if (error.usage) log.usage = error.usage;
+        if (error.usage) {
+          log.requests += 1;
+          log.usage = error.usage;
+        }
         if (error.kind === 'unavailable' && attempt === 0) {
           await this.sleep(this.retryDelayMs);
           continue;
@@ -314,40 +318,11 @@ export class IntradayCollection {
           );
           return 'stop';
         }
-        log.error(`${asset.ticker}: ${error.message}`, asset.id);
+        log.error(`${label}: ${error.message}`);
         return null;
       }
     }
     return null;
-  }
-
-  /** Depois da última coleta do dia: o preço final de cada ativo vira o fechamento provisório. */
-  private async provisionalCloses(assets: HistoryAsset[], today: IsoDate): Promise<number> {
-    const latest = await this.deps.quotes.latest('gratuito');
-    const closes: DailyQuote[] = [];
-    for (const asset of assets) {
-      const quote = latest.get(asset.id);
-      if (!quote || isoDateInBrasilia(quote.at) !== today) continue;
-      const high = quote.high ?? quote.price;
-      const low = quote.low ?? quote.price;
-      const open = quote.open ?? quote.price;
-      // Mesma regra do banco: abertura e fechamento entre a mínima e a máxima.
-      const within = (value: string) =>
-        compareDecimals(low, value) <= 0 && compareDecimals(value, high) <= 0;
-      if (!within(open) || !within(quote.price)) continue;
-      closes.push({
-        assetId: asset.id,
-        date: today,
-        open,
-        high,
-        low,
-        close: quote.price,
-        average: null,
-        trades: null,
-        volume: null,
-      });
-    }
-    return this.deps.daily.save(closes, 'brapi');
   }
 
   /** Sem calendário do ano: nada é coletado, e o motivo fica registrado uma vez por dia. */
@@ -385,8 +360,11 @@ class CollectionLog {
   readonly errors: RunError[] = [];
   private hidden = 0;
   readonly assets = new Set<string>();
+  /** Ativos do catálogo que não vieram na lista (ticker que mudou, papel que saiu da brapi). */
+  readonly missing: string[] = [];
   records = 0;
   requests = 0;
+  /** Listas que responderam. */
   answered = 0;
   usage: QuoteUsage | null = null;
   stopped: 'quota_exhausted' | 'rate_limited' | null = null;
@@ -410,6 +388,10 @@ class CollectionLog {
       errors,
       requests: this.requests,
       quota: this.usage,
+      totals: {
+        missing: this.missing.length,
+        missingTickers: this.missing.slice(0, MISSING_TICKERS_SHOWN),
+      },
     };
   }
 
@@ -422,33 +404,13 @@ class CollectionLog {
 }
 
 /**
- * `'ok'` para gravar; `'ignore'` para uma cotação que ainda não é do pregão de hoje (sem erro);
- * texto para um dado estranho, que vira erro registrado.
+ * A lista ainda mostra o pregão anterior (antes da abertura, ou em dia de abertura tardia, como a
+ * Quarta-feira de Cinzas): o preço é o fechamento guardado de ontem, mas a variação não é zero (é a
+ * de ontem). Se hoje o preço voltasse mesmo ao fechamento de ontem, a variação seria zero.
  */
-function check(
-  answer: SourceQuote,
-  moment: Pick<Moment, 'now' | 'today' | 'calendar'>,
-  storedPreviousClose: string | undefined,
-): 'ok' | 'ignore' | string {
-  if (answer.at.getTime() > moment.now.getTime() + FUTURE_TOLERANCE_MS) {
-    return 'horário da cotação no futuro';
-  }
-  // A brapi devolve o pregão anterior enquanto o de hoje não começa (e até em feriado põe o
-  // horário de hoje): o horário sozinho não basta.
-  if (isoDateInBrasilia(answer.at) !== moment.today) return 'ignore';
-  if (
-    storedPreviousClose &&
-    answer.previousClose &&
-    sameAtCents(answer.price, storedPreviousClose) &&
-    !sameAtCents(answer.previousClose, storedPreviousClose)
-  ) {
-    return 'ignore';
-  }
-  const { high, low } = answer;
-  if (high && low && compareDecimals(low, high) > 0) return 'mínima do dia maior que a máxima';
-  if (low && compareDecimals(answer.price, low) < 0) return 'preço abaixo da mínima do dia';
-  if (high && compareDecimals(answer.price, high) > 0) return 'preço acima da máxima do dia';
-  return 'ok';
+function isYesterdays(item: ListedAsset, previousClose: string | undefined): boolean {
+  if (!item.price || !previousClose || item.change === null) return false;
+  return sameAtCents(item.price, previousClose) && compareDecimals(item.change, '0') !== 0;
 }
 
 function tradingCalendarOf(

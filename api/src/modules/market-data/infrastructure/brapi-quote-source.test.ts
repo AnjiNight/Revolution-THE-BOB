@@ -149,3 +149,144 @@ describe('adaptador da brapi (SPEC-009, CA01)', () => {
     expect(usageFrom(new Headers({ 'x-ratelimit-window': 'billing-cycle' }), NOW)).toBeNull();
   });
 });
+
+/** Itens como a lista da brapi devolveu de verdade em 03/11/2026 (SPEC-040 §4.3). */
+function listBody(stocks: unknown[], extra: Record<string, unknown> = {}) {
+  return { indexes: [], stocks, totalCount: stocks.length, hasNextPage: false, ...extra };
+}
+
+const LIST_ITEMS = [
+  {
+    stock: 'PETR4',
+    name: 'PETROLEO BRASILEIRO S.A. PETROBRAS',
+    close: 49.7,
+    change: -5.71,
+    volume: 17497900,
+    logo: 'https://icons.brapi.dev/icons/PETR4.svg',
+    sector: 'Energy Minerals',
+    subsector: 'Exploração. Refino e Distribuição',
+    type: 'stock',
+    subType: 'stock',
+  },
+  {
+    stock: 'TAEE11',
+    name: 'TAESA',
+    close: 38.1,
+    change: 0.21,
+    logo: 'https://icons.brapi.dev/icons/TAEE11.svg',
+    subsector: 'Energia Elétrica',
+    type: 'stock',
+    subType: 'unit',
+  },
+  { stock: 'AAPL34', name: 'APPLE', close: 60, type: 'bdr', subType: 'bdr' },
+  { stock: 'BOVA11', name: 'ISHARES BOVA', close: 150, type: 'fund', subType: 'etf' },
+];
+
+describe('lista da brapi (SPEC-040)', () => {
+  it('lê ações e units, com nome, subsetor, logo, preço e variação; descarta outros tipos', async () => {
+    const { fetchFn, calls } = fakeFetch(200, listBody(LIST_ITEMS));
+    const listing = await source(fetchFn).list('stock');
+    expect(listing).toEqual({
+      assets: [
+        {
+          ticker: 'PETR4',
+          name: 'PETROLEO BRASILEIRO S.A. PETROBRAS',
+          subType: 'stock',
+          subsector: 'Exploração. Refino e Distribuição',
+          logoUrl: 'https://icons.brapi.dev/icons/PETR4.svg',
+          price: '49.7',
+          change: '-5.71',
+        },
+        {
+          ticker: 'TAEE11',
+          name: 'TAESA',
+          subType: 'unit',
+          subsector: 'Energia Elétrica',
+          logoUrl: 'https://icons.brapi.dev/icons/TAEE11.svg',
+          price: '38.1',
+          change: '0.21',
+        },
+      ],
+      requests: 1,
+      usage: null,
+    });
+    const url = new URL(calls[0]?.url ?? '');
+    expect(url.origin + url.pathname).toBe('https://brapi.test/api/quote/list');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      type: 'stock',
+      limit: '2000',
+      page: '1',
+    });
+    expect(calls[0]?.headers.authorization).toBe('Bearer token-de-teste');
+  });
+
+  it('FIIs: pede o tipo fundo, subtipo FII, e só aceita FII', async () => {
+    const { fetchFn, calls } = fakeFetch(
+      200,
+      listBody([
+        { stock: 'MXRF11', name: 'MAXI RENDA', close: 8.79, change: -1.01, subType: 'fii' },
+        { stock: 'KNCA11', name: 'KINEA CREDITO AGRO', close: 9.1, subType: 'fi-agro' },
+      ]),
+    );
+    const listing = await source(fetchFn, null).list('fii');
+    expect(listing.assets.map((asset) => asset.ticker)).toEqual(['MXRF11']);
+    expect(Object.fromEntries(new URL(calls[0]?.url ?? '').searchParams)).toMatchObject({
+      type: 'fund',
+      subType: 'fii',
+    });
+    // Sem token, a lista responde igual (§4.3, T3) e nenhum cabeçalho de token vai.
+    expect(calls[0]?.headers.authorization).toBeUndefined();
+  });
+
+  it('preço zerado ou ausente vira vazio; item malformado é descartado', async () => {
+    const { fetchFn } = fakeFetch(
+      200,
+      listBody([
+        { stock: 'ABCD3', close: 0, change: null, subType: 'stock' },
+        { stock: 'EFGH3', subType: 'stock' },
+        null,
+        'texto',
+        { name: 'sem ticker', subType: 'stock' },
+      ]),
+    );
+    const { assets } = await source(fetchFn).list('stock');
+    expect(assets).toEqual([
+      expect.objectContaining({ ticker: 'ABCD3', name: 'ABCD3', price: null, change: null }),
+      expect.objectContaining({ ticker: 'EFGH3', price: null, logoUrl: null, subsector: null }),
+    ]);
+  });
+
+  it('segue para a próxima página, sem passar de 5', async () => {
+    const pages: string[] = [];
+    const fetchFn: typeof fetch = (input) => {
+      pages.push(new URL(String(input)).searchParams.get('page') ?? '');
+      const body = listBody([{ stock: `PAG${pages.length}3`, subType: 'stock' }], {
+        hasNextPage: true,
+      });
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+    };
+    const listing = await source(fetchFn).list('stock');
+    expect(pages).toEqual(['1', '2', '3', '4', '5']);
+    expect(listing).toMatchObject({ requests: 5 });
+    expect(listing.assets).toHaveLength(5);
+  });
+
+  it('se um dia a brapi descontar a lista, a cota vem nos cabeçalhos', async () => {
+    const { fetchFn } = fakeFetch(200, listBody([]), BILLING_HEADERS);
+    expect((await source(fetchFn).list('stock')).usage).toEqual({
+      remaining: 14_999,
+      limit: 15_000,
+      resetsAt: new Date(NOW.getTime() + 3600 * 1000),
+    });
+  });
+
+  it('falhas da lista viram erros distintos', async () => {
+    const kind = async (status: number, body: unknown = listBody([])) =>
+      (await failure(source(fakeFetch(status, body).fetchFn).list('stock'))).kind;
+    expect(await kind(429)).toBe('rate_limited');
+    expect(await kind(503)).toBe('unavailable');
+    expect(await kind(401)).toBe('unauthorized');
+    expect(await kind(200, '<html>')).toBe('bad_response');
+    expect(await kind(200, { results: [] })).toBe('bad_response');
+  });
+});

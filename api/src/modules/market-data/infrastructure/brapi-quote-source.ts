@@ -1,6 +1,9 @@
 import {
   QuoteSourceError,
-  type IntradayQuoteSource,
+  type AssetListing,
+  type ListedAsset,
+  type ListKind,
+  type QuoteListSource,
   type QuoteUsage,
   type SourceQuote,
 } from '../application/ports.js';
@@ -9,9 +12,13 @@ import { compareDecimals, decimalFromJson } from '../domain/decimal.js';
 export const BRAPI_BASE_URL = 'https://brapi.dev';
 
 const REQUEST_TIMEOUT_MS = 15_000;
+/** A lista devolve até 2.000 papéis por página; ações e FIIs cabem numa só (SPEC-040 §4.3). */
+const LIST_PAGE_SIZE = 2000;
+/** Se um dia precisar de mais páginas, para aqui: nunca uma sequência sem fim de consultas. */
+const MAX_LIST_PAGES = 5;
 
 export interface BrapiQuoteSourceOptions {
-  /** Token do plano (SPEC-009). Sem ele, a brapi só responde os tickers de teste. */
+  /** Token do plano. Opcional desde a SPEC-040: a lista responde igual sem ele. */
   token: string | null;
   baseUrl?: string;
   fetch?: typeof fetch;
@@ -19,11 +26,13 @@ export interface BrapiQuoteSourceOptions {
 }
 
 /**
- * Adaptador da brapi (DA06): cotação simples de um ativo (`/api/quote/{ticker}`, que vale para
- * ações e FIIs em todos os planos), com o token no cabeçalho. Converte a resposta para o formato
- * do sistema e classifica as falhas. A cota do plano vem nos cabeçalhos de cada resposta.
+ * Adaptador da brapi (DA06). A lista (`/api/quote/list`, SPEC-040) traz ações e FIIs com nome,
+ * subsetor, logo, preço e variação, numa consulta por classe; a cotação simples
+ * (`/api/quote/{ticker}`, SPEC-009) traz um ativo com o horário e os dados do dia. Converte as
+ * respostas para o formato do sistema e classifica as falhas. Quando a brapi desconta a consulta
+ * da cota do plano, a cota vem nos cabeçalhos da resposta.
  */
-export class BrapiQuoteSource implements IntradayQuoteSource {
+export class BrapiQuoteSource implements QuoteListSource {
   readonly tokenConfigured: boolean;
   private readonly baseUrl: string;
   private readonly fetch: typeof fetch;
@@ -36,10 +45,38 @@ export class BrapiQuoteSource implements IntradayQuoteSource {
     this.clock = options.clock ?? (() => new Date());
   }
 
+  async list(kind: ListKind): Promise<AssetListing> {
+    const assets: ListedAsset[] = [];
+    let requests = 0;
+    let usage: QuoteUsage | null = null;
+    for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
+      const params = new URLSearchParams(
+        kind === 'fii' ? { type: 'fund', subType: 'fii' } : { type: 'stock' },
+      );
+      params.set('limit', String(LIST_PAGE_SIZE));
+      params.set('page', String(page));
+      const answer = await this.request(`/api/quote/list?${params.toString()}`, 'lista');
+      requests += 1;
+      usage = answer.usage ?? usage;
+      assets.push(...parseList(answer.body, kind));
+      if ((answer.body as { hasNextPage?: unknown }).hasNextPage !== true) break;
+    }
+    return { assets, requests, usage };
+  }
+
   async quote(ticker: string): Promise<SourceQuote> {
+    const answer = await this.request(`/api/quote/${encodeURIComponent(ticker)}`, 'ticker');
+    return { ...parseQuote(answer.body, ticker), usage: answer.usage };
+  }
+
+  /** Faz a consulta e classifica as falhas; devolve o JSON e a cota, se veio. */
+  private async request(
+    path: string,
+    what: 'lista' | 'ticker',
+  ): Promise<{ body: unknown; usage: QuoteUsage | null }> {
     let response: Response;
     try {
-      response = await this.fetch(`${this.baseUrl}/api/quote/${encodeURIComponent(ticker)}`, {
+      response = await this.fetch(`${this.baseUrl}${path}`, {
         headers: {
           accept: 'application/json',
           ...(this.options.token ? { authorization: `Bearer ${this.options.token}` } : {}),
@@ -64,14 +101,16 @@ export class BrapiQuoteSource implements IntradayQuoteSource {
     if (response.status === 404 || response.status === 400) {
       throw new QuoteSourceError(
         'not_found',
-        `ticker não encontrado na brapi (${response.status})`,
+        what === 'ticker'
+          ? `ticker não encontrado na brapi (${response.status})`
+          : `a brapi não reconheceu a consulta da lista (${response.status})`,
         usage,
       );
     }
     if (response.status === 401 || response.status === 402 || response.status === 403) {
       throw new QuoteSourceError(
         'unauthorized',
-        `a brapi recusou a consulta (${response.status}): token ausente ou inválido para este ticker`,
+        `a brapi recusou a consulta (${response.status}): token ausente ou inválido`,
         usage,
       );
     }
@@ -79,14 +118,52 @@ export class BrapiQuoteSource implements IntradayQuoteSource {
       throw new QuoteSourceError('unavailable', `brapi respondeu ${response.status}`, usage);
     }
 
-    let body: unknown;
     try {
-      body = await response.json();
+      return { body: await response.json(), usage };
     } catch {
       throw new QuoteSourceError('bad_response', 'resposta da brapi não é JSON', usage);
     }
-    return { ...parseQuote(body, ticker), usage };
   }
+}
+
+const LIST_SUBTYPES: Record<ListKind, ReadonlyArray<ListedAsset['subType']>> = {
+  stock: ['stock', 'unit'],
+  fii: ['fii'],
+};
+
+/**
+ * Lê a lista. Papéis de outros tipos (ETF, BDR, FI-Infra...) e itens malformados são descartados;
+ * preço zerado ou ausente vira `null` (o papel continua, sem preço).
+ */
+export function parseList(body: unknown, kind: ListKind): ListedAsset[] {
+  const items = (body as { stocks?: unknown } | null)?.stocks;
+  if (!Array.isArray(items)) {
+    throw new QuoteSourceError('bad_response', 'resposta da lista da brapi sem "stocks"');
+  }
+  const wanted = LIST_SUBTYPES[kind];
+  return items.flatMap((item: unknown): ListedAsset[] => {
+    if (!item || typeof item !== 'object') return [];
+    const fields = item as Record<string, unknown>;
+    const ticker = text(fields.stock)?.toUpperCase();
+    const subType = wanted.find((type) => type === fields.subType);
+    if (!ticker || !subType) return [];
+    const price = decimalFromJson(fields.close);
+    return [
+      {
+        ticker,
+        name: text(fields.name) ?? ticker,
+        subType,
+        subsector: text(fields.subsector),
+        logoUrl: text(fields.logo),
+        price: price !== null && compareDecimals(price, '0') > 0 ? price : null,
+        change: decimalFromJson(fields.change),
+      },
+    ];
+  });
+}
+
+function text(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
 type Fields = Omit<SourceQuote, 'usage'>;
@@ -114,8 +191,8 @@ export function parseQuote(body: unknown, ticker: string): Fields {
     throw new QuoteSourceError('bad_response', 'resposta da brapi sem horário da cotação');
   }
   const optional = (value: unknown) => {
-    const text = decimalFromJson(value);
-    return text !== null && compareDecimals(text, '0') > 0 ? text : null;
+    const decimal = decimalFromJson(value);
+    return decimal !== null && compareDecimals(decimal, '0') > 0 ? decimal : null;
   };
   return {
     price,
@@ -129,15 +206,15 @@ export function parseQuote(body: unknown, ticker: string): Fields {
 
 /**
  * Cota do plano nos cabeçalhos: `x-ratelimit-remaining`, `x-ratelimit-limit` e `ratelimit-reset`
- * (segundos até renovar) quando a janela é o ciclo de cobrança. Sem token, a brapi só informa o
- * limite por minuto: aí não há cota de ciclo para ler.
+ * (segundos até renovar) quando a janela é o ciclo de cobrança. Sem token, ou numa consulta que a
+ * brapi não desconta (a lista), ela só informa o limite por minuto: aí não há cota de ciclo.
  */
 export function usageFrom(headers: Headers, now: Date): QuoteUsage | null {
   if (headers.get('x-ratelimit-window') !== 'billing-cycle') return null;
   // Cabeçalho ausente é "não sei", nunca zero: Number(null) daria 0 e pareceria cota esgotada.
   const read = (...names: string[]) => {
-    const text = names.map((name) => headers.get(name)).find((value) => value?.trim());
-    return text ? Number(text) : Number.NaN;
+    const value = names.map((name) => headers.get(name)).find((header) => header?.trim());
+    return value ? Number(value) : Number.NaN;
   };
   const remaining = read('x-ratelimit-remaining', 'ratelimit-remaining');
   const limit = read('x-ratelimit-limit', 'ratelimit-limit');

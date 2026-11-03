@@ -1,4 +1,4 @@
-import { isIsoDate, type IsoDate } from '@simulador/shared';
+import { isIsoDate, TICKER_PATTERN, type AssetClass, type IsoDate } from '@simulador/shared';
 
 /**
  * Leitor do arquivo de séries históricas da B3 (COTAHIST, SPEC-008 §4.1). Cada linha tem 245
@@ -41,6 +41,7 @@ const SPOT_MARKET = '010';
 const FIELD = {
   recordType: [1, 2],
   date: [3, 10],
+  bdi: [11, 12],
   ticker: [13, 24],
   market: [25, 27],
   open: [57, 69],
@@ -100,6 +101,38 @@ export function parseCotahistLine(rawLine: string): CotahistQuote | null {
   const problem = priceProblem(quote);
   if (problem) fail(problem);
   return quote;
+}
+
+/** Negócio de uma ação, unit ou FII num pregão, lido do arquivo da B3 (SPEC-040). */
+export interface CotahistTrade {
+  ticker: string;
+  date: IsoDate;
+  assetClass: AssetClass;
+}
+
+/** `CODBDI 12`: FII. Lote padrão (`02`) e empresas em situação especial (`05` a `09`): ação. */
+const FII_BDI = '12';
+const STOCK_BDI = new Set(['02', '05', '06', '07', '08', '09']);
+
+/**
+ * Lê só o ticker, a data e a classe de uma linha (SPEC-040), sem o resto: a importação do catálogo
+ * precisa saber quem negociou, inclusive os papéis que não estão no catálogo. Devolve `null` para
+ * o que não interessa: outros registros e mercados, ticker fora do formato da B3 (fracionário,
+ * opções), ETFs e outros tipos de papel, linha curta ou data impossível.
+ */
+export function peekCotahistTrade(rawLine: string): CotahistTrade | null {
+  const line = rawLine.replace(/\r$/, '');
+  if (line.length < LINE_LENGTH || field(line, 'recordType') !== QUOTE_RECORD) return null;
+  if (field(line, 'market') !== SPOT_MARKET) return null;
+  const ticker = field(line, 'ticker').trim();
+  if (!TICKER_PATTERN.test(ticker)) return null;
+  const bdi = field(line, 'bdi');
+  const assetClass = bdi === FII_BDI ? 'fii' : STOCK_BDI.has(bdi) ? 'stock' : null;
+  if (!assetClass) return null;
+  const rawDate = field(line, 'date');
+  const date = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`;
+  if (!/^\d{8}$/.test(rawDate) || !isIsoDate(date)) return null;
+  return { ticker, date, assetClass };
 }
 
 /** Campo numérico só com dígitos (o leiaute completa com zeros à esquerda). */

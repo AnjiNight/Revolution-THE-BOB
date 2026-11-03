@@ -25,6 +25,7 @@
 | 1.15 | SPEC-008 detalhada ([SPEC-008.md](SPEC-008.md)), aprovada e implementada; DA18 aceita; OPEN-05 resolvida (histórico desde 2016); proventos (OPEN-06) fora da SPEC-008; ativo desativado continua sendo coletado |
 | 1.16 | SPEC-009 detalhada ([SPEC-009.md](SPEC-009.md)), aprovada e implementada; OPEN-07 resolvida (brapi usada para mostrar as cotações no próprio app, com fonte e horário, sem repassar os dados); cotações do pregão guardadas por 30 dias (OPEN-40); cotação de FII pela brapi conferida no plano gratuito (OPEN-48) |
 | 1.17 | Nova SPEC-040 (catálogo completo da B3, com logos), na Fase 2, logo depois da SPEC-009: pedida pelo Luís em 02/11/2026 ([SPEC-040.md](SPEC-040.md)), escrita e aguardando o teste da rota de lista da brapi e a aprovação; muda as SPECs 006 e 009 e a premissa de catálogo curado da DA16 |
+| 1.18 | SPEC-040 aprovada (03/11/2026, depois do teste da rota de lista da brapi) e implementada; DA16 atualizada (catálogo sem curadoria, coleta pela lista, atraso de até 45 min) |
 
 ---
 
@@ -537,7 +538,7 @@ Visão geral por fase:
 
 #### SPEC-040 — Catálogo completo da B3, com logos
 
-📄 Detalhada em [SPEC-040.md](SPEC-040.md) — escrita, aguardando o teste da rota de lista (03/11/2026) e a aprovação.
+📄 Detalhada em [SPEC-040.md](SPEC-040.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -552,7 +553,7 @@ Visão geral por fase:
 | ADRs | DA06, DA07, DA13, DA14, DA16 (muda a premissa de catálogo curado), DA18, DA22, DA23 |
 | Depende de | SPEC-006, SPEC-008, SPEC-009 |
 | Posição | Logo depois da SPEC-009, antes da ficha do ativo (010), que mostra o logo |
-| Em aberto | Teste da rota de lista da brapi (plano A ou B da coleta); termos da brapi para os logos |
+| Em aberto | Termos da brapi para os logos (teste da rota de lista feito em 03/11/2026: a lista não desconta da cota) |
 | Prioridade derivada | Should |
 
 #### SPEC-007 — Ingestão da série do CDI

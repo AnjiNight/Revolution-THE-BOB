@@ -3,6 +3,7 @@ import type {
   AssetHistory,
   AssetQuote,
   AssetStatusFilter,
+  CatalogImportStatus,
   QuoteCollectionStatus,
   SectorCode,
 } from '@simulador/shared';
@@ -13,11 +14,16 @@ export interface AssetFilter {
   status: AssetStatusFilter;
   assetClass?: AssetClass | undefined;
   sector?: SectorCode | undefined;
+  /** SPEC-040: só os importados com a classificação ainda a revisar. */
+  pendingReview?: boolean | undefined;
 }
 
-/** Campos que uma alteração pode mudar. A classe não está aqui (RB22). */
+/** Campos que uma alteração pode mudar. A classe e a origem não estão aqui (RB22). */
 export type AssetChanges = Partial<
-  Pick<StoredAsset, 'ticker' | 'name' | 'sector' | 'deactivatedAt'>
+  Pick<
+    StoredAsset,
+    'ticker' | 'name' | 'sector' | 'deactivatedAt' | 'classificationReviewedAt' | 'autoDeactivated'
+  >
 >;
 
 /** Decisão tomada sobre o ativo atual, com ele travado: o que muda e o registro de auditoria. */
@@ -44,10 +50,29 @@ export interface AssetQuoteReader {
   status(): Promise<QuoteCollectionStatus>;
 }
 
+/** Volume financeiro do último pregão de cada ativo (SPEC-040: a busca sem texto ordena por ele). */
+export interface AssetActivityReader {
+  lastVolumes(): Promise<Map<string, string>>;
+}
+
+/** Logos dos ativos (SPEC-040), guardados pelo módulo Dados de Mercado. */
+export interface AssetLogoReader {
+  withLogo(): Promise<Set<string>>;
+  find(assetId: string): Promise<{ type: string; content: Uint8Array } | null>;
+}
+
+/** Importação diária do catálogo (SPEC-040): situação e o último negócio de cada ticker na B3. */
+export interface CatalogImportReader {
+  status(): Promise<CatalogImportStatus>;
+  lastTradingDays(): Promise<Map<string, string>>;
+}
+
 export interface AssetRepository {
   /** Ativos que passam nos filtros, em qualquer ordem (a busca ordena). */
   list(filter: AssetFilter): Promise<StoredAsset[]>;
   countActive(): Promise<number>;
+  /** Importados com a classificação ainda a revisar, no catálogo inteiro. */
+  countPendingReview(): Promise<number>;
   findById(id: string): Promise<StoredAsset | null>;
   /** Grava o ativo e o registro de auditoria juntos. Ticker em uso: TickerInUseError. */
   create(asset: StoredAsset, audit: AuditEntry): Promise<StoredAsset>;

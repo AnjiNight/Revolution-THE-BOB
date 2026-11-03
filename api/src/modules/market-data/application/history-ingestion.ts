@@ -6,8 +6,16 @@ import {
   type IsoDate,
 } from '@simulador/shared';
 import { TradingCalendar } from '../../financial-calculation/trading-calendar.js';
-import { CotahistLineError, parseCotahistLine } from '../domain/cotahist.js';
+import {
+  CotahistLineError,
+  parseCotahistLine,
+  peekCotahistTrade,
+  type CotahistTrade,
+} from '../domain/cotahist.js';
 import type {
+  B3Trade,
+  B3TradeRepository,
+  B3TradeScanner,
   CalendarRepository,
   CotahistSource,
   DailyQuote,
@@ -37,6 +45,8 @@ export interface HistoryIngestionDeps {
   quotes: QuoteRepository;
   runs: TaskRunRepository;
   calendars: CalendarRepository;
+  /** SPEC-040: último pregão de todos os tickers lidos, para a importação do catálogo. */
+  trades?: B3TradeRepository;
   clock?: () => Date;
   sleep?: (ms: number) => Promise<void>;
   retryDelaysMs?: readonly number[];
@@ -96,7 +106,7 @@ class RunLog {
  * ingestão (DA07, DA14): adaptador, gravação idempotente, novas tentativas e execução registrada.
  * Falha de fonte nunca derruba o processador: vira erro registrado (RNF13).
  */
-export class HistoryIngestion {
+export class HistoryIngestion implements B3TradeScanner {
   private readonly clock: () => Date;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly retryDelays: readonly number[];
@@ -204,6 +214,34 @@ export class HistoryIngestion {
   }
 
   /**
+   * SPEC-040: lê os arquivos anuais só para guardar quem negociou, sem gravar cotações. A primeira
+   * importação do catálogo precisa saber quem negociou nos últimos 3 meses, inclusive os papéis que
+   * ainda não estão no catálogo. Devolve os problemas; vazio se leu tudo.
+   */
+  async refreshTrades(years: number[]): Promise<string[]> {
+    const currentYear = yearOf(isoDateInBrasilia(this.clock()));
+    const problems: string[] = [];
+    for (const year of years) {
+      const label = `arquivo anual de ${year}`;
+      try {
+        const lines = await this.withRetries(() =>
+          this.deps.source.annual(year, year < currentYear),
+        );
+        if (!lines) {
+          problems.push(`${label} ainda não publicado pela B3`);
+          continue;
+        }
+        const trades = new TradeLog();
+        for await (const line of lines) trades.add(peekCotahistTrade(line));
+        await this.deps.trades?.record(trades.values(), this.clock());
+      } catch (error) {
+        problems.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    return problems;
+  }
+
+  /**
    * Baixa (com novas tentativas) e lê um arquivo, gravando as cotações dos `assets`. Devolve
    * quantas cotações cada ativo teve, ou `null` se o arquivo não foi lido.
    */
@@ -217,6 +255,7 @@ export class HistoryIngestion {
   ): Promise<Map<string, number> | null> {
     const byTicker = new Map(assets.map((asset) => [asset.ticker, asset.id]));
     const counts = new Map<string, number>();
+    const trades = new TradeLog();
     let batch: DailyQuote[] = [];
     const flush = async () => {
       if (batch.length === 0) return;
@@ -232,7 +271,9 @@ export class HistoryIngestion {
         return null;
       }
       for await (const line of lines) {
-        // O arquivo traz todos os papéis da bolsa: só os do catálogo são lidos.
+        // SPEC-040: de todos os papéis, só o último negócio (a importação do catálogo usa).
+        trades.add(peekCotahistTrade(line));
+        // O arquivo traz todos os papéis da bolsa: só os do catálogo são lidos inteiros.
         const assetId = byTicker.get(line.slice(12, 24).trim());
         if (!assetId) continue;
         const quote = this.parse(log, line, assetId);
@@ -248,6 +289,7 @@ export class HistoryIngestion {
         if (batch.length >= BATCH_SIZE) await flush();
       }
       await flush();
+      await this.deps.trades?.record(trades.values(), this.clock());
       log.filesRead += 1;
       return counts;
     } catch (error) {
@@ -296,6 +338,25 @@ export class HistoryIngestion {
     const result = log.result();
     await this.deps.runs.finish(runId, result, this.clock());
     return result;
+  }
+}
+
+/** Último negócio de cada ticker num arquivo. */
+class TradeLog {
+  private readonly latest = new Map<string, CotahistTrade>();
+
+  add(trade: CotahistTrade | null): void {
+    if (!trade) return;
+    const current = this.latest.get(trade.ticker);
+    if (!current || trade.date > current.date) this.latest.set(trade.ticker, trade);
+  }
+
+  values(): B3Trade[] {
+    return [...this.latest.values()].map((trade) => ({
+      ticker: trade.ticker,
+      assetClass: trade.assetClass,
+      lastTradingDay: trade.date,
+    }));
   }
 }
 

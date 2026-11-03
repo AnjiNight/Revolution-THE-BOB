@@ -164,23 +164,37 @@ model Setor {
   @@map("setor")
 }
 
+/// Quem pôs o ativo no catálogo (SPEC-040): a equipe, pela tela, ou a importação diária da B3.
+enum OrigemAtivo {
+  equipe
+  importacao
+
+  @@map("origem_ativo")
+}
+
 /// Ativo do catálogo (SPEC-006). Nunca é apagado: sem "desativado_em" ele está ativo. O par
-/// (classe, setor) aponta para "setor", o que garante setor da mesma classe do ativo.
+/// (classe, setor) aponta para "setor", o que garante setor da mesma classe do ativo. SPEC-040: o
+/// importado nasce com a classificação "a revisar" (sem "classificacao_conferida_em").
 model Ativo {
-  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ticker       String      @unique @db.VarChar(6)
-  nome         String      @db.VarChar(100)
-  classe       ClasseAtivo
-  setor        String      @db.VarChar(40)
-  criadoEm     DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime    @map("atualizado_em") @db.Timestamptz(3)
-  desativadoEm DateTime?   @map("desativado_em") @db.Timestamptz(3)
+  id                        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticker                    String      @unique @db.VarChar(6)
+  nome                      String      @db.VarChar(100)
+  classe                    ClasseAtivo
+  setor                     String      @db.VarChar(40)
+  criadoEm                  DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm              DateTime    @map("atualizado_em") @db.Timestamptz(3)
+  desativadoEm              DateTime?   @map("desativado_em") @db.Timestamptz(3)
+  origem                    OrigemAtivo @default(equipe)
+  classificacaoConferidaEm  DateTime?   @default(now()) @map("classificacao_conferida_em") @db.Timestamptz(3)
+  /// O processador desativou (sem negócio na B3 há 3 meses): só ele reativa sozinho.
+  desativadoAutomaticamente Boolean     @default(false) @map("desativado_automaticamente")
 
   setorAtivo Setor @relation(fields: [classe, setor], references: [classe, codigo], onDelete: Restrict, onUpdate: Restrict)
 
   cotacoes        CotacaoDiaria[]
   cargasHistorico CargaHistorico[]
   cotacoesPregao  CotacaoPregao[]
+  logo            LogoAtivo?
 
   @@index([classe, setor])
   @@map("ativo")
@@ -236,6 +250,7 @@ enum TarefaIngestao {
   historico_retroativo
   fechamento_diario
   cotacao_pregao
+  importacao_catalogo
 
   @@map("tarefa_ingestao")
 }
@@ -266,6 +281,8 @@ model ExecucaoTarefa {
   cotaRestante   Int?              @map("cota_restante")
   cotaLimite     Int?              @map("cota_limite")
   cotaRenovaEm   DateTime?         @map("cota_renova_em") @db.Timestamptz(3)
+  /// SPEC-040: totais que não cabem em "registros" (importação: criados, desativados, logos...).
+  totais         Json?             @db.JsonB
 
   erros ErroExecucao[]
 
@@ -324,6 +341,11 @@ enum AcaoAuditoria {
   ativo_desativado
   ativo_reativado
   calendario_publicado
+  /// SPEC-040: feitas pelo processador, sem colaborador.
+  ativo_importado
+  ativo_desativado_automaticamente
+  ativo_reativado_automaticamente
+  classificacao_conferida
 
   @@map("acao_auditoria")
 }
@@ -341,7 +363,8 @@ enum EntidadeAuditoria {
 model RegistroAuditoria {
   id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   ocorridoEm    DateTime          @map("ocorrido_em") @db.Timestamptz(3)
-  colaboradorId String            @map("colaborador_id") @db.Uuid
+  /// Vazio só nas ações do processador (SPEC-040).
+  colaboradorId String?           @map("colaborador_id") @db.Uuid
   acao          AcaoAuditoria
   entidade      EntidadeAuditoria
   entidadeId    String            @map("entidade_id") @db.VarChar(64)
@@ -349,4 +372,37 @@ model RegistroAuditoria {
 
   @@index([entidade, entidadeId, ocorridoEm])
   @@map("registro_auditoria")
+}
+
+/// Último pregão com negócio de cada ação, unit e FII nos arquivos da B3 (SPEC-040), inclusive
+/// dos que não estão no catálogo: a importação usa para saber quem negociou nos últimos 3 meses.
+model NegociacaoB3 {
+  ticker       String      @id @db.VarChar(6)
+  classe       ClasseAtivo
+  ultimoPregao DateTime    @map("ultimo_pregao") @db.Date
+  atualizadoEm DateTime    @map("atualizado_em") @db.Timestamptz(3)
+
+  @@map("negociacao_b3")
+}
+
+enum SituacaoLogo {
+  ok
+  sem_logo
+
+  @@map("situacao_logo")
+}
+
+/// Logo do ativo (SPEC-040), baixado do servidor de ícones da brapi e entregue pelo nosso servidor.
+model LogoAtivo {
+  ativoId   String       @id @map("ativo_id") @db.Uuid
+  situacao  SituacaoLogo
+  tipo      String?      @db.VarChar(20)
+  conteudo  Bytes?
+  /// SHA-256 do conteúdo: o mesmo arquivo em muitos tickers é o logo genérico.
+  resumo    String?      @db.VarChar(64)
+  baixadoEm DateTime     @map("baixado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@map("logo_ativo")
 }

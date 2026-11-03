@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Aprovada pelo Luís em 02/11/2026 e implementada (ver §9) |
+| Status | Aprovada pelo Luís em 02/11/2026 e implementada (ver §9). **Mudada pela [SPEC-040](SPEC-040.md):** a coleta passa a usar a lista da brapi (todos os ativos, sem gastar a cota), o atraso informado passa a 45 minutos e o fechamento provisório sai |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)) |
 | Prioridade | *Must* |
 | Depende de | [SPEC-005](SPEC-005.md) (calendário de pregão), [SPEC-006](SPEC-006.md) (catálogo), [SPEC-008](SPEC-008.md) (padrão de ingestão e fechamento diário) |

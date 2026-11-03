@@ -335,6 +335,27 @@ export class AuthClient {
     return this.call(() => this.assetAction('POST', ASSET_PATHS.reactivate, id));
   }
 
+  /** SPEC-040: o colaborador confere a classificação sugerida pela importação. */
+  confirmAssetClassification(id: string): Promise<ClientResult<CatalogAsset>> {
+    return this.call(() => this.assetAction('POST', ASSET_PATHS.confirmClassification, id));
+  }
+
+  /**
+   * SPEC-040: logo do ativo como `data:` URL, porque a tela só mostra imagens do próprio app (CSP).
+   * `null` quando o ativo não tem logo próprio.
+   */
+  assetLogo(id: string): Promise<ClientResult<string | null>> {
+    return this.call(async () => {
+      const path = assetUrl(ASSET_PATHS.logo, id);
+      let logo = await this.image(path, this.accessToken);
+      if (logo === 'unauthorized' && (await this.refresh())) {
+        logo = await this.image(path, this.accessToken);
+      }
+      if (logo === 'unauthorized') throw new RequestFailed('unauthorized');
+      return logo;
+    });
+  }
+
   private async assetAction(
     method: string,
     path: string,
@@ -420,6 +441,37 @@ export class AuthClient {
     }
   }
 
+  /** Baixa uma imagem do servidor; só SVG ou PNG de até 100 KB viram `data:` URL. */
+  private async image(
+    path: string,
+    accessToken: string | null,
+  ): Promise<string | null | 'unauthorized'> {
+    const base = validateServerUrl(this.options.serverUrl(), this.options.allowInsecureLocalhost);
+    if (!base) throw new RequestFailed('invalid_url');
+    let response: Response;
+    try {
+      response = await (this.options.fetchFn ?? fetch)(new URL(path, base), {
+        headers: {
+          accept: 'image/svg+xml, image/png',
+          ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+        },
+        signal: AbortSignal.timeout(this.options.timeoutMs ?? 10_000),
+      });
+    } catch {
+      throw new RequestFailed('server_unavailable');
+    }
+    if (response.status === 401) return 'unauthorized';
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new RequestFailed(response.status >= 500 ? 'server_unavailable' : 'unexpected');
+    }
+    const type = response.headers.get('content-type')?.split(';')[0]?.trim();
+    if (type !== 'image/svg+xml' && type !== 'image/png') return null;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length === 0 || bytes.length > MAX_LOGO_BYTES) return null;
+    return `data:${type};base64,${bytes.toString('base64')}`;
+  }
+
   private async request<T>(
     method: string,
     path: string,
@@ -459,6 +511,8 @@ export class AuthClient {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** O servidor só guarda logos de até 100 KB (SPEC-040); maior que isso não é logo. */
+const MAX_LOGO_BYTES = 100 * 1024;
 
 /** O id vem da interface: só um UUID entra no caminho da rota. */
 function assetUrl(path: string, id: string): string {

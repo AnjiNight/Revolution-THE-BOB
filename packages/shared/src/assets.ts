@@ -1,14 +1,16 @@
 import { z } from 'zod';
 import { NAME_MAX, NAME_MIN, validate, type FieldErrors, type ValidationResult } from './auth.js';
 
-/** Rotas do catálogo de ativos (SPEC-006, §5.2). `:id` vira o id do ativo com `assetPath`. */
+/** Rotas do catálogo de ativos (SPEC-006 e 040, §5.2). `:id` vira o id do ativo com `assetPath`. */
 export const ASSET_PATHS = {
   search: '/api/assets',
   sectors: '/api/assets/sectors',
+  logo: '/api/assets/:id/logo',
   catalog: '/api/collaborator/assets',
   asset: '/api/collaborator/assets/:id',
   deactivate: '/api/collaborator/assets/:id/deactivate',
   reactivate: '/api/collaborator/assets/:id/reactivate',
+  confirmClassification: '/api/collaborator/assets/:id/confirm-classification',
 } as const;
 
 export function assetPath(path: string, id: string): string {
@@ -92,11 +94,11 @@ export function normalizeTicker(ticker: string): string {
   return ticker.trim().toUpperCase();
 }
 
-/** Busca do usuário: no máximo 50 resultados (o catálogo curado cabe inteiro). */
+/** Busca do usuário: no máximo 50 resultados; com mais, a pessoa refina a busca. */
 export const ASSET_SEARCH_LIMIT = 50;
+/** Lista do colaborador (SPEC-040): no máximo 100 por vez, com o catálogo da bolsa inteira. */
+export const CATALOG_PAGE_LIMIT = 100;
 export const ASSET_SEARCH_TEXT_MAX = 60;
-/** A coleta gratuita de cotações comporta uns 40 a 50 ativos (DA16): acima disso, a tela avisa. */
-export const FREE_COLLECTION_CAPACITY = 50;
 
 /**
  * Texto para comparar na busca: minúsculas, sem acentos e com espaços simples. "Açúcar" e
@@ -112,24 +114,24 @@ export function normalizeSearchText(text: string): string {
 }
 
 /**
- * Última cotação do pregão de um ativo (SPEC-009), do nível gratuito: atraso de até 30 minutos.
- * Nunca é "tempo real" (DA16).
+ * Última cotação do pregão de um ativo (SPEC-009 e 040), do nível gratuito: atraso de até 45
+ * minutos. Nunca é "tempo real" (DA16).
  */
 export interface AssetQuote {
   /** Decimal em texto (RNF12). */
   price: string;
   /** Variação em relação ao fechamento do pregão anterior, em %, com 2 casas; `null` sem referência. */
   change: string | null;
-  /** Horário da cotação informado pela fonte (ISO 8601). */
+  /** Horário da coleta (ISO 8601): a lista da brapi não traz o horário de cada preço (SPEC-040). */
   at: string;
   source: 'brapi';
 }
 
-/** Atraso máximo das cotações do nível gratuito (DA16), mostrado junto do horário. */
-export const FREE_QUOTE_DELAY_MINUTES = 30;
-
-/** Tickers que a brapi responde sem token (só para testar). */
-export const BRAPI_FREE_TICKERS = ['PETR4', 'MGLU3', 'VALE3', 'ITUB4'] as const;
+/**
+ * Atraso máximo das cotações do nível gratuito (DA16), mostrado junto do horário: 30 minutos do
+ * plano gratuito da brapi e até 15 minutos em que a lista fica guardada no servidor dela (SPEC-040).
+ */
+export const FREE_QUOTE_DELAY_MINUTES = 45;
 
 /** Ativo como o usuário vê na busca. */
 export interface Asset {
@@ -140,7 +142,12 @@ export interface Asset {
   sector: SectorCode;
   /** SPEC-009: última cotação do pregão; `null` enquanto não houver nenhuma. */
   quote: AssetQuote | null;
+  /** SPEC-040: há logo (em `/api/assets/:id/logo`); sem ele, o app mostra as letras do ticker. */
+  hasLogo: boolean;
 }
+
+/** Quem pôs o ativo no catálogo (SPEC-040): a equipe ou a importação diária da B3. */
+export type AssetOrigin = 'team' | 'import';
 
 /** Ativo como o colaborador vê no catálogo: com a situação e as datas. */
 export interface CatalogAsset extends Asset {
@@ -149,6 +156,12 @@ export interface CatalogAsset extends Asset {
   createdAt: string;
   updatedAt: string;
   deactivatedAt: string | null;
+  /** SPEC-040. */
+  origin: AssetOrigin;
+  /** Importado e com a classificação sugerida ainda não conferida pela equipe. */
+  classificationPending: boolean;
+  /** Desativado pelo processador (sem negócio na B3 há 3 meses); volta sozinho se negociar. */
+  autoDeactivated: boolean;
 }
 
 /** Corpo de `GET /api/assets`. */
@@ -176,6 +189,8 @@ export interface AssetHistory {
 /** Ativo na lista do colaborador: com a situação do histórico de cotações. */
 export interface CatalogListAsset extends CatalogAsset {
   history: AssetHistory;
+  /** SPEC-040: último pregão com negócio nos arquivos da B3 (AAAA-MM-DD), se conhecido. */
+  lastTradedOn: string | null;
 }
 
 /** Situação da coleta das cotações do pregão (SPEC-009 §5.3), na tela do colaborador. */
@@ -191,15 +206,37 @@ export interface QuoteCollectionStatus {
   /** Quando a cota renova (ISO 8601), se a brapi informou. */
   quotaResetsAt: string | null;
   quotaExhausted: boolean;
-  /** Sem token, só os tickers de teste da brapi recebem cotação. */
+  /** Há token da brapi no servidor (SPEC-040: opcional; a lista responde igual sem ele). */
   tokenConfigured: boolean;
+  /**
+   * A brapi descontou da cota as consultas da última coleta. A lista não desconta (SPEC-040): com
+   * `false`, a tela diz que a coleta não gasta a cota.
+   */
+  quotaCounted: boolean;
+}
+
+/** Situação da importação diária do catálogo (SPEC-040 §5.3), na tela do colaborador. */
+export interface CatalogImportStatus {
+  /** Última importação (ISO 8601) e como terminou; `null` antes da primeira. */
+  lastRunAt: string | null;
+  lastStatus: 'sucesso' | 'parcial' | 'falha' | null;
+  created: number;
+  deactivated: number;
+  reactivated: number;
+  /** Os arquivos da B3 estavam atrasados: ninguém foi desativado nessa importação. */
+  b3Behind: boolean;
 }
 
 /** Corpo de `GET /api/collaborator/assets`. */
 export interface CatalogListResult {
+  /** No máximo 100 (SPEC-040). */
   assets: CatalogListAsset[];
-  /** Ativos ativos no catálogo inteiro, sem filtro (aviso acima de 50, DA16). */
+  /** Há mais ativos além dos devolvidos: o colaborador refina a busca. */
+  hasMore: boolean;
+  /** Ativos ativos no catálogo inteiro, sem filtro. */
   activeCount: number;
+  /** Importados com a classificação ainda a revisar, no catálogo inteiro. */
+  pendingReviewCount: number;
   /**
    * Anos da janela do histórico (desde 2016) sem calendário de pregão publicado: as cotações deles
    * só são carregadas depois da publicação (SPEC-008 §4).
@@ -207,6 +244,8 @@ export interface CatalogListResult {
   historyYearsWithoutCalendar: number[];
   /** SPEC-009: situação da coleta das cotações do pregão. */
   quoteCollection: QuoteCollectionStatus;
+  /** SPEC-040: situação da importação diária do catálogo. */
+  catalogImport: CatalogImportStatus;
 }
 
 /** Erros das rotas do catálogo. */
@@ -308,6 +347,8 @@ export interface AssetSearchQuery {
 
 export interface CatalogQuery extends AssetSearchQuery {
   status: AssetStatusFilter;
+  /** SPEC-040: só os importados com a classificação ainda a revisar. */
+  review?: 'pending';
 }
 
 const searchQuerySchema = z.object({
@@ -319,13 +360,14 @@ const searchQuerySchema = z.object({
   class: assetClassField.optional(),
   sector: sectorField.optional(),
   status: z.enum(ASSET_STATUS_FILTERS, { error: 'invalid_option' }).optional(),
+  review: z.literal('pending', { error: 'invalid_option' }).optional(),
 });
 
 /** Valida a query string da busca. Setor de outra classe que a filtrada dá `wrong_class`. */
 export function validateCatalogQuery(input: unknown): ValidationResult<CatalogQuery> {
   const checked = validate(searchQuerySchema, input);
   if (!checked.success) return checked;
-  const { q, class: assetClass, sector, status } = checked.data;
+  const { q, class: assetClass, sector, status, review } = checked.data;
   const mismatch = sectorClassError(assetClass, sector);
   if (mismatch.sector) return { success: false, fields: mismatch };
   return {
@@ -335,6 +377,7 @@ export function validateCatalogQuery(input: unknown): ValidationResult<CatalogQu
       ...(assetClass ? { class: assetClass } : {}),
       ...(sector ? { sector: sector as SectorCode } : {}),
       status: status ?? 'all',
+      ...(review ? { review } : {}),
     },
   };
 }

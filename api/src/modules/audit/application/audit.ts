@@ -12,7 +12,20 @@ export type AuditAction =
   | 'asset_updated'
   | 'asset_deactivated'
   | 'asset_reactivated'
-  | 'calendar_published';
+  | 'calendar_published'
+  /** SPEC-040: feitas pelo processador, sem colaborador. */
+  | 'asset_imported'
+  | 'asset_auto_deactivated'
+  | 'asset_auto_reactivated'
+  /** SPEC-040: o colaborador conferiu a classificação sugerida pela importação. */
+  | 'classification_confirmed';
+
+/** Ações que o processador faz sozinho: são as únicas sem colaborador (SPEC-040). */
+export const AUTOMATIC_ACTIONS: readonly AuditAction[] = [
+  'asset_imported',
+  'asset_auto_deactivated',
+  'asset_auto_reactivated',
+];
 
 export type AuditEntity = 'asset' | 'calendar_year';
 
@@ -24,8 +37,11 @@ export interface AuditDetails {
 
 export interface AuditEntry {
   at: Date;
-  /** Só o id; nome e e-mail ficam no módulo de identidade (DA13). */
-  collaboratorId: string;
+  /**
+   * Só o id; nome e e-mail ficam no módulo de identidade (DA13). `null` só nas ações do
+   * processador (`AUTOMATIC_ACTIONS`).
+   */
+  collaboratorId: string | null;
   action: AuditAction;
   entity: AuditEntity;
   /** Id do ativo ou o ano do calendário. */

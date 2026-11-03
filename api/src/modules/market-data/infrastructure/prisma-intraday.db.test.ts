@@ -3,7 +3,7 @@ import { createPrismaClient, type PrismaClient } from '../../../shared/infrastru
 import { IntradayCollection } from '../application/intraday-collection.js';
 import type { DailyQuote, IntradayQuote } from '../application/ports.js';
 import { suggestNonTradingDays } from '../domain/calendar-suggestion.js';
-import { FakeQuoteSource } from '../testing/fakes.js';
+import { FakeListSource, listed } from '../testing/fakes.js';
 import { PrismaCalendarRepository } from './prisma-calendar-repository.js';
 import { PrismaIntradayQuoteRepository } from './prisma-intraday-quote-repository.js';
 import { PrismaQuoteRepository, PrismaTaskRunRepository } from './prisma-quote-repository.js';
@@ -207,6 +207,7 @@ describe.skipIf(!url)('cotações do pregão no PostgreSQL', () => {
         status: 'cota_esgotada',
         requests: 3,
         quota: { remaining: 0, limit: 15_000, resetsAt: at('00:00', '2026-12-01') },
+        totals: null,
       });
       expect(await runs.requestsSince('cotacao_pregao', at('00:00'))).toBe(3);
       expect(await runs.runsSince('cotacao_pregao', at('00:00'))).toBe(1);
@@ -217,7 +218,7 @@ describe.skipIf(!url)('cotações do pregão no PostgreSQL', () => {
     });
   });
 
-  it('coleta de ponta a ponta sobre o banco: cotações, fechamento provisório e situação', async () => {
+  it('coleta de ponta a ponta sobre o banco pela lista (SPEC-040): cotações e situação', async () => {
     await calendars.publish(
       {
         year: 2026,
@@ -234,29 +235,15 @@ describe.skipIf(!url)('cotações do pregão no PostgreSQL', () => {
         details: {},
       }),
     );
+    // Fechamento de sexta guardado pela B3: a variação de hoje é sobre ele.
+    await daily.save([dailyQuote({ close: '52.200000', high: '52.200000' })], 'b3_cotahist');
     let now = at('18:35'); // última coleta do dia (18h30)
-    const source = new FakeQuoteSource(() => now);
-    source.usage = { remaining: 9_000, limit: 15_000, resetsAt: at('00:00', '2026-12-01') };
-    source.answers.set('PETR4', {
-      price: '52.71',
-      at: at('18:31'),
-      open: '52.45',
-      high: '53.66',
-      low: '52.36',
-      previousClose: '52.2',
-    });
-    source.answers.set('MXRF11', {
-      price: '8.88',
-      at: at('18:31'),
-      open: '8.94',
-      high: '8.96',
-      low: '8.84',
-      previousClose: '8.94',
-    });
+    const source = new FakeListSource(false);
+    source.answers.set('stock', [listed('PETR4', { price: '52.71', change: '0.98' })]);
+    source.answers.set('fii', [listed('MXRF11', { price: '8.88', change: '-0.67' })]);
     const collection = new IntradayCollection({
       source,
       quotes: intraday,
-      daily,
       runs,
       calendars,
       monthlyQuota: 15_000,
@@ -265,50 +252,37 @@ describe.skipIf(!url)('cotações do pregão no PostgreSQL', () => {
 
     expect(await collection.collect()).toMatchObject({
       status: 'sucesso',
-      records: 4,
-      requests: 2,
+      records: 2,
+      requests: 0,
+      totals: { missing: 0, missingTickers: [] },
     });
-    const provisional = await prisma.cotacaoDiaria.findUniqueOrThrow({
-      where: { ativoId_data: { ativoId: PETR4, data: new Date('2026-11-03T00:00:00Z') } },
+    // Sem fechamento provisório: o dia de hoje chega com o arquivo da B3.
+    expect(await prisma.cotacaoDiaria.count({ where: { fonte: 'brapi' } })).toBe(0);
+    const saved = await prisma.cotacaoPregao.findFirstOrThrow({ where: { ativoId: PETR4 } });
+    expect(saved).toMatchObject({
+      momento: at('18:35'),
+      aberturaDia: null,
+      fechamentoAnterior: null,
     });
-    expect(provisional).toMatchObject({
-      fonte: 'brapi',
-      precoMedio: null,
-      negocios: null,
-      volume: null,
-    });
-    expect(provisional.fechamento.toFixed(2)).toBe('52.71');
-
-    // Manhã seguinte: a B3 substitui o provisório.
-    await daily.save(
-      [
-        dailyQuote({
-          date: '2026-11-03',
-          close: '52.800000',
-          high: '53.700000',
-          low: '52.300000',
-          open: '52.450000',
-        }),
-      ],
-      'b3_cotahist',
-    );
-    const replaced = await prisma.cotacaoDiaria.findUniqueOrThrow({
-      where: { ativoId_data: { ativoId: PETR4, data: new Date('2026-11-03T00:00:00Z') } },
-    });
-    expect(replaced.fonte).toBe('b3_cotahist');
 
     now = at('19:00');
     expect(await collection.collect()).toBeNull();
     expect(await collection.status()).toMatchObject({
       lastStatus: 'sucesso',
-      requestsUsed: 6_002,
+      requestsUsed: 0,
       quota: 15_000,
-      tokenConfigured: true,
+      tokenConfigured: false,
       quotaExhausted: false,
+      quotaCounted: false,
     });
     expect((await collection.latestQuotes()).get(PETR4)).toMatchObject({
       price: '52.71',
       change: '0.98',
+      at: at('18:35').toISOString(),
     });
+    const run = await prisma.execucaoTarefa.findFirstOrThrow({
+      where: { tarefa: 'cotacao_pregao' },
+    });
+    expect(run.totais).toEqual({ missing: 0, missingTickers: [] });
   });
 });

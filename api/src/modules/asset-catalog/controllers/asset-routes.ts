@@ -24,6 +24,7 @@ export interface AssetRoutesOptions {
 const run = domainErrorRunner({
   ticker_in_use: { status: 409, message: 'Outro ativo já usa este ticker.' },
   asset_not_found: { status: 404, message: 'Ativo não encontrado.' },
+  logo_not_found: { status: 404, message: 'Este ativo não tem logo.' },
   validation_error: { status: 400, message: 'Dados inválidos.' },
 });
 
@@ -40,9 +41,16 @@ function assetId(request: FastifyRequest<{ Params: IdParams }>): string {
   return id.toLowerCase();
 }
 
+/** Logo no navegador de alguém que abriu o endereço direto: nenhum script roda (SPEC-040). */
+const LOGO_HEADERS = {
+  'cache-control': 'private, max-age=86400',
+  'x-content-type-options': 'nosniff',
+  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+} as const;
+
 /**
- * Catálogo de ativos (SPEC-006 §5.2): busca e lista de setores para qualquer pessoa conectada;
- * manutenção só para colaborador, com o 403 antes de qualquer validação (DA12).
+ * Catálogo de ativos (SPEC-006 e 040, §5.2): busca, setores e logos para qualquer pessoa
+ * conectada; manutenção só para colaborador, com o 403 antes de qualquer validação (DA12).
  */
 export function registerAssetRoutes(app: FastifyInstance, options: AssetRoutesOptions): void {
   const { catalog } = options;
@@ -64,6 +72,14 @@ export function registerAssetRoutes(app: FastifyInstance, options: AssetRoutesOp
 
   app.get(ASSET_PATHS.sectors, authenticated, async (_request, reply) => {
     return reply.send({ sectors: catalog.sectors() });
+  });
+
+  app.get<{ Params: IdParams }>(ASSET_PATHS.logo, authenticated, async (request, reply) => {
+    const id = assetId(request);
+    const logo = await run(() => catalog.logo(id));
+    return reply
+      .headers({ ...LOGO_HEADERS, 'content-type': logo.type })
+      .send(Buffer.from(logo.content));
   });
 
   app.get(ASSET_PATHS.catalog, collaboratorOnly, async (request, reply) => {
@@ -90,6 +106,16 @@ export function registerAssetRoutes(app: FastifyInstance, options: AssetRoutesOp
     async (request, reply) => {
       const id = assetId(request);
       const asset = await run(() => catalog.deactivate(id, requireAuth(request).userId));
+      return reply.send({ asset });
+    },
+  );
+
+  app.post<{ Params: IdParams }>(
+    ASSET_PATHS.confirmClassification,
+    collaboratorOnly,
+    async (request, reply) => {
+      const id = assetId(request);
+      const asset = await run(() => catalog.confirmClassification(id, requireAuth(request).userId));
       return reply.send({ asset });
     },
   );

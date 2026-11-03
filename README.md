@@ -86,19 +86,18 @@ O colaborador entra pela **Área do colaborador**, na tela de login.
 
 **Calendário de pregão** ([SPEC-005](specs/SPEC-005.md)): enquanto um ano não é publicado, o app recusa datas dele. Na Área do colaborador, abra **Calendário**, clique em **Carregar sugestão**, confira com o calendário oficial da B3 e clique em **Publicar**. O ano seguinte deve ser publicado até 31 de dezembro (o Início do colaborador avisa desde 1º de dezembro).
 
-**Catálogo de ativos** ([SPEC-006](specs/SPEC-006.md)): a busca do usuário só mostra os ativos que a equipe cadastrou. Na Área do colaborador, abra **Ativos** e use **Novo ativo** (ticker, nome, classe Ação ou FII e setor ou segmento). A classe não muda depois do cadastro, e ativo nunca é apagado: é desativado. Cada mudança no catálogo e cada publicação do calendário ficam no registro de auditoria.
+**Catálogo de ativos** ([SPEC-006](specs/SPEC-006.md) e [SPEC-040](specs/SPEC-040.md)): o processador importa todo dia, às 08:30, as ações (com as units) e os FIIs negociados na B3 nos últimos 3 meses, com o logo de cada um; quem para de negociar é desativado sozinho, e volta sozinho se voltar a negociar. Na primeira vez, a importação baixa o arquivo anual do ano atual da B3 (uns 60 a 90 MB) para saber quem negociou. A classificação (setor ou segmento) vem sugerida e marcada **a revisar**: na Área do colaborador, abra **Ativos**, filtre por **Classificação: A revisar** e, em cada um, corrija o setor ou use **Confirmar classificação**. A importação nunca muda o que a equipe editou. O colaborador também cadastra à mão com **Novo ativo** (ticker, nome, classe Ação ou FII e setor ou segmento). A classe não muda depois do cadastro, e ativo nunca é apagado: é desativado. Cada mudança no catálogo (inclusive as do processador) e cada publicação do calendário ficam no registro de auditoria.
 
 **Histórico de cotações** ([SPEC-008](specs/SPEC-008.md)): o processador (`npm run dev:worker`) carrega o fechamento diário dos ativos do catálogo a partir dos arquivos públicos da B3, desde 2016. Ativo novo ganha o histórico em até 15 minutos; os pregões que faltam são buscados todo dia às 08:00. Só entram os anos com calendário publicado: publique de 2016 até o ano atual (a tela **Ativos** do colaborador avisa quais faltam). Os arquivos anuais (uns 60 a 90 MB cada) ficam guardados em `api/.cache/b3`.
 
-### Token da brapi (cotações do pregão)
+### Token da brapi (opcional)
 
-As cotações do pregão ([SPEC-009](specs/SPEC-009.md)) vêm da [brapi](https://brapi.dev), no plano gratuito. **Cada pessoa da equipe gera o próprio token**: a cota de 15 mil consultas por mês é por chave, então dois computadores com o mesmo token gastam a mesma cota.
+As cotações do pregão e a lista de ativos ([SPEC-009](specs/SPEC-009.md) e [SPEC-040](specs/SPEC-040.md)) vêm da [brapi](https://brapi.dev). Desde a SPEC-040, o app usa a **lista** da brapi, que responde sem token e não desconta da cota: **o token é opcional**. Se você quiser usar um (para o caso de a brapi mudar a regra), **gere o seu**: a cota de 15 mil consultas por mês é por chave, então dois computadores com o mesmo token gastam a mesma cota.
 
 1. Crie uma conta gratuita em [brapi.dev](https://brapi.dev) e gere um token no painel.
 2. No `api/.env`, preencha `BRAPI_TOKEN` com o **seu** token. O `api/.env` não vai para o Git; nunca coloque o token em commits nem mensagens.
-3. Sem token, só PETR4, MGLU3, VALE3 e ITUB4 recebem cotação, e a tela **Ativos** do colaborador avisa.
 
-**Cotações do pregão:** com o processador ligado (`npm run dev:worker`), em dia de pregão, ele busca o último preço dos ativos ativos do catálogo de 30 em 30 minutos, das 10h30 até meia hora depois do fechamento (horário de Brasília). O preço, a variação do dia e o horário aparecem na lista **Ativos**, sempre com o aviso de atraso de até 30 minutos (nunca "tempo real"). Se a cota não der para todos os ativos, o processador espaça as coletas sozinho e mantém a do fechamento; a tela **Ativos** do colaborador mostra a última coleta e o uso da cota. Cotações do pregão ficam guardadas por 30 dias.
+**Cotações do pregão:** com o processador ligado (`npm run dev:worker`), em dia de pregão, ele lê a lista da brapi (duas consultas: ações e FIIs) de 30 em 30 minutos, das 10h30 até meia hora depois do fechamento (horário de Brasília), e grava o preço de todos os ativos ativos. O preço, a variação do dia e o horário da coleta aparecem na lista **Ativos**, sempre com o aviso de atraso de até 45 minutos (30 do plano gratuito e até 15 em que a lista fica guardada na brapi; nunca "tempo real"). O fechamento do dia entra nos gráficos com o arquivo da B3 da manhã seguinte. Cotações do pregão ficam guardadas por 30 dias.
 
 ### Login com Google (opcional)
 

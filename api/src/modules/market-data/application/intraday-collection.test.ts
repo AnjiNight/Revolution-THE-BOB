@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { suggestNonTradingDays } from '../domain/calendar-suggestion.js';
 import {
-  FakeQuoteSource,
+  FakeListSource,
   InMemoryCalendarRepository,
   InMemoryIntradayQuoteRepository,
   InMemoryQuoteRepository,
   InMemoryTaskRuns,
+  listed,
 } from '../testing/fakes.js';
 import { INTRADAY_RETRY_DELAY_MS, IntradayCollection } from './intraday-collection.js';
 import type { QuoteUsage } from './ports.js';
@@ -23,12 +24,12 @@ const CYCLE: QuoteUsage = {
   resetsAt: new Date('2026-12-01T03:00:00Z'),
 };
 
-describe('cotações do pregão (SPEC-009)', () => {
+describe('cotações do pregão pela lista da brapi (SPEC-009 e 040)', () => {
   let now: Date;
   let catalog: Array<{ id: string; ticker: string; active: boolean }>;
   let daily: InMemoryQuoteRepository;
   let intraday: InMemoryIntradayQuoteRepository;
-  let source: FakeQuoteSource;
+  let source: FakeListSource;
   let runs: InMemoryTaskRuns;
   let calendars: InMemoryCalendarRepository;
   let sleep: ReturnType<typeof vi.fn<(ms: number) => Promise<void>>>;
@@ -52,24 +53,14 @@ describe('cotações do pregão (SPEC-009)', () => {
       }),
     );
 
-  /** Respostas normais da brapi para os dois ativos ativos, com o horário dado. */
-  const answer = (quoteAt: Date) => {
-    source.answers.set('PETR4', {
-      price: '52.71',
-      at: quoteAt,
-      open: '52.45',
-      high: '53.66',
-      low: '52.36',
-      previousClose: '52.2',
-    });
-    source.answers.set('MXRF11', {
-      price: '8.88',
-      at: quoteAt,
-      open: '8.94',
-      high: '8.96',
-      low: '8.84',
-      previousClose: '8.94',
-    });
+  /** Respostas normais da lista: ações (com VALE3, desativado no catálogo) e FIIs. */
+  const answer = (petr4 = '52.71', mxrf11 = '8.88') => {
+    source.answers.set('stock', [
+      listed('PETR4', { price: petr4, change: '0.98' }),
+      listed('VALE3', { price: '61.30', change: '-1.42' }),
+      listed('ITUB4', { price: '38.66', change: '-0.08' }),
+    ]);
+    source.answers.set('fii', [listed('MXRF11', { price: mxrf11, change: '-0.67' })]);
   };
 
   /** Fechamento guardado de um pregão anterior (como a B3 grava). */
@@ -96,15 +87,13 @@ describe('cotações do pregão (SPEC-009)', () => {
     catalog = [MXRF11, PETR4, VALE3];
     daily = new InMemoryQuoteRepository();
     intraday = new InMemoryIntradayQuoteRepository(() => catalog, daily);
-    source = new FakeQuoteSource(() => now);
-    source.usage = { ...CYCLE };
+    source = new FakeListSource();
     runs = new InMemoryTaskRuns();
     calendars = new InMemoryCalendarRepository();
     sleep = vi.fn<(ms: number) => Promise<void>>().mockResolvedValue();
     collection = new IntradayCollection({
       source,
       quotes: intraday,
-      daily,
       runs,
       calendars,
       monthlyQuota: 15_000,
@@ -112,10 +101,10 @@ describe('cotações do pregão (SPEC-009)', () => {
       sleep,
     });
     await publish(2026);
-    answer(at('11:31'));
+    answer();
   });
 
-  describe('quando coleta (CA02)', () => {
+  describe('quando coleta (CA02 da SPEC-009)', () => {
     it('fim de semana, feriado e antes das 10h30: nenhuma consulta', async () => {
       now = new Date('2026-11-07T15:00:00Z'); // sábado
       expect(await collection.collect()).toBeNull();
@@ -148,184 +137,169 @@ describe('cotações do pregão (SPEC-009)', () => {
       now = at('11:50');
       expect(await collection.collect()).toBeNull();
       now = at('12:05');
-      answer(at('12:01'));
       expect(await collection.collect()).toMatchObject({ records: 2 });
       expect(runs.runs).toHaveLength(2);
     });
   });
 
-  describe('o que grava (CA04, CA07)', () => {
-    it('só os ativos ativos, com horário, fonte, nível, consultas e a cota informada', async () => {
+  describe('o que grava (CA08 da SPEC-040)', () => {
+    it('duas consultas (ações e FIIs) para todos os ativos ativos, com o horário da coleta', async () => {
       const result = await collection.collect();
-      expect(source.requests).toEqual(['MXRF11', 'PETR4']); // VALE3 está desativado
+      expect(source.requests).toEqual(['stock', 'fii']);
       expect(result).toEqual({
         status: 'sucesso',
-        records: 2,
+        records: 2, // VALE3 está desativado; ITUB4 não está no catálogo
         affectedAssets: 2,
         periodStart: '2026-11-03',
         periodEnd: '2026-11-03',
         errors: [],
-        requests: 2,
-        quota: { ...CYCLE, remaining: 13_998 },
+        requests: 0, // a lista não desconta da cota
+        quota: null,
+        totals: { missing: 0, missingTickers: [] },
       });
       expect([...intraday.quotes.values()]).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({
+          {
             assetId: PETR4.id,
-            at: at('11:31'),
+            at: at('11:35'),
             level: 'gratuito',
-            source: 'brapi',
             price: '52.71',
-            previousClose: '52.2',
-          }),
+            open: null,
+            high: null,
+            low: null,
+            previousClose: null,
+            source: 'brapi',
+          },
         ]),
       );
       expect(runs.runs[0]?.task).toBe('cotacao_pregao');
     });
 
-    it('a mesma cotação de novo não duplica', async () => {
+    it('o horário da coleta vai em segundos inteiros', async () => {
+      now = new Date(at('11:35').getTime() + 12_345);
       await collection.collect();
-      now = at('12:05'); // a brapi ainda não atualizou: mesmo horário de antes
-      const again = await collection.collect();
-      expect(again).toMatchObject({ status: 'sucesso', records: 0 });
-      expect(intraday.quotes.size).toBe(2);
+      expect([...intraday.quotes.values()][0]?.at).toEqual(
+        new Date(at('11:35').getTime() + 12_000),
+      );
     });
 
-    it('cotação que ainda é do pregão anterior é ignorada, sem erro', async () => {
-      // Fechamento de sexta (30/10; 2/11 foi feriado) já guardado: 52,71 para PETR4.
+    it('ativo do catálogo que não veio na lista é contado, sem erro', async () => {
+      catalog = [...catalog, { id: 'a-brdt3', ticker: 'BRDT3', active: true }];
+      const result = await collection.collect();
+      expect(result).toMatchObject({
+        status: 'sucesso',
+        records: 2,
+        errors: [],
+        totals: { missing: 1, missingTickers: ['BRDT3'] },
+      });
+    });
+
+    it('papel da lista sem preço não grava nada', async () => {
+      source.answers.set('fii', [listed('MXRF11', { price: null })]);
+      expect(await collection.collect()).toMatchObject({ status: 'sucesso', records: 1 });
+    });
+
+    it('a lista ainda com o pregão de ontem é ignorada, sem erro', async () => {
+      // Fechamento de sexta (30/10; 2/11 foi feriado) guardado: 52,71 para PETR4. A lista ainda
+      // mostra 52,71 com a variação de sexta (0,98%): é o preço de ontem.
       await close(PETR4.id, '2026-10-30', '52.71');
-      // A brapi ainda mostra o pregão de sexta (fechamento anterior 52,20, de quinta).
       const result = await collection.collect();
       expect(result).toMatchObject({ status: 'sucesso', records: 1, errors: [] });
       expect([...intraday.quotes.values()].map((quote) => quote.assetId)).toEqual([MXRF11.id]);
     });
 
-    it('cotação com horário de outro dia é ignorada', async () => {
-      answer(new Date('2026-10-30T20:00:00Z'));
-      expect(await collection.collect()).toMatchObject({ records: 0, errors: [] });
-    });
-
-    it('dado estranho vira erro com o ativo, e os outros continuam', async () => {
-      source.answers.set('PETR4', { price: '60.00', at: at('11:31'), high: '53.66', low: '52.36' });
-      source.answers.set('MXRF11', { price: '8.88', at: new Date('2026-11-03T18:00:00Z') });
-      const result = await collection.collect();
-      expect(result?.status).toBe('parcial');
-      expect(result?.errors).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            assetId: PETR4.id,
-            message: 'PETR4: preço acima da máxima do dia',
-          }),
-          expect.objectContaining({
-            assetId: MXRF11.id,
-            message: 'MXRF11: horário da cotação no futuro',
-          }),
-        ]),
-      );
-      expect(intraday.quotes.size).toBe(0);
+    it('preço que volta ao fechamento de ontem, com variação zero, é de hoje', async () => {
+      await close(PETR4.id, '2026-10-30', '52.71');
+      source.answers.set('stock', [listed('PETR4', { price: '52.71', change: '0' })]);
+      expect(await collection.collect()).toMatchObject({ records: 2 });
     });
   });
 
-  describe('falhas (CA05)', () => {
+  describe('falhas (CA05 da SPEC-009)', () => {
     it('erro de rede: uma nova tentativa depois de 10 segundos', async () => {
-      source.answers.set('PETR4', [{ error: 'unavailable' }, { price: '52.71', at: at('11:31') }]);
+      source.queue('stock', { error: 'unavailable' });
       const result = await collection.collect();
       expect(sleep).toHaveBeenCalledWith(INTRADAY_RETRY_DELAY_MS);
-      expect(source.requests).toEqual(['MXRF11', 'PETR4', 'PETR4']);
-      expect(result).toMatchObject({ status: 'sucesso', records: 2, requests: 3 });
+      expect(source.requests).toEqual(['stock', 'stock', 'fii']);
+      expect(result).toMatchObject({ status: 'sucesso', records: 2 });
     });
 
-    it('ticker não encontrado vira erro, e a coleta segue com os outros', async () => {
-      source.answers.delete('MXRF11');
+    it('uma lista que falha vira erro, e a outra é gravada', async () => {
+      source.answers.set('fii', { error: 'bad_response' });
       const result = await collection.collect();
       expect(result).toMatchObject({ status: 'parcial', records: 1 });
-      expect(result?.errors[0]).toMatchObject({ assetId: MXRF11.id });
+      expect(result?.errors[0]?.message).toContain('lista de FIIs');
     });
 
-    it('429: a coleta para ali e termina como parcial', async () => {
-      source.answers.set('PETR4', { error: 'rate_limited' });
-      catalog = [MXRF11, PETR4, { id: 'a-wege3', ticker: 'WEGE3', active: true }];
-      const result = await collection.collect();
-      expect(source.requests).toEqual(['MXRF11', 'PETR4']); // WEGE3 não foi consultado
-      expect(result).toMatchObject({ status: 'parcial', records: 1 });
+    it('429: a coleta para ali; parcial se a outra lista já tinha respondido', async () => {
+      source.answers.set('fii', { error: 'rate_limited' });
+      expect(await collection.collect()).toMatchObject({ status: 'parcial', records: 1 });
+
+      now = at('12:05');
+      source.answers.set('stock', { error: 'rate_limited' });
+      expect(await collection.collect()).toMatchObject({ status: 'falha', records: 0 });
+      // Na segunda, a de FIIs nem foi consultada.
+      expect(source.requests).toEqual(['stock', 'fii', 'stock']);
     });
 
-    it('cota esgotada: para até a cota renovar, e volta depois', async () => {
+    it('cota esgotada (se a brapi passar a descontar a lista): para até renovar', async () => {
       const exhausted = { remaining: 0, limit: 15_000, resetsAt: new Date('2026-11-04T03:00:00Z') };
-      source.answers.set('MXRF11', { error: 'quota_exhausted', usage: exhausted });
+      source.answers.set('stock', { error: 'quota_exhausted', usage: exhausted });
       expect(await collection.collect()).toMatchObject({
         status: 'cota_esgotada',
         quota: exhausted,
+        requests: 1,
       });
 
       now = at('15:05');
       expect(await collection.collect()).toBeNull();
-      expect(source.requests).toEqual(['MXRF11']);
+      expect(source.requests).toEqual(['stock']);
 
       // Quarta, 4/11, depois de renovar.
       now = new Date('2026-11-04T14:05:00Z');
-      answer(new Date('2026-11-04T14:01:00Z'));
-      source.usage = { ...CYCLE };
+      answer();
       expect(await collection.collect()).toMatchObject({ status: 'sucesso', records: 2 });
     });
 
     it('enquanto a brapi falha, a última cotação válida continua valendo (RNF13)', async () => {
       await collection.collect();
       now = at('12:05');
-      source.answers.set('PETR4', { error: 'unauthorized' });
-      source.answers.set('MXRF11', { error: 'not_found' });
+      source.answers.set('stock', { error: 'unauthorized' });
+      source.answers.set('fii', { error: 'not_found' });
       expect(await collection.collect()).toMatchObject({ status: 'falha' });
       expect((await collection.latestQuotes()).get(PETR4.id)).toMatchObject({ price: '52.71' });
     });
   });
 
-  describe('fechamento provisório (CA06)', () => {
-    it('a última coleta do dia grava o preço final no fechamento diário, como brapi', async () => {
+  describe('fechamento (SPEC-040: sem fechamento provisório)', () => {
+    it('a última coleta do dia grava só a cotação: o dia chega com o arquivo da B3', async () => {
       now = at('18:35');
-      answer(at('18:31'));
-      const result = await collection.collect();
-      expect(result?.records).toBe(4); // 2 cotações + 2 fechamentos provisórios
-      expect(daily.quotes.get(`${PETR4.id}|2026-11-03`)).toEqual({
-        assetId: PETR4.id,
-        date: '2026-11-03',
-        open: '52.45',
-        high: '53.66',
-        low: '52.36',
-        close: '52.71',
-        average: null,
-        trades: null,
-        volume: null,
-        source: 'brapi',
-      });
-    });
-
-    it('as coletas do meio do dia não gravam fechamento', async () => {
-      await collection.collect();
+      expect(await collection.collect()).toMatchObject({ records: 2 });
       expect(daily.quotes.size).toBe(0);
     });
   });
 
-  describe('regra da cota (CA03)', () => {
-    it('com pouca cota no ciclo, pula as coletas do meio do dia e faz a do fechamento', async () => {
-      // Cota informada numa coleta de ontem: 2.500 (a reserva é 1.500), para 50 ativos.
-      catalog = Array.from({ length: 50 }, (_, i) => ({
-        id: `a-${i}`,
-        ticker: `TST${String.fromCharCode(65 + Math.floor(i / 10))}${i % 10}`,
-        active: true,
-      }));
-      for (const asset of catalog) source.answers.set(asset.ticker, { at: at('11:31') });
+  describe('regra da cota (proteção, §4.2)', () => {
+    it('se a brapi descontar a lista, a cota conta 2 consultas por coleta', async () => {
+      source.usage = { ...CYCLE };
+      const result = await collection.collect();
+      expect(result).toMatchObject({ requests: 2, quota: { ...CYCLE, remaining: 13_998 } });
+    });
+
+    it('com a cota quase no fim, pula as coletas do meio do dia e faz a do fechamento', async () => {
+      // Cota informada numa coleta de ontem: só 1.540 (a reserva é 1.500), 40 para o ciclo.
       const runId = await runs.start('cotacao_pregao', new Date('2026-10-30T21:00:00Z'));
       await runs.finish(
         runId,
         {
           status: 'sucesso',
-          records: 50,
-          affectedAssets: 50,
+          records: 2,
+          affectedAssets: 2,
           periodStart: '2026-10-30',
           periodEnd: '2026-10-30',
           errors: [],
-          requests: 50,
-          quota: { ...CYCLE, remaining: 2_500 },
+          requests: 2,
+          quota: { ...CYCLE, remaining: 1_540 },
         },
         new Date('2026-10-30T21:01:00Z'),
       );
@@ -334,13 +308,12 @@ describe('cotações do pregão (SPEC-009)', () => {
       expect(source.requests).toEqual([]);
 
       now = at('18:35');
-      for (const asset of catalog) source.answers.set(asset.ticker, { at: at('18:31') });
-      expect(await collection.collect()).toMatchObject({ records: 100 });
-      expect(source.requests).toHaveLength(50);
+      expect(await collection.collect()).toMatchObject({ records: 2 });
+      expect(source.requests).toEqual(['stock', 'fii']);
     });
   });
 
-  describe('leitura (CA08, CA09, CA10)', () => {
+  describe('leitura', () => {
     it('limpeza: apaga as cotações do pregão com mais de 30 dias', async () => {
       await intraday.save([
         {
@@ -360,43 +333,58 @@ describe('cotações do pregão (SPEC-009)', () => {
       expect(intraday.quotes.size).toBe(2);
     });
 
-    it('variação sobre o fechamento guardado; sem ele, sobre o que a brapi informa', async () => {
+    it('variação sobre o fechamento guardado da B3; sem ele, sem variação', async () => {
       await close(MXRF11.id, '2026-10-30', '9.00');
       await collection.collect();
       const latest = await collection.latestQuotes();
-      // MXRF11: 8,88 sobre o fechamento guardado de 9,00; PETR4: 52,71 sobre os 52,20 da brapi.
       expect(latest.get(MXRF11.id)).toEqual({
         price: '8.88',
         change: '-1.33',
-        at: at('11:31').toISOString(),
+        at: at('11:35').toISOString(),
         source: 'brapi',
       });
-      expect(latest.get(PETR4.id)?.change).toBe('0.98');
+      expect(latest.get(PETR4.id)?.change).toBeNull();
     });
 
-    it('situação da coleta para o colaborador', async () => {
+    it('situação da coleta: a lista não gasta a cota', async () => {
       await collection.collect();
       expect(await collection.status()).toEqual({
         lastRunAt: now.toISOString(),
         lastStatus: 'sucesso',
         intervalMinutes: 30,
-        requestsUsed: 1_002,
-        quota: 15_000,
-        quotaResetsAt: CYCLE.resetsAt.toISOString(),
-        quotaExhausted: false,
-        tokenConfigured: true,
-      });
-    });
-
-    it('sem nenhuma coleta, a conta é a do mês com a cota configurada', async () => {
-      const status = await collection.status();
-      expect(status).toMatchObject({
-        lastRunAt: null,
-        lastStatus: null,
         requestsUsed: 0,
         quota: 15_000,
         quotaResetsAt: null,
+        quotaExhausted: false,
+        tokenConfigured: true,
+        quotaCounted: false,
       });
+    });
+
+    it('situação quando a brapi desconta: uso do ciclo informado', async () => {
+      source.usage = { ...CYCLE };
+      await collection.collect();
+      expect(await collection.status()).toMatchObject({
+        requestsUsed: 1_002,
+        quotaResetsAt: CYCLE.resetsAt.toISOString(),
+        quotaCounted: true,
+      });
+    });
+
+    it('sem token, a coleta funciona igual (§4.3, T3)', async () => {
+      source = new FakeListSource(false);
+      answer();
+      collection = new IntradayCollection({
+        source,
+        quotes: intraday,
+        runs,
+        calendars,
+        monthlyQuota: 15_000,
+        clock: () => now,
+        sleep,
+      });
+      expect(await collection.collect()).toMatchObject({ status: 'sucesso', records: 2 });
+      expect((await collection.status()).tokenConfigured).toBe(false);
     });
   });
 });

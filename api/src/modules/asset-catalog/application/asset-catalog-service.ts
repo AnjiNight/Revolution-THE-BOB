@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   ASSET_SEARCH_LIMIT,
+  CATALOG_PAGE_LIMIT,
   isSectorOf,
   SECTOR_OPTIONS,
   type AssetHistory,
@@ -8,6 +9,7 @@ import {
   type AssetSearchResult,
   type AssetUpdate,
   type CatalogAsset,
+  type CatalogImportStatus,
   type CatalogListResult,
   type CatalogQuery,
   type NewAsset,
@@ -16,14 +18,23 @@ import {
 } from '@simulador/shared';
 import type { AuditAction, AuditEntry, JsonValue } from '../../audit/application/audit.js';
 import { searchAssets } from '../domain/asset-search.js';
-import { isActive, toCatalogAsset, toPublicAsset, type StoredAsset } from '../domain/asset.js';
-import { AssetNotFoundError, AssetValidationError } from '../domain/errors.js';
+import {
+  isActive,
+  isClassificationPending,
+  toCatalogAsset,
+  toPublicAsset,
+  type StoredAsset,
+} from '../domain/asset.js';
+import { AssetNotFoundError, AssetValidationError, LogoNotFoundError } from '../domain/errors.js';
 import type {
+  AssetActivityReader,
   AssetChanges,
   AssetHistoryReader,
+  AssetLogoReader,
   AssetModification,
   AssetQuoteReader,
   AssetRepository,
+  CatalogImportReader,
 } from './ports.js';
 
 const PENDING_HISTORY: AssetHistory = { status: 'pending', from: null, to: null };
@@ -38,6 +49,17 @@ const NO_COLLECTION: QuoteCollectionStatus = {
   quotaResetsAt: null,
   quotaExhausted: false,
   tokenConfigured: false,
+  quotaCounted: false,
+};
+
+/** Sem a importação (testes antigos): nenhuma importação ainda. */
+const NO_IMPORT: CatalogImportStatus = {
+  lastRunAt: null,
+  lastStatus: null,
+  created: 0,
+  deactivated: 0,
+  reactivated: 0,
+  b3Behind: false,
 };
 
 export interface AssetCatalogServiceDeps {
@@ -46,13 +68,18 @@ export interface AssetCatalogServiceDeps {
   history?: AssetHistoryReader;
   /** Última cotação e situação da coleta (SPEC-009). Sem ele, nenhum ativo tem cotação. */
   quotes?: AssetQuoteReader;
+  /** SPEC-040: volume do último pregão (ordem da busca sem texto), logos e importação. */
+  activity?: AssetActivityReader;
+  logos?: AssetLogoReader;
+  imports?: CatalogImportReader;
   clock?: () => Date;
   newId?: () => string;
 }
 
 /**
- * Catálogo de ativos (SPEC-006): busca para qualquer pessoa conectada; cadastro, edição,
- * desativação e reativação pelo colaborador, sempre com registro de auditoria (RNF15).
+ * Catálogo de ativos (SPEC-006 e 040): busca para qualquer pessoa conectada; cadastro, edição,
+ * conferência da classificação importada, desativação e reativação pelo colaborador, sempre com
+ * registro de auditoria (RNF15).
  */
 export class AssetCatalogService {
   private readonly clock: () => Date;
@@ -63,47 +90,76 @@ export class AssetCatalogService {
     this.newId = deps.newId ?? randomUUID;
   }
 
-  /** Usuário: só ativos ativos (OPEN-41), até 50 resultados, com a última cotação (SPEC-009). */
+  /**
+   * Usuário: só ativos ativos (OPEN-41), até 50 resultados, com a última cotação (SPEC-009) e o
+   * logo (SPEC-040). Sem texto, os mais negociados primeiro.
+   */
   async search(query: AssetSearchQuery): Promise<AssetSearchResult> {
-    const [candidates, quotes] = await Promise.all([
+    const [candidates, quotes, logos, volumes] = await Promise.all([
       this.deps.assets.list({
         status: 'active',
         assetClass: query.class,
         sector: query.sector,
       }),
       this.deps.quotes?.latestQuotes(),
+      this.deps.logos?.withLogo(),
+      this.deps.activity?.lastVolumes(),
     ]);
-    const found = searchAssets(candidates, query.q, ASSET_SEARCH_LIMIT);
+    const found = searchAssets(candidates, query.q, ASSET_SEARCH_LIMIT, byVolume(volumes));
     return {
-      assets: found.assets.map((asset) => toPublicAsset(asset, quotes?.get(asset.id) ?? null)),
+      assets: found.assets.map((asset) =>
+        toPublicAsset(asset, quotes?.get(asset.id) ?? null, logos?.has(asset.id) ?? false),
+      ),
       hasMore: found.hasMore,
     };
   }
 
   /**
-   * Colaborador: todos os que passam nos filtros, inclusive desativados, com a situação do
-   * histórico de cotações (SPEC-008), e o total de ativos.
+   * Colaborador: até 100 dos que passam nos filtros, inclusive desativados, com a situação do
+   * histórico (SPEC-008), da coleta (SPEC-009) e da importação (SPEC-040).
    */
   async catalog(query: CatalogQuery): Promise<CatalogListResult> {
-    const [candidates, activeCount, history, quotes, quoteCollection] = await Promise.all([
+    const [
+      candidates,
+      activeCount,
+      pendingReviewCount,
+      history,
+      quotes,
+      quoteCollection,
+      logos,
+      volumes,
+      catalogImport,
+      tradingDays,
+    ] = await Promise.all([
       this.deps.assets.list({
         status: query.status,
         assetClass: query.class,
         sector: query.sector,
+        pendingReview: query.review === 'pending',
       }),
       this.deps.assets.countActive(),
+      this.deps.assets.countPendingReview(),
       this.deps.history?.overview(),
       this.deps.quotes?.latestQuotes(),
       this.deps.quotes?.status(),
+      this.deps.logos?.withLogo(),
+      this.deps.activity?.lastVolumes(),
+      this.deps.imports?.status(),
+      this.deps.imports?.lastTradingDays(),
     ]);
+    const found = searchAssets(candidates, query.q, CATALOG_PAGE_LIMIT, byVolume(volumes));
     return {
-      assets: searchAssets(candidates, query.q).assets.map((asset) => ({
-        ...toCatalogAsset(asset, quotes?.get(asset.id) ?? null),
+      assets: found.assets.map((asset) => ({
+        ...toCatalogAsset(asset, quotes?.get(asset.id) ?? null, logos?.has(asset.id) ?? false),
         history: history?.byAsset.get(asset.id) ?? PENDING_HISTORY,
+        lastTradedOn: tradingDays?.get(asset.ticker) ?? null,
       })),
+      hasMore: found.hasMore,
       activeCount,
+      pendingReviewCount,
       historyYearsWithoutCalendar: history?.yearsWithoutCalendar ?? [],
       quoteCollection: quoteCollection ?? NO_COLLECTION,
+      catalogImport: catalogImport ?? NO_IMPORT,
     };
   }
 
@@ -111,7 +167,17 @@ export class AssetCatalogService {
     return SECTOR_OPTIONS;
   }
 
-  /** Cadastro (CA01). Os dados já chegam validados pelas regras compartilhadas. */
+  /** Logo do ativo (SPEC-040). Sem logo próprio: LogoNotFoundError. */
+  async logo(id: string): Promise<{ type: string; content: Uint8Array }> {
+    const image = await this.deps.logos?.find(id);
+    if (!image) throw new LogoNotFoundError();
+    return image;
+  }
+
+  /**
+   * Cadastro (CA01). Os dados já chegam validados pelas regras compartilhadas. Quem cadastra
+   * escolhe a classificação: o ativo já nasce conferido (SPEC-040).
+   */
   async create(input: NewAsset, collaboratorId: string): Promise<CatalogAsset> {
     const now = this.clock();
     const asset: StoredAsset = {
@@ -123,6 +189,9 @@ export class AssetCatalogService {
       createdAt: now,
       updatedAt: now,
       deactivatedAt: null,
+      origin: 'team',
+      classificationReviewedAt: now,
+      autoDeactivated: false,
     };
     const created = await this.deps.assets.create(asset, {
       at: now,
@@ -144,7 +213,8 @@ export class AssetCatalogService {
 
   /**
    * Edição (CA03): ticker, nome e setor. O setor precisa ser da classe do ativo, conferida com ele
-   * travado. Sem mudança de verdade, nada é gravado e não há auditoria.
+   * travado; mudar o setor também confere a classificação (SPEC-040). Sem mudança de verdade, nada
+   * é gravado e não há auditoria.
    */
   async update(id: string, input: AssetUpdate, collaboratorId: string): Promise<CatalogAsset> {
     return this.change(id, (current) => {
@@ -158,9 +228,28 @@ export class AssetCatalogService {
       if (input.name !== undefined && input.name !== current.name) changes.name = input.name;
       if (input.sector !== undefined && input.sector !== current.sector) {
         changes.sector = input.sector;
+        if (isClassificationPending(current)) changes.classificationReviewedAt = this.clock();
       }
       if (Object.keys(changes).length === 0) return null;
       return this.modification(current, collaboratorId, 'asset_updated', changes);
+    });
+  }
+
+  /**
+   * SPEC-040: o colaborador confere a classificação sugerida sem mudar nada. Já conferida: nada é
+   * gravado e não há auditoria.
+   */
+  async confirmClassification(id: string, collaboratorId: string): Promise<CatalogAsset> {
+    return this.change(id, (current) => {
+      if (!isClassificationPending(current)) return null;
+      const now = this.clock();
+      return this.modification(
+        current,
+        collaboratorId,
+        'classification_confirmed',
+        { classificationReviewedAt: now },
+        now,
+      );
     });
   }
 
@@ -173,7 +262,7 @@ export class AssetCatalogService {
         current,
         collaboratorId,
         'asset_deactivated',
-        { deactivatedAt: now },
+        { deactivatedAt: now, autoDeactivated: false },
         now,
       );
     });
@@ -183,7 +272,10 @@ export class AssetCatalogService {
     return this.change(id, (current) =>
       isActive(current)
         ? null
-        : this.modification(current, collaboratorId, 'asset_reactivated', { deactivatedAt: null }),
+        : this.modification(current, collaboratorId, 'asset_reactivated', {
+            deactivatedAt: null,
+            autoDeactivated: false,
+          }),
     );
   }
 
@@ -193,7 +285,8 @@ export class AssetCatalogService {
   ): Promise<CatalogAsset> {
     const changed = await this.deps.assets.modify(id, decide);
     if (!changed) throw new AssetNotFoundError();
-    return toCatalogAsset(changed);
+    const hasLogo = (await this.deps.logos?.withLogo())?.has(changed.id) ?? false;
+    return toCatalogAsset(changed, null, hasLogo);
   }
 
   private modification(
@@ -218,6 +311,16 @@ export class AssetCatalogService {
   }
 }
 
+/** Os mais negociados primeiro (volume do último pregão); sem volume, por último. */
+function byVolume(
+  volumes: Map<string, string> | undefined,
+): ((a: StoredAsset, b: StoredAsset) => number) | undefined {
+  if (!volumes || volumes.size === 0) return undefined;
+  // Só para ordenar: a precisão do número não importa aqui.
+  const volumeOf = (asset: StoredAsset) => Number(volumes.get(asset.id) ?? -1);
+  return (a, b) => volumeOf(b) - volumeOf(a);
+}
+
 /** Só os campos que mudaram, em JSON. Situação (ativo ou não) em vez da data de desativação. */
 function snapshot(asset: StoredAsset, changes: AssetChanges): { [key: string]: JsonValue } {
   const fields: { [key: string]: JsonValue } = {};
@@ -225,5 +328,9 @@ function snapshot(asset: StoredAsset, changes: AssetChanges): { [key: string]: J
   if ('name' in changes) fields.name = asset.name;
   if ('sector' in changes) fields.sector = asset.sector;
   if ('deactivatedAt' in changes) fields.active = isActive(asset);
+  if ('classificationReviewedAt' in changes) {
+    fields.classificationPending = isClassificationPending(asset);
+    fields.sector = asset.sector;
+  }
   return fields;
 }

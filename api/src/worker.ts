@@ -9,13 +9,16 @@ export interface DailyTask {
 
 /**
  * Tarefa com horário (SPEC-008): roda ao iniciar e depois a cada `everyMinutes` ou todo dia às
- * `dailyAtHour` horas de Brasília. Uma execução nunca começa enquanto a anterior não terminou.
+ * `dailyAtHour`:`dailyAtMinute` de Brasília. Uma execução nunca começa enquanto a anterior não
+ * terminou.
  */
 export interface ScheduledTask {
   name: string;
   run: () => Promise<number>;
   everyMinutes?: number;
   dailyAtHour?: number;
+  /** SPEC-040: a importação do catálogo roda às 08:30. Padrão: na hora cheia. */
+  dailyAtMinute?: number;
 }
 
 export interface WorkerOptions {
@@ -32,11 +35,11 @@ const DAY_MS = 24 * 60 * MINUTE_MS;
 /** Brasília está em UTC−3 o ano todo desde 2019 (sem horário de verão). */
 const BRASILIA_OFFSET_MS = -3 * 60 * MINUTE_MS;
 
-/** Milissegundos até a próxima vez em que o relógio de Brasília marca `hour`:00. */
-export function msUntilBrasiliaHour(now: Date, hour: number): number {
+/** Milissegundos até a próxima vez em que o relógio de Brasília marca `hour`:`minute`. */
+export function msUntilBrasiliaHour(now: Date, hour: number, minute = 0): number {
   const local = now.getTime() + BRASILIA_OFFSET_MS;
   const startOfDay = Math.floor(local / DAY_MS) * DAY_MS;
-  let next = startOfDay + hour * 60 * MINUTE_MS;
+  let next = startOfDay + (hour * 60 + minute) * MINUTE_MS;
   if (next <= local) next += DAY_MS;
   return next - local;
 }
@@ -101,7 +104,7 @@ export function startWorker(options: WorkerOptions): { stop: () => void } {
     if (task.everyMinutes !== undefined) {
       intervals.push(setInterval(() => void run(), task.everyMinutes * MINUTE_MS));
     }
-    const { dailyAtHour } = task;
+    const { dailyAtHour, dailyAtMinute = 0 } = task;
     if (dailyAtHour !== undefined) {
       const schedule = () =>
         later(
@@ -109,7 +112,7 @@ export function startWorker(options: WorkerOptions): { stop: () => void } {
             void run();
             schedule();
           },
-          msUntilBrasiliaHour(now(), dailyAtHour),
+          msUntilBrasiliaHour(now(), dailyAtHour, dailyAtMinute),
         );
       schedule();
     }

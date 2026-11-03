@@ -19,6 +19,10 @@ const ACTION_TO_ACAO: Record<AuditAction, AcaoAuditoria> = {
   asset_deactivated: 'ativo_desativado',
   asset_reactivated: 'ativo_reativado',
   calendar_published: 'calendario_publicado',
+  asset_imported: 'ativo_importado',
+  asset_auto_deactivated: 'ativo_desativado_automaticamente',
+  asset_auto_reactivated: 'ativo_reativado_automaticamente',
+  classification_confirmed: 'classificacao_conferida',
 };
 const ACAO_TO_ACTION = Object.fromEntries(
   Object.entries(ACTION_TO_ACAO).map(([action, acao]) => [acao, action]),
@@ -36,7 +40,7 @@ const ENTIDADE_TO_ENTITY = Object.fromEntries(
  * Linha a gravar, dentro da transação de quem fez a alteração: a mudança e o registro dela entram
  * juntos ou nenhum dos dois entra.
  */
-export function auditRow(entry: AuditEntry): Prisma.RegistroAuditoriaCreateInput {
+export function auditRow(entry: AuditEntry): Prisma.RegistroAuditoriaCreateManyInput {
   return {
     ocorridoEm: entry.at,
     colaboradorId: entry.collaboratorId,

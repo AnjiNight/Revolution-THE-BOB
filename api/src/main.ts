@@ -16,13 +16,18 @@ import { PrismaRefreshTokenRepository } from './modules/identity/infrastructure/
 import { PrismaUserRepository } from './modules/identity/infrastructure/prisma-user-repository.js';
 import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-sender.js';
 import { CalendarService } from './modules/market-data/application/calendar-service.js';
+import { CatalogImport } from './modules/market-data/application/catalog-import.js';
 import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
 import { IntradayCollection } from './modules/market-data/application/intraday-collection.js';
 import { HistoryStatusService } from './modules/market-data/application/history-status-service.js';
 import { B3CotahistSource } from './modules/market-data/infrastructure/b3-cotahist-source.js';
+import { BrapiLogoSource } from './modules/market-data/infrastructure/brapi-logo-source.js';
 import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
 import { PrismaIntradayQuoteRepository } from './modules/market-data/infrastructure/prisma-intraday-quote-repository.js';
+import { PrismaB3TradeRepository } from './modules/market-data/infrastructure/prisma-b3-trade-repository.js';
 import { PrismaCalendarRepository } from './modules/market-data/infrastructure/prisma-calendar-repository.js';
+import { PrismaCatalogImportRepository } from './modules/market-data/infrastructure/prisma-catalog-import-repository.js';
+import { PrismaLogoRepository } from './modules/market-data/infrastructure/prisma-logo-repository.js';
 import {
   PrismaQuoteRepository,
   PrismaTaskRunRepository,
@@ -52,14 +57,38 @@ async function main(): Promise<void> {
 
   let shutdown: () => Promise<void>;
 
-  // SPEC-009: cotações do pregão pela brapi. O servidor só lê; o processador coleta.
+  // Dados de mercado: o servidor só lê; o processador coleta e importa.
+  const brapi = new BrapiQuoteSource({ token: config.brapi.token, baseUrl: config.brapi.baseUrl });
+  const quotes = new PrismaQuoteRepository(prisma);
+  const runs = new PrismaTaskRunRepository(prisma);
+  const trades = new PrismaB3TradeRepository(prisma);
+  const logos = new PrismaLogoRepository(prisma);
+  // SPEC-008: histórico pelos arquivos da B3, que também dizem quem negociou (SPEC-040).
+  const history = new HistoryIngestion({
+    source: new B3CotahistSource({ cacheDir: config.b3CacheDir }),
+    quotes,
+    runs,
+    calendars,
+    trades,
+  });
+  // SPEC-009 e 040: cotações do pregão pela lista da brapi.
   const intraday = new IntradayCollection({
-    source: new BrapiQuoteSource({ token: config.brapi.token, baseUrl: config.brapi.baseUrl }),
+    source: brapi,
     quotes: new PrismaIntradayQuoteRepository(prisma),
-    daily: new PrismaQuoteRepository(prisma),
-    runs: new PrismaTaskRunRepository(prisma),
+    runs,
     calendars,
     monthlyQuota: config.brapi.monthlyQuota,
+  });
+  // SPEC-040: o catálogo com as ações e os FIIs negociados na B3, com logos.
+  const catalogImport = new CatalogImport({
+    source: brapi,
+    trades,
+    scanner: history,
+    catalog: new PrismaCatalogImportRepository(prisma),
+    logos,
+    logoSource: new BrapiLogoSource(),
+    runs,
+    calendars,
   });
 
   if (mode === 'server') {
@@ -91,8 +120,11 @@ async function main(): Promise<void> {
       calendar: new CalendarService({ calendars }),
       catalog: new AssetCatalogService({
         assets: new PrismaAssetRepository(prisma),
-        history: new HistoryStatusService({ quotes: new PrismaQuoteRepository(prisma), calendars }),
+        history: new HistoryStatusService({ quotes, calendars }),
         quotes: intraday,
+        activity: quotes,
+        logos,
+        imports: catalogImport,
       }),
     });
     await app.listen({ host: config.host, port: config.port });
@@ -102,12 +134,6 @@ async function main(): Promise<void> {
   } else {
     const logger = pino(loggerOptions(config.logLevel));
     const users = new PrismaUserRepository(prisma);
-    const history = new HistoryIngestion({
-      source: new B3CotahistSource({ cacheDir: config.b3CacheDir }),
-      quotes: new PrismaQuoteRepository(prisma),
-      runs: new PrismaTaskRunRepository(prisma),
-      calendars,
-    });
     const worker = startWorker({
       logger,
       probe,
@@ -132,6 +158,13 @@ async function main(): Promise<void> {
           name: 'fechamento diário',
           run: async () => (await history.updateDaily())?.records ?? 0,
           dailyAtHour: 8,
+        },
+        // SPEC-040: importação do catálogo às 08:30, depois do fechamento diário das 08:00.
+        {
+          name: 'importação do catálogo',
+          run: async () => (await catalogImport.run())?.records ?? 0,
+          dailyAtHour: 8,
+          dailyAtMinute: 30,
         },
         // SPEC-009: confere a cada 5 minutos se chegou a hora de uma coleta do pregão.
         {

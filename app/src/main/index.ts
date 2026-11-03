@@ -199,6 +199,10 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(ASSET_CHANNELS.deactivate, (_event, id: string) => auth.deactivateAsset(id));
   ipcMain.handle(ASSET_CHANNELS.reactivate, (_event, id: string) => auth.reactivateAsset(id));
+  ipcMain.handle(ASSET_CHANNELS.confirmClassification, (_event, id: string) =>
+    auth.confirmAssetClassification(id),
+  );
+  ipcMain.handle(ASSET_CHANNELS.logo, (_event, id: string) => auth.assetLogo(id));
 
   createWindow();
   app.on('activate', () => {

@@ -1,5 +1,4 @@
 import {
-  FREE_COLLECTION_CAPACITY,
   normalizeTicker,
   validateAssetUpdate,
   validateNewAsset,
@@ -8,16 +7,18 @@ import {
   type AssetStatusFilter,
   type AssetUpdateInput,
   type CatalogAsset,
+  type CatalogImportStatus,
+  type CatalogListAsset,
   type CatalogQuery,
   type FieldErrors,
   type SectorCode,
 } from '@simulador/shared';
-import { CheckCircle, Plus, Warning } from '@phosphor-icons/react';
+import { CheckCircle, Info, Plus, Warning } from '@phosphor-icons/react';
 import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError, ClientResult } from '../../../shared/auth-ipc';
 import '../assets.css';
-import { formatCalendarDay, formatYears } from '../format';
+import { formatCalendarDay, formatDate, formatYears, quoteMoment } from '../format';
 import { useAssetQuery } from '../useAssetQuery';
 import {
   AssetFilters,
@@ -29,12 +30,14 @@ import {
   useSectorName,
   type AssetFilterState,
 } from './AssetFields';
+import { AssetLogo } from './AssetLogo';
 import { QuoteCollectionLine, QuoteText } from './QuoteText';
 import { SelectField } from './SelectField';
 import { TextField } from './TextField';
 
 type FormState = { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; asset: CatalogAsset };
-type NoticeKind = 'created' | 'updated' | 'unchanged' | 'deactivated' | 'reactivated';
+type NoticeKind = 'created' | 'updated' | 'unchanged' | 'deactivated' | 'reactivated' | 'confirmed';
+type ReviewFilter = 'all' | 'pending';
 
 const STATUS_OPTIONS: ReadonlyArray<{ value: AssetStatusFilter; label: string }> = [
   { value: 'all', label: 'catalog.statusAll' },
@@ -42,16 +45,27 @@ const STATUS_OPTIONS: ReadonlyArray<{ value: AssetStatusFilter; label: string }>
   { value: 'inactive', label: 'catalog.statusInactive' },
 ];
 
+const REVIEW_OPTIONS: ReadonlyArray<{ value: ReviewFilter; label: string }> = [
+  { value: 'all', label: 'catalog.reviewAll' },
+  { value: 'pending', label: 'catalog.reviewPending' },
+];
+
 /**
- * Tela "Ativos" da Área do colaborador (SPEC-006 §5.3): busca com filtro de situação, contador
- * com aviso acima de 50 (DA16), cadastro, edição, desativação com confirmação e reativação.
+ * Tela "Ativos" da Área do colaborador (SPECs 006 e 040, §5.3): busca com filtros de situação e
+ * de classificação a revisar, contadores, situação da importação diária e da coleta, cadastro,
+ * edição, conferência da classificação, desativação com confirmação e reativação.
  */
 export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => void }) {
   const { t } = useTranslation();
   const sectorName = useSectorName();
   const [filters, setFilters] = useState<AssetFilterState>(EMPTY_FILTERS);
   const [status, setStatus] = useState<AssetStatusFilter>('all');
-  const query: CatalogQuery = { ...toSearchQuery(filters), status };
+  const [review, setReview] = useState<ReviewFilter>('all');
+  const query: CatalogQuery = {
+    ...toSearchQuery(filters),
+    status,
+    ...(review === 'pending' ? { review } : {}),
+  };
   const { data, error, loading, reload } = useAssetQuery(
     query,
     window.api.assets.catalog,
@@ -142,9 +156,9 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
   };
 
   const activeCount = data?.activeCount ?? 0;
-  const overCapacity = activeCount > FREE_COLLECTION_CAPACITY;
+  const pendingReview = data?.pendingReviewCount ?? 0;
   const yearsWithoutCalendar = data?.historyYearsWithoutCalendar ?? [];
-  const filtered = hasFilters(filters) || status !== 'all';
+  const filtered = hasFilters(filters) || status !== 'all' || review !== 'all';
 
   return (
     <div className="assets-view catalog-view">
@@ -158,13 +172,14 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
           <div>
             <p className="catalog-count">
               {data ? t('catalog.activeCount', { count: activeCount }) : t('loading')}
+              {data && pendingReview > 0 && (
+                <span className="review-count">
+                  {' · '}
+                  {t('catalog.pendingReviewCount', { count: pendingReview })}
+                </span>
+              )}
             </p>
-            {overCapacity && (
-              <p className="catalog-capacity">
-                <Warning weight="fill" aria-hidden="true" />
-                {t('catalog.capacityWarning', { limit: FREE_COLLECTION_CAPACITY })}
-              </p>
-            )}
+            {data && <CatalogImportLine status={data.catalogImport} />}
             {data && <QuoteCollectionLine status={data.quoteCollection} />}
             {yearsWithoutCalendar.length > 0 && (
               <p className="catalog-capacity">
@@ -215,6 +230,17 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
               </option>
             ))}
           </SelectField>
+          <SelectField
+            label={t('catalog.reviewFilter')}
+            value={review}
+            onChange={(value) => setReview(value as ReviewFilter)}
+          >
+            {REVIEW_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {t(option.label)}
+              </option>
+            ))}
+          </SelectField>
         </AssetFilters>
 
         <div className="assets-summary">
@@ -229,6 +255,7 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
               onClick={() => {
                 setFilters(EMPTY_FILTERS);
                 setStatus('all');
+                setReview('all');
               }}
             >
               {t('assets.clear')}
@@ -296,15 +323,24 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
                       }
                     >
                       <td>
-                        <span className="asset-ticker">{asset.ticker}</span>
-                        <span className="asset-name">{asset.name}</span>
-                        <HistoryLine history={asset.history} />
-                        <span className={`class-badge class-${asset.class} narrow-only`}>
-                          {t(`assets.class.${asset.class}`)}
-                        </span>
-                        <span className="narrow-only quote-narrow">
-                          <QuoteText quote={asset.quote} />
-                        </span>
+                        <div className="asset-identity">
+                          <AssetLogo asset={asset} />
+                          <div className="asset-identity-text">
+                            <span className="asset-ticker">{asset.ticker}</span>
+                            <span className="asset-name">{asset.name}</span>
+                            <HistoryLine history={asset.history} />
+                            <AutoDeactivatedLine asset={asset} />
+                            {asset.classificationPending && (
+                              <span className="review-badge">{t('catalog.reviewBadge')}</span>
+                            )}
+                            <span className={`class-badge class-${asset.class} narrow-only`}>
+                              {t(`assets.class.${asset.class}`)}
+                            </span>
+                            <span className="narrow-only quote-narrow">
+                              <QuoteText quote={asset.quote} />
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="wide-only">
                         <span className={`class-badge class-${asset.class}`}>
@@ -399,8 +435,68 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
             </tbody>
           </table>
         )}
+        {data?.hasMore && <p className="field-hint">{t('catalog.hasMore')}</p>}
       </section>
     </div>
+  );
+}
+
+/** Situação da importação diária do catálogo (SPEC-040 §5.3). */
+function CatalogImportLine({ status }: { status: CatalogImportStatus }) {
+  const { t, i18n } = useTranslation();
+  if (!status.lastRunAt) {
+    return (
+      <p className="quote-collection-line">
+        <Info weight="fill" aria-hidden="true" />
+        <span>{t('catalog.import.never')}</span>
+      </p>
+    );
+  }
+  const moment = quoteMoment(status.lastRunAt, i18n.language);
+  const when = moment.today
+    ? t('catalog.quotes.whenToday', { time: moment.time })
+    : t('catalog.quotes.whenOther', { date: moment.date, time: moment.time });
+  return (
+    <div className="quote-collection">
+      <p className="quote-collection-line">
+        <Info weight="fill" aria-hidden="true" />
+        <span>
+          {t('catalog.import.lastRun', {
+            when,
+            created: status.created,
+            deactivated: status.deactivated,
+            reactivated: status.reactivated,
+          })}
+        </span>
+      </p>
+      {status.lastStatus === 'falha' && (
+        <p className="catalog-capacity">
+          <Warning weight="fill" aria-hidden="true" />
+          {t('catalog.import.failed')}
+        </p>
+      )}
+      {status.lastStatus !== 'falha' && status.b3Behind && (
+        <p className="catalog-capacity">
+          <Warning weight="fill" aria-hidden="true" />
+          {t('catalog.import.b3Behind')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Desativado pelo processador: desde quando não há negócio na B3 (SPEC-040 §5.3). */
+function AutoDeactivatedLine({ asset }: { asset: CatalogListAsset }) {
+  const { t, i18n } = useTranslation();
+  if (asset.active || !asset.autoDeactivated) return null;
+  return (
+    <span className="asset-history is-warn">
+      {asset.lastTradedOn
+        ? t('catalog.autoDeactivated', {
+            date: formatCalendarDay(asset.lastTradedOn, i18n.language),
+          })
+        : t('catalog.autoDeactivatedNever')}
+    </span>
   );
 }
 
@@ -438,7 +534,7 @@ function AssetForm({
   onCancel: () => void;
   onFailed: (code: ClientAuthError) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [ticker, setTicker] = useState(asset?.ticker ?? '');
   const [name, setName] = useState(asset?.name ?? '');
   const [assetClass, setAssetClass] = useState<AssetClass | ''>(asset?.class ?? '');
@@ -452,6 +548,15 @@ function AssetForm({
   useEffect(() => {
     formRef.current?.querySelector('input')?.focus();
   }, []);
+
+  const confirm = async () => {
+    if (!asset) return;
+    setError(undefined);
+    setSubmitting(true);
+    const result = await window.api.assets.confirmClassification(asset.id);
+    setSubmitting(false);
+    handle(result, 'confirmed');
+  };
 
   const handle = (result: ClientResult<CatalogAsset>, kind: NoticeKind) => {
     if (result.ok) return onSaved(kind, result.data);
@@ -503,6 +608,12 @@ function AssetForm({
       <h2 id={titleId}>
         {asset ? t('catalog.editTitle', { ticker: asset.ticker }) : t('catalog.newTitle')}
       </h2>
+      {asset?.origin === 'import' && (
+        <p className="import-origin">
+          {t('catalog.importedOn', { date: formatDate(asset.createdAt, i18n.language) })}
+          {asset.classificationPending && ` ${t('catalog.importedPending')}`}
+        </p>
+      )}
       {error && (
         <p className="form-error" role="alert">
           {t(`authErrors.${error}`)}
@@ -556,6 +667,16 @@ function AssetForm({
         <button type="submit" disabled={submitting}>
           {submitting ? t('auth.submitting') : asset ? t('catalog.save') : t('catalog.create')}
         </button>
+        {asset?.classificationPending && (
+          <button
+            type="button"
+            className="secondary"
+            disabled={submitting}
+            onClick={() => void confirm()}
+          >
+            {t('catalog.confirmClassification')}
+          </button>
+        )}
         <button type="button" className="secondary" disabled={submitting} onClick={onCancel}>
           {t('auth.cancel')}
         </button>

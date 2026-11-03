@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildTestApp } from '../../../testing/test-app.js';
 import { createCollaborator } from '../../identity/application/create-collaborator.js';
 import { suggestNonTradingDays } from '../../market-data/domain/calendar-suggestion.js';
+import { listed, svgLogo } from '../../market-data/testing/fakes.js';
 
 type TestApp = Awaited<ReturnType<typeof buildTestApp>>;
 
@@ -86,10 +87,14 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
         class: 'stock',
         sector: 'petroleo_gas_biocombustiveis',
         quote: null,
+        hasLogo: false,
         active: true,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
         deactivatedAt: null,
+        origin: 'team',
+        classificationPending: false,
+        autoDeactivated: false,
       });
       const fii = await create(mxrf11);
       expect(fii).toMatchObject({ ticker: 'MXRF11', class: 'fii', sector: 'recebiveis' });
@@ -296,6 +301,7 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
             class: 'fii',
             sector: 'recebiveis',
             quote: null,
+            hasLogo: false,
           },
         ],
         hasMore: false,
@@ -396,6 +402,7 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
         call('PATCH', assetPath(ASSET_PATHS.asset, stock.id), user, { name: 'Invasão' }),
         call('POST', assetPath(ASSET_PATHS.deactivate, stock.id), user),
         call('POST', assetPath(ASSET_PATHS.reactivate, stock.id), user),
+        call('POST', assetPath(ASSET_PATHS.confirmClassification, stock.id), user),
       ];
       for (const res of await Promise.all(attempts)) {
         expect(res.statusCode).toBe(403);
@@ -409,6 +416,7 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
       for (const [method, url] of [
         ['GET', ASSET_PATHS.search],
         ['GET', ASSET_PATHS.sectors],
+        ['GET', assetPath(ASSET_PATHS.logo, '00000000-0000-4000-8000-000000000000')],
         ['GET', ASSET_PATHS.catalog],
         ['POST', ASSET_PATHS.catalog],
       ] as const) {
@@ -478,23 +486,36 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
         { nonTradingDays: suggestNonTradingDays(2026) },
         collaborator.user.id,
       );
-      await create(petr4);
+      const stock = await create(petr4);
       await create(mxrf11);
-      t.quoteSource.answers.set('PETR4', {
-        price: '38.52',
-        at: new Date('2026-10-22T14:31:00Z'),
-        previousClose: '38.06',
-      });
-      t.quoteSource.answers.set('MXRF11', { error: 'not_found' });
+      // Fechamento de ontem guardado pela B3 (SPEC-008): a variação é sobre ele.
+      await t.quotes.save(
+        [
+          {
+            assetId: stock.id,
+            date: '2026-10-21',
+            open: '38.06',
+            high: '38.06',
+            low: '38.06',
+            close: '38.06',
+            average: '38.06',
+            trades: 1,
+            volume: '1.00',
+          },
+        ],
+        'b3_cotahist',
+      );
+      // SPEC-040: a lista da brapi traz o PETR4; o MXRF11 não veio.
+      t.quoteSource.answers.set('stock', [listed('PETR4', { price: '38.52', change: '1.21' })]);
     });
 
-    it('a busca do usuário mostra a última cotação, com a variação e o horário', async () => {
+    it('a busca do usuário mostra a última cotação, com a variação e o horário da coleta', async () => {
       await t.intraday.collect();
       const { assets } = await search();
       expect(assets.find((asset) => asset.ticker === 'PETR4')?.quote).toEqual({
         price: '38.52',
         change: '1.21',
-        at: '2026-10-22T14:31:00.000Z',
+        at: now.toISOString(),
         source: 'brapi',
       });
       // Sem cotação ainda: quote vazio, e a tela mostra "Sem cotação ainda".
@@ -510,14 +531,207 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
       });
       expect(body.quoteCollection).toEqual({
         lastRunAt: now.toISOString(),
-        lastStatus: 'parcial',
+        lastStatus: 'sucesso',
         intervalMinutes: 30,
-        requestsUsed: 2,
+        requestsUsed: 0,
         quota: 15_000,
         quotaResetsAt: null,
         quotaExhausted: false,
         tokenConfigured: true,
+        quotaCounted: false,
       });
+    });
+  });
+
+  describe('catálogo completo da B3 (SPEC-040)', () => {
+    const list = async (query = '') => {
+      const res = await call('GET', `${ASSET_PATHS.catalog}${query}`, collaborator);
+      expect(res.statusCode, res.body).toBe(200);
+      return res.json<CatalogListResult>();
+    };
+
+    /** Volume do último pregão da B3 (a busca sem texto ordena por ele). */
+    const volume = (assetId: string, value: string) =>
+      t.quotes.save(
+        [
+          {
+            assetId,
+            date: '2026-10-21',
+            open: '10',
+            high: '10',
+            low: '10',
+            close: '10',
+            average: '10',
+            trades: 1,
+            volume: value,
+          },
+        ],
+        'b3_cotahist',
+      );
+
+    /** Importa pela tarefa do processador, com a B3 em dia. */
+    const importCatalog = async () => {
+      await t.calendar.publish(
+        2026,
+        { nonTradingDays: suggestNonTradingDays(2026) },
+        collaborator.user.id,
+      );
+      t.quoteSource.answers.set('stock', [
+        listed('PETR4', { name: 'PETROLEO BRASILEIRO S.A.', subsector: 'Bancos' }),
+        listed('ITUB4', { subsector: 'Bancos' }),
+      ]);
+      t.quoteSource.answers.set('fii', [listed('MXRF11', { subsector: 'Logística' })]);
+      t.trades
+        .traded('PETR4', '2026-10-21')
+        .traded('ITUB4', '2026-10-21')
+        .traded('MXRF11', '2026-10-21');
+      return t.catalogImport.run();
+    };
+
+    it('a busca sem texto mostra os mais negociados primeiro (CA09)', async () => {
+      const a = await create({ ...petr4, ticker: 'AAAA3', name: 'Pouco negociada' });
+      const b = await create({ ...petr4, ticker: 'BBBB3', name: 'Muito negociada' });
+      await create({ ...petr4, ticker: 'CCCC3', name: 'Sem negócio guardado' });
+      await volume(a.id, '1000.00');
+      await volume(b.id, '9000000.00');
+      expect((await search()).assets.map((asset) => asset.ticker)).toEqual([
+        'BBBB3',
+        'AAAA3',
+        'CCCC3',
+      ]);
+      // Com texto, a ordem continua a da SPEC-006.
+      expect((await search('?q=a')).assets[0]?.ticker).toBe('AAAA3');
+    });
+
+    it('a importação cria os ativos a revisar; o colaborador filtra, conta e confere (CA06)', async () => {
+      expect(await importCatalog()).toMatchObject({ status: 'sucesso', records: 3 });
+      const all = await list();
+      expect(all.pendingReviewCount).toBe(3);
+      expect(all.catalogImport).toEqual({
+        lastRunAt: now.toISOString(),
+        lastStatus: 'sucesso',
+        created: 3,
+        deactivated: 0,
+        reactivated: 0,
+        b3Behind: false,
+      });
+      const petr = all.assets.find((asset) => asset.ticker === 'PETR4');
+      expect(petr).toMatchObject({
+        name: 'PETROLEO BRASILEIRO S.A.',
+        sector: 'financeiro', // a sugestão errada que o colaborador corrige
+        origin: 'import',
+        classificationPending: true,
+        hasLogo: true,
+        lastTradedOn: '2026-10-21',
+      });
+
+      // Confere sem mudar o setor do ITUB4; corrige o do PETR4 (editar também confere).
+      const itub = all.assets.find((asset) => asset.ticker === 'ITUB4');
+      const confirmed = await call(
+        'POST',
+        assetPath(ASSET_PATHS.confirmClassification, itub?.id ?? ''),
+        collaborator,
+      );
+      expect(confirmed.statusCode).toBe(200);
+      expect(confirmed.json<{ asset: CatalogAsset }>().asset).toMatchObject({
+        ticker: 'ITUB4',
+        classificationPending: false,
+        sector: 'financeiro',
+      });
+      const edited = await call(
+        'PATCH',
+        assetPath(ASSET_PATHS.asset, petr?.id ?? ''),
+        collaborator,
+        {
+          sector: 'petroleo_gas_biocombustiveis',
+        },
+      );
+      expect(edited.json<{ asset: CatalogAsset }>().asset.classificationPending).toBe(false);
+
+      const pending = await list('?review=pending');
+      expect(pending.assets.map((asset) => asset.ticker)).toEqual(['MXRF11']);
+      expect(pending.pendingReviewCount).toBe(1);
+
+      // Conferir de novo não muda nada nem grava auditoria.
+      await call(
+        'POST',
+        assetPath(ASSET_PATHS.confirmClassification, itub?.id ?? ''),
+        collaborator,
+      );
+      expect(t.audit.forEntity('asset', itub?.id ?? '').map((entry) => entry.action)).toEqual([
+        'asset_imported',
+        'classification_confirmed',
+      ]);
+      expect(t.audit.forEntity('asset', itub?.id ?? '')[1]).toMatchObject({
+        collaboratorId: collaborator.user.id,
+        details: {
+          before: { classificationPending: true, sector: 'financeiro' },
+          after: { classificationPending: false, sector: 'financeiro' },
+        },
+      });
+      expect(t.audit.forEntity('asset', itub?.id ?? '')[0]?.collaboratorId).toBeNull();
+    });
+
+    it('filtro de classificação inválido dá validation_error', async () => {
+      const res = await call('GET', `${ASSET_PATHS.catalog}?review=todos`, collaborator);
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ fields: { review: 'invalid_option' } });
+    });
+
+    it('logo: a rota entrega a imagem; sem logo próprio, 404 (CA07)', async () => {
+      await importCatalog();
+      const petr = (await search('?q=PETR4')).assets[0];
+      expect(petr?.hasLogo).toBe(true);
+      const logo = await call('GET', assetPath(ASSET_PATHS.logo, petr?.id ?? ''), user);
+      expect(logo.statusCode).toBe(200);
+      expect(logo.headers['content-type']).toBe('image/svg+xml');
+      expect(logo.headers['cache-control']).toBe('private, max-age=86400');
+      expect(logo.headers['content-security-policy']).toContain("default-src 'none'");
+      expect(logo.rawPayload).toEqual(
+        Buffer.from(svgLogo('https://icons.brapi.dev/icons/PETR4.svg').content),
+      );
+
+      const team = await create({ ...petr4, ticker: 'SEML3' });
+      const missing = await call('GET', assetPath(ASSET_PATHS.logo, team.id), user);
+      expect(missing.statusCode).toBe(404);
+      expect(missing.json()).toMatchObject({ error: 'logo_not_found' });
+      const invalid = await call('GET', assetPath(ASSET_PATHS.logo, 'nao-e-uuid'), user);
+      expect(invalid.statusCode).toBe(404);
+    });
+
+    it('desativado pelo processador: a lista diz e mostra o último negócio; o colaborador reativa', async () => {
+      const old = await create({ ...petr4, ticker: 'OLDD3' });
+      t.trades.traded('OLDD3', '2026-06-30');
+      expect(await importCatalog()).toMatchObject({ totals: { deactivated: 1 } });
+      const listed3 = (await list('?q=OLDD3')).assets[0];
+      expect(listed3).toMatchObject({
+        active: false,
+        autoDeactivated: true,
+        lastTradedOn: '2026-06-30',
+      });
+      expect((await search('?q=OLDD3')).assets).toEqual([]);
+
+      const res = await call('POST', assetPath(ASSET_PATHS.reactivate, old.id), collaborator);
+      expect(res.json<{ asset: CatalogAsset }>().asset).toMatchObject({
+        active: true,
+        autoDeactivated: false,
+      });
+    });
+
+    it('lista do colaborador: no máximo 100 por vez, avisando que há mais', async () => {
+      for (let i = 0; i < 101; i += 1) {
+        const letters = String.fromCharCode(65 + Math.floor(i / 26), 65 + (i % 26));
+        await create({
+          ticker: `TS${letters}3`,
+          name: `Ativo ${i}`,
+          class: 'stock',
+          sector: 'outros',
+        });
+      }
+      const page = await list();
+      expect(page.assets).toHaveLength(100);
+      expect(page.hasMore).toBe(true);
+      expect(page.activeCount).toBe(101);
     });
   });
 });

@@ -173,6 +173,16 @@ describe('filtros da busca', () => {
       fields: { sector: 'wrong_class' },
     });
   });
+
+  it('SPEC-040: filtro dos importados a revisar', () => {
+    expect(validateCatalogQuery({ review: 'pending' })).toEqual({
+      success: true,
+      data: { q: '', status: 'all', review: 'pending' },
+    });
+    expect(validateCatalogQuery({ review: 'todos' })).toMatchObject({
+      fields: { review: 'invalid_option' },
+    });
+  });
 });
 
 describe('rotas', () => {

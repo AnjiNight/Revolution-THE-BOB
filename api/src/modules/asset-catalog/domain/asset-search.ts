@@ -8,14 +8,17 @@ interface Searchable {
 /**
  * Busca por texto (SPEC-006 §4): ticker que começa com o texto ou nome que contém o texto, sem
  * diferenciar maiúsculas e acentos. Ordem: ticker igual, ticker que começa com o texto e, por
- * fim, nome. Sem texto, tudo em ordem de ticker.
+ * fim, nome. Sem texto, a ordem de `emptyOrder` (SPEC-040: os mais negociados primeiro) e depois
+ * o ticker.
  *
- * Roda em memória depois dos filtros do banco: o catálogo é curado (dezenas de ativos, DA16).
+ * Roda em memória depois dos filtros do banco: mesmo com a bolsa inteira (SPEC-040), são algumas
+ * centenas de ativos.
  */
 export function searchAssets<T extends Searchable>(
   assets: readonly T[],
   text: string,
   limit = Number.POSITIVE_INFINITY,
+  emptyOrder?: (a: T, b: T) => number,
 ): { assets: T[]; hasMore: boolean } {
   const query = normalizeSearchText(text);
   const tickerQuery = query.replace(/ /g, '').toUpperCase();
@@ -28,6 +31,7 @@ export function searchAssets<T extends Searchable>(
     (a, b) =>
       a.rank - b.rank ||
       (a.rank === NAME_MATCH ? a.name.localeCompare(b.name) : 0) ||
+      (query === '' && emptyOrder ? emptyOrder(a.asset, b.asset) : 0) ||
       a.asset.ticker.localeCompare(b.asset.ticker),
   );
   return {

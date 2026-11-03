@@ -68,6 +68,9 @@ const api: DesktopApi = {
     update: (id, input) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.update, id, input),
     deactivate: (id) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.deactivate, id),
     reactivate: (id) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.reactivate, id),
+    confirmClassification: (id) =>
+      invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.confirmClassification, id),
+    logo: (id) => invoke<ClientResult<string | null>>(ASSET_CHANNELS.logo, id),
   },
 };
 

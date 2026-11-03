@@ -41,7 +41,10 @@ export function QuoteText({ quote }: { quote: AssetQuote | null }) {
   );
 }
 
-/** Situação da coleta do pregão na tela do colaborador: última coleta, intervalo, cota e avisos. */
+/**
+ * Situação da coleta do pregão na tela do colaborador: última coleta, intervalo e avisos. A lista
+ * da brapi não gasta a cota (SPEC-040); se um dia gastar, a linha mostra o uso do ciclo.
+ */
 export function QuoteCollectionLine({ status }: { status: QuoteCollectionStatus }) {
   const { t, i18n } = useTranslation();
   const number = (value: number) => new Intl.NumberFormat(i18n.language).format(value);
@@ -62,19 +65,15 @@ export function QuoteCollectionLine({ status }: { status: QuoteCollectionStatus 
             ? t('catalog.quotes.lastRun', { when: when(status.lastRunAt) })
             : t('catalog.quotes.never')}
           {' · '}
-          {t('catalog.quotes.usage', {
-            interval: status.intervalMinutes,
-            used: number(status.requestsUsed),
-            quota: number(status.quota),
-          })}
+          {status.quotaCounted
+            ? t('catalog.quotes.usage', {
+                interval: status.intervalMinutes,
+                used: number(status.requestsUsed),
+                quota: number(status.quota),
+              })
+            : t('catalog.quotes.free', { interval: status.intervalMinutes })}
         </span>
       </p>
-      {!status.tokenConfigured && (
-        <p className="catalog-capacity">
-          <Warning weight="fill" aria-hidden="true" />
-          {t('catalog.quotes.noToken')}
-        </p>
-      )}
       {status.quotaExhausted && (
         <p className="catalog-capacity">
           <Warning weight="fill" aria-hidden="true" />

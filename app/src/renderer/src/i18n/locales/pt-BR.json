@@ -372,7 +372,7 @@
   "assets": {
     "title": "Ativos",
     "subtitle": "Busque ações e fundos imobiliários (FIIs) para estudar e simular.",
-    "catalogNote": "O catálogo tem os ativos escolhidos pela equipe.",
+    "catalogNote": "O catálogo tem as ações e os FIIs negociados na B3 nos últimos 3 meses.",
     "searchLabel": "Buscar por ticker ou nome",
     "searchHint": "Por exemplo: PETR4, Itaú ou logística.",
     "classFilter": "Classe",
@@ -384,7 +384,7 @@
     "searching": "Buscando…",
     "hasMore": "Mostrando os 50 primeiros. Refine a busca para ver os outros.",
     "empty": "Nenhum ativo encontrado com essa busca.",
-    "emptyCatalog": "O catálogo ainda está vazio. A equipe está cadastrando os ativos.",
+    "emptyCatalog": "O catálogo ainda está vazio. As ações e os FIIs chegam com a importação diária.",
     "listLabel": "Resultado da busca de ativos",
     "columns": {
       "asset": "Ativo",
@@ -449,7 +449,6 @@
     "statusActive": "Ativos",
     "statusInactive": "Desativados",
     "activeCount": "Ativos no catálogo: {{count}}",
-    "capacityWarning": "A coleta gratuita de cotações comporta cerca de {{limit}} ativos. Acima disso, desative alguns ou use um plano pago de cotações.",
     "new": "Novo ativo",
     "newTitle": "Novo ativo",
     "editTitle": "Editar {{ticker}}",
@@ -477,7 +476,7 @@
     "active": "Ativo",
     "inactive": "Desativado",
     "empty": "Nenhum ativo com esses filtros.",
-    "emptyCatalog": "Nenhum ativo cadastrado ainda. Comece por \"Novo ativo\".",
+    "emptyCatalog": "Nenhum ativo ainda. A importação diária traz as ações e os FIIs da B3; você também pode usar \"Novo ativo\".",
     "listLabel": "Ativos do catálogo",
     "historyPending": "Histórico: carregando…",
     "historyLoaded": "Histórico de {{from}} a {{to}}",
@@ -489,11 +488,29 @@
       "whenToday": "às {{time}}",
       "whenOther": "em {{date}} às {{time}}",
       "usage": "a cada {{interval}} min · {{used}} de {{quota}} consultas no ciclo da brapi",
-      "noToken": "Sem token da brapi no servidor: só PETR4, MGLU3, VALE3 e ITUB4 recebem cotação. Cada pessoa da equipe gera o próprio token (veja o README).",
       "exhausted": "A cota da brapi acabou: as cotações voltam {{when}}.",
       "exhaustedUnknown": "A cota da brapi acabou: as cotações voltam quando ela renovar.",
       "slower": "Para a cota durar até o fim do ciclo, as cotações são buscadas a cada {{interval}} minutos.",
-      "lastFailed": "A última coleta teve falhas. Os detalhes ficam no registro de execuções."
+      "lastFailed": "A última coleta teve falhas. Os detalhes ficam no registro de execuções.",
+      "free": "a cada {{interval}} min · lista da brapi, sem gastar a cota"
+    },
+    "pendingReviewCount": "Classificação a revisar: {{count}}",
+    "reviewFilter": "Classificação",
+    "reviewAll": "Todas",
+    "reviewPending": "A revisar",
+    "reviewBadge": "Classificação a revisar",
+    "hasMore": "Mostrando os 100 primeiros. Refine a busca para ver os outros.",
+    "autoDeactivated": "Desativado automaticamente: sem negócio na B3 desde {{date}}",
+    "autoDeactivatedNever": "Desativado automaticamente: sem negócio na B3 nos últimos 3 meses",
+    "importedOn": "Importado da B3 em {{date}}.",
+    "importedPending": "A classificação foi sugerida pela importação: confira o setor ou segmento.",
+    "confirmClassification": "Confirmar classificação",
+    "confirmed": "Classificação de {{ticker}} conferida.",
+    "import": {
+      "never": "Importação da B3: nenhuma ainda",
+      "lastRun": "Importação da B3 {{when}} · novos: {{created}} · desativados: {{deactivated}} · reativados: {{reactivated}}",
+      "failed": "A última importação falhou: a lista da brapi não respondeu. O catálogo não mudou; ela roda de novo no próximo horário.",
+      "b3Behind": "Os arquivos da B3 estavam atrasados: ninguém foi desativado nesta importação."
     }
   }
 }

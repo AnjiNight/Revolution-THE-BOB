@@ -372,7 +372,7 @@
   "assets": {
     "title": "Assets",
     "subtitle": "Search stocks and Brazilian REITs (FIIs) to study and simulate.",
-    "catalogNote": "The catalog has the assets chosen by the team.",
+    "catalogNote": "The catalog has the stocks and REITs (FIIs) traded on B3 in the last 3 months.",
     "searchLabel": "Search by ticker or name",
     "searchHint": "For example: PETR4, Itaú or logistics.",
     "classFilter": "Class",
@@ -384,7 +384,7 @@
     "searching": "Searching…",
     "hasMore": "Showing the first 50. Refine the search to see the others.",
     "empty": "No assets match this search.",
-    "emptyCatalog": "The catalog is still empty. The team is adding the assets.",
+    "emptyCatalog": "The catalog is still empty. Stocks and REITs arrive with the daily import.",
     "listLabel": "Asset search results",
     "columns": {
       "asset": "Asset",
@@ -449,7 +449,6 @@
     "statusActive": "Active",
     "statusInactive": "Deactivated",
     "activeCount": "Active assets in the catalog: {{count}}",
-    "capacityWarning": "The free quote collection supports about {{limit}} assets. Above that, deactivate some or use a paid quote plan.",
     "new": "New asset",
     "newTitle": "New asset",
     "editTitle": "Edit {{ticker}}",
@@ -477,7 +476,7 @@
     "active": "Active",
     "inactive": "Deactivated",
     "empty": "No assets match these filters.",
-    "emptyCatalog": "No assets yet. Start with \"New asset\".",
+    "emptyCatalog": "No assets yet. The daily import brings the stocks and REITs from B3; you can also use \"New asset\".",
     "listLabel": "Catalog assets",
     "historyPending": "History: loading…",
     "historyLoaded": "History from {{from}} to {{to}}",
@@ -489,11 +488,29 @@
       "whenToday": "at {{time}}",
       "whenOther": "on {{date}} at {{time}}",
       "usage": "every {{interval}} min · {{used}} of {{quota}} requests in the brapi cycle",
-      "noToken": "No brapi token on the server: only PETR4, MGLU3, VALE3 and ITUB4 get quotes. Each team member generates their own token (see the README).",
       "exhausted": "The brapi quota ran out: quotes come back {{when}}.",
       "exhaustedUnknown": "The brapi quota ran out: quotes come back when it renews.",
       "slower": "So the quota lasts until the end of the cycle, quotes are fetched every {{interval}} minutes.",
-      "lastFailed": "The last collection had failures. The details are in the run log."
+      "lastFailed": "The last collection had failures. The details are in the run log.",
+      "free": "every {{interval}} min · brapi list, no quota used"
+    },
+    "pendingReviewCount": "Classification to review: {{count}}",
+    "reviewFilter": "Classification",
+    "reviewAll": "All",
+    "reviewPending": "To review",
+    "reviewBadge": "Classification to review",
+    "hasMore": "Showing the first 100. Refine the search to see the others.",
+    "autoDeactivated": "Deactivated automatically: no trades on B3 since {{date}}",
+    "autoDeactivatedNever": "Deactivated automatically: no trades on B3 in the last 3 months",
+    "importedOn": "Imported from B3 on {{date}}.",
+    "importedPending": "The classification was suggested by the import: check the sector or segment.",
+    "confirmClassification": "Confirm classification",
+    "confirmed": "{{ticker}} classification confirmed.",
+    "import": {
+      "never": "B3 import: none yet",
+      "lastRun": "B3 import {{when}} · new: {{created}} · deactivated: {{deactivated}} · reactivated: {{reactivated}}",
+      "failed": "The last import failed: the brapi list did not respond. The catalog did not change; it runs again at the next scheduled time.",
+      "b3Behind": "The B3 files were late: nobody was deactivated in this import."
     }
   }
 }

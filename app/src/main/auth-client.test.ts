@@ -18,6 +18,11 @@ const profile = {
   createdAt: '2026-10-10T12:00:00.000Z',
 };
 
+/** SPEC-040: ativos com logo, sem logo e com resposta estranha no servidor falso. */
+const LOGO_SVG = '<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>';
+const NO_LOGO_ID = '0d9e1f7a-1111-4222-8333-000000000404';
+const HTML_LOGO_ID = '0d9e1f7a-1111-4222-8333-000000000415';
+
 const ASSET = {
   id: '0d9e1f7a-1111-4222-8333-444455556666',
   ticker: 'PETR4',
@@ -160,6 +165,18 @@ class FakeServer {
         return json(200, { asset: { ...ASSET, active: false } });
       case assetPath(ASSET_PATHS.asset, ASSET.id):
         return json(404, { error: 'asset_not_found', message: 'x' });
+      case assetPath(ASSET_PATHS.confirmClassification, ASSET.id):
+        return json(200, { asset: { ...ASSET, classificationPending: false } });
+      // SPEC-040: o logo exige sessão; volta como imagem, não como JSON.
+      case assetPath(ASSET_PATHS.logo, ASSET.id): {
+        const token = headers.authorization?.replace('Bearer ', '') ?? '';
+        if (!this.validAccess.has(token)) return json(401, { error: 'unauthorized', message: 'x' });
+        return new Response(LOGO_SVG, { headers: { 'content-type': 'image/svg+xml' } });
+      }
+      case assetPath(ASSET_PATHS.logo, NO_LOGO_ID):
+        return json(404, { error: 'logo_not_found', message: 'x' });
+      case assetPath(ASSET_PATHS.logo, HTML_LOGO_ID):
+        return new Response('<html>', { headers: { 'content-type': 'text/html' } });
       default:
         return json(500, { error: 'internal_error', message: 'x' });
     }
@@ -556,5 +573,49 @@ describe('catálogo de ativos (SPEC-006)', () => {
       });
     }
     expect(server.calls).toHaveLength(before);
+  });
+});
+
+describe('catálogo completo da B3 (SPEC-040)', () => {
+  it('o logo vira data: URL para a tela; sem logo ou com resposta estranha, nada', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.assetLogo(ASSET.id)).resolves.toEqual({
+      ok: true,
+      data: `data:image/svg+xml;base64,${Buffer.from(LOGO_SVG).toString('base64')}`,
+    });
+    expect(server.calls.at(-1)).toMatchObject({
+      method: 'GET',
+      path: assetPath(ASSET_PATHS.logo, ASSET.id),
+      authorization: 'Bearer access-1',
+    });
+    await expect(client.assetLogo(NO_LOGO_ID)).resolves.toEqual({ ok: true, data: null });
+    await expect(client.assetLogo(HTML_LOGO_ID)).resolves.toEqual({ ok: true, data: null });
+    await expect(client.assetLogo('../../me')).resolves.toEqual({ ok: false, error: 'unexpected' });
+  });
+
+  it('token de acesso vencido: renova a sessão e pede o logo de novo', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    server.expireAccessTokens();
+    const result = await client.assetLogo(ASSET.id);
+    expect(result.ok && result.data?.startsWith('data:image/svg+xml;base64,')).toBe(true);
+    expect(server.calls.map((call) => call.path).slice(-3)).toEqual([
+      assetPath(ASSET_PATHS.logo, ASSET.id),
+      AUTH_PATHS.refresh,
+      assetPath(ASSET_PATHS.logo, ASSET.id),
+    ]);
+  });
+
+  it('confere a classificação e manda o filtro "a revisar" na lista', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.confirmAssetClassification(ASSET.id)).resolves.toEqual({
+      ok: true,
+      data: { ...ASSET, classificationPending: false },
+    });
+    expect(server.calls.at(-1)).toMatchObject({
+      method: 'POST',
+      path: assetPath(ASSET_PATHS.confirmClassification, ASSET.id),
+    });
+    await client.assetCatalog({ q: '', status: 'all', review: 'pending' });
+    expect(server.calls.at(-1)?.search).toBe('?status=all&review=pending');
   });
 });

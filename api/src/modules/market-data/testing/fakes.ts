@@ -1,16 +1,37 @@
-import { isoDateInBrasilia, type IsoDate, type NonTradingDay } from '@simulador/shared';
+import {
+  isoDateInBrasilia,
+  type AssetClass,
+  type AssetOrigin,
+  type IsoDate,
+  type NonTradingDay,
+  type SectorCode,
+} from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import { InMemoryAuditTrail } from '../../audit/testing/fakes.js';
 import {
   QuoteSourceError,
+  type AssetListing,
+  type AutomaticChange,
+  type B3Trade,
+  type B3TradeRepository,
+  type B3TradeScanner,
   type CalendarRepository,
+  type CatalogEntry,
+  type CatalogImportRepository,
+  type ImportedAsset,
+  type ListedAsset,
+  type ListKind,
+  type LogoImage,
+  type LogoRecord,
+  type LogoRepository,
+  type LogoSource,
+  type QuoteListSource,
   type CotahistSource,
   type DailyQuote,
   type HistoryAsset,
   type IngestionTask,
   type IntradayQuote,
   type IntradayQuoteRepository,
-  type IntradayQuoteSource,
   type LatestIntradayQuote,
   type LoadedYear,
   type NewCalendarPublication,
@@ -22,7 +43,6 @@ import {
   type QuoteUsage,
   type RunResult,
   type RunSummary,
-  type SourceQuote,
   type StoredCalendarYear,
   type TaskRunReader,
   type TaskRunRepository,
@@ -121,6 +141,19 @@ export class InMemoryQuoteRepository implements QuoteRepository {
     return Promise.resolve();
   }
 
+  /** Volume do último pregão da B3 de cada ativo (SPEC-040). */
+  lastVolumes(): Promise<Map<string, string>> {
+    const latest = new Map<string, DailyQuote>();
+    for (const quote of this.quotes.values()) {
+      if (quote.source !== 'b3_cotahist' || quote.volume === null) continue;
+      const current = latest.get(quote.assetId);
+      if (!current || quote.date > current.date) latest.set(quote.assetId, quote);
+    }
+    return Promise.resolve(
+      new Map([...latest].map(([assetId, quote]) => [assetId, quote.volume ?? '0'])),
+    );
+  }
+
   closesOf(assetId: string): Array<[IsoDate, string]> {
     return [...this.quotes.values()]
       .filter((quote) => quote.assetId === assetId)
@@ -162,6 +195,7 @@ export class InMemoryTaskRuns implements TaskRunRepository, TaskRunReader {
       status: run.result?.status ?? null,
       requests: run.result?.requests ?? 0,
       quota: run.result?.quota ?? null,
+      totals: run.result?.totals ?? null,
     });
   }
 
@@ -253,35 +287,48 @@ export class InMemoryIntradayQuoteRepository implements IntradayQuoteRepository 
   }
 }
 
-type FakeAnswer =
-  Partial<Omit<SourceQuote, 'usage'>> | { error: QuoteSourceErrorKind; usage?: QuoteUsage };
+/** Um papel da lista, com valores padrão para os testes. */
+export function listed(ticker: string, overrides: Partial<ListedAsset> = {}): ListedAsset {
+  return {
+    ticker,
+    name: `${ticker} S.A.`,
+    subType: /11$/.test(ticker) ? 'fii' : 'stock',
+    subsector: null,
+    logoUrl: `https://icons.brapi.dev/icons/${ticker}.svg`,
+    price: '10.00',
+    change: '0.50',
+    ...overrides,
+  };
+}
+
+type FakeListFailure = { error: QuoteSourceErrorKind; usage?: QuoteUsage };
+type FakeListAnswer = ListedAsset[] | FakeListFailure;
 
 /**
- * "brapi" em memória: uma resposta por ticker (ou uma lista, uma por consulta). Ticker sem
- * resposta é "não encontrado". Conta as consultas e devolve a cota que restaria.
+ * "brapi" em memória: uma resposta por lista, ou uma fila (`queue`), uma por consulta. Lista sem
+ * resposta volta vazia. Conta as consultas; com `usage`, finge que a brapi desconta da cota.
  */
-export class FakeQuoteSource implements IntradayQuoteSource {
-  readonly answers = new Map<string, FakeAnswer | FakeAnswer[]>();
-  readonly requests: string[] = [];
+export class FakeListSource implements QuoteListSource {
+  readonly answers = new Map<ListKind, FakeListAnswer>();
+  readonly queues = new Map<ListKind, FakeListAnswer[]>();
+  readonly requests: ListKind[] = [];
   usage: QuoteUsage | null = null;
 
-  constructor(
-    private readonly clock: () => Date,
-    readonly tokenConfigured = true,
-  ) {}
+  constructor(readonly tokenConfigured = true) {}
 
-  quote(ticker: string): Promise<SourceQuote> {
-    this.requests.push(ticker);
-    if (this.usage)
+  /** As próximas consultas desta lista recebem estas respostas, em ordem. */
+  queue(kind: ListKind, ...answers: FakeListAnswer[]): this {
+    this.queues.set(kind, [...(this.queues.get(kind) ?? []), ...answers]);
+    return this;
+  }
+
+  list(kind: ListKind): Promise<AssetListing> {
+    this.requests.push(kind);
+    if (this.usage) {
       this.usage = { ...this.usage, remaining: Math.max(0, this.usage.remaining - 1) };
-    const stored = this.answers.get(ticker);
-    const answer = Array.isArray(stored) ? stored.shift() : stored;
-    if (!answer) {
-      return Promise.reject(
-        new QuoteSourceError('not_found', 'ticker não encontrado na brapi (404)'),
-      );
     }
-    if ('error' in answer) {
+    const answer = this.queues.get(kind)?.shift() ?? this.answers.get(kind) ?? [];
+    if (!Array.isArray(answer)) {
       return Promise.reject(
         new QuoteSourceError(
           answer.error,
@@ -291,13 +338,8 @@ export class FakeQuoteSource implements IntradayQuoteSource {
       );
     }
     return Promise.resolve({
-      price: '10.00',
-      at: this.clock(),
-      open: null,
-      high: null,
-      low: null,
-      previousClose: null,
-      ...answer,
+      assets: answer.map((asset) => ({ ...asset })),
+      requests: 1,
       usage: this.usage,
     });
   }
@@ -337,5 +379,220 @@ export class FakeCotahistSource implements CotahistSource {
         yield* lines;
       })(),
     );
+  }
+}
+
+/** Negócios da B3 em memória (SPEC-040), com a mesma regra do PostgreSQL: a data só avança. */
+export class InMemoryB3Trades implements B3TradeRepository {
+  readonly trades = new Map<string, B3Trade>();
+
+  record(trades: B3Trade[], _at?: Date): Promise<void> {
+    for (const trade of trades) {
+      const current = this.trades.get(trade.ticker);
+      if (!current || trade.lastTradingDay >= current.lastTradingDay) {
+        this.trades.set(trade.ticker, { ...trade });
+      }
+    }
+    return Promise.resolve();
+  }
+
+  all(): Promise<Map<string, B3Trade>> {
+    return Promise.resolve(new Map([...this.trades].map(([ticker, t]) => [ticker, { ...t }])));
+  }
+
+  /** Atalho dos testes: o ticker negociou pela última vez nesta data. */
+  traded(ticker: string, lastTradingDay: IsoDate, assetClass?: AssetClass): this {
+    this.trades.set(ticker, {
+      ticker,
+      lastTradingDay,
+      assetClass: assetClass ?? (/11$/.test(ticker) ? 'fii' : 'stock'),
+    });
+    return this;
+  }
+}
+
+/** Leitor dos arquivos anuais que só anota os anos pedidos e devolve os problemas combinados. */
+export class FakeTradeScanner implements B3TradeScanner {
+  readonly calls: number[][] = [];
+  problems: string[] = [];
+  /** O que a leitura "encontra" nos arquivos. */
+  found: B3Trade[] = [];
+
+  constructor(private readonly trades: InMemoryB3Trades) {}
+
+  async refreshTrades(years: number[]): Promise<string[]> {
+    this.calls.push([...years]);
+    await this.trades.record(this.found);
+    return [...this.problems];
+  }
+}
+
+/** Ativo do catálogo em memória, com os campos que a importação lê e escreve. */
+export interface CatalogRow {
+  id: string;
+  ticker: string;
+  name: string;
+  assetClass: AssetClass;
+  sector: SectorCode;
+  createdAt: Date;
+  updatedAt: Date;
+  deactivatedAt: Date | null;
+  origin: AssetOrigin;
+  classificationReviewedAt: Date | null;
+  autoDeactivated: boolean;
+}
+
+/** Escritas da importação sobre um catálogo em memória, com a auditoria junto. */
+export class InMemoryCatalogImport implements CatalogImportRepository {
+  constructor(
+    private readonly rows: CatalogRow[],
+    readonly audit: InMemoryAuditTrail = new InMemoryAuditTrail(),
+  ) {}
+
+  entries(): Promise<CatalogEntry[]> {
+    return Promise.resolve(
+      this.rows.map((row) => ({
+        id: row.id,
+        ticker: row.ticker,
+        assetClass: row.assetClass,
+        createdAt: row.createdAt,
+        deactivatedAt: row.deactivatedAt,
+        autoDeactivated: row.autoDeactivated,
+      })),
+    );
+  }
+
+  createImported(assets: ImportedAsset[], at: Date): Promise<ImportedAsset[]> {
+    const created: ImportedAsset[] = [];
+    for (const asset of assets) {
+      if (this.rows.some((row) => row.ticker === asset.ticker)) continue;
+      this.rows.push({
+        ...asset,
+        createdAt: at,
+        updatedAt: at,
+        deactivatedAt: null,
+        origin: 'import',
+        classificationReviewedAt: null,
+        autoDeactivated: false,
+      });
+      this.audit.append({
+        at,
+        collaboratorId: null,
+        action: 'asset_imported',
+        entity: 'asset',
+        entityId: asset.id,
+        details: {
+          after: {
+            ticker: asset.ticker,
+            name: asset.name,
+            class: asset.assetClass,
+            sector: asset.sector,
+          },
+        },
+      });
+      created.push(asset);
+    }
+    return Promise.resolve(created);
+  }
+
+  autoDeactivate(changes: AutomaticChange[], at: Date): Promise<number> {
+    let changed = 0;
+    for (const change of changes) {
+      const row = this.rows.find((item) => item.id === change.id && item.deactivatedAt === null);
+      if (!row) continue;
+      Object.assign(row, { deactivatedAt: at, autoDeactivated: true, updatedAt: at });
+      this.audit.append({
+        at,
+        collaboratorId: null,
+        action: 'asset_auto_deactivated',
+        entity: 'asset',
+        entityId: row.id,
+        details: {
+          before: { active: true },
+          after: { active: false, lastTradedOn: change.lastTradedOn },
+        },
+      });
+      changed += 1;
+    }
+    return Promise.resolve(changed);
+  }
+
+  autoReactivate(changes: AutomaticChange[], at: Date): Promise<number> {
+    let changed = 0;
+    for (const change of changes) {
+      const row = this.rows.find(
+        (item) => item.id === change.id && item.deactivatedAt !== null && item.autoDeactivated,
+      );
+      if (!row) continue;
+      Object.assign(row, { deactivatedAt: null, autoDeactivated: false, updatedAt: at });
+      this.audit.append({
+        at,
+        collaboratorId: null,
+        action: 'asset_auto_reactivated',
+        entity: 'asset',
+        entityId: row.id,
+        details: {
+          before: { active: false },
+          after: { active: true, lastTradedOn: change.lastTradedOn },
+        },
+      });
+      changed += 1;
+    }
+    return Promise.resolve(changed);
+  }
+}
+
+/** Logos em memória (SPEC-040). */
+export class InMemoryLogoRepository implements LogoRepository {
+  readonly logos = new Map<string, LogoRecord & { downloadedAt: Date }>();
+
+  downloadedAt(): Promise<Map<string, Date>> {
+    return Promise.resolve(
+      new Map([...this.logos].map(([assetId, logo]) => [assetId, logo.downloadedAt])),
+    );
+  }
+
+  save(logos: LogoRecord[], at: Date): Promise<void> {
+    for (const logo of logos) this.logos.set(logo.assetId, { ...logo, downloadedAt: at });
+    return Promise.resolve();
+  }
+
+  find(assetId: string): Promise<LogoImage | null> {
+    const logo = this.logos.get(assetId);
+    return Promise.resolve(logo?.status === 'ok' ? logo.image : null);
+  }
+
+  withLogo(): Promise<Set<string>> {
+    return Promise.resolve(
+      new Set([...this.logos].filter(([, logo]) => logo.status === 'ok').map(([id]) => id)),
+    );
+  }
+}
+
+/** Imagem SVG mínima, diferente para cada texto. */
+export function svgLogo(text: string): LogoImage {
+  return {
+    type: 'image/svg+xml',
+    content: new TextEncoder().encode(
+      `<svg xmlns="http://www.w3.org/2000/svg"><text>${text}</text></svg>`,
+    ),
+  };
+}
+
+/**
+ * "Servidor de ícones" em memória: endereço da brapi sem imagem combinada devolve um SVG próprio
+ * daquele endereço; `failing` responde erro; outro servidor também.
+ */
+export class FakeLogoSource implements LogoSource {
+  readonly images = new Map<string, LogoImage>();
+  readonly failing = new Set<string>();
+  readonly requests: string[] = [];
+
+  download(url: string): Promise<LogoImage> {
+    this.requests.push(url);
+    if (this.failing.has(url) || !url.startsWith('https://icons.brapi.dev/')) {
+      return Promise.reject(new Error(`logo respondeu 404 (${url})`));
+    }
+    return Promise.resolve(this.images.get(url) ?? svgLogo(url));
   }
 }

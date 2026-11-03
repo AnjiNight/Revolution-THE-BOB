@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cotahistHeader, cotahistLine, cotahistTrailer } from '../testing/cotahist-fixtures.js';
-import { CotahistLineError, parseCotahistLine } from './cotahist.js';
+import { CotahistLineError, parseCotahistLine, peekCotahistTrade } from './cotahist.js';
 
 const petr4 = {
   date: '20261028',
@@ -123,5 +123,40 @@ describe('leitor do COTAHIST (CA01)', () => {
     expect(() =>
       parseCotahistLine(cotahistLine({ ...petr4, open: 0, high: 0, low: 0, average: 0, close: 0 })),
     ).toThrow(/zero/);
+  });
+});
+
+describe('quem negociou (SPEC-040)', () => {
+  it('lê ticker, data e classe de ação, unit e FII, sem o resto da linha', () => {
+    expect(peekCotahistTrade(cotahistLine(petr4))).toEqual({
+      ticker: 'PETR4',
+      date: '2026-10-28',
+      assetClass: 'stock',
+    });
+    expect(peekCotahistTrade(cotahistLine({ ...petr4, ticker: 'TAEE11' }))?.assetClass).toBe(
+      'stock',
+    );
+    expect(
+      peekCotahistTrade(cotahistLine({ ...petr4, ticker: 'MXRF11', codbdi: '12' }))?.assetClass,
+    ).toBe('fii');
+    // Empresa em recuperação judicial (CODBDI 08) continua sendo ação.
+    expect(peekCotahistTrade(cotahistLine({ ...petr4, codbdi: '08' }))?.assetClass).toBe('stock');
+  });
+
+  it('ignora o que não é ação nem FII do lote padrão', () => {
+    expect(peekCotahistTrade(cotahistHeader())).toBeNull();
+    expect(peekCotahistTrade(cotahistTrailer(1))).toBeNull();
+    expect(
+      peekCotahistTrade(cotahistLine({ ...petr4, ticker: 'PETR4F', market: '020' })),
+    ).toBeNull();
+    expect(
+      peekCotahistTrade(cotahistLine({ ...petr4, ticker: 'PETRK400', market: '070' })),
+    ).toBeNull();
+    expect(
+      peekCotahistTrade(cotahistLine({ ...petr4, ticker: 'BOVA11', codbdi: '14' })),
+    ).toBeNull();
+    expect(peekCotahistTrade(cotahistLine({ ...petr4, ticker: 'PETR4T' }))).toBeNull();
+    expect(peekCotahistTrade(cotahistLine({ ...petr4, date: '20261399' }))).toBeNull();
+    expect(peekCotahistTrade(cotahistLine(petr4).slice(0, 200))).toBeNull();
   });
 });
