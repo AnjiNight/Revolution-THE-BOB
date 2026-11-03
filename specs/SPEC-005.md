@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Aprovada pelo Luís em 22/10/2026 e implementada (ver §9) |
+| Status | Aprovada pelo Luís em 22/10/2026 e implementada (ver §9). Sugestão corrigida em 03/11/2026: último dia útil do ano (nota no fim) |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)) |
 | Prioridade | Técnica de regra (habilita os *Must*: 008, 009 e os lançamentos 012–015) |
 | Depende de | [SPEC-002](SPEC-002.md) (conta de colaborador) |
@@ -34,7 +34,7 @@ O **colaborador** mantém o calendário: a cada ano, ele carrega uma sugestão p
 ### 3.1 Inclui
 
 1. **Regras de calendário em código puro** (DA10): dia de pregão, contagem de pregões, pregão anterior e próximo.
-2. **Sugestão automática** dos dias sem pregão de qualquer ano: feriados nacionais fixos, os móveis calculados a partir da Páscoa (Carnaval, Sexta-feira Santa, Corpus Christi) e os dias que a B3 costuma fechar (24/12 e 31/12).
+2. **Sugestão automática** dos dias sem pregão de qualquer ano: feriados nacionais fixos, os móveis calculados a partir da Páscoa (Carnaval, Sexta-feira Santa, Corpus Christi) e os dias que a B3 costuma fechar (24/12 e o último dia útil do ano).
 3. **Publicação do ano** pelo colaborador: a lista inteira de dias sem pregão de um ano, com o motivo de cada um. Pode republicar para corrigir.
 4. **Tela "Calendário de pregão"** na Área do colaborador.
 5. **Aviso no Início do colaborador** a partir de 1º de dezembro, se o ano seguinte ainda não foi publicado.
@@ -54,9 +54,9 @@ Aprovadas pela equipe em 22/10/2026: fonte e responsável (OPEN-01); ano não pu
 
 | Tema | Decisão | Motivo |
 |---|---|---|
-| **Fonte (OPEN-01)** | O **calendário oficial publicado pela B3** a cada ano ("Calendário de negociação") | É a única fonte que vale para o pregão: a B3 segue os feriados nacionais, mas tem regras próprias (fecha em 24/12 e 31/12; desde 2022 abre nos feriados de São Paulo, como 25/1 e 9/7) |
+| **Fonte (OPEN-01)** | O **calendário oficial publicado pela B3** a cada ano ("Calendário de negociação") | É a única fonte que vale para o pregão: a B3 segue os feriados nacionais, mas tem regras próprias (fecha em 24/12 e no último dia útil do ano; desde 2022 abre nos feriados de São Paulo: 25/1, 9/7 e 20/11) |
 | **Responsável (OPEN-01)** | O **colaborador**, pela Área do colaborador: carrega a sugestão, confere com a B3, ajusta e publica | Mantém a revisão manual da DA07, que cobre mudanças que nenhum cálculo prevê (feriado novo, como o 20/11 desde 2024) |
-| Sugestão automática | Feriados nacionais fixos; Carnaval (segunda e terça), Sexta-feira Santa e Corpus Christi calculados pela Páscoa; Consciência Negra (20/11) a partir de 2024; 24/12 e 31/12. Cada item vem marcado como sugestão | Para 2026, a sugestão bate com o calendário oficial da B3; o colaborador só confere |
+| Sugestão automática | Feriados nacionais fixos; Carnaval (segunda e terça), Sexta-feira Santa e Corpus Christi calculados pela Páscoa; Consciência Negra (20/11) a partir de 2024; 24/12; e o último dia útil do ano (31/12 ou, quando ele cai no fim de semana, a sexta antes). Cada item vem marcado como sugestão | Para 2026, a sugestão bate com o calendário oficial da B3; o colaborador só confere |
 | **Ano não publicado** | O sistema **não adivinha**: qualquer pergunta sobre uma data desse ano falha com `calendar_not_published`, e quem usa (cotações, lançamentos) recusa a operação mostrando um aviso que explica o motivo: "O calendário de pregão desse ano ainda não foi publicado pela equipe. Sem ele, o app não sabe em quais dias a bolsa abriu." | Usar a sugestão sem revisão poderia aceitar um lançamento num dia sem pregão, quebrando a RB11 sem ninguém perceber |
 | Prazo | O ano seguinte deve ser publicado até **31 de dezembro**; o Início do colaborador avisa a partir de **1º de dezembro** | A B3 divulga o calendário do ano seguinte no começo de dezembro (o de 2026 saiu no Ofício Circular 054/2025-VNC, de 04/12/2025) e pode corrigi-lo depois; por isso o colaborador também pode republicar |
 | Fins de semana | Nunca têm pregão e **não são guardados**: só os dias úteis sem pregão entram na lista | Lista curta (cerca de 12 dias por ano) e sem como errar um sábado |
@@ -148,3 +148,5 @@ Total: **375 testes** passando (com o banco real), lint, tipos, formatação e b
 **Para as próximas Specs:** as cotações e os lançamentos (SPEC-008, 009, 012–015) pedem as regras com `CalendarService.tradingCalendar(de, até)` e, quando a data cai num ano não publicado, respondem com o código `calendar_not_published`. O app já tem o aviso que explica o motivo (`authErrors.calendar_not_published`).
 
 > **Nota (SPEC-006, 22/10/2026):** cada publicação também passa a ser gravada no registro de auditoria (RNF15), com a lista anterior e a nova, na mesma transação. Ver [SPEC-006](SPEC-006.md).
+
+> **Correção (03/11/2026):** ao publicar os anos de 2016 a 2026, a lista de cada ano foi comparada com os dias que tiveram pregão nos arquivos anuais da B3 (SPEC-008). A sugestão errava um caso: a B3 não abre no **último dia útil do ano**, e quando 31/12 cai no fim de semana esse dia é a sexta antes (30/12/2016, 29/12/2017, 30/12/2022 e 29/12/2023 não tiveram pregão; o próximo caso é 29/12/2028). A sugestão passou a trazer esse dia, com o motivo "Último dia útil do ano", e de 2022 a 2025 ela é igual aos dias sem pregão dos arquivos da B3; a de 2026 continua igual ao calendário oficial (`calendar-suggestion.test.ts`). Os anos de até 2021 ainda pedem a revisão do colaborador: a B3 fechou nos feriados de São Paulo (25/1, 9/7 e 20/11) em 2016–2019 e 2021, e abriu neles em 2020.

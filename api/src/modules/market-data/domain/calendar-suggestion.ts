@@ -41,18 +41,24 @@ const FIXED_HOLIDAYS: ReadonlyArray<{
   { month: 12, day: 25, reason: 'Natal' },
 ];
 
-/** Dias em que a B3 não abre, embora não sejam feriado nacional. */
-const B3_CLOSINGS: ReadonlyArray<{ month: number; day: number; reason: string }> = [
-  { month: 12, day: 24, reason: 'Véspera de Natal' },
-  { month: 12, day: 31, reason: 'Último dia do ano' },
-];
+/**
+ * A B3 não abre no último dia útil do ano: 31/12 ou, quando ele cai no fim de semana, a sexta antes
+ * (30/12/2022 e 29/12/2023, conferidos nos arquivos anuais da B3).
+ */
+function lastBusinessDay(year: number): IsoDate {
+  let day = isoDate(year, 12, 31);
+  while (isWeekend(day)) day = addDays(day, -1);
+  return day;
+}
 
 /**
  * Sugestão dos dias úteis sem pregão de um ano (SPEC-005 §4), para o colaborador conferir com o
- * calendário oficial da B3 antes de publicar. Para 2026 ela é igual ao oficial.
+ * calendário oficial da B3 antes de publicar. De 2022 a 2025 ela é igual aos dias sem pregão dos
+ * arquivos da B3, e a de 2026 ao calendário oficial.
  *
- * Não cobre os feriados de São Paulo (25/1 e 9/7), em que a B3 fechava até 2021, nem mudanças
- * avisadas pela B3 durante o ano: por isso a revisão do colaborador (DA07).
+ * Não cobre os feriados de São Paulo (25/1, 9/7 e 20/11), em que a B3 fechava até 2021 (em 2020 ela
+ * abriu nesses dias), nem mudanças avisadas pela B3 durante o ano: por isso a revisão do
+ * colaborador (DA07).
  */
 export function suggestNonTradingDays(year: number): NonTradingDay[] {
   const easter = easterSunday(year);
@@ -65,10 +71,9 @@ export function suggestNonTradingDays(year: number): NonTradingDay[] {
     { date: addDays(easter, -47), reason: 'Carnaval' },
     { date: addDays(easter, -2), reason: 'Sexta-feira Santa' },
     { date: addDays(easter, 60), reason: 'Corpus Christi' },
-    ...B3_CLOSINGS.map((closing) => ({
-      date: isoDate(year, closing.month, closing.day),
-      reason: closing.reason,
-    })),
+    // Dias em que a B3 não abre, embora não sejam feriado nacional.
+    { date: isoDate(year, 12, 24), reason: 'Véspera de Natal' },
+    { date: lastBusinessDay(year), reason: 'Último dia útil do ano' },
   ];
   // Dois feriados no mesmo dia viram um só (ex.: Sexta-feira Santa em 21/4, como em 2000).
   const byDate = new Map<IsoDate, string>();

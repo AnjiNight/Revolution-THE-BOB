@@ -51,8 +51,38 @@ describe('sugestão do ano', () => {
       { date: '2026-11-20', reason: 'Dia Nacional de Zumbi e da Consciência Negra' },
       { date: '2026-12-24', reason: 'Véspera de Natal' },
       { date: '2026-12-25', reason: 'Natal' },
-      { date: '2026-12-31', reason: 'Último dia do ano' },
+      { date: '2026-12-31', reason: 'Último dia útil do ano' },
     ]);
+  });
+
+  it('2022 a 2025 são iguais aos dias sem pregão dos arquivos anuais da B3', () => {
+    const b3 = (year: number, days: string) => days.split(' ').map((day) => `${year}-${day}`);
+    expect(dates(2022)).toEqual(
+      b3(2022, '02-28 03-01 04-15 04-21 06-16 09-07 10-12 11-02 11-15 12-30'),
+    );
+    expect(dates(2023)).toEqual(
+      b3(2023, '02-20 02-21 04-07 04-21 05-01 06-08 09-07 10-12 11-02 11-15 12-25 12-29'),
+    );
+    expect(dates(2024)).toEqual(
+      b3(2024, '01-01 02-12 02-13 03-29 05-01 05-30 11-15 11-20 12-24 12-25 12-31'),
+    );
+    expect(dates(2025)).toEqual(
+      b3(2025, '01-01 03-03 03-04 04-18 04-21 05-01 06-19 11-20 12-24 12-25 12-31'),
+    );
+  });
+
+  it('31/12 no fim de semana: a B3 fecha no último dia útil, a sexta antes', () => {
+    const lastDay = (year: number) =>
+      suggestNonTradingDays(year).filter((day) => day.reason === 'Último dia útil do ano');
+    // Sábado
+    expect(lastDay(2016)).toEqual([{ date: '2016-12-30', reason: 'Último dia útil do ano' }]);
+    expect(lastDay(2022)).toEqual([{ date: '2022-12-30', reason: 'Último dia útil do ano' }]);
+    // Domingo
+    expect(lastDay(2017)).toEqual([{ date: '2017-12-29', reason: 'Último dia útil do ano' }]);
+    expect(lastDay(2023)).toEqual([{ date: '2023-12-29', reason: 'Último dia útil do ano' }]);
+    expect(lastDay(2028)).toEqual([{ date: '2028-12-29', reason: 'Último dia útil do ano' }]);
+    // Dia de semana
+    expect(lastDay(2027)).toEqual([{ date: '2027-12-31', reason: 'Último dia útil do ano' }]);
   });
 
   it('não sugere fim de semana (15/11/2026 é domingo)', () => {
