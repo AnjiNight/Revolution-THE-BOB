@@ -26,6 +26,7 @@
 | 1.16 | SPEC-009 detalhada ([SPEC-009.md](SPEC-009.md)), aprovada e implementada; OPEN-07 resolvida (brapi usada para mostrar as cotações no próprio app, com fonte e horário, sem repassar os dados); cotações do pregão guardadas por 30 dias (OPEN-40); cotação de FII pela brapi conferida no plano gratuito (OPEN-48) |
 | 1.17 | Nova SPEC-040 (catálogo completo da B3, com logos), na Fase 2, logo depois da SPEC-009: pedida pelo Luís em 02/11/2026 ([SPEC-040.md](SPEC-040.md)), escrita e aguardando o teste da rota de lista da brapi e a aprovação; muda as SPECs 006 e 009 e a premissa de catálogo curado da DA16 |
 | 1.18 | SPEC-040 aprovada (03/11/2026, depois do teste da rota de lista da brapi) e implementada; DA16 atualizada (catálogo sem curadoria, coleta pela lista, atraso de até 45 min) |
+| 1.19 | SPEC-010 detalhada ([SPEC-010.md](SPEC-010.md)), aguardando a aprovação; os saltos de preço encontrados no histórico (239 ativos) reforçam a OPEN-06 antes das SPECs 016 e 019 |
 
 ---
 
@@ -575,6 +576,8 @@ Visão geral por fase:
 | Prioridade derivada | Should (RF10, Requisitos v1.3) |
 
 #### SPEC-010 — Ficha do ativo com histórico de cotações
+
+📄 Detalhada em [SPEC-010.md](SPEC-010.md) — escrita, aguardando a aprovação.
 
 | Campo | Conteúdo |
 |---|---|
