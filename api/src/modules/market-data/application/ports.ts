@@ -1,13 +1,23 @@
-import type { AssetClass, IsoDate, NonTradingDay, SectorCode } from '@simulador/shared';
+import type {
+  AssetClass,
+  CalendarSource,
+  IsoDate,
+  NonTradingDay,
+  SectorCode,
+} from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type { CotahistQuote } from '../domain/cotahist.js';
 
-/** Ano publicado, como fica guardado (SPEC-005 §6). */
+/** Ano publicado, como fica guardado (SPEC-005 §6 e §10). */
 export interface StoredCalendarYear {
   year: number;
   publishedAt: Date;
-  /** Id do colaborador; nenhum dado pessoal fora do módulo de identidade (DA13). */
-  publishedBy: string;
+  /**
+   * Id do colaborador; nenhum dado pessoal fora do módulo de identidade (DA13). `null` só quando o
+   * processador publicou pelo arquivo da B3 (`source: 'b3_file'`).
+   */
+  publishedBy: string | null;
+  source: CalendarSource;
   /** Em ordem de data. */
   nonTradingDays: NonTradingDay[];
 }
@@ -15,7 +25,9 @@ export interface StoredCalendarYear {
 export interface NewCalendarPublication {
   year: number;
   publishedAt: Date;
-  publishedBy: string;
+  publishedBy: string | null;
+  /** Padrão: `collaborator`. */
+  source?: CalendarSource;
   nonTradingDays: NonTradingDay[];
 }
 
@@ -118,7 +130,11 @@ export interface QuoteRepository {
 
 /** Tarefas de ingestão (SPECs 008, 009 e 040, §5.1); as SPECs 007 e 027 acrescentam as suas. */
 export type IngestionTask =
-  'historico_retroativo' | 'fechamento_diario' | 'cotacao_pregao' | 'importacao_catalogo';
+  | 'historico_retroativo'
+  | 'fechamento_diario'
+  | 'cotacao_pregao'
+  | 'importacao_catalogo'
+  | 'calendario_b3';
 export type RunStatus = 'sucesso' | 'parcial' | 'falha' | 'aguardando_publicacao' | 'cota_esgotada';
 
 export interface RunError {

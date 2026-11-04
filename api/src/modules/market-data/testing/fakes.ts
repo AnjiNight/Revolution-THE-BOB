@@ -77,6 +77,7 @@ export class InMemoryCalendarRepository implements CalendarRepository {
     this.audit.append(audit(before ?? null));
     const stored: StoredCalendarYear = {
       ...publication,
+      source: publication.source ?? 'collaborator',
       nonTradingDays: [...publication.nonTradingDays].sort((a, b) => a.date.localeCompare(b.date)),
     };
     this.years.set(publication.year, stored);

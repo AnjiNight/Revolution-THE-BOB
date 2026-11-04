@@ -118,13 +118,24 @@ model ExclusaoConta {
   @@map("exclusao_conta")
 }
 
-/// Ano do calendário de pregão publicado por um colaborador (SPEC-005). Ano sem linha aqui não foi
-/// publicado, e as regras de pregão recusam datas dele. "publicado_por" é só o id do colaborador,
-/// sem chave estrangeira: o módulo Dados de Mercado não depende das tabelas da identidade (DA13).
+/// Quem publicou um ano do calendário (SPEC-005 §10).
+enum OrigemCalendario {
+  colaborador
+  arquivo_b3
+
+  @@map("origem_calendario")
+}
+
+/// Ano do calendário de pregão publicado por um colaborador ou, nos anos fechados, pelo processador
+/// a partir do arquivo anual da B3 (SPEC-005 §10). Ano sem linha aqui não foi publicado, e as
+/// regras de pregão recusam datas dele. "publicado_por" é só o id do colaborador, sem chave
+/// estrangeira: o módulo Dados de Mercado não depende das tabelas da identidade (DA13). Vazio só
+/// com origem "arquivo_b3" (CHECK na migração).
 model AnoCalendario {
-  ano          Int      @id @db.SmallInt
-  publicadoEm  DateTime @map("publicado_em") @db.Timestamptz(3)
-  publicadoPor String   @map("publicado_por") @db.Uuid
+  ano          Int              @id @db.SmallInt
+  publicadoEm  DateTime         @map("publicado_em") @db.Timestamptz(3)
+  publicadoPor String?          @map("publicado_por") @db.Uuid
+  origem       OrigemCalendario @default(colaborador)
 
   diasSemPregao DiaSemPregao[]
 
@@ -251,6 +262,7 @@ enum TarefaIngestao {
   fechamento_diario
   cotacao_pregao
   importacao_catalogo
+  calendario_b3
 
   @@map("tarefa_ingestao")
 }
@@ -346,6 +358,8 @@ enum AcaoAuditoria {
   ativo_desativado_automaticamente
   ativo_reativado_automaticamente
   classificacao_conferida
+  /// SPEC-005 §10: ano fechado do calendário publicado pelo processador, sem colaborador.
+  calendario_importado
 
   @@map("acao_auditoria")
 }

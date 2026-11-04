@@ -344,6 +344,7 @@
     "subtitle": "Os dias úteis em que a B3 não abre. Enquanto um ano não é publicado, o app não aceita datas dele.",
     "year": "Ano",
     "published": "Publicado em {{date}}",
+    "publishedFromB3": "Publicado pelo processador em {{date}}, a partir do arquivo da B3",
     "notPublished": "Não publicado",
     "b3Note": "Confira com o calendário oficial da B3 antes de publicar. A B3 divulga o do ano seguinte no começo de dezembro.",
     "loadSuggestion": "Carregar sugestão",

@@ -230,9 +230,12 @@ export function TradingCalendar({ initialYear, onSessionExpired }: TradingCalend
               className={saved.published ? 'soon-badge current-badge' : 'soon-badge warn-badge'}
             >
               {saved.published && saved.publishedAt
-                ? t('calendar.published', {
-                    date: formatDate(saved.publishedAt, i18n.language, true),
-                  })
+                ? t(
+                    saved.source === 'b3_file' ? 'calendar.publishedFromB3' : 'calendar.published',
+                    {
+                      date: formatDate(saved.publishedAt, i18n.language, true),
+                    },
+                  )
                 : t('calendar.notPublished')}
             </span>
           )}

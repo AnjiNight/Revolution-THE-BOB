@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Aprovada pelo Luís em 22/10/2026 e implementada (ver §9). Sugestão corrigida em 03/11/2026: último dia útil do ano (nota no fim) |
+| Status | Aprovada pelo Luís em 22/10/2026 e implementada (ver §9). Sugestão corrigida em 03/11/2026: último dia útil do ano (nota no fim). **Mudada em 04/11/2026** (aprovada pela Nicoly): anos fechados publicados pelo processador a partir do arquivo anual da B3 (§10) |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)) |
 | Prioridade | Técnica de regra (habilita os *Must*: 008, 009 e os lançamentos 012–015) |
 | Depende de | [SPEC-002](SPEC-002.md) (conta de colaborador) |
@@ -149,4 +149,39 @@ Total: **375 testes** passando (com o banco real), lint, tipos, formatação e b
 
 > **Nota (SPEC-006, 22/10/2026):** cada publicação também passa a ser gravada no registro de auditoria (RNF15), com a lista anterior e a nova, na mesma transação. Ver [SPEC-006](SPEC-006.md).
 
-> **Correção (03/11/2026):** ao publicar os anos de 2016 a 2026, a lista de cada ano foi comparada com os dias que tiveram pregão nos arquivos anuais da B3 (SPEC-008). A sugestão errava um caso: a B3 não abre no **último dia útil do ano**, e quando 31/12 cai no fim de semana esse dia é a sexta antes (30/12/2016, 29/12/2017, 30/12/2022 e 29/12/2023 não tiveram pregão; o próximo caso é 29/12/2028). A sugestão passou a trazer esse dia, com o motivo "Último dia útil do ano", e de 2022 a 2025 ela é igual aos dias sem pregão dos arquivos da B3; a de 2026 continua igual ao calendário oficial (`calendar-suggestion.test.ts`). Os anos de até 2021 ainda pedem a revisão do colaborador: a B3 fechou nos feriados de São Paulo (25/1, 9/7 e 20/11) em 2016–2019 e 2021, e abriu neles em 2020.
+> **Correção (03/11/2026) — histórico; os anos fechados agora seguem o §10:** ao publicar os anos de 2016 a 2026, a lista de cada ano foi comparada com os dias que tiveram pregão nos arquivos anuais da B3 (SPEC-008). A sugestão errava um caso: a B3 não abre no **último dia útil do ano**, e quando 31/12 cai no fim de semana esse dia é a sexta antes (30/12/2016, 29/12/2017, 30/12/2022 e 29/12/2023 não tiveram pregão; o próximo caso é 29/12/2028). A sugestão passou a trazer esse dia, com o motivo "Último dia útil do ano", e de 2022 a 2025 ela é igual aos dias sem pregão dos arquivos da B3; a de 2026 continua igual ao calendário oficial (`calendar-suggestion.test.ts`). Os anos de até 2021 ainda pedem a revisão do colaborador: a B3 fechou nos feriados de São Paulo (25/1, 9/7 e 20/11) em 2016–2019 e 2021, e abriu neles em 2020.
+
+## 10. Mudança: anos fechados pelo arquivo da B3 (04/11/2026)
+
+Pedida e aprovada pela Nicoly em 04/11/2026: os anos que já passaram não precisam de conferência, porque a B3 já publicou o que aconteceu. O **arquivo anual da B3** (COTAHIST, o mesmo da [SPEC-008](SPEC-008.md)) traz uma linha para cada papel em cada pregão; num ano fechado, **todo dia útil que não aparece no arquivo foi um dia sem pregão**. É a fonte oficial e cobre o que a sugestão não sabe (feriados de São Paulo até 2021, fechamentos extraordinários).
+
+| Tema | Decisão | Motivo |
+|---|---|---|
+| **Quais anos** | Anos **fechados** da janela do histórico (2016 até o ano passado) que ainda **não foram publicados** | O ano atual e os futuros ainda não têm o arquivo completo: continuam com a sugestão, a conferência e o "Publicar" (§4) |
+| **Como** | O processador lê o arquivo anual e publica o ano com os dias úteis que não aparecem nele. O motivo vem da sugestão quando ela tem o dia ("Carnaval"), dos feriados de São Paulo ("Aniversário de São Paulo", "Revolução Constitucionalista", "Consciência Negra em São Paulo") e, no resto, "Sem pregão no arquivo da B3" | O motivo é texto; o que vale é a data |
+| Conferência do arquivo | Arquivo com menos de **200 pregões**, ou com cotação em fim de semana, **não publica** nada: vira erro da execução | Arquivo cortado não pode virar um calendário cheio de "dias sem pregão" |
+| **Ano já publicado pelo colaborador** | O processador **não muda**. Ele compara com o arquivo e, se houver diferença, registra um erro na execução com os dias ("2019: no calendário publicado e com pregão no arquivo: 2019-01-25") | A equipe continua mandando no que publicou; a diferença aparece no registro (SPEC-011 mostra na tela) |
+| Quem publicou | `publicado_por` vazio e `origem = arquivo_b3`; na auditoria, a ação nova `calendar_imported` (ação do processador, sem colaborador, como as da SPEC-040), com a lista anterior e a nova | RNF15; DA13 |
+| Republicar | O colaborador pode republicar um ano publicado pelo processador (vira `origem = colaborador`); o processador não volta a mexer nele | Correção manual sempre possível |
+| **Quando** | Ao iniciar o processador e todo dia às **07:30**, antes do fechamento diário das 08:00. Sem ano para publicar nem para conferir, não grava execução. Cada ano do colaborador é conferido uma vez depois de cada publicação dele | Em janeiro, o ano que acabou entra assim que a B3 publicar o arquivo |
+| Arquivo ainda não publicado | Termina como `aguardando_publicacao`, sem erro, e tenta no dia seguinte | Mesmo padrão da SPEC-008 |
+| Falhas | As mesmas 3 novas tentativas da SPEC-008; depois, `falha` registrada e nada publicado | RNF13 |
+| Arquivos | Os mesmos arquivos anuais de anos fechados da SPEC-008, guardados em `B3_CACHE_DIR`: o histórico não baixa de novo | Nenhum download a mais |
+| Tela | Tela Calendário: "Publicado pelo processador em {data}, a partir do arquivo da B3" | O colaborador sabe de onde veio |
+
+| Tabela | Mudança |
+|---|---|
+| `ano_calendario` | Nova coluna `origem` (`colaborador`, `arquivo_b3`; padrão `colaborador`); `publicado_por` aceita vazio, **só** quando `origem = arquivo_b3` (e é obrigatório quando `colaborador`) |
+| `registro_auditoria` | Nova ação `calendario_importado`, a única do calendário sem colaborador |
+| `tarefa_ingestao` | Novo valor `calendario_b3` |
+
+A migração tem `down.sql` (RNF17): os anos do processador voltam como publicados por um colaborador com o id zerado, como na reversão da SPEC-040.
+
+| ID | Critério |
+|---|---|
+| CA12 | Ano fechado não publicado é publicado com os dias úteis ausentes do arquivo, inclusive os feriados de São Paulo de 2016–2019 e 2021, com o motivo certo |
+| CA13 | Ano atual e futuro nunca são publicados pelo processador |
+| CA14 | Ano publicado pelo colaborador não muda; diferença com o arquivo vira erro da execução com as datas |
+| CA15 | Arquivo com menos de 200 pregões ou com fim de semana não publica; arquivo não publicado termina como `aguardando_publicacao`; B3 fora do ar: 3 novas tentativas e `falha` |
+| CA16 | A publicação grava `origem = arquivo_b3`, sem colaborador, e a auditoria `calendar_imported`; o banco recusa ano sem colaborador com `origem = colaborador`; a migração pode ser desfeita e refeita |
+| CA17 | A tela mostra "Publicado pelo processador … a partir do arquivo da B3", em português e inglês |

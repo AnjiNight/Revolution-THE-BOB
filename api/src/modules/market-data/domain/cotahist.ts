@@ -135,6 +135,18 @@ export function peekCotahistTrade(rawLine: string): CotahistTrade | null {
   return { ticker, date, assetClass };
 }
 
+/**
+ * SPEC-005 §10: o pregão de uma linha de cotação, de qualquer papel e mercado (todo pregão tem
+ * negócio). `null` para cabeçalho, rodapé e linha sem data válida.
+ */
+export function cotahistSessionDate(rawLine: string): IsoDate | null {
+  const line = rawLine.replace(/\r$/, '');
+  if (field(line, 'recordType') !== QUOTE_RECORD) return null;
+  const rawDate = field(line, 'date');
+  const date = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`;
+  return /^\d{8}$/.test(rawDate) && isIsoDate(date) ? date : null;
+}
+
 /** Campo numérico só com dígitos (o leiaute completa com zeros à esquerda). */
 function digits(value: string, name: string, fail: (message: string) => never): bigint {
   if (!/^\d+$/.test(value)) return fail(`campo ${name} não é numérico: "${value.trim()}"`);

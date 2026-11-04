@@ -30,12 +30,20 @@ export interface NonTradingDay {
   reason: string;
 }
 
+/**
+ * Quem publicou o ano (SPEC-005 §10): o colaborador, ou o processador a partir do arquivo anual da
+ * B3 (só anos fechados).
+ */
+export type CalendarSource = 'collaborator' | 'b3_file';
+
 /** Corpo de `GET /api/calendar/:year` e da resposta da publicação. */
 export interface TradingCalendarYear {
   year: number;
   published: boolean;
   /** ISO 8601; `null` se o ano não foi publicado. */
   publishedAt: string | null;
+  /** `null` se o ano não foi publicado. */
+  source: CalendarSource | null;
   /** Só dias úteis, em ordem de data. Fins de semana nunca têm pregão e não entram. */
   nonTradingDays: NonTradingDay[];
 }

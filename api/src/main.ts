@@ -15,6 +15,7 @@ import { PrismaEmailCodeRepository } from './modules/identity/infrastructure/pri
 import { PrismaRefreshTokenRepository } from './modules/identity/infrastructure/prisma-refresh-token-repository.js';
 import { PrismaUserRepository } from './modules/identity/infrastructure/prisma-user-repository.js';
 import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-sender.js';
+import { B3CalendarImport } from './modules/market-data/application/b3-calendar-import.js';
 import { CalendarService } from './modules/market-data/application/calendar-service.js';
 import { CatalogImport } from './modules/market-data/application/catalog-import.js';
 import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
@@ -63,9 +64,10 @@ async function main(): Promise<void> {
   const runs = new PrismaTaskRunRepository(prisma);
   const trades = new PrismaB3TradeRepository(prisma);
   const logos = new PrismaLogoRepository(prisma);
+  const cotahist = new B3CotahistSource({ cacheDir: config.b3CacheDir });
   // SPEC-008: histórico pelos arquivos da B3, que também dizem quem negociou (SPEC-040).
   const history = new HistoryIngestion({
-    source: new B3CotahistSource({ cacheDir: config.b3CacheDir }),
+    source: cotahist,
     quotes,
     runs,
     calendars,
@@ -90,6 +92,8 @@ async function main(): Promise<void> {
     runs,
     calendars,
   });
+  // SPEC-005 §10: os anos fechados do calendário pelos mesmos arquivos anuais da B3.
+  const calendarImport = new B3CalendarImport({ source: cotahist, calendars, runs });
 
   if (mode === 'server') {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
@@ -150,6 +154,13 @@ async function main(): Promise<void> {
       ],
       // SPEC-008: histórico de ativo novo a cada 15 minutos; pregões que faltam às 08:00.
       scheduledTasks: [
+        // SPEC-005 §10: anos fechados do calendário pelo arquivo da B3, antes do fechamento diário.
+        {
+          name: 'calendário pelos arquivos da B3',
+          run: async () => (await calendarImport.run())?.records ?? 0,
+          dailyAtHour: 7,
+          dailyAtMinute: 30,
+        },
         {
           name: 'histórico retroativo',
           run: async () => (await history.loadRetroactive())?.records ?? 0,

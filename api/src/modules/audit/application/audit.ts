@@ -18,13 +18,16 @@ export type AuditAction =
   | 'asset_auto_deactivated'
   | 'asset_auto_reactivated'
   /** SPEC-040: o colaborador conferiu a classificação sugerida pela importação. */
-  | 'classification_confirmed';
+  | 'classification_confirmed'
+  /** SPEC-005 §10: ano fechado publicado pelo processador a partir do arquivo da B3. */
+  | 'calendar_imported';
 
-/** Ações que o processador faz sozinho: são as únicas sem colaborador (SPEC-040). */
+/** Ações que o processador faz sozinho: são as únicas sem colaborador (SPEC-040, SPEC-005 §10). */
 export const AUTOMATIC_ACTIONS: readonly AuditAction[] = [
   'asset_imported',
   'asset_auto_deactivated',
   'asset_auto_reactivated',
+  'calendar_imported',
 ];
 
 export type AuditEntity = 'asset' | 'calendar_year';

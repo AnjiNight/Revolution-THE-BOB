@@ -1,7 +1,8 @@
-import type { IsoDate, NonTradingDay } from '@simulador/shared';
+import type { CalendarSource, IsoDate, NonTradingDay } from '@simulador/shared';
 import type {
   AnoCalendario,
   DiaSemPregao,
+  OrigemCalendario,
   PrismaClient,
 } from '../../../generated/prisma/client.js';
 import type { AuditEntry } from '../../audit/application/audit.js';
@@ -21,11 +22,17 @@ function fromIsoDate(date: IsoDate): Date {
   return new Date(`${date}T00:00:00.000Z`);
 }
 
+const SOURCE_TO_ORIGEM: Record<CalendarSource, OrigemCalendario> = {
+  collaborator: 'colaborador',
+  b3_file: 'arquivo_b3',
+};
+
 function toStored(row: AnoCalendario & { diasSemPregao: DiaSemPregao[] }): StoredCalendarYear {
   return {
     year: row.ano,
     publishedAt: row.publicadoEm,
     publishedBy: row.publicadoPor,
+    source: row.origem === 'arquivo_b3' ? 'b3_file' : 'collaborator',
     nonTradingDays: row.diasSemPregao.map((day) => ({
       date: toIsoDate(day.data),
       reason: day.motivo,
@@ -66,7 +73,11 @@ export class PrismaCalendarRepository implements CalendarRepository {
     audit: (before: NonTradingDay[] | null) => AuditEntry,
   ): Promise<StoredCalendarYear> {
     const ano = publication.year;
-    const header = { publicadoEm: publication.publishedAt, publicadoPor: publication.publishedBy };
+    const header = {
+      publicadoEm: publication.publishedAt,
+      publicadoPor: publication.publishedBy,
+      origem: SOURCE_TO_ORIGEM[publication.source ?? 'collaborator'],
+    };
     return this.prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<Array<{ ano: number }>>`
         SELECT ano FROM ano_calendario WHERE ano = ${ano} FOR UPDATE`;

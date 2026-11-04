@@ -64,6 +64,7 @@ describe('rotas do calendário de pregão (SPEC-005)', () => {
       year: 2026,
       published: false,
       publishedAt: null,
+      source: null,
       nonTradingDays: [],
     });
   });
@@ -87,6 +88,7 @@ describe('rotas do calendário de pregão (SPEC-005)', () => {
       year: 2026,
       published: true,
       publishedAt: NOW.toISOString(),
+      source: 'collaborator',
       nonTradingDays: [
         { date: '2026-01-01', reason: 'Confraternização Universal' },
         { date: '2026-12-25', reason: 'Natal' },

@@ -25,7 +25,7 @@ export class CalendarService {
     const stored = await this.deps.calendars.findYear(year);
     return stored
       ? toPublic(stored)
-      : { year, published: false, publishedAt: null, nonTradingDays: [] };
+      : { year, published: false, publishedAt: null, source: null, nonTradingDays: [] };
   }
 
   /** Colaborador: ponto de partida para conferir com o calendário oficial da B3. */
@@ -45,7 +45,13 @@ export class CalendarService {
     const now = this.clock();
     const after = publication.nonTradingDays.map(({ date, reason }) => ({ date, reason }));
     const stored = await this.deps.calendars.publish(
-      { year, publishedAt: now, publishedBy: collaboratorId, nonTradingDays: after },
+      {
+        year,
+        publishedAt: now,
+        publishedBy: collaboratorId,
+        source: 'collaborator',
+        nonTradingDays: after,
+      },
       (before) => ({
         at: now,
         collaboratorId,
@@ -78,6 +84,7 @@ function toPublic(stored: StoredCalendarYear): TradingCalendarYear {
     year: stored.year,
     published: true,
     publishedAt: stored.publishedAt.toISOString(),
+    source: stored.source,
     nonTradingDays: stored.nonTradingDays,
   };
 }

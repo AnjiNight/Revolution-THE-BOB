@@ -344,6 +344,7 @@
     "subtitle": "The weekdays when B3 is closed. Until a year is published, the app doesn't accept dates in it.",
     "year": "Year",
     "published": "Published on {{date}}",
+    "publishedFromB3": "Published by the processor on {{date}}, from the B3 file",
     "notPublished": "Not published",
     "b3Note": "Check against B3's official calendar before publishing. B3 releases next year's calendar in early December.",
     "loadSuggestion": "Load suggestion",

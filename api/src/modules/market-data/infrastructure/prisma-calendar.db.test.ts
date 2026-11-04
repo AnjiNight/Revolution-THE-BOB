@@ -84,9 +84,70 @@ describe.skipIf(!url)('calendário de pregão no PostgreSQL', () => {
       year: 2026,
       publishedAt: later,
       publishedBy: OTHER_COLLABORATOR,
+      source: 'collaborator',
       nonTradingDays: [{ date: '2026-02-16', reason: 'Carnaval' }],
     });
     expect(await prisma.diaSemPregao.count()).toBe(1);
+  });
+
+  it('ano fechado publicado pelo processador fica sem colaborador, na auditoria também (§10, CA16)', async () => {
+    // Instante único: a auditoria só aceita inclusões e guarda as execuções anteriores do teste.
+    const at = new Date();
+    const days = [{ date: '2019-01-25', reason: 'Aniversário de São Paulo' }];
+    const stored = await calendars.publish(
+      { year: 2019, publishedAt: at, publishedBy: null, source: 'b3_file', nonTradingDays: days },
+      (before) => ({
+        at,
+        collaboratorId: null,
+        action: 'calendar_imported',
+        entity: 'calendar_year',
+        entityId: '2019',
+        details: { before: before && plain(before), after: days },
+      }),
+    );
+    expect(stored).toMatchObject({ year: 2019, publishedBy: null, source: 'b3_file' });
+    expect(await calendars.findYear(2019)).toEqual(stored);
+    const entries = await auditTrail.forEntity('calendar_year', '2019');
+    expect(entries.filter((entry) => entry.at.getTime() === at.getTime())).toMatchObject([
+      { action: 'calendar_imported', collaboratorId: null, details: { before: null, after: days } },
+    ]);
+
+    // O colaborador republica: vira dele.
+    await publish(2019);
+    expect(await calendars.findYear(2019)).toMatchObject({
+      publishedBy: COLLABORATOR,
+      source: 'collaborator',
+    });
+  });
+
+  it('o banco recusa ano do colaborador sem colaborador e do processador com colaborador (CA16)', async () => {
+    await expect(
+      prisma.anoCalendario.create({
+        data: { ano: 2019, publicadoEm: new Date(), publicadoPor: null, origem: 'colaborador' },
+      }),
+    ).rejects.toThrow();
+    await expect(
+      prisma.anoCalendario.create({
+        data: {
+          ano: 2019,
+          publicadoEm: new Date(),
+          publicadoPor: COLLABORATOR,
+          origem: 'arquivo_b3',
+        },
+      }),
+    ).rejects.toThrow();
+    await expect(
+      prisma.registroAuditoria.create({
+        data: {
+          ocorridoEm: new Date(),
+          colaboradorId: null,
+          acao: 'calendario_publicado',
+          entidade: 'ano_calendario',
+          entidadeId: '2019',
+          detalhes: {},
+        },
+      }),
+    ).rejects.toThrow();
   });
 
   it('publicação com dia recusado pelo banco não deixa nada pela metade', async () => {
