@@ -4,8 +4,10 @@ import {
   CATALOG_PAGE_LIMIT,
   isSectorOf,
   SECTOR_OPTIONS,
+  type AssetDetail,
   type AssetHistory,
   type AssetSearchQuery,
+  type AssetSession,
   type AssetSearchResult,
   type AssetUpdate,
   type CatalogAsset,
@@ -13,10 +15,14 @@ import {
   type CatalogListResult,
   type CatalogQuery,
   type NewAsset,
+  type PriceHistory,
+  type PriceHistoryPeriod,
   type QuoteCollectionStatus,
   type SectorOption,
 } from '@simulador/shared';
 import type { AuditAction, AuditEntry, JsonValue } from '../../audit/application/audit.js';
+import { percentChange } from '../../financial-calculation/decimal.js';
+import { periodStart, summarizePeriod } from '../../financial-calculation/price-history.js';
 import { searchAssets } from '../domain/asset-search.js';
 import {
   isActive,
@@ -32,9 +38,11 @@ import type {
   AssetHistoryReader,
   AssetLogoReader,
   AssetModification,
+  AssetPriceReader,
   AssetQuoteReader,
   AssetRepository,
   CatalogImportReader,
+  StoredSession,
 } from './ports.js';
 
 const PENDING_HISTORY: AssetHistory = { status: 'pending', from: null, to: null };
@@ -72,6 +80,8 @@ export interface AssetCatalogServiceDeps {
   activity?: AssetActivityReader;
   logos?: AssetLogoReader;
   imports?: CatalogImportReader;
+  /** SPEC-010: pregões da B3 para a ficha. Sem ele, a ficha fica sem último pregão e sem gráfico. */
+  prices?: AssetPriceReader;
   clock?: () => Date;
   newId?: () => string;
 }
@@ -105,12 +115,19 @@ export class AssetCatalogService {
       this.deps.logos?.withLogo(),
       this.deps.activity?.lastVolumes(),
     ]);
-    const found = searchAssets(candidates, query.q, ASSET_SEARCH_LIMIT, byVolume(volumes));
+    const found = searchAssets(
+      candidates,
+      query.q,
+      ASSET_SEARCH_LIMIT,
+      byVolume(volumes),
+      query.offset,
+    );
     return {
       assets: found.assets.map((asset) =>
         toPublicAsset(asset, quotes?.get(asset.id) ?? null, logos?.has(asset.id) ?? false),
       ),
       hasMore: found.hasMore,
+      total: found.total,
     };
   }
 
@@ -147,7 +164,13 @@ export class AssetCatalogService {
       this.deps.imports?.status(),
       this.deps.imports?.lastTradingDays(),
     ]);
-    const found = searchAssets(candidates, query.q, CATALOG_PAGE_LIMIT, byVolume(volumes));
+    const found = searchAssets(
+      candidates,
+      query.q,
+      CATALOG_PAGE_LIMIT,
+      byVolume(volumes),
+      query.offset,
+    );
     return {
       assets: found.assets.map((asset) => ({
         ...toCatalogAsset(asset, quotes?.get(asset.id) ?? null, logos?.has(asset.id) ?? false),
@@ -155,6 +178,7 @@ export class AssetCatalogService {
         lastTradedOn: tradingDays?.get(asset.ticker) ?? null,
       })),
       hasMore: found.hasMore,
+      total: found.total,
       activeCount,
       pendingReviewCount,
       historyYearsWithoutCalendar: history?.yearsWithoutCalendar ?? [],
@@ -165,6 +189,62 @@ export class AssetCatalogService {
 
   sectors(): readonly SectorOption[] {
     return SECTOR_OPTIONS;
+  }
+
+  /**
+   * SPEC-010: ficha do ativo para qualquer pessoa conectada, inclusive de ativo desativado (quem tem
+   * o ativo vê o ativo, SPEC-006): a última cotação do pregão, o último pregão da B3 e a situação do
+   * histórico.
+   */
+  async detail(id: string): Promise<AssetDetail> {
+    const asset = await this.deps.assets.findById(id);
+    if (!asset) throw new AssetNotFoundError();
+    const [quote, logos, sessions, history] = await Promise.all([
+      this.deps.quotes?.latestQuote(id),
+      this.deps.logos?.withLogo(),
+      this.deps.prices?.sessions(id, 2),
+      this.deps.history?.forAsset(id),
+    ]);
+    return {
+      ...toPublicAsset(asset, quote ?? null, logos?.has(id) ?? false),
+      active: isActive(asset),
+      deactivatedAt: asset.deactivatedAt?.toISOString() ?? null,
+      lastSession: toSession(sessions ?? []),
+      history: history ?? PENDING_HISTORY,
+    };
+  }
+
+  /**
+   * SPEC-010: os fechamentos do período, que termina no último fechamento guardado, com o resumo e
+   * os saltos (núcleo de cálculo, DA10). Sem histórico carregado, a série vem vazia.
+   */
+  async priceHistory(id: string, period: PriceHistoryPeriod): Promise<PriceHistory> {
+    const asset = await this.deps.assets.findById(id);
+    if (!asset) throw new AssetNotFoundError();
+    const history = await this.deps.history?.forAsset(id);
+    if (!this.deps.prices || history?.status !== 'loaded' || !history.from || !history.to) {
+      return {
+        period,
+        from: null,
+        to: null,
+        shorterThanPeriod: false,
+        points: [],
+        summary: null,
+        jumps: [],
+      };
+    }
+    const start = periodStart(history.to, period);
+    const points = await this.deps.prices.closes(id, start);
+    const { summary, jumps } = summarizePeriod(points);
+    return {
+      period,
+      from: points[0]?.date ?? null,
+      to: points.at(-1)?.date ?? null,
+      shorterThanPeriod: start !== null && history.from > start,
+      points,
+      summary,
+      jumps,
+    };
   }
 
   /** Logo do ativo (SPEC-040). Sem logo próprio: LogoNotFoundError. */
@@ -309,6 +389,22 @@ export class AssetCatalogService {
     };
     return { changes, updatedAt: now, audit };
   }
+}
+
+/** O último pregão, com a variação sobre o anterior (a mesma regra da SPEC-009). */
+function toSession([last, previous]: StoredSession[]): AssetSession | null {
+  if (!last) return null;
+  return {
+    date: last.date,
+    open: last.open,
+    high: last.high,
+    low: last.low,
+    close: last.close,
+    previousClose: previous?.close ?? null,
+    change: previous ? percentChange(last.close, previous.close) : null,
+    trades: last.trades,
+    volume: last.volume,
+  };
 }
 
 /** Os mais negociados primeiro (volume do último pregão); sem volume, por último. */

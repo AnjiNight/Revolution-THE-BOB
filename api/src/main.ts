@@ -125,6 +125,7 @@ async function main(): Promise<void> {
         activity: quotes,
         logos,
         imports: catalogImport,
+        prices: quotes,
       }),
     });
     await app.listen({ host: config.host, port: config.port });

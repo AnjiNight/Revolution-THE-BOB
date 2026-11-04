@@ -27,7 +27,9 @@ import {
   type LogoSource,
   type QuoteListSource,
   type CotahistSource,
+  type DailyClose,
   type DailyQuote,
+  type DailySession,
   type HistoryAsset,
   type IngestionTask,
   type IntradayQuote,
@@ -120,6 +122,40 @@ export class InMemoryQuoteRepository implements QuoteRepository {
     return Promise.resolve(ranges);
   }
 
+  async quoteRange(assetId: string): Promise<QuoteRange | null> {
+    return (await this.quoteRanges()).get(assetId) ?? null;
+  }
+
+  loadedYearsOf(assetId: string): Promise<Set<number>> {
+    return Promise.resolve(new Set(this.loaded.get(assetId)));
+  }
+
+  /** SPEC-010: os últimos pregões da B3, do mais novo para o mais antigo. */
+  sessions(assetId: string, count: number): Promise<DailySession[]> {
+    return Promise.resolve(
+      this.fromB3(assetId)
+        .reverse()
+        .slice(0, count)
+        .map(({ date, open, high, low, close, trades, volume }) => ({
+          date,
+          open,
+          high,
+          low,
+          close,
+          trades,
+          volume,
+        })),
+    );
+  }
+
+  closes(assetId: string, from: IsoDate | null): Promise<DailyClose[]> {
+    return Promise.resolve(
+      this.fromB3(assetId)
+        .filter((quote) => from === null || quote.date >= from)
+        .map(({ date, close }) => ({ date, close })),
+    );
+  }
+
   save(quotes: DailyQuote[], source: QuoteSource): Promise<number> {
     let saved = 0;
     for (const quote of quotes) {
@@ -159,6 +195,13 @@ export class InMemoryQuoteRepository implements QuoteRepository {
       .filter((quote) => quote.assetId === assetId)
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((quote) => [quote.date, quote.close]);
+  }
+
+  /** Cotações da B3 de um ativo, em ordem de data. */
+  private fromB3(assetId: string): DailyQuote[] {
+    return [...this.quotes.values()]
+      .filter((quote) => quote.assetId === assetId && quote.source === 'b3_cotahist')
+      .sort((a, b) => a.date.localeCompare(b.date));
   }
 }
 
@@ -256,6 +299,10 @@ export class InMemoryIntradayQuoteRepository implements IntradayQuoteRepository 
       });
     }
     return Promise.resolve(latest);
+  }
+
+  async latestOf(level: QuoteLevel, assetId: string): Promise<LatestIntradayQuote | null> {
+    return (await this.latest(level)).get(assetId) ?? null;
   }
 
   closesBefore(date: string): Promise<Map<string, string>> {

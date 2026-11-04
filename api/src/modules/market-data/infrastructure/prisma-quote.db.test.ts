@@ -256,6 +256,122 @@ describe.skipIf(!url)('histórico de cotações no PostgreSQL', () => {
     expect(await prisma.execucaoTarefa.count()).toBe(1);
   });
 
+  describe('ficha do ativo (SPEC-010)', () => {
+    beforeEach(async () => {
+      await quotes.save(
+        [
+          quote({ date: '2026-10-28', close: '38.510000' }),
+          quote({ date: '2026-10-29', close: '38.000001', volume: '1000.00' }),
+          quote({ date: '2026-10-30', close: '38.250000' }),
+          quote({
+            assetId: MXRF11,
+            date: '2026-10-30',
+            open: '8.940000',
+            high: '8.960000',
+            low: '8.840000',
+            close: '8.880000',
+            average: '8.900000',
+            trades: 82311,
+            volume: '31213326.76',
+          }),
+        ],
+        'b3_cotahist',
+      );
+      // O provisório da brapi (sem negócios nem volume) não entra na ficha.
+      await quotes.save(
+        [
+          quote({
+            date: '2026-11-03',
+            close: '38.600000',
+            average: null,
+            trades: null,
+            volume: null,
+          }),
+        ],
+        'brapi',
+      );
+    });
+
+    it('os últimos pregões da B3, do mais novo para o mais antigo, sem zeros sobrando', async () => {
+      expect(await quotes.sessions(PETR4, 2)).toEqual([
+        {
+          date: '2026-10-30',
+          open: '38.12',
+          high: '38.7',
+          low: '37.9',
+          close: '38.25',
+          trades: 45210,
+          volume: '1587345123.99',
+        },
+        {
+          date: '2026-10-29',
+          open: '38.12',
+          high: '38.7',
+          low: '37.9',
+          close: '38.000001',
+          trades: 45210,
+          volume: '1000',
+        },
+      ]);
+      expect(await quotes.sessions('33333333-3333-4333-8333-333333333333', 2)).toEqual([]);
+    });
+
+    it('fechamentos desde a data pedida, ou todos, em ordem de data', async () => {
+      expect(await quotes.closes(PETR4, '2026-10-29')).toEqual([
+        { date: '2026-10-29', close: '38.000001' },
+        { date: '2026-10-30', close: '38.25' },
+      ]);
+      expect((await quotes.closes(PETR4, null)).map((point) => point.date)).toEqual([
+        '2026-10-28',
+        '2026-10-29',
+        '2026-10-30',
+      ]);
+    });
+
+    it('situação do histórico de um ativo só, igual à da lista', async () => {
+      await calendars.publish(
+        {
+          year: 2026,
+          publishedAt: new Date(),
+          publishedBy: PETR4,
+          nonTradingDays: suggestNonTradingDays(2026),
+        },
+        () => ({
+          at: new Date(),
+          collaboratorId: PETR4,
+          action: 'calendar_published',
+          entity: 'calendar_year',
+          entityId: '2026',
+          details: {},
+        }),
+      );
+      await quotes.markYearsLoaded([{ assetId: PETR4, year: 2026, records: 3 }], new Date());
+      expect(await quotes.quoteRange(PETR4)).toEqual({ from: '2026-10-28', to: '2026-10-30' });
+      expect(await quotes.loadedYearsOf(PETR4)).toEqual(new Set([2026]));
+      const status = new HistoryStatusService({
+        quotes,
+        calendars,
+        clock: () => new Date('2026-11-03T15:00:00Z'),
+      });
+      expect(await status.forAsset(PETR4)).toEqual((await status.overview()).byAsset.get(PETR4));
+      expect(await status.forAsset(MXRF11)).toEqual({
+        status: 'loaded',
+        from: '2026-10-30',
+        to: '2026-10-30',
+      });
+    });
+
+    it('volume do último pregão de cada ativo (busca sem texto, SPEC-040)', async () => {
+      // O de 30/10 de cada um; o provisório da brapi, de 03/11, fica de fora.
+      expect(await quotes.lastVolumes()).toEqual(
+        new Map([
+          [PETR4, '1587345123.99'],
+          [MXRF11, '31213326.76'],
+        ]),
+      );
+    });
+  });
+
   describe('restrições do banco (CA11)', () => {
     const insert = (values: string) =>
       prisma.$executeRawUnsafe(

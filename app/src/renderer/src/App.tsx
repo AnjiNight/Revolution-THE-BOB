@@ -1,9 +1,10 @@
 import type { PublicUser } from '@simulador/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../shared/auth-ipc';
 import { AppShell } from './components/AppShell';
 import { AssetCatalog } from './components/AssetCatalog';
+import { AssetDetailPage } from './components/AssetDetailPage';
 import { AssetSearch } from './components/AssetSearch';
 import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
@@ -31,16 +32,27 @@ type View =
   | { kind: 'home'; user: PublicUser }
   | { kind: 'profile'; user: PublicUser }
   | { kind: 'calendar'; user: PublicUser; year?: number }
-  | { kind: 'assets'; user: PublicUser };
+  /** `assetId`: a ficha do ativo aberta por cima da lista (SPEC-010). */
+  | { kind: 'assets'; user: PublicUser; assetId?: string };
 
 /**
  * Fluxo de telas da SPEC-002 (§5.3), da SPEC-003 (Meu perfil), da SPEC-004 (recuperar senha), da
- * SPEC-039 (confirmar o e-mail antes de entrar), da SPEC-005 (calendário de pregão, colaborador) e
- * da SPEC-006 (ativos: busca do usuário e catálogo do colaborador).
+ * SPEC-039 (confirmar o e-mail antes de entrar), da SPEC-005 (calendário de pregão, colaborador),
+ * da SPEC-006 (ativos: busca do usuário e catálogo do colaborador) e da SPEC-010 (ficha do ativo).
  */
 export function App() {
   const { t } = useTranslation();
   const [view, setView] = useState<View>({ kind: 'loading' });
+  /** O botão que abriu a ficha: o foco volta para ele quando a ficha fecha. */
+  const assetOpener = useRef<HTMLElement | null>(null);
+  const showingList = view.kind === 'assets' && view.assetId === undefined;
+
+  useEffect(() => {
+    const opener = assetOpener.current;
+    if (!showingList || !opener) return;
+    assetOpener.current = null;
+    if (opener.isConnected) opener.focus();
+  }, [showingList]);
 
   useEffect(() => {
     window.api.auth
@@ -76,6 +88,10 @@ export function App() {
     const { user } = view;
     const openCalendar = (year?: number) =>
       setView({ kind: 'calendar', user, ...(year ? { year } : {}) });
+    const openAsset = (assetId: string, opener: HTMLElement) => {
+      assetOpener.current = opener;
+      setView({ kind: 'assets', user, assetId });
+    };
     return (
       <AppShell
         user={user}
@@ -102,12 +118,26 @@ export function App() {
             onSessionExpired={sessionExpired}
           />
         )}
-        {view.kind === 'assets' &&
-          (user.role === 'collaborator' ? (
-            <AssetCatalog onSessionExpired={sessionExpired} />
-          ) : (
-            <AssetSearch onSessionExpired={sessionExpired} />
-          ))}
+        {view.kind === 'assets' && (
+          <>
+            {/* Com a ficha aberta, a lista fica escondida, mas montada: a busca não se perde. */}
+            <div hidden={view.assetId !== undefined}>
+              {user.role === 'collaborator' ? (
+                <AssetCatalog onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
+              ) : (
+                <AssetSearch onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
+              )}
+            </div>
+            {view.assetId !== undefined && (
+              <AssetDetailPage
+                key={view.assetId}
+                assetId={view.assetId}
+                onBack={() => setView({ kind: 'assets', user })}
+                onSessionExpired={sessionExpired}
+              />
+            )}
+          </>
+        )}
         {view.kind === 'profile' && (
           <Profile
             onUserChanged={userChanged}

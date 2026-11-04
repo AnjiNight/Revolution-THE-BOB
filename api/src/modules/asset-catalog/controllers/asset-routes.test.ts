@@ -305,7 +305,22 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
           },
         ],
         hasMore: false,
+        total: 1,
       });
+    });
+
+    it('"Mostrar mais": offset pula os primeiros, e o total conta todos', async () => {
+      const first = await search();
+      const rest = await search(`?offset=1`);
+      expect(rest.total).toBe(first.total);
+      expect(rest.assets.map((asset) => asset.ticker)).toEqual(
+        first.assets.slice(1).map((asset) => asset.ticker),
+      );
+      for (const offset of ['-1', 'abc', '1.5', '99999']) {
+        const res = await call('GET', `${ASSET_PATHS.search}?offset=${offset}`, user);
+        expect(res.statusCode, offset).toBe(400);
+        expect(res.json()).toMatchObject({ fields: { offset: 'invalid_option' } });
+      }
     });
 
     it('filtro inválido dá validation_error', async () => {
@@ -326,6 +341,12 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
       const result = await search();
       expect(result.assets).toHaveLength(50);
       expect(result.hasMore).toBe(true);
+      // "Mostrar mais" traz os 5 que faltavam, sem repetir nenhum.
+      const more = await search('?offset=50');
+      expect(more).toMatchObject({ hasMore: false, total: 55 });
+      expect(more.assets).toHaveLength(5);
+      const tickers = [...result.assets, ...more.assets].map((asset) => asset.ticker);
+      expect(new Set(tickers).size).toBe(55);
     });
   });
 
@@ -732,6 +753,10 @@ describe('rotas do catálogo de ativos (SPEC-006)', () => {
       expect(page.assets).toHaveLength(100);
       expect(page.hasMore).toBe(true);
       expect(page.activeCount).toBe(101);
+      expect(page.total).toBe(101);
+      const next = await list('?offset=100');
+      expect(next).toMatchObject({ hasMore: false, total: 101 });
+      expect(next.assets).toHaveLength(1);
     });
   });
 });

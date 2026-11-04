@@ -10,7 +10,11 @@ import {
   type QuoteCollectionStatus,
 } from '@simulador/shared';
 import { TradingCalendar } from '../../financial-calculation/trading-calendar.js';
-import { compareDecimals, percentChange, sameAtCents } from '../domain/decimal.js';
+import {
+  compareDecimals,
+  percentChange,
+  sameAtCents,
+} from '../../financial-calculation/decimal.js';
 import { planCollection, type QuotaDecision } from '../domain/quota-plan.js';
 import { brasiliaInstant, collectionMinutes, dueCollection } from '../domain/trading-session.js';
 import {
@@ -20,6 +24,7 @@ import {
   type HistoryAsset,
   type IntradayQuote,
   type IntradayQuoteRepository,
+  type LatestIntradayQuote,
   type ListedAsset,
   type ListKind,
   type QuoteListSource,
@@ -121,17 +126,13 @@ export class IntradayCollection {
   /** Última cotação de cada ativo, com a variação sobre o fechamento do pregão anterior. */
   async latestQuotes(): Promise<Map<string, AssetQuote>> {
     const latest = await this.deps.quotes.latest('gratuito');
-    const quotes = new Map<string, AssetQuote>();
-    for (const [assetId, quote] of latest) {
-      const previous = quote.storedPreviousClose ?? quote.previousClose;
-      quotes.set(assetId, {
-        price: quote.price,
-        change: previous ? percentChange(quote.price, previous) : null,
-        at: quote.at.toISOString(),
-        source: 'brapi',
-      });
-    }
-    return quotes;
+    return new Map([...latest].map(([assetId, quote]) => [assetId, toAssetQuote(quote)]));
+  }
+
+  /** SPEC-010: a última de um ativo só, para a ficha. */
+  async latestQuote(assetId: string): Promise<AssetQuote | null> {
+    const quote = await this.deps.quotes.latestOf('gratuito', assetId);
+    return quote ? toAssetQuote(quote) : null;
   }
 
   /** Situação da coleta para a tela do colaborador (SPEC-009 e 040, §5.3). */
@@ -411,6 +412,17 @@ class CollectionLog {
 function isYesterdays(item: ListedAsset, previousClose: string | undefined): boolean {
   if (!item.price || !previousClose || item.change === null) return false;
   return sameAtCents(item.price, previousClose) && compareDecimals(item.change, '0') !== 0;
+}
+
+/** Variação sobre o fechamento guardado antes do dia da cotação (ou o que a fonte informou). */
+function toAssetQuote(quote: LatestIntradayQuote): AssetQuote {
+  const previous = quote.storedPreviousClose ?? quote.previousClose;
+  return {
+    price: quote.price,
+    change: previous ? percentChange(quote.price, previous) : null,
+    at: quote.at.toISOString(),
+    source: 'brapi',
+  };
 }
 
 function tradingCalendarOf(

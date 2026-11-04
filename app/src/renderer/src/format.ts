@@ -76,6 +76,50 @@ export function formatMoney(value: string, language: string): string {
   }).format(Number(value));
 }
 
+/** Volume financeiro abreviado (SPEC-010): "R$ 3,3 bi", "R$ 31,2 mi"; em inglês, "R$3.3B". */
+export function formatCompactMoney(value: string, language: string): string {
+  return new Intl.NumberFormat(language, {
+    style: 'currency',
+    currency: 'BRL',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(Number(value));
+}
+
+/** Quantidade no formato do idioma: "77.862", "77,862". */
+export function formatCount(value: number, language: string): string {
+  return new Intl.NumberFormat(language).format(value);
+}
+
+/** Preço do eixo do gráfico (SPEC-010): sem centavos quando o passo é de R$ 1 ou mais. */
+export function formatAxisPrice(value: number, step: number, language: string): string {
+  const digits = step >= 1 ? 0 : 2;
+  return new Intl.NumberFormat(language, {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
+/**
+ * Marca de data do eixo do gráfico: o dia ("30/10") nos períodos curtos, o mês ("nov.") nos
+ * médios, com o ano no lugar de janeiro, e o ano nos longos. Lida em UTC: é um dia, não um instante.
+ */
+export function formatTickDate(
+  date: IsoDate,
+  unit: 'day' | 'month' | 'year',
+  language: string,
+): string {
+  if (unit === 'year' || (unit === 'month' && date.slice(5, 7) === '01')) return date.slice(0, 4);
+  return new Intl.DateTimeFormat(
+    language,
+    unit === 'month'
+      ? { month: 'short', timeZone: 'UTC' }
+      : { day: '2-digit', month: '2-digit', timeZone: 'UTC' },
+  ).format(new Date(`${date}T00:00:00Z`));
+}
+
 /** Variação do dia com sinal: "+1,23%", "-0,85%", "0,00%". O sinal não depende só da cor. */
 export function formatChange(change: string, language: string): string {
   return new Intl.NumberFormat(language, {

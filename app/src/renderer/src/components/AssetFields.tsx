@@ -9,6 +9,7 @@ import {
 import { MagnifyingGlass } from '@phosphor-icons/react';
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { ClientAuthError } from '../../../shared/auth-ipc';
 import { SelectField } from './SelectField';
 
 /** Nome traduzido de um setor (ações) ou segmento (FIIs): o servidor só conhece o código. */
@@ -157,6 +158,47 @@ export function toSearchQuery(filters: AssetFilterState) {
   };
 }
 
+/**
+ * Fim da lista (mudança da SPEC-006 em 03/11/2026): "Mostrando 50 de 711" e o botão "Mostrar
+ * mais". O foco fica no botão, que desce com a lista; a linha da contagem é anunciada.
+ */
+export function ShowMore({
+  pages,
+}: {
+  pages: {
+    assets: readonly unknown[];
+    total: number;
+    hasMore: boolean;
+    loadedMore: boolean;
+    loadingMore: boolean;
+    moreError?: ClientAuthError | undefined;
+    loadMore: () => Promise<void>;
+  };
+}) {
+  const { t } = useTranslation();
+  if (!pages.hasMore && !pages.loadedMore) return null;
+  return (
+    <div className="show-more">
+      <p role="status">{t('assets.showing', { shown: pages.assets.length, total: pages.total })}</p>
+      {pages.moreError && (
+        <p className="form-error" role="alert">
+          {t(`authErrors.${pages.moreError}`)}
+        </p>
+      )}
+      {pages.hasMore && (
+        <button
+          type="button"
+          className="secondary"
+          disabled={pages.loadingMore}
+          onClick={() => void pages.loadMore()}
+        >
+          {pages.loadingMore ? t('assets.loadingMore') : t('assets.showMore')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** Campo de busca, classe e setor ou segmento, iguais nas telas do usuário e do colaborador. */
 export function AssetFilters({
   value,
@@ -184,13 +226,12 @@ export function AssetFilters({
             maxLength={ASSET_SEARCH_TEXT_MAX}
             autoComplete="off"
             spellCheck={false}
-            aria-describedby={`${searchId}-hint`}
+            // O exemplo fica dentro do campo: sem a linha de dica, a lista aparece já na
+            // primeira tela (o rótulo continua fora do campo).
+            placeholder={t('assets.searchPlaceholder')}
             onChange={(event) => onChange({ ...value, q: event.target.value })}
           />
         </div>
-        <p id={`${searchId}-hint`} className="field-hint">
-          {t('assets.searchHint')}
-        </p>
       </div>
       <ClassChoice
         legend={t('assets.classFilter')}

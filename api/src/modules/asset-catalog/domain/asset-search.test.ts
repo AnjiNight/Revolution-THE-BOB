@@ -46,7 +46,19 @@ describe('busca de ativos (CA05)', () => {
     expect(searchAssets(catalog, '', 3)).toEqual({
       assets: [catalog[4], catalog[5], catalog[1]],
       hasMore: true,
+      total: catalog.length,
     });
     expect(searchAssets(catalog, '', 7).hasMore).toBe(false);
+  });
+
+  it('"Mostrar mais": a partir do offset, na mesma ordem, até acabar', () => {
+    const all = searchAssets(catalog, '').assets;
+    const second = searchAssets(catalog, '', 3, undefined, 3);
+    expect(second.assets).toEqual(all.slice(3, 6));
+    expect(second.hasMore).toBe(all.length > 6);
+    expect(second.total).toBe(all.length);
+    const last = searchAssets(catalog, '', 3, undefined, all.length - 1);
+    expect(last).toMatchObject({ assets: [all.at(-1)], hasMore: false });
+    expect(searchAssets(catalog, '', 3, undefined, all.length).assets).toEqual([]);
   });
 });

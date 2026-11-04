@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Aprovada pelo Luís em 22/10/2026 e implementada (ver §9). **Mudada pela [SPEC-040](SPEC-040.md):** o catálogo passa a ter as ações e os FIIs da B3, importados todo dia, e o aviso acima de 50 ativos sai |
+| Status | Aprovada pelo Luís em 22/10/2026 e implementada (ver §9). **Mudada pela [SPEC-040](SPEC-040.md):** o catálogo passa a ter as ações e os FIIs da B3, importados todo dia, e o aviso acima de 50 ativos sai. **Mudada em 03/11/2026:** "Mostrar mais" no fim da busca (nota no fim) |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)) |
 | Prioridade | *Must* (RF07, busca); *Should* (RF39, cadastro), mas a busca precisa do cadastro para ter o que mostrar |
 | Depende de | [SPEC-002](SPEC-002.md) (conta de colaborador) |
@@ -199,3 +199,5 @@ ATIVO ganha classe em lista fechada, setor ou segmento e situação (arquitetura
 Total: **441 testes** passando (com o banco real), lint, tipos, formatação e build.
 
 **Para as próximas Specs:** os lançamentos (SPEC-012 a 015) usam `isActive` do ativo para recusar compra de ativo desativado e continuam aceitando venda; as cotações (SPEC-008) partem de `AssetRepository.list({ status: 'active' })`. Nova ação administrativa entra no registro com um valor novo em `acao_auditoria` (migração) e é gravada na mesma transação, com `auditRow`.
+
+> **Mudança (03/11/2026, pedido do Luís):** com o catálogo da bolsa inteira (SPEC-040, uns 700 ativos), a busca deixa de parar nos 50 primeiros: no fim da lista, **Mostrar mais** traz os 50 seguintes (100 na lista do colaborador), até o último. As rotas `GET /api/assets` e `GET /api/collaborator/assets` aceitam `offset` (quantos resultados pular; inteiro de 0 a 10.000, senão `validation_error`) e devolvem `total` (quantos passam na busca e nos filtros). A tela mostra "Ativos encontrados: 711" e, no fim, "Mostrando 50 de 711". Trocar a busca ou os filtros volta para os primeiros. Testes: `asset-search.test.ts`, `asset-routes.test.ts` e `auth-client.test.ts`.

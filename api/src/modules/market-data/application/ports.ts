@@ -72,6 +72,23 @@ export interface LoadedYear {
   records: number;
 }
 
+/** Um pregão guardado da B3, como a ficha do ativo mostra (SPEC-010). */
+export interface DailySession {
+  date: IsoDate;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  trades: number | null;
+  volume: string | null;
+}
+
+/** Fechamento de um pregão, para o gráfico da ficha (SPEC-010). */
+export interface DailyClose {
+  date: IsoDate;
+  close: string;
+}
+
 /** Primeiro e último pregão guardados de um ativo. */
 export interface QuoteRange {
   from: IsoDate;
@@ -87,6 +104,10 @@ export interface QuoteRepository {
    * provisório da brapi (SPEC-009) não conta: senão a atualização diária pularia o dia dele.
    */
   quoteRanges(): Promise<Map<string, QuoteRange>>;
+  /** SPEC-010: o mesmo, de um ativo só (`null` sem cotação da B3). */
+  quoteRange(assetId: string): Promise<QuoteRange | null>;
+  /** SPEC-010: anos já lidos de um ativo só. */
+  loadedYearsOf(assetId: string): Promise<Set<number>>;
   /**
    * Insere ou atualiza pela chave (ativo, data), sem duplicar (idempotente). Precedência (DA18):
    * a B3 substitui qualquer fonte; outra fonte nunca substitui a B3. Devolve quantas linhas gravou.
@@ -248,6 +269,8 @@ export interface IntradayQuoteRepository {
   /** Grava as novas; a mesma (ativo, horário, nível) não duplica. Devolve quantas gravou. */
   save(quotes: IntradayQuote[]): Promise<number>;
   latest(level: QuoteLevel): Promise<Map<string, LatestIntradayQuote>>;
+  /** SPEC-010: a última de um ativo só. */
+  latestOf(level: QuoteLevel, assetId: string): Promise<LatestIntradayQuote | null>;
   /** Último fechamento guardado antes da data, por ativo (da B3 ou provisório). */
   closesBefore(date: IsoDate): Promise<Map<string, string>>;
   deleteBefore(instant: Date): Promise<number>;

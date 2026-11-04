@@ -61,9 +61,11 @@ export const CALENDAR_CHANNELS = {
   publish: 'calendar:publish',
 } as const;
 
-/** Canais IPC do catálogo de ativos (SPECs 006 e 040); manutenção só para colaborador. */
+/** Canais IPC do catálogo de ativos (SPECs 006, 010 e 040); manutenção só para colaborador. */
 export const ASSET_CHANNELS = {
   search: 'assets:search',
+  detail: 'assets:detail',
+  history: 'assets:history',
   logo: 'assets:logo',
   catalog: 'assets:catalog',
   create: 'assets:create',

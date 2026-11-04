@@ -8,16 +8,7 @@ import type {
   QuoteLevel,
   QuoteSource,
 } from '../application/ports.js';
-
-/** `numeric` chega do PostgreSQL como texto; vazio continua vazio. */
-function decimal(value: string | null): string | null {
-  return value === null ? null : normalize(value);
-}
-
-/** "52.710000" → "52.71": o mesmo número, sem zeros sobrando. */
-function normalize(value: string): string {
-  return value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value;
-}
+import { decimal, normalize } from './numeric-text.js';
 
 interface LatestRow {
   ativo_id: string;
@@ -30,6 +21,21 @@ interface LatestRow {
   fechamento_anterior: string | null;
   fonte: QuoteSource;
   fechamento_guardado: string | null;
+}
+
+function toLatest(row: LatestRow): LatestIntradayQuote {
+  return {
+    assetId: row.ativo_id,
+    at: row.momento,
+    level: row.nivel,
+    price: normalize(row.preco),
+    open: decimal(row.abertura_dia),
+    high: decimal(row.maxima_dia),
+    low: decimal(row.minima_dia),
+    previousClose: decimal(row.fechamento_anterior),
+    source: row.fonte,
+    storedPreviousClose: decimal(row.fechamento_guardado),
+  };
 }
 
 /** Cotações do pregão (SPEC-009) no PostgreSQL. */
@@ -84,23 +90,28 @@ export class PrismaIntradayQuoteRepository implements IntradayQuoteRepository {
       FROM cotacao_pregao q
       WHERE q.nivel = ${level}::nivel_cotacao
       ORDER BY q.ativo_id, q.momento DESC`;
-    return new Map(
-      rows.map((row) => [
-        row.ativo_id,
-        {
-          assetId: row.ativo_id,
-          at: row.momento,
-          level: row.nivel,
-          price: normalize(row.preco),
-          open: decimal(row.abertura_dia),
-          high: decimal(row.maxima_dia),
-          low: decimal(row.minima_dia),
-          previousClose: decimal(row.fechamento_anterior),
-          source: row.fonte,
-          storedPreviousClose: decimal(row.fechamento_guardado),
-        },
-      ]),
-    );
+    return new Map(rows.map((row) => [row.ativo_id, toLatest(row)]));
+  }
+
+  /** SPEC-010: o mesmo, de um ativo só (a ficha), pela chave (ativo, horário). */
+  async latestOf(level: QuoteLevel, assetId: string): Promise<LatestIntradayQuote | null> {
+    const rows = await this.prisma.$queryRaw<LatestRow[]>`
+      SELECT
+        q.ativo_id, q.momento, q.nivel, q.preco::text, q.abertura_dia::text, q.maxima_dia::text,
+        q.minima_dia::text, q.fechamento_anterior::text, q.fonte,
+        (
+          SELECT d.fechamento::text FROM cotacao_diaria d
+          WHERE d.ativo_id = q.ativo_id
+            AND d.data < (q.momento AT TIME ZONE 'America/Sao_Paulo')::date
+          ORDER BY d.data DESC
+          LIMIT 1
+        ) AS fechamento_guardado
+      FROM cotacao_pregao q
+      WHERE q.ativo_id = ${assetId}::uuid AND q.nivel = ${level}::nivel_cotacao
+      ORDER BY q.momento DESC
+      LIMIT 1`;
+    const row = rows[0];
+    return row ? toLatest(row) : null;
   }
 
   async closesBefore(date: IsoDate): Promise<Map<string, string>> {

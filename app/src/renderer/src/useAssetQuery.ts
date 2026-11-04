@@ -51,3 +51,66 @@ export function useAssetQuery<Q, T>(
     reload,
   };
 }
+
+interface Page {
+  assets: readonly unknown[];
+  hasMore: boolean;
+  total: number;
+}
+
+/**
+ * Lista com "Mostrar mais" (mudança da SPEC-006 em 03/11/2026): a primeira página acompanha os
+ * filtros (`useAssetQuery`); cada "Mostrar mais" pede a página seguinte e junta embaixo. As páginas
+ * extras valem só para a primeira página de que partiram: trocar os filtros, ou recarregar depois
+ * de uma alteração, volta para a primeira.
+ */
+export function useAssetPages<Q extends { offset?: number }, T extends Page>(
+  query: Q,
+  fetcher: (query: Q) => Promise<ClientResult<T>>,
+  onSessionExpired: () => void,
+) {
+  type Item = T['assets'][number];
+  const first = useAssetQuery(query, fetcher, onSessionExpired);
+  const [more, setMore] = useState<{ base: T; assets: Item[]; hasMore: boolean } | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<{ base: T; error: ClientAuthError } | null>(null);
+
+  const base = first.data;
+  const extra = more && more.base === base ? more : null;
+  const assets: Item[] = base
+    ? [...(base.assets as readonly Item[]), ...(extra?.assets ?? [])]
+    : [];
+
+  const loadMore = async () => {
+    if (!base || loadingMore) return;
+    setLoadingMore(true);
+    setMoreError(null);
+    const result = await fetcher({ ...query, offset: assets.length });
+    setLoadingMore(false);
+    if (!result.ok) {
+      if (result.error === 'unauthorized') return onSessionExpired();
+      setMoreError({ base, error: result.error });
+      return;
+    }
+    setMore((previous) => ({
+      base,
+      assets: [
+        ...(previous?.base === base ? previous.assets : []),
+        ...(result.data.assets as readonly Item[]),
+      ],
+      hasMore: result.data.hasMore,
+    }));
+  };
+
+  return {
+    ...first,
+    assets,
+    hasMore: extra ? extra.hasMore : (base?.hasMore ?? false),
+    total: base?.total ?? 0,
+    /** Já veio alguma página além da primeira. */
+    loadedMore: extra !== null,
+    loadMore,
+    loadingMore,
+    moreError: moreError?.base === base ? moreError.error : undefined,
+  };
+}

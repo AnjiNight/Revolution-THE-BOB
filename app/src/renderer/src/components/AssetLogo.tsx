@@ -29,8 +29,11 @@ export function logoInitials(ticker: string): string {
  */
 export function AssetLogo({
   asset,
+  large = false,
 }: {
   asset: Pick<Asset, 'id' | 'ticker' | 'class' | 'hasLogo'>;
+  /** SPEC-010: 48 px no topo da ficha; 32 px nas listas. */
+  large?: boolean;
 }) {
   // A imagem guarda de qual ativo ela é: se a linha passa a mostrar outro, a antiga não aparece.
   const [loaded, setLoaded] = useState<{ id: string; src: string | null } | null>(null);
@@ -47,11 +50,13 @@ export function AssetLogo({
   }, [asset.id, asset.hasLogo]);
 
   const src = asset.hasLogo && loaded?.id === asset.id ? loaded.src : null;
+  const size = large ? 48 : 32;
+  const className = large ? 'asset-logo asset-logo-large' : 'asset-logo';
   if (src) {
-    return <img className="asset-logo" src={src} alt="" width={32} height={32} />;
+    return <img className={className} src={src} alt="" width={size} height={size} />;
   }
   return (
-    <span className={`asset-logo asset-initials is-${asset.class}`} aria-hidden="true">
+    <span className={`${className} asset-initials is-${asset.class}`} aria-hidden="true">
       {logoInitials(asset.ticker)}
     </span>
   );

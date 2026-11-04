@@ -1,7 +1,9 @@
 import type { IsoDate } from '@simulador/shared';
 import type { PrismaClient } from '../../../generated/prisma/client.js';
 import type {
+  DailyClose,
   DailyQuote,
+  DailySession,
   HistoryAsset,
   IngestionTask,
   LoadedYear,
@@ -14,6 +16,17 @@ import type {
   TaskRunReader,
   TaskRunRepository,
 } from '../application/ports.js';
+import { normalize } from './numeric-text.js';
+
+interface SessionRow {
+  data: Date;
+  abertura: string;
+  maxima: string;
+  minima: string;
+  fechamento: string;
+  negocios: number | null;
+  volume: string | null;
+}
 
 /** A coluna DATE chega como meia-noite em UTC; o dia é só a parte da data. */
 function toIsoDate(date: Date): IsoDate {
@@ -67,6 +80,65 @@ export class PrismaQuoteRepository implements QuoteRepository {
     return ranges;
   }
 
+  async quoteRange(assetId: string): Promise<QuoteRange | null> {
+    const row = await this.prisma.cotacaoDiaria.aggregate({
+      where: { ativoId: assetId, fonte: 'b3_cotahist' },
+      _min: { data: true },
+      _max: { data: true },
+    });
+    return row._min.data && row._max.data
+      ? { from: toIsoDate(row._min.data), to: toIsoDate(row._max.data) }
+      : null;
+  }
+
+  async loadedYearsOf(assetId: string): Promise<Set<number>> {
+    const rows = await this.prisma.cargaHistorico.findMany({
+      where: { ativoId: assetId },
+      select: { ano: true },
+    });
+    return new Set(rows.map((row) => row.ano));
+  }
+
+  /**
+   * SPEC-010: os últimos `count` pregões da B3 de um ativo, do mais novo para o mais antigo (o
+   * último pregão e o anterior, para a variação).
+   */
+  async sessions(assetId: string, count: number): Promise<DailySession[]> {
+    const rows = await this.prisma.$queryRaw<SessionRow[]>`
+      SELECT data, abertura::text, maxima::text, minima::text, fechamento::text, negocios,
+        volume::text
+      FROM cotacao_diaria
+      WHERE ativo_id = ${assetId}::uuid AND fonte = 'b3_cotahist'
+      ORDER BY data DESC
+      LIMIT ${count}`;
+    return rows.map((row) => ({
+      date: toIsoDate(row.data),
+      open: normalize(row.abertura),
+      high: normalize(row.maxima),
+      low: normalize(row.minima),
+      close: normalize(row.fechamento),
+      trades: row.negocios,
+      volume: row.volume === null ? null : normalize(row.volume),
+    }));
+  }
+
+  /** SPEC-010: fechamentos da B3 de um ativo desde `from` (Tudo: desde o primeiro), em ordem. */
+  async closes(assetId: string, from: IsoDate | null): Promise<DailyClose[]> {
+    const rows = await this.prisma.cotacaoDiaria.findMany({
+      where: {
+        ativoId: assetId,
+        fonte: 'b3_cotahist',
+        ...(from ? { data: { gte: fromIsoDate(from) } } : {}),
+      },
+      select: { data: true, fechamento: true },
+      orderBy: { data: 'asc' },
+    });
+    return rows.map((row) => ({
+      date: toIsoDate(row.data),
+      close: normalize(row.fechamento.toFixed()),
+    }));
+  }
+
   /**
    * Um INSERT só para o lote inteiro (colunas como listas, com `unnest`). Na chave repetida,
    * atualiza só se a cotação nova é da B3 ou a guardada não é (precedência da DA18).
@@ -104,14 +176,19 @@ export class PrismaQuoteRepository implements QuoteRepository {
 
   /**
    * SPEC-040: volume financeiro do último pregão da B3 de cada ativo, para a busca sem texto mostrar
-   * os mais negociados primeiro.
+   * os mais negociados primeiro. Um ativo por vez, pela chave (ativo, data): com o histórico inteiro
+   * (1 milhão de linhas), leva milissegundos em vez de meio segundo (SPEC-010).
    */
   async lastVolumes(): Promise<Map<string, string>> {
     const rows = await this.prisma.$queryRaw<Array<{ ativo_id: string; volume: string }>>`
-      SELECT DISTINCT ON (ativo_id) ativo_id, volume::text
-      FROM cotacao_diaria
-      WHERE fonte = 'b3_cotahist' AND volume IS NOT NULL
-      ORDER BY ativo_id, data DESC`;
+      SELECT a.id AS ativo_id, v.volume::text AS volume
+      FROM ativo a
+      CROSS JOIN LATERAL (
+        SELECT d.volume FROM cotacao_diaria d
+        WHERE d.ativo_id = a.id AND d.fonte = 'b3_cotahist' AND d.volume IS NOT NULL
+        ORDER BY d.data DESC
+        LIMIT 1
+      ) v`;
     return new Map(rows.map((row) => [row.ativo_id, row.volume]));
   }
 

@@ -16,6 +16,7 @@ import type {
   NewAssetInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
+  PriceHistoryPeriod,
   RegisterInput,
   UpdateNameInput,
 } from '@simulador/shared';
@@ -191,6 +192,11 @@ app.whenReady().then(() => {
   // Catálogo de ativos (SPEC-006): o servidor confere se a conta é de colaborador.
   ipcMain.handle(ASSET_CHANNELS.search, (_event, query: AssetSearchQuery) =>
     auth.searchAssets(query),
+  );
+  // SPEC-010: ficha e gráfico; o cliente confere o id e o período antes de chamar o servidor.
+  ipcMain.handle(ASSET_CHANNELS.detail, (_event, id: string) => auth.assetDetail(id));
+  ipcMain.handle(ASSET_CHANNELS.history, (_event, id: string, period: PriceHistoryPeriod) =>
+    auth.assetHistory(id, period),
   );
   ipcMain.handle(ASSET_CHANNELS.catalog, (_event, query: CatalogQuery) => auth.assetCatalog(query));
   ipcMain.handle(ASSET_CHANNELS.create, (_event, input: NewAssetInput) => auth.createAsset(input));

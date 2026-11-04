@@ -4,11 +4,13 @@ import {
   AUTH_PATHS,
   CALENDAR_PATHS,
   calendarPath,
+  isPriceHistoryPeriod,
   parseCalendarYear,
   PROFILE_PATHS,
   TERMS_VERSION,
   type AccountDeletionConfirmInput,
   type AccountDeletionRequestInput,
+  type AssetDetail,
   type AssetSearchQuery,
   type AssetSearchResult,
   type AssetUpdateInput,
@@ -33,6 +35,8 @@ import {
   type PasswordResetConfirmInput,
   type PasswordResetRequestInput,
   type PersonalDataExport,
+  type PriceHistory,
+  type PriceHistoryPeriod,
   type PublicUser,
   type RegisterInput,
   type TokenPair,
@@ -305,6 +309,25 @@ export class AuthClient {
     );
   }
 
+  /** SPEC-010: ficha do ativo para qualquer pessoa conectada, também de ativo desativado. */
+  assetDetail(id: string): Promise<ClientResult<AssetDetail>> {
+    return this.call(() =>
+      this.authorizedRequest<AssetDetail>('GET', assetUrl(ASSET_PATHS.detail, id)),
+    );
+  }
+
+  /** SPEC-010: fechamentos do período, com o resumo e os saltos. */
+  assetHistory(id: string, period: PriceHistoryPeriod): Promise<ClientResult<PriceHistory>> {
+    return this.call(() => {
+      // O período vem da interface: só um dos cinco entra na query string.
+      if (!isPriceHistoryPeriod(period)) throw new RequestFailed('unexpected');
+      return this.authorizedRequest<PriceHistory>(
+        'GET',
+        `${assetUrl(ASSET_PATHS.history, id)}?period=${period}`,
+      );
+    });
+  }
+
   /** Colaborador: todos os ativos que passam nos filtros, inclusive desativados. */
   assetCatalog(query: CatalogQuery): Promise<ClientResult<CatalogListResult>> {
     return this.call(() =>
@@ -520,11 +543,15 @@ function assetUrl(path: string, id: string): string {
   return assetPath(path, id);
 }
 
-/** Filtros da busca na query string; vazios ficam de fora. */
+/** Filtros da busca na query string; vazios (e o `offset` zero) ficam de fora. */
 function withQuery(path: string, query: AssetSearchQuery | CatalogQuery): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (typeof value === 'string' && value !== '') params.set(key, value);
+    // "Mostrar mais": só um inteiro positivo entra na query string.
+    if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) {
+      params.set(key, String(value));
+    }
   }
   const text = params.toString();
   return text ? `${path}?${text}` : path;

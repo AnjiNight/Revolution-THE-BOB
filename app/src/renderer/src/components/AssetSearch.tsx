@@ -3,11 +3,12 @@ import { Info } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../assets.css';
-import { useAssetQuery } from '../useAssetQuery';
+import { useAssetPages } from '../useAssetQuery';
 import {
   AssetFilters,
   EMPTY_FILTERS,
   hasFilters,
+  ShowMore,
   toSearchQuery,
   useSectorName,
   type AssetFilterState,
@@ -16,15 +17,23 @@ import { AssetLogo } from './AssetLogo';
 import { QuoteText } from './QuoteText';
 
 /**
- * Tela "Ativos" do usuário (SPEC-006 e 040, §5.3): busca por ticker ou nome e filtros de classe
- * e de setor ou segmento, só nos ativos ativos do catálogo (OPEN-41). Sem texto, os mais negociados
- * primeiro.
+ * Tela "Ativos" do usuário (SPECs 006, 010 e 040, §5.3): busca por ticker ou nome e filtros de
+ * classe e de setor ou segmento, só nos ativos ativos do catálogo (OPEN-41). Sem texto, os mais
+ * negociados primeiro. O ticker abre a ficha do ativo.
  */
-export function AssetSearch({ onSessionExpired }: { onSessionExpired: () => void }) {
+export function AssetSearch({
+  onSessionExpired,
+  onOpenAsset,
+}: {
+  onSessionExpired: () => void;
+  /** SPEC-010: `opener` recebe o foco de volta quando a ficha fecha. */
+  onOpenAsset: (assetId: string, opener: HTMLElement) => void;
+}) {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<AssetFilterState>(EMPTY_FILTERS);
   const query: AssetSearchQuery = toSearchQuery(filters);
-  const { data, error, loading } = useAssetQuery(query, window.api.assets.search, onSessionExpired);
+  const pages = useAssetPages(query, window.api.assets.search, onSessionExpired);
+  const { data, error, loading } = pages;
   const filtered = hasFilters(filters);
 
   return (
@@ -40,7 +49,7 @@ export function AssetSearch({ onSessionExpired }: { onSessionExpired: () => void
         <div className="assets-summary">
           <p role="status">
             {loading && t('assets.searching')}
-            {!loading && data && t('assets.resultCount', { count: data.assets.length })}
+            {!loading && data && t('assets.resultCount', { count: pages.total })}
           </p>
           {filtered && (
             <button type="button" className="link" onClick={() => setFilters(EMPTY_FILTERS)}>
@@ -58,8 +67,10 @@ export function AssetSearch({ onSessionExpired }: { onSessionExpired: () => void
         {data && data.assets.length === 0 && (
           <p className="assets-empty">{filtered ? t('assets.empty') : t('assets.emptyCatalog')}</p>
         )}
-        {data && data.assets.length > 0 && <AssetTable assets={data.assets} busy={loading} />}
-        {data?.hasMore && <p className="field-hint">{t('assets.hasMore')}</p>}
+        {data && pages.assets.length > 0 && (
+          <AssetTable assets={pages.assets} busy={loading} onOpenAsset={onOpenAsset} />
+        )}
+        {data && <ShowMore pages={pages} />}
 
         <p className="assets-note">
           <Info weight="fill" aria-hidden="true" />
@@ -73,11 +84,20 @@ export function AssetSearch({ onSessionExpired }: { onSessionExpired: () => void
 }
 
 /** Logo, ticker e nome, classe, setor ou segmento e o último preço (SPEC-009 e 040). */
-function AssetTable({ assets, busy }: { assets: Asset[]; busy: boolean }) {
+function AssetTable({
+  assets,
+  busy,
+  onOpenAsset,
+}: {
+  assets: Asset[];
+  busy: boolean;
+  onOpenAsset: (assetId: string, opener: HTMLElement) => void;
+}) {
   const { t } = useTranslation();
   const sectorName = useSectorName();
   return (
-    <table className="asset-table" aria-label={t('assets.listLabel')} aria-busy={busy}>
+    // A linha inteira abre a ficha: o botão do ticker cobre a linha (um botão só no teclado).
+    <table className="asset-table is-clickable" aria-label={t('assets.listLabel')} aria-busy={busy}>
       <thead>
         <tr>
           <th scope="col">{t('assets.columns.asset')}</th>
@@ -95,7 +115,14 @@ function AssetTable({ assets, busy }: { assets: Asset[]; busy: boolean }) {
               <div className="asset-identity">
                 <AssetLogo asset={asset} />
                 <div className="asset-identity-text">
-                  <span className="asset-ticker">{asset.ticker}</span>
+                  <button
+                    type="button"
+                    className="link asset-open asset-ticker"
+                    aria-label={t('detail.openLabel', { ticker: asset.ticker })}
+                    onClick={(event) => onOpenAsset(asset.id, event.currentTarget)}
+                  >
+                    {asset.ticker}
+                  </button>
                   <span className="asset-name">{asset.name}</span>
                   {/* Janela estreita: o preço vai para baixo do nome. */}
                   <span className="narrow-only quote-narrow">

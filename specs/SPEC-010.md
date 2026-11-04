@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Escrita em 03/11/2026. Aguarda a aprovação do Luís, com as respostas do §4.1 |
+| Status | Aprovada pelo Luís em 03/11/2026, com as respostas do §4.1 (saltos: B; período: 1 ano), e implementada (ver §9) |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)) |
 | Prioridade | *Must* (RF08) |
 | Depende de | [SPEC-006](SPEC-006.md) (catálogo e busca), [SPEC-008](SPEC-008.md) (histórico da B3), [SPEC-009](SPEC-009.md) (cotação do pregão), [SPEC-040](SPEC-040.md) (logos e catálogo completo) |
@@ -54,7 +54,9 @@ O usuário abre, pela lista **Ativos**, a **ficha** de uma ação ou de um FII. 
 
 ## 4. Decisões
 
-### 4.1 Para o Luís decidir na aprovação
+### 4.1 Respondidas pelo Luís em 03/11/2026
+
+**Respostas: decisão 1 = B; decisão 2 = 1 ano** (as recomendações).
 
 | # | Tema | Opções | Recomendação |
 |---|---|---|---|
@@ -65,7 +67,7 @@ O usuário abre, pela lista **Ativos**, a **ficha** de uma ação ou de um FII. 
 
 | Tema | Proposta | Motivo |
 |---|---|---|
-| **Onde abre** | Na lista Ativos do usuário, o ticker vira um botão que abre a ficha. Na lista do colaborador, o botão **Ficha** fica ao lado de Editar. **Voltar** retorna à lista com a mesma busca e os mesmos filtros | Caminho natural do P01 (buscar, depois consultar); voltar sem perder a busca |
+| **Onde abre** | Nas duas listas Ativos (usuário e colaborador), o ticker vira um botão que abre a ficha (*na implementação*, ver §9: no lugar de um botão **Ficha** ao lado de Editar). **Voltar** retorna à lista com a mesma busca e os mesmos filtros | Caminho natural do P01 (buscar, depois consultar); voltar sem perder a busca |
 | Quem vê | Qualquer pessoa conectada (usuário ou colaborador). Cotação é dado público de mercado, sem dado pessoal: nada vai para a auditoria | Leitura pura; a diferença por plano chega com a SPEC-026 |
 | Ativo desativado | A ficha abre, com "Desativado no catálogo desde 12/07/2026". Ele continua fora da busca do usuário (SPEC-006), mas quem tiver o ativo vai chegar à ficha pela carteira (SPEC-014) | Mesmo princípio da SPEC-006: quem tem o ativo vê o ativo |
 | **Última cotação (topo)** | Vale a mais recente entre a **cotação do pregão** (SPEC-009 e 040) e o **fechamento da B3** (SPEC-008). Cotação do pregão de um dia depois do último fechamento: "R$ 53,10 +0,74% · Cotação das 14:30 (atraso de até 45 min)". Caso contrário: "R$ 52,71 +0,98% · Fechamento de 30/10/2026 (B3)". A variação é sobre o fechamento anterior guardado (regra da SPEC-009). Nunca "tempo real" | No fim de semana o fechamento oficial da B3 vale mais que a última coleta de sexta; durante o pregão, a coleta é mais nova |
@@ -75,7 +77,7 @@ O usuário abre, pela lista **Ativos**, a **ficha** de uma ação ou de um FII. 
 | Pontos | Um ponto por pregão, sem amostragem: em Tudo, uns 2.700 pontos (o PETR4 tem 2.691), uns 100 KB | Exato e simples; o tamanho é pequeno |
 | **Resumo do período** | **Variação** do primeiro ao último fechamento do período, com 2 casas; **mínima** e **máxima** dos fechamentos, com as datas. O servidor calcula em decimal (RNF12), por funções puras do módulo de Cálculo Financeiro (DA10). O app converte para número só para posicionar a linha na tela, nunca para mostrar valores | Valor mostrado sempre exato; regra testável sem banco |
 | Cursor | Passando o mouse, aparece a data e o fechamento do pregão mais próximo. Pelo teclado, o gráfico recebe foco: ← e → andam um pregão, Page Up e Page Down andam um mês, Home e End vão ao início e ao fim. O valor fica numa caixa visível e é lido pelo leitor de tela | RNF18; o gráfico não fica só para quem usa mouse |
-| **Saltos** (se a decisão 1 for B) | Salto: fechamento **1,8 vez maior ou menor** que o do pregão anterior (alta de 80% ou queda de 44% ou mais). O gráfico mostra uma linha tracejada na data. Embaixo dele: "16/04/2024: −50,6% de um pregão para o seguinte. Desdobramentos e grupamentos mudam o preço sem mudar o valor de quem tem o ativo; também pode ter sido uma variação real". Com salto no período, a variação aparece como "não calculada: há salto de preço no período". O sistema não tenta adivinhar o tipo de salto | Os dados do §4.3 mostram desdobramentos, grupamentos e quedas reais com o mesmo formato; adivinhar erraria (ex.: AMER3) |
+| **Saltos** (decisão 1: B) | Salto: fechamento **1,8 vez maior ou menor** que o do pregão anterior (alta de 80% ou queda de 44% ou mais). O gráfico mostra uma linha tracejada na data. Embaixo dele: "16/04/2024: −50,6% de um pregão para o seguinte. Desdobramentos e grupamentos mudam o preço sem mudar o valor de quem tem o ativo; também pode ter sido uma variação real". Com salto no período, a variação aparece como "não calculada: há salto de preço no período". O sistema não tenta adivinhar o tipo de salto | Os dados do §4.3 mostram desdobramentos, grupamentos e quedas reais com o mesmo formato; adivinhar erraria (ex.: AMER3) |
 | **Aviso fixo** | Sempre visível, junto do gráfico: "Preços como a B3 publica, sem ajuste por dividendos, rendimentos de FIIs, desdobramentos ou grupamentos. A variação não é a rentabilidade de quem tinha o ativo." | SPEC-008 já previa este aviso; nos FIIs, o preço cai todo mês no pagamento do rendimento |
 | Histórico ainda não pronto | Carregando: "O histórico deste ativo ainda está sendo carregado. Volte em alguns minutos." Não encontrado: "Este ativo não aparece nos arquivos da B3 desde 2016." O topo mostra a cotação do pregão, se houver | Ativo recém-importado (SPEC-040) fica alguns minutos sem histórico |
 | Atualização | Com a ficha aberta, o app pede a cotação do topo **a cada 5 minutos**, só ao nosso servidor. O gráfico muda quando chega o fechamento da B3 | A coleta continua centralizada, a cada 30 min (PA03); pedindo a cada 5 min, a cotação nova aparece na tela em até 5 min |
@@ -118,8 +120,7 @@ Preços e variações vão como decimal em texto (RNF12). Sem login, 401. O app 
 
 | Situação | Tela |
 |---|---|
-| Lista Ativos (usuário) | O ticker de cada linha vira botão: "Abrir a ficha de PETR4" |
-| Lista do colaborador | Botão **Ficha** ao lado de Editar |
+| Lista Ativos (usuário e colaborador) | O ticker de cada linha vira botão: "Abrir a ficha de PETR4" |
 | Topo da ficha | **Voltar**; logo, ticker, nome, classe e setor ou segmento; preço, variação e horário ou data (§4.2); "Desativado no catálogo desde…" quando for o caso |
 | Último pregão | Os seis valores com a data, cada um com o botão de ajuda |
 | Gráfico | Botões de período (o escolhido fica marcado); resumo do período; o gráfico; os saltos; o aviso fixo; "Fonte: arquivos da B3 · último fechamento em 30/10/2026" |
@@ -138,9 +139,9 @@ Nenhuma tabela nova e nenhuma migração. As rotas leem `ativo`, `logo_ativo`, `
 | CA01 | A ficha abre pela lista Ativos do usuário e pela do colaborador; **Voltar** retorna com a mesma busca e os mesmos filtros |
 | CA02 | O topo mostra a cotação mais recente entre a do pregão e o fechamento da B3, com horário ("atraso de até 45 min") ou data ("Fechamento de… (B3)"); a variação tem sinal e não depende só da cor; nunca aparece "tempo real" |
 | CA03 | O último pregão mostra abertura, máxima, mínima, fechamento, negócios e volume, com a data; cada termo tem a sua explicação, acessível pelo teclado |
-| CA04 | Os períodos começam e terminam como no §4.2; Tudo começa no primeiro fechamento guardado; ativo com menos histórico mostra "Histórico desde…"; a ficha abre no período da decisão 2 |
+| CA04 | Os períodos começam e terminam como no §4.2; Tudo começa no primeiro fechamento guardado; ativo com menos histórico mostra "Histórico desde…"; a ficha abre em 1 ano (decisão 2) |
 | CA05 | Variação, mínima e máxima saem em decimal, com 2 casas na variação, e batem com casos calculados à mão (testes sem banco) |
-| CA06 | Se a decisão 1 for B: saltos de 1,8 vez ou mais são marcados no gráfico e listados, e a variação do período não é calculada quando há salto |
+| CA06 | Saltos de 1,8 vez ou mais são marcados no gráfico e listados, e a variação do período não é calculada quando há salto |
 | CA07 | O aviso de preços sem ajuste aparece sempre junto do gráfico |
 | CA08 | Histórico carregando, não encontrado ou vazio mostra a mensagem certa, sem quebrar a tela; o topo continua com a cotação do pregão, se houver |
 | CA09 | Com a ficha aberta, a cotação é pedida de novo a cada 5 minutos; falha numa atualização mantém o que estava na tela e mostra o aviso, sem erro técnico (QA02, RNF13) |
@@ -153,7 +154,41 @@ Nenhuma tabela nova e nenhuma migração. As rotas leem `ativo`, `logo_ativo`, `
 
 | ID | Situação |
 |---|---|
-| Decisões 1 e 2 | ⏳ O Luís responde na aprovação (§4.1) |
+| Decisões 1 e 2 | ✅ Respondidas pelo Luís em 03/11/2026: saltos marcados (B) e período de 1 ano |
 | OPEN-06 | ⏳ **Proventos e eventos corporativos.** Saltos em 239 ativos (§4.3) mostram que a SPEC-016 (carteira histórica) e a SPEC-019 (rentabilidade) não podem vir sem ela: quem "comprou" BBAS3 em 2023 veria a carteira cair pela metade em 16/04/2024. Sugestão: uma Spec própria, antes da SPEC-016, com a fonte de eventos da B3 |
 | Textos de ajuda | ⏳ As frases dos termos (abertura, volume etc.) são revisadas pela equipe no Pull Request |
 | SPEC-029 | Os marcadores de notícia usam o mesmo recurso dos saltos no gráfico |
+
+## 9. Verificação (03/11/2026)
+
+| Critério | Resultado |
+|---|---|
+| CA01 | ✅ Conferido na tela: o ticker abre a ficha nas duas listas; **Voltar** devolve a lista com a mesma busca e o foco no ticker que abriu a ficha; ao abrir, o foco vai para o ticker no topo |
+| CA02 | ✅ Regra compartilhada (`asset-detail.test.ts`): a cotação do pregão vale quando é de um dia depois do último fechamento, pelo dia em Brasília (23h30 de 30/10 ainda é 30/10); senão, o fechamento da B3. Rota: cotação com a variação sobre o fechamento guardado. Na tela: "Cotação das 18:34 (atraso de até 45 min)" ou "Fechamento de 30 de out. de 2026 (B3)", com o sinal na variação |
+| CA03 | ✅ Rota com os seis valores e o fechamento anterior; o fechamento provisório que não é da B3 fica de fora (no PostgreSQL também). Na tela, cada termo com o botão de ajuda (`aria-expanded`), pelo teclado |
+| CA04 | ✅ Núcleo de cálculo (`price-history.test.ts`): o mesmo dia N meses antes, o último dia do mês quando ele não existe (inclusive 29/02), Tudo sem início. Rotas: 1 ano por padrão, 1 mês, Tudo e "Histórico desde…" (5 anos com histórico de 2025) |
+| CA05 | ✅ Variação, mínima e máxima em decimal, com 2 casas meio para cima (RB13) e a data mais antiga no empate; conferido à mão também no ponta a ponta (PETR4: −14,84%) |
+| CA06 | ✅ Salto de 1,8 vez ou mais nos dois sentidos (o limite incluso); com salto, variação não calculada. Na tela: linha tracejada na data, a lista com o texto e a explicação. No ponta a ponta, o desdobramento do BBAS3 em 16/04/2024 (−50,57%) sai dos arquivos reais da B3 |
+| CA07 | ✅ Aviso fixo no painel do histórico em todas as situações (carregando, falha, sem histórico) |
+| CA08 | ✅ Rotas e tela: histórico carregando ("Volte em alguns minutos"), não encontrado e série vazia; o topo continua com a cotação do pregão |
+| CA09 | ✅ Na tela, com o relógio acelerado: a ficha pede a cotação de novo no intervalo de 5 minutos; com falha, continua com o que tinha (inclusive o gráfico) e mostra "Não foi possível atualizar agora…". Falha do gráfico e da ficha com **Tentar de novo**; nenhuma mensagem técnica |
+| CA10 | ✅ Ativo desativado abre com "Desativado no catálogo desde…"; ativo inexistente: 404 e "Ativo não encontrado" |
+| CA11 | ✅ Conferido na tela: português e inglês, tema claro e escuro, 480 px sem rolagem para os lados. Gráfico como controle deslizante: setas, Page Up, Page Down, Home e End, com data e preço lidos pelo leitor de tela (`aria-valuetext`) e a dica das teclas. Contraste: textos de 4,52:1 a 17:1; linha do gráfico 6,2:1 (claro) e 7,5:1 (escuro); marca do salto 5,1:1 e 7,8:1 |
+| CA12 | ✅ Rotas (`asset-detail-routes.test.ts`): 401, 400 (`period`), 404 (inclusive id que não é UUID), decimais em texto. No banco de desenvolvimento cheio (1,06 milhão de fechamentos): ficha em 6 ms, gráfico de 1 ano em 7 ms e de Tudo em 18 ms |
+| CA13 | ✅ Nenhum teste acessa a internet; os cálculos rodam sem banco; as consultas novas no `simulador_test` (`prisma-quote.db.test.ts`, `prisma-intraday.db.test.ts`) |
+| Ponta a ponta | ✅ Peças reais: os arquivos anuais verdadeiros da B3 de 2023 a 2025 (guardados, sem baixar nada), `HistoryIngestion`, repositórios do Prisma no PostgreSQL de teste e o servidor respondendo por HTTP, com cadastro e confirmação pela API: 11 verificações |
+
+Total: **671 testes** passando (com o banco real), lint, tipos e formatação.
+
+**Ajustes da implementação:**
+
+- **Lista do colaborador:** o ticker abre a ficha, como na lista do usuário, em vez de um botão **Ficha** ao lado de Editar. Com três botões, a coluna do ativo ficava espremida e "Desativar" era cortado em janelas médias.
+- **Decimais:** as contas em decimal (`decimal.ts`) passaram do módulo Dados de Mercado para o núcleo de cálculo (`financial-calculation`), que o catálogo e os dados de mercado usam (DA10).
+- **Busca sem texto:** o volume do último pregão (ordem da SPEC-040) passou a ser lido ativo por ativo, pela chave (ativo, data). Com o histórico inteiro carregado, a consulta antiga levava meio segundo a cada busca; agora a busca inteira leva uns 30 ms.
+- **Consultas de um ativo só:** a ficha lê a situação do histórico, a última cotação do pregão e os pregões só do ativo aberto, em vez dos de todo o catálogo.
+- **Gráfico:** cada período é pedido uma vez; quando chega um fechamento novo da B3 (na atualização de 5 minutos), os períodos são pedidos de novo.
+- **Linha inteira abre a ficha** (pedido do Luís em 03/11/2026), na lista do usuário: o botão do ticker ganha uma camada que cobre a linha, com destaque ao passar o mouse e o contorno do foco na linha inteira. No teclado e no leitor de tela continua um botão só ("Abrir a ficha de PETR4"). Na lista do colaborador, só o ticker abre a ficha, porque a linha tem os botões Editar e Desativar.
+- **"Mostrar mais"** (pedido do Luís em 03/11/2026): a lista deixa de parar nos 50 primeiros; a mudança é da busca da SPEC-006 e está descrita na nota no fim dela.
+- **Lista Ativos mais compacta** (pedido do Luís em 03/11/2026): na janela padrão do app (1100 × 720), a lista começava abaixo da primeira tela. O título ficou menor, a busca e os filtros ficaram numa linha só, e o exemplo da busca foi para dentro do campo ("Ex.: PETR4, Itaú ou logística"), com o contraste do texto secundário. Agora a primeira linha da lista aparece a uns 400 px do alto na tela do usuário e a uns 520 px na do colaborador; nas janelas estreitas, os filtros continuam uns embaixo dos outros.
+
+**Para as próximas Specs:** a SPEC-014 põe o botão de compra na ficha (`AssetDetailPage`); a SPEC-029 acrescenta os marcadores de notícia ao `PriceChart`, como os saltos; a Spec de proventos e eventos (OPEN-06) troca o aviso fixo e os saltos pelos preços ajustados.

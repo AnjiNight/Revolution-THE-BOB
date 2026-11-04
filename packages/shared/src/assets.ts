@@ -1,10 +1,16 @@
 import { z } from 'zod';
 import { NAME_MAX, NAME_MIN, validate, type FieldErrors, type ValidationResult } from './auth.js';
 
-/** Rotas do catálogo de ativos (SPEC-006 e 040, §5.2). `:id` vira o id do ativo com `assetPath`. */
+/**
+ * Rotas do catálogo de ativos (SPECs 006, 010 e 040, §5.2). `:id` vira o id do ativo com
+ * `assetPath`.
+ */
 export const ASSET_PATHS = {
   search: '/api/assets',
   sectors: '/api/assets/sectors',
+  /** SPEC-010: ficha do ativo e fechamentos de um período. */
+  detail: '/api/assets/:id',
+  history: '/api/assets/:id/history',
   logo: '/api/assets/:id/logo',
   catalog: '/api/collaborator/assets',
   asset: '/api/collaborator/assets/:id',
@@ -94,9 +100,9 @@ export function normalizeTicker(ticker: string): string {
   return ticker.trim().toUpperCase();
 }
 
-/** Busca do usuário: no máximo 50 resultados; com mais, a pessoa refina a busca. */
+/** Busca do usuário: 50 resultados por vez; "Mostrar mais" traz os 50 seguintes. */
 export const ASSET_SEARCH_LIMIT = 50;
-/** Lista do colaborador (SPEC-040): no máximo 100 por vez, com o catálogo da bolsa inteira. */
+/** Lista do colaborador (SPEC-040): 100 por vez, com o catálogo da bolsa inteira. */
 export const CATALOG_PAGE_LIMIT = 100;
 export const ASSET_SEARCH_TEXT_MAX = 60;
 
@@ -166,9 +172,12 @@ export interface CatalogAsset extends Asset {
 
 /** Corpo de `GET /api/assets`. */
 export interface AssetSearchResult {
+  /** No máximo 50, a partir do `offset` pedido. */
   assets: Asset[];
-  /** Há mais resultados além dos 50 devolvidos: a pessoa precisa refinar a busca. */
+  /** Há mais resultados depois destes: a tela mostra "Mostrar mais". */
   hasMore: boolean;
+  /** Quantos ativos passam na busca e nos filtros, no total. */
+  total: number;
 }
 
 /** Primeiro ano do histórico de cotações carregado dos arquivos da B3 (SPEC-008, OPEN-05). */
@@ -229,10 +238,12 @@ export interface CatalogImportStatus {
 
 /** Corpo de `GET /api/collaborator/assets`. */
 export interface CatalogListResult {
-  /** No máximo 100 (SPEC-040). */
+  /** No máximo 100 (SPEC-040), a partir do `offset` pedido. */
   assets: CatalogListAsset[];
-  /** Há mais ativos além dos devolvidos: o colaborador refina a busca. */
+  /** Há mais ativos depois destes: a tela mostra "Mostrar mais". */
   hasMore: boolean;
+  /** Quantos ativos passam na busca e nos filtros, no total. */
+  total: number;
   /** Ativos ativos no catálogo inteiro, sem filtro. */
   activeCount: number;
   /** Importados com a classificação ainda a revisar, no catálogo inteiro. */
@@ -343,7 +354,12 @@ export interface AssetSearchQuery {
   q: string;
   class?: AssetClass;
   sector?: SectorCode;
+  /** "Mostrar mais" (mudança de 03/11/2026): quantos resultados pular; sem ele, do primeiro. */
+  offset?: number;
 }
+
+/** Maior `offset` aceito: muito acima do catálogo da bolsa inteira (uns 700 ativos). */
+export const ASSET_SEARCH_OFFSET_MAX = 10_000;
 
 export interface CatalogQuery extends AssetSearchQuery {
   status: AssetStatusFilter;
@@ -361,13 +377,20 @@ const searchQuerySchema = z.object({
   sector: sectorField.optional(),
   status: z.enum(ASSET_STATUS_FILTERS, { error: 'invalid_option' }).optional(),
   review: z.literal('pending', { error: 'invalid_option' }).optional(),
+  // Chega da query string como texto: só um número inteiro, sem sinal.
+  offset: z
+    .string({ error: 'invalid_option' })
+    .regex(/^\d{1,5}$/, { error: 'invalid_option' })
+    .transform(Number)
+    .pipe(z.number().max(ASSET_SEARCH_OFFSET_MAX, { error: 'invalid_option' }))
+    .optional(),
 });
 
 /** Valida a query string da busca. Setor de outra classe que a filtrada dá `wrong_class`. */
 export function validateCatalogQuery(input: unknown): ValidationResult<CatalogQuery> {
   const checked = validate(searchQuerySchema, input);
   if (!checked.success) return checked;
-  const { q, class: assetClass, sector, status, review } = checked.data;
+  const { q, class: assetClass, sector, status, review, offset } = checked.data;
   const mismatch = sectorClassError(assetClass, sector);
   if (mismatch.sector) return { success: false, fields: mismatch };
   return {
@@ -378,6 +401,7 @@ export function validateCatalogQuery(input: unknown): ValidationResult<CatalogQu
       ...(sector ? { sector: sector as SectorCode } : {}),
       status: status ?? 'all',
       ...(review ? { review } : {}),
+      ...(offset ? { offset } : {}),
     },
   };
 }

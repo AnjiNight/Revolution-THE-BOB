@@ -7,6 +7,12 @@ import { Info, Warning } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { formatChange, formatMoney, quoteMoment } from '../format';
 
+/** Cor da variação (a variação também traz o sinal, RNF18). */
+export function changeDirection(change: string | null): 'up' | 'down' | 'flat' {
+  if (change === null || Number(change) === 0) return 'flat';
+  return Number(change) > 0 ? 'up' : 'down';
+}
+
 /**
  * Último preço, variação do dia e horário da cotação (SPEC-009 §5.3), sempre com o atraso e nunca
  * como "tempo real" (DA16). A variação traz o sinal: não depende só da cor (RNF18).
@@ -16,12 +22,7 @@ export function QuoteText({ quote }: { quote: AssetQuote | null }) {
   if (!quote) return <span className="quote-none">{t('assets.quote.none')}</span>;
 
   const moment = quoteMoment(quote.at, i18n.language);
-  const direction =
-    quote.change === null || Number(quote.change) === 0
-      ? 'flat'
-      : Number(quote.change) > 0
-        ? 'up'
-        : 'down';
+  const direction = changeDirection(quote.change);
   return (
     <span className="quote">
       <span className="quote-line">

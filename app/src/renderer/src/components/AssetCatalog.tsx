@@ -19,13 +19,14 @@ import { useTranslation } from 'react-i18next';
 import type { ClientAuthError, ClientResult } from '../../../shared/auth-ipc';
 import '../assets.css';
 import { formatCalendarDay, formatDate, formatYears, quoteMoment } from '../format';
-import { useAssetQuery } from '../useAssetQuery';
+import { useAssetPages } from '../useAssetQuery';
 import {
   AssetFilters,
   ClassChoice,
   EMPTY_FILTERS,
   hasFilters,
   SectorSelect,
+  ShowMore,
   toSearchQuery,
   useSectorName,
   type AssetFilterState,
@@ -51,11 +52,18 @@ const REVIEW_OPTIONS: ReadonlyArray<{ value: ReviewFilter; label: string }> = [
 ];
 
 /**
- * Tela "Ativos" da Área do colaborador (SPECs 006 e 040, §5.3): busca com filtros de situação e
- * de classificação a revisar, contadores, situação da importação diária e da coleta, cadastro,
- * edição, conferência da classificação, desativação com confirmação e reativação.
+ * Tela "Ativos" da Área do colaborador (SPECs 006, 010 e 040, §5.3): busca com filtros de situação
+ * e de classificação a revisar, contadores, situação da importação diária e da coleta, cadastro,
+ * edição, conferência da classificação, desativação com confirmação, reativação e a ficha.
  */
-export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => void }) {
+export function AssetCatalog({
+  onSessionExpired,
+  onOpenAsset,
+}: {
+  onSessionExpired: () => void;
+  /** SPEC-010: `opener` recebe o foco de volta quando a ficha fecha. */
+  onOpenAsset: (assetId: string, opener: HTMLElement) => void;
+}) {
   const { t } = useTranslation();
   const sectorName = useSectorName();
   const [filters, setFilters] = useState<AssetFilterState>(EMPTY_FILTERS);
@@ -66,11 +74,8 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
     status,
     ...(review === 'pending' ? { review } : {}),
   };
-  const { data, error, loading, reload } = useAssetQuery(
-    query,
-    window.api.assets.catalog,
-    onSessionExpired,
-  );
+  const pages = useAssetPages(query, window.api.assets.catalog, onSessionExpired);
+  const { data, error, loading, reload } = pages;
   const [form, setForm] = useState<FormState>({ mode: 'closed' });
   const [confirming, setConfirming] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -246,7 +251,7 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
         <div className="assets-summary">
           <p role="status">
             {loading && t('assets.searching')}
-            {!loading && data && t('assets.resultCount', { count: data.assets.length })}
+            {!loading && data && t('assets.resultCount', { count: pages.total })}
           </p>
           {filtered && (
             <button
@@ -279,13 +284,13 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
           )}
         </p>
 
-        {data && data.assets.length === 0 && (
+        {data && pages.assets.length === 0 && (
           <p className="assets-empty">
             {filtered ? t('catalog.empty') : t('catalog.emptyCatalog')}
           </p>
         )}
 
-        {data && data.assets.length > 0 && (
+        {data && pages.assets.length > 0 && (
           <table
             ref={table}
             className="asset-table catalog-table"
@@ -309,7 +314,7 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
               </tr>
             </thead>
             <tbody>
-              {data.assets.map((asset) => {
+              {pages.assets.map((asset) => {
                 const editing = form.mode === 'edit' && form.asset.id === asset.id;
                 const busy = pending === asset.id;
                 return (
@@ -326,7 +331,14 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
                         <div className="asset-identity">
                           <AssetLogo asset={asset} />
                           <div className="asset-identity-text">
-                            <span className="asset-ticker">{asset.ticker}</span>
+                            <button
+                              type="button"
+                              className="link asset-open asset-ticker"
+                              aria-label={t('detail.openLabel', { ticker: asset.ticker })}
+                              onClick={(event) => onOpenAsset(asset.id, event.currentTarget)}
+                            >
+                              {asset.ticker}
+                            </button>
                             <span className="asset-name">{asset.name}</span>
                             <HistoryLine history={asset.history} />
                             <AutoDeactivatedLine asset={asset} />
@@ -435,7 +447,7 @@ export function AssetCatalog({ onSessionExpired }: { onSessionExpired: () => voi
             </tbody>
           </table>
         )}
-        {data?.hasMore && <p className="field-hint">{t('catalog.hasMore')}</p>}
+        {data && <ShowMore pages={pages} />}
       </section>
     </div>
   );

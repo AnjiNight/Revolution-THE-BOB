@@ -140,6 +140,10 @@ describe.skipIf(!url)('cotações do pregão no PostgreSQL', () => {
     });
     expect(latest.has(MXRF11)).toBe(false);
     expect(await intraday.closesBefore('2026-11-04')).toEqual(new Map([[PETR4, '52.71']]));
+    // SPEC-010: a de um ativo só é a mesma; outro nível não conta.
+    await intraday.save([quote({ at: at('23:45'), level: 'assinante', price: '53.00' })]);
+    expect(await intraday.latestOf('gratuito', PETR4)).toEqual(latest.get(PETR4));
+    expect(await intraday.latestOf('gratuito', MXRF11)).toBeNull();
   });
 
   it('limpeza apaga só o que é mais antigo que o instante (CA08)', async () => {

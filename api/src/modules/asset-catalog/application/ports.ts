@@ -4,6 +4,8 @@ import type {
   AssetQuote,
   AssetStatusFilter,
   CatalogImportStatus,
+  IsoDate,
+  PricePoint,
   QuoteCollectionStatus,
   SectorCode,
 } from '@simulador/shared';
@@ -39,6 +41,8 @@ export interface AssetModification {
  */
 export interface AssetHistoryReader {
   overview(): Promise<{ byAsset: Map<string, AssetHistory>; yearsWithoutCalendar: number[] }>;
+  /** SPEC-010: a situação de um ativo só, para a ficha. */
+  forAsset(assetId: string): Promise<AssetHistory>;
 }
 
 /**
@@ -47,7 +51,28 @@ export interface AssetHistoryReader {
  */
 export interface AssetQuoteReader {
   latestQuotes(): Promise<Map<string, AssetQuote>>;
+  /** SPEC-010: a última de um ativo só, para a ficha. */
+  latestQuote(assetId: string): Promise<AssetQuote | null>;
   status(): Promise<QuoteCollectionStatus>;
+}
+
+/** Um pregão guardado da B3 (SPEC-010), em decimal como texto (RNF12). */
+export interface StoredSession {
+  date: IsoDate;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  trades: number | null;
+  volume: string | null;
+}
+
+/** SPEC-010: os pregões guardados da B3 de um ativo, que o módulo Dados de Mercado fornece. */
+export interface AssetPriceReader {
+  /** Os últimos `count` pregões, do mais novo para o mais antigo. */
+  sessions(assetId: string, count: number): Promise<StoredSession[]>;
+  /** Fechamentos desde `from` (Tudo: desde o primeiro), em ordem de data. */
+  closes(assetId: string, from: IsoDate | null): Promise<PricePoint[]>;
 }
 
 /** Volume financeiro do último pregão de cada ativo (SPEC-040: a busca sem texto ordena por ele). */

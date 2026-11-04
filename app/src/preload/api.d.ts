@@ -1,9 +1,12 @@
 import type {
+  AssetDetail,
   AssetSearchResult,
   CalendarSuggestion,
   CatalogAsset,
   CatalogListResult,
   ConsentList,
+  PriceHistory,
+  PriceHistoryPeriod,
   TradingCalendarYear,
   UserProfile,
 } from '@simulador/shared';
@@ -74,12 +77,16 @@ export interface DesktopApi {
     publish(year: number, input: CalendarPublication): Promise<ClientResult<TradingCalendarYear>>;
   };
   /**
-   * Catálogo de ativos (SPECs 006 e 040). Busca e logos para todos; o resto só colaborador (403
-   * para usuário).
+   * Catálogo de ativos (SPECs 006, 010 e 040). Busca, ficha e logos para todos; o resto só
+   * colaborador (403 para usuário).
    */
   assets: {
     /** Só ativos ativos, até 50 (`hasMore` avisa que há mais). */
     search(query: AssetSearchQuery): Promise<ClientResult<AssetSearchResult>>;
+    /** SPEC-010: ficha do ativo, também de ativo desativado. */
+    detail(id: string): Promise<ClientResult<AssetDetail>>;
+    /** SPEC-010: fechamentos do período, com o resumo e os saltos. */
+    history(id: string, period: PriceHistoryPeriod): Promise<ClientResult<PriceHistory>>;
     catalog(query: CatalogQuery): Promise<ClientResult<CatalogListResult>>;
     create(input: NewAssetInput): Promise<ClientResult<CatalogAsset>>;
     /** Só o que muda; a classe nunca (RB22). */

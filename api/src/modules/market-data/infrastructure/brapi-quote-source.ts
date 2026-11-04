@@ -7,7 +7,7 @@ import {
   type QuoteUsage,
   type SourceQuote,
 } from '../application/ports.js';
-import { compareDecimals, decimalFromJson } from '../domain/decimal.js';
+import { compareDecimals, decimalFromJson } from '../../financial-calculation/decimal.js';
 
 export const BRAPI_BASE_URL = 'https://brapi.dev';
 

@@ -9,17 +9,33 @@
   gap: 1.25rem;
 }
 
+/* Título menor que o das outras telas: a lista é o conteúdo e aparece já na primeira tela. */
+.assets-view .page-hero {
+  padding-bottom: 1.25rem;
+}
+
+.assets-view .page-hero h1 {
+  font-size: clamp(1.7rem, 2.6vw, 2.2rem);
+}
+
+.assets-view .page-hero .lead {
+  max-width: 54rem;
+  margin-top: 0.45rem;
+  font-size: 1rem;
+}
+
 /* ---------- Filtros ---------- */
 
+/* Busca e filtros numa linha só nas janelas largas; nas estreitas, uns embaixo dos outros. */
 .asset-filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 1rem 1.5rem;
+  align-items: flex-end;
+  gap: 1rem 1.25rem;
 }
 
 .asset-search-field {
-  flex: 1 1 100%;
+  flex: 2 1 13rem;
 }
 
 .search-input {
@@ -40,15 +56,19 @@
   padding-left: 2.5rem;
 }
 
+/* O exemplo dentro do campo com o contraste do texto secundário (mais de 6:1 nos dois temas). */
+.search-input input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* Os seletores entram direto na linha dos filtros: cada um quebra para baixo sozinho. */
 .asset-filter-selects {
-  display: flex;
-  flex: 1 1 24rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  display: contents;
 }
 
 .asset-filter-selects > .field {
-  flex: 1 1 12rem;
+  flex: 1 1 7rem;
   max-width: 22rem;
 }
 
@@ -533,6 +553,80 @@ img.asset-logo {
   margin: 0;
   color: var(--muted);
   font-size: 0.875rem;
+}
+
+/* "Mostrar mais" no fim da lista (mudança da SPEC-006 em 03/11/2026). */
+.show-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.show-more p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.show-more button {
+  min-width: 12rem;
+  margin-top: 0;
+}
+
+/* SPEC-010: o ticker da lista do usuário abre a ficha. */
+button.link.asset-open {
+  color: var(--text);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+button.link.asset-open:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+/*
+ * Lista do usuário: a linha inteira abre a ficha. O botão do ticker ganha uma camada que cobre a
+ * linha: o clique em qualquer lugar é dele, e no teclado e no leitor de tela continua um botão só.
+ */
+.asset-table.is-clickable tbody tr {
+  position: relative;
+}
+
+.asset-table.is-clickable button.asset-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+}
+
+/* O "afundar" dos botões (transform) prenderia a camada dentro do ticker no meio do clique. */
+.asset-table.is-clickable button.asset-open:active {
+  transform: none;
+}
+
+.asset-table.is-clickable th:first-child,
+.asset-table.is-clickable td:first-child {
+  padding-left: 0.75rem;
+}
+
+.asset-table.is-clickable tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.asset-table.is-clickable tbody tr:hover button.asset-open {
+  color: var(--accent);
+}
+
+/* O contorno do foco envolve a linha inteira, não só o ticker. */
+.asset-table.is-clickable button.asset-open:focus-visible {
+  outline: none;
+}
+
+.asset-table.is-clickable button.asset-open:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* ---------- Janela estreita (até 480px) ---------- */

@@ -5,6 +5,7 @@ import {
   CALENDAR_PATHS,
   calendarPath,
   PROFILE_PATHS,
+  type PriceHistoryPeriod,
 } from '@simulador/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthClient } from './auth-client.js';
@@ -173,6 +174,13 @@ class FakeServer {
         if (!this.validAccess.has(token)) return json(401, { error: 'unauthorized', message: 'x' });
         return new Response(LOGO_SVG, { headers: { 'content-type': 'image/svg+xml' } });
       }
+      // SPEC-010: ficha e gráfico.
+      case assetPath(ASSET_PATHS.detail, ASSET.id):
+        return json(200, { ...ASSET, active: true, lastSession: null });
+      case assetPath(ASSET_PATHS.detail, NO_LOGO_ID):
+        return json(404, { error: 'asset_not_found', message: 'x' });
+      case assetPath(ASSET_PATHS.history, ASSET.id):
+        return json(200, { period: url.searchParams.get('period'), points: [] });
       case assetPath(ASSET_PATHS.logo, NO_LOGO_ID):
         return json(404, { error: 'logo_not_found', message: 'x' });
       case assetPath(ASSET_PATHS.logo, HTML_LOGO_ID):
@@ -541,6 +549,13 @@ describe('catálogo de ativos (SPEC-006)', () => {
     });
     await client.searchAssets({ q: '' });
     expect(server.calls.at(-1)?.search).toBeUndefined();
+    // "Mostrar mais": o offset vai na query string; zero ou valor estranho ficam de fora.
+    await client.searchAssets({ q: 'petr', offset: 50 });
+    expect(server.calls.at(-1)?.search).toBe('?q=petr&offset=50');
+    await client.searchAssets({ q: '', offset: 0 });
+    expect(server.calls.at(-1)?.search).toBeUndefined();
+    await client.searchAssets({ q: '', offset: 1.5 });
+    expect(server.calls.at(-1)?.search).toBeUndefined();
   });
 
   it('traduz 403, 409 e 404 e devolve o ativo das ações', async () => {
@@ -617,5 +632,46 @@ describe('catálogo completo da B3 (SPEC-040)', () => {
     });
     await client.assetCatalog({ q: '', status: 'all', review: 'pending' });
     expect(server.calls.at(-1)?.search).toBe('?status=all&review=pending');
+  });
+});
+
+describe('ficha do ativo (SPEC-010)', () => {
+  it('pede a ficha e o período do gráfico; traduz o 404', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.assetDetail(ASSET.id)).resolves.toEqual({
+      ok: true,
+      data: { ...ASSET, active: true, lastSession: null },
+    });
+    await expect(client.assetHistory(ASSET.id, '5y')).resolves.toEqual({
+      ok: true,
+      data: { period: '5y', points: [] },
+    });
+    expect(server.calls.at(-1)).toMatchObject({
+      method: 'GET',
+      path: assetPath(ASSET_PATHS.history, ASSET.id),
+      search: '?period=5y',
+      authorization: 'Bearer access-1',
+    });
+    await expect(client.assetDetail(NO_LOGO_ID)).resolves.toEqual({
+      ok: false,
+      error: 'asset_not_found',
+    });
+  });
+
+  it('id que não é UUID ou período fora da lista nem chegam ao servidor', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    const before = server.calls.length;
+    await expect(client.assetDetail('../../me')).resolves.toEqual({
+      ok: false,
+      error: 'unexpected',
+    });
+    await expect(client.assetHistory('abc', '1y')).resolves.toEqual({
+      ok: false,
+      error: 'unexpected',
+    });
+    await expect(
+      client.assetHistory(ASSET.id, '1y&period=max' as PriceHistoryPeriod),
+    ).resolves.toEqual({ ok: false, error: 'unexpected' });
+    expect(server.calls).toHaveLength(before);
   });
 });

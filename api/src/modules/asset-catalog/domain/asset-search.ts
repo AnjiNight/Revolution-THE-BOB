@@ -12,14 +12,15 @@ interface Searchable {
  * o ticker.
  *
  * Roda em memória depois dos filtros do banco: mesmo com a bolsa inteira (SPEC-040), são algumas
- * centenas de ativos.
+ * centenas de ativos. `offset` pula os primeiros resultados ("Mostrar mais"); `total` conta todos.
  */
 export function searchAssets<T extends Searchable>(
   assets: readonly T[],
   text: string,
   limit = Number.POSITIVE_INFINITY,
   emptyOrder?: (a: T, b: T) => number,
-): { assets: T[]; hasMore: boolean } {
+  offset = 0,
+): { assets: T[]; hasMore: boolean; total: number } {
   const query = normalizeSearchText(text);
   const tickerQuery = query.replace(/ /g, '').toUpperCase();
 
@@ -35,8 +36,9 @@ export function searchAssets<T extends Searchable>(
       a.asset.ticker.localeCompare(b.asset.ticker),
   );
   return {
-    assets: ranked.slice(0, limit).map((item) => item.asset),
-    hasMore: ranked.length > limit,
+    assets: ranked.slice(offset, offset + limit).map((item) => item.asset),
+    hasMore: ranked.length > offset + limit,
+    total: ranked.length,
   };
 }
 

@@ -90,6 +90,8 @@ O colaborador entra pela **Área do colaborador**, na tela de login.
 
 **Histórico de cotações** ([SPEC-008](specs/SPEC-008.md)): o processador (`npm run dev:worker`) carrega o fechamento diário dos ativos do catálogo a partir dos arquivos públicos da B3, desde 2016. Ativo novo ganha o histórico em até 15 minutos; os pregões que faltam são buscados todo dia às 08:00. Só entram os anos com calendário publicado: publique de 2016 até o ano atual (a tela **Ativos** do colaborador avisa quais faltam). Os arquivos anuais (uns 60 a 90 MB cada) ficam guardados em `api/.cache/b3`.
 
+**Ficha do ativo** ([SPEC-010](specs/SPEC-010.md)): na tela **Ativos**, clique no ticker. A ficha mostra a última cotação (a do pregão ou o fechamento da B3, a mais recente), o último pregão da B3 e o gráfico dos fechamentos, de 1 mês até tudo desde 2016. Os preços estão como a B3 publica, sem ajuste por dividendos, desdobramentos ou grupamentos: saltos grandes de um pregão para o seguinte ficam marcados no gráfico.
+
 ### Token da brapi (opcional)
 
 As cotações do pregão e a lista de ativos ([SPEC-009](specs/SPEC-009.md) e [SPEC-040](specs/SPEC-040.md)) vêm da [brapi](https://brapi.dev). Desde a SPEC-040, o app usa a **lista** da brapi, que responde sem token e não desconta da cota: **o token é opcional**. Se você quiser usar um (para o caso de a brapi mudar a regra), **gere o seu**: a cota de 15 mil consultas por mês é por chave, então dois computadores com o mesmo token gastam a mesma cota.

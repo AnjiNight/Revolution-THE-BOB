@@ -142,6 +142,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     activity: quotes,
     logos,
     imports: catalogImport,
+    prices: quotes,
     ...(options.clock ? { clock: options.clock } : {}),
   });
   const calendar = new CalendarService({

@@ -47,4 +47,19 @@ export class HistoryStatusService {
     }
     return { byAsset, yearsWithoutCalendar };
   }
+
+  /** SPEC-010: a situação de um ativo só, para a ficha. */
+  async forAsset(assetId: string): Promise<AssetHistory> {
+    const currentYear = yearOf(isoDateInBrasilia(this.clock()));
+    const [published, loaded, range] = await Promise.all([
+      this.deps.calendars.findYears(HISTORY_START_YEAR, currentYear),
+      this.deps.quotes.loadedYearsOf(assetId),
+      this.deps.quotes.quoteRange(assetId),
+    ]);
+    return historyStatus(
+      range ?? undefined,
+      loaded,
+      published.map((stored) => stored.year),
+    );
+  }
 }

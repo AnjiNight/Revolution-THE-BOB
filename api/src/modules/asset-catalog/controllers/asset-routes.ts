@@ -3,6 +3,7 @@ import {
   validateAssetUpdate,
   validateCatalogQuery,
   validateNewAsset,
+  validatePriceHistoryQuery,
 } from '@simulador/shared';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { domainErrorRunner } from '../../../shared/http/domain-errors.js';
@@ -49,8 +50,9 @@ const LOGO_HEADERS = {
 } as const;
 
 /**
- * Catálogo de ativos (SPEC-006 e 040, §5.2): busca, setores e logos para qualquer pessoa
- * conectada; manutenção só para colaborador, com o 403 antes de qualquer validação (DA12).
+ * Catálogo de ativos (SPECs 006, 010 e 040, §5.2): busca, setores, ficha, gráfico e logos para
+ * qualquer pessoa conectada; manutenção só para colaborador, com o 403 antes de qualquer
+ * validação (DA12).
  */
 export function registerAssetRoutes(app: FastifyInstance, options: AssetRoutesOptions): void {
   const { catalog } = options;
@@ -60,18 +62,36 @@ export function registerAssetRoutes(app: FastifyInstance, options: AssetRoutesOp
 
   // Usuário: só ativos ativos; o filtro de situação não vale aqui.
   app.get(ASSET_PATHS.search, authenticated, async (request, reply) => {
-    const { q, class: assetClass, sector } = ensureValid(validateCatalogQuery(request.query));
+    const {
+      q,
+      class: assetClass,
+      sector,
+      offset,
+    } = ensureValid(validateCatalogQuery(request.query));
     return reply.send(
       await catalog.search({
         q,
         ...(assetClass ? { class: assetClass } : {}),
         ...(sector ? { sector } : {}),
+        ...(offset ? { offset } : {}),
       }),
     );
   });
 
   app.get(ASSET_PATHS.sectors, authenticated, async (_request, reply) => {
     return reply.send({ sectors: catalog.sectors() });
+  });
+
+  // SPEC-010: ficha e gráfico, também de ativo desativado (quem tem o ativo vê o ativo).
+  app.get<{ Params: IdParams }>(ASSET_PATHS.detail, authenticated, async (request, reply) => {
+    const id = assetId(request);
+    return reply.send(await run(() => catalog.detail(id)));
+  });
+
+  app.get<{ Params: IdParams }>(ASSET_PATHS.history, authenticated, async (request, reply) => {
+    const id = assetId(request);
+    const { period } = ensureValid(validatePriceHistoryQuery(request.query));
+    return reply.send(await run(() => catalog.priceHistory(id, period)));
   });
 
   app.get<{ Params: IdParams }>(ASSET_PATHS.logo, authenticated, async (request, reply) => {

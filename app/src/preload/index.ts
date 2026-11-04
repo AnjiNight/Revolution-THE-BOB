@@ -1,9 +1,11 @@
 import type {
+  AssetDetail,
   AssetSearchResult,
   CalendarSuggestion,
   CatalogAsset,
   CatalogListResult,
   ConsentList,
+  PriceHistory,
   TradingCalendarYear,
   UserProfile,
 } from '@simulador/shared';
@@ -63,6 +65,8 @@ const api: DesktopApi = {
   },
   assets: {
     search: (query) => invoke<ClientResult<AssetSearchResult>>(ASSET_CHANNELS.search, query),
+    detail: (id) => invoke<ClientResult<AssetDetail>>(ASSET_CHANNELS.detail, id),
+    history: (id, period) => invoke<ClientResult<PriceHistory>>(ASSET_CHANNELS.history, id, period),
     catalog: (query) => invoke<ClientResult<CatalogListResult>>(ASSET_CHANNELS.catalog, query),
     create: (input) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.create, input),
     update: (id, input) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.update, id, input),

@@ -1,14 +1,40 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatAxisPrice,
   formatCalendarDay,
   formatChange,
+  formatCompactMoney,
+  formatCount,
   formatDate,
   formatMoney,
+  formatTickDate,
   formatWeekday,
   formatYears,
   initials,
   quoteMoment,
 } from './format';
+
+describe('ficha do ativo (SPEC-010)', () => {
+  it('volume abreviado e quantidade de negócios no formato do idioma', () => {
+    expect(formatCompactMoney('3265521701.00', 'pt-BR')).toMatch(/^R\$\s3,3\sbi$/);
+    expect(formatCompactMoney('31213326.76', 'en')).toBe('R$31.2M');
+    expect(formatCount(77862, 'pt-BR')).toBe('77.862');
+    expect(formatCount(77862, 'en')).toBe('77,862');
+  });
+
+  it('preço do eixo: sem centavos com passo de R$ 1 ou mais', () => {
+    expect(formatAxisPrice(52, 2, 'pt-BR')).toMatch(/^R\$\s52$/);
+    expect(formatAxisPrice(8.85, 0.05, 'pt-BR')).toMatch(/^R\$\s8,85$/);
+  });
+
+  it('marcas de data: dia, mês (o ano no lugar de janeiro) e ano, sem desvio de fuso', () => {
+    expect(formatTickDate('2026-10-30', 'day', 'pt-BR')).toBe('30/10');
+    expect(formatTickDate('2026-10-30', 'day', 'en')).toBe('10/30');
+    expect(formatTickDate('2026-11-03', 'month', 'pt-BR')).toBe('nov.');
+    expect(formatTickDate('2026-01-02', 'month', 'pt-BR')).toBe('2026');
+    expect(formatTickDate('2024-01-01', 'year', 'en')).toBe('2024');
+  });
+});
 
 describe('initials', () => {
   it.each([
