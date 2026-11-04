@@ -28,7 +28,7 @@
 | 1.18 | SPEC-040 aprovada (03/11/2026, depois do teste da rota de lista da brapi) e implementada; DA16 atualizada (catálogo sem curadoria, coleta pela lista, atraso de até 45 min) |
 | 1.19 | SPEC-010 detalhada ([SPEC-010.md](SPEC-010.md)), aguardando a aprovação; os saltos de preço encontrados no histórico (239 ativos) reforçam a OPEN-06 antes das SPECs 016 e 019 |
 | 1.20 | SPEC-010 aprovada (03/11/2026: saltos marcados no gráfico, período de 1 ano) e implementada; SPEC-006 mudada: "Mostrar mais" no fim da busca, em vez de parar nos 50 primeiros |
-
+| 1.21 | SPEC-007 detalhada ([SPEC-007.md](SPEC-007.md)), aguardando a aprovação; o CDI segue os dias úteis bancários (tem valor em 24/12 e 31/12, sem pregão), então a SPEC-005 deixa de ser dependência da série e serve só para conferência |
 ---
 
 ## 0. Como ler este documento
@@ -560,6 +560,8 @@ Visão geral por fase:
 
 #### SPEC-007 — Ingestão da série do CDI
 
+📄 Detalhada em [SPEC-007.md](SPEC-007.md) — aguardando aprovação.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O processador coleta a série diária do CDI da fonte do Banco Central, de forma idempotente, com novas tentativas e registro de cada execução, reutilizando o padrão de ingestão criado na SPEC-008 (Selic e IPCA entram na fase de renda fixa) |
@@ -571,9 +573,9 @@ Visão geral por fase:
 | Entidades | INDEXADOR (CDI), TAXA_DIARIA, EXECUCAO_TAREFA† |
 | Drivers | FAS03, QA02, QA08, QA12 |
 | ADRs | DA06, DA07, DA14, DA22 |
-| Depende de | SPEC-005, SPEC-008 |
+| Depende de | SPEC-008 (padrão de ingestão); SPEC-005 só para conferir pregões sem CDI |
 | Posição | Depois das cotações (008, 009), porque só atende o benchmark (020). Reaproveita o padrão de adaptador + execução registrada da SPEC-008 |
-| Em aberto | OPEN-40 |
+| Em aberto | OPEN-40 (proposta: série guardada para sempre) |
 | Prioridade derivada | Should (RF10, Requisitos v1.3) |
 
 #### SPEC-010 — Ficha do ativo com histórico de cotações
