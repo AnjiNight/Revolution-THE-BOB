@@ -21,6 +21,7 @@ import {
 } from '../modules/identity/testing/fakes.js';
 import { CalendarService } from '../modules/market-data/application/calendar-service.js';
 import { CatalogImport } from '../modules/market-data/application/catalog-import.js';
+import { CdiStatusService } from '../modules/market-data/application/cdi-status-service.js';
 import { HistoryStatusService } from '../modules/market-data/application/history-status-service.js';
 import { IntradayCollection } from '../modules/market-data/application/intraday-collection.js';
 import {
@@ -30,6 +31,7 @@ import {
   InMemoryB3Trades,
   InMemoryCalendarRepository,
   InMemoryCatalogImport,
+  InMemoryIndexRates,
   InMemoryIntradayQuoteRepository,
   InMemoryLogoRepository,
   InMemoryQuoteRepository,
@@ -149,6 +151,9 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     calendars,
     ...(options.clock ? { clock: options.clock } : {}),
   });
+  // Série do CDI (SPEC-007) em memória.
+  const indexRates = new InMemoryIndexRates();
+  const cdi = new CdiStatusService({ rates: indexRates, runs, calendars, clock });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -165,6 +170,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     accessTokens,
     calendar,
     catalog,
+    cdi,
     logStream: logs,
   });
 
@@ -223,6 +229,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     logos,
     logoSource,
     catalogImport,
+    indexRates,
+    cdi,
     ...services,
   };
 }

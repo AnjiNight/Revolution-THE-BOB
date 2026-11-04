@@ -30,6 +30,7 @@
 | 1.20 | SPEC-010 aprovada (03/11/2026: saltos marcados no gráfico, período de 1 ano) e implementada; SPEC-006 mudada: "Mostrar mais" no fim da busca, em vez de parar nos 50 primeiros |
 | 1.21 | SPEC-007 detalhada ([SPEC-007.md](SPEC-007.md)), aguardando a aprovação; o CDI segue os dias úteis bancários (tem valor em 24/12 e 31/12, sem pregão), então a SPEC-005 deixa de ser dependência da série e serve só para conferência |
 | 1.22 | SPEC-005 mudada (aprovada pela Nicoly em 04/11/2026): anos fechados publicados pelo processador a partir do arquivo anual da B3 ([SPEC-005 §10](SPEC-005.md)) |
+| 1.23 | SPEC-007 aprovada (Nicoly, 04/11/2026, como escrita) e implementada: série do CDI desde 2016 pelo SGS do Banco Central; OPEN-40 decidida para o CDI (guardado para sempre) |
 ---
 
 ## 0. Como ler este documento
@@ -561,7 +562,7 @@ Visão geral por fase:
 
 #### SPEC-007 — Ingestão da série do CDI
 
-📄 Detalhada em [SPEC-007.md](SPEC-007.md) — aguardando aprovação.
+📄 Detalhada em [SPEC-007.md](SPEC-007.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|

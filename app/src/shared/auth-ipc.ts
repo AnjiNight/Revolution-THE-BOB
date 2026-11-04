@@ -75,6 +75,11 @@ export const ASSET_CHANNELS = {
   confirmClassification: 'assets:confirm-classification',
 } as const;
 
+/** Canais IPC dos indexadores (SPEC-007): situação da série do CDI, só para colaborador. */
+export const INDEX_CHANNELS = {
+  cdi: 'indexes:cdi',
+} as const;
+
 /** Erros que a interface sabe traduzir. */
 export type ClientAuthError =
   | AuthErrorCode

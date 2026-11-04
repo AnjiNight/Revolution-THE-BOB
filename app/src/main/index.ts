@@ -25,6 +25,7 @@ import {
   ASSET_CHANNELS,
   AUTH_CHANNELS,
   CALENDAR_CHANNELS,
+  INDEX_CHANNELS,
   PROFILE_CHANNELS,
 } from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL } from '../shared/server-status.js';
@@ -188,6 +189,9 @@ app.whenReady().then(() => {
   ipcMain.handle(CALENDAR_CHANNELS.publish, (_event, year: number, input: CalendarPublication) =>
     auth.publishCalendar(year, input),
   );
+
+  // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.
+  ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());
 
   // Catálogo de ativos (SPEC-006): o servidor confere se a conta é de colaborador.
   ipcMain.handle(ASSET_CHANNELS.search, (_event, query: AssetSearchQuery) =>

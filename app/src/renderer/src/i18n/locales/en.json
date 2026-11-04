@@ -89,6 +89,15 @@
       "nextYear": "The {{year}} trading calendar hasn't been published yet. Publish it by December 31.",
       "open": "Open the calendar"
     },
+    "cdi": {
+      "loaded": "CDI series: from {{from}} to {{to}}",
+      "updated": "updated on {{at}}",
+      "loading": "CDI series: loading (the processor is fetching it from the Central Bank)",
+      "stale": "The CDI series stopped at {{date}}. Check that the processor is running.",
+      "failed": "The last CDI update failed ({{at}}).",
+      "missing_one": "{{count}} trading day has no CDI in the series.",
+      "missing_other": "{{count}} trading days have no CDI in the series."
+    },
     "availableTitle": "Available now",
     "open": "Open",
     "tools": {

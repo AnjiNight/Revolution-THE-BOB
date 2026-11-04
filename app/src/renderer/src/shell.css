@@ -598,6 +598,13 @@
   line-height: 1.5;
 }
 
+/* SPEC-007: situação da série do CDI no Início do colaborador, quando está tudo em dia. */
+.cdi-status {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .calendar-reminder ul {
   display: flex;
   flex: 1 1 22rem;

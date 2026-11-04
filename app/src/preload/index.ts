@@ -4,6 +4,7 @@ import type {
   CalendarSuggestion,
   CatalogAsset,
   CatalogListResult,
+  CdiStatus,
   ConsentList,
   PriceHistory,
   TradingCalendarYear,
@@ -14,6 +15,7 @@ import {
   ASSET_CHANNELS,
   AUTH_CHANNELS,
   CALENDAR_CHANNELS,
+  INDEX_CHANNELS,
   PROFILE_CHANNELS,
   type AuthResult,
   type ClientResult,
@@ -62,6 +64,9 @@ const api: DesktopApi = {
       invoke<ClientResult<CalendarSuggestion>>(CALENDAR_CHANNELS.suggestion, year),
     publish: (year, input) =>
       invoke<ClientResult<TradingCalendarYear>>(CALENDAR_CHANNELS.publish, year, input),
+  },
+  indexes: {
+    cdi: () => invoke<ClientResult<CdiStatus>>(INDEX_CHANNELS.cdi),
   },
   assets: {
     search: (query) => invoke<ClientResult<AssetSearchResult>>(ASSET_CHANNELS.search, query),

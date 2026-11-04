@@ -75,6 +75,12 @@ const configSchema = z
       .trim()
       .regex(/^https?:\/\//, 'BRAPI_BASE_URL deve começar com http:// ou https://')
       .default('https://brapi.dev'),
+    /** Endereço da API SGS do Banco Central (SPEC-007, CDI); só muda nos testes de ponta a ponta. */
+    BCB_SGS_BASE_URL: z
+      .string()
+      .trim()
+      .regex(/^https?:\/\//, 'BCB_SGS_BASE_URL deve começar com http:// ou https://')
+      .default('https://api.bcb.gov.br'),
   })
   .refine((c) => c.NODE_ENV !== 'production' || !c.JWT_SECRET.includes('troque'), {
     error: 'o JWT_SECRET de exemplo não pode ser usado em produção',
@@ -117,6 +123,8 @@ export interface AppConfig {
   b3CacheDir: string;
   /** SPEC-009: cotações do pregão pela brapi. */
   brapi: { token: string | null; monthlyQuota: number; baseUrl: string };
+  /** SPEC-007: série do CDI pela API SGS do Banco Central (sem token). */
+  bcbSgsBaseUrl: string;
 }
 
 export class ConfigError extends Error {
@@ -162,5 +170,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       monthlyQuota: c.BRAPI_MONTHLY_QUOTA,
       baseUrl: c.BRAPI_BASE_URL,
     },
+    bcbSgsBaseUrl: c.BCB_SGS_BASE_URL,
   };
 }

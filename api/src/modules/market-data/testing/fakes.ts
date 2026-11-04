@@ -31,6 +31,9 @@ import {
   type DailyQuote,
   type DailySession,
   type HistoryAsset,
+  type IndexRateRepository,
+  type IndexSource,
+  type IndexSourceError,
   type IngestionTask,
   type IntradayQuote,
   type IntradayQuoteRepository,
@@ -46,10 +49,77 @@ import {
   type RunResult,
   type RunSummary,
   type StoredCalendarYear,
+  type StoredIndexer,
   type TaskRunReader,
   type TaskRunRepository,
 } from '../application/ports.js';
 import { cotahistFile, type CotahistLineFields } from './cotahist-fixtures.js';
+
+/** Série dos indexadores em memória (SPEC-007), com o CDI cadastrado como na migração. */
+export class InMemoryIndexRates implements IndexRateRepository {
+  readonly indexer: StoredIndexer = { id: 'idx-cdi', code: 'CDI', sgsSeries: 12 };
+  /** Valor guardado por data, como a coluna (6 casas). */
+  readonly rates = new Map<IsoDate, string>();
+  readonly loaded = new Map<number, number>();
+
+  findIndexer(code: string): Promise<StoredIndexer | null> {
+    return Promise.resolve(code === this.indexer.code ? this.indexer : null);
+  }
+
+  rateDates(): Promise<IsoDate[]> {
+    return Promise.resolve([...this.rates.keys()].sort());
+  }
+
+  loadedYears(): Promise<Set<number>> {
+    return Promise.resolve(new Set(this.loaded.keys()));
+  }
+
+  save(
+    _indexerId: string,
+    rates: ReadonlyArray<{ date: IsoDate; value: string }>,
+  ): Promise<number> {
+    let changed = 0;
+    for (const { date, value } of rates) {
+      const [integer, fraction = ''] = value.split('.');
+      const stored = `${integer}.${fraction.padEnd(6, '0')}`;
+      if (this.rates.get(date) === stored) continue;
+      this.rates.set(date, stored);
+      changed += 1;
+    }
+    return Promise.resolve(changed);
+  }
+
+  markYearLoaded(_indexerId: string, year: number, records: number): Promise<void> {
+    this.loaded.set(year, records);
+    return Promise.resolve();
+  }
+}
+
+/**
+ * "Banco Central" em memória: linhas da série por data. `failures` faz as próximas consultas
+ * falharem, uma por item; `published` limita até que dia o CDI já saiu.
+ */
+export class FakeIndexSource implements IndexSource {
+  readonly rows = new Map<IsoDate, string>();
+  readonly requests: Array<{ code: number; from: IsoDate; to: IsoDate }> = [];
+  failures: IndexSourceError[] = [];
+  extraRows: unknown[] = [];
+
+  series(code: number, from: IsoDate, to: IsoDate): Promise<unknown[] | null> {
+    this.requests.push({ code, from, to });
+    const failure = this.failures.shift();
+    if (failure) return Promise.reject(failure);
+    const found = [...this.rows]
+      .filter(([date]) => date >= from && date <= to)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, valor]) => ({
+        data: `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`,
+        valor,
+      }));
+    const all = [...found, ...this.extraRows];
+    return Promise.resolve(all.length > 0 ? all : null);
+  }
+}
 
 /** Calendário em memória para testes sem banco. */
 export class InMemoryCalendarRepository implements CalendarRepository {

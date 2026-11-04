@@ -18,16 +18,20 @@ import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-se
 import { B3CalendarImport } from './modules/market-data/application/b3-calendar-import.js';
 import { CalendarService } from './modules/market-data/application/calendar-service.js';
 import { CatalogImport } from './modules/market-data/application/catalog-import.js';
+import { CdiIngestion } from './modules/market-data/application/cdi-ingestion.js';
+import { CdiStatusService } from './modules/market-data/application/cdi-status-service.js';
 import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
 import { IntradayCollection } from './modules/market-data/application/intraday-collection.js';
 import { HistoryStatusService } from './modules/market-data/application/history-status-service.js';
 import { B3CotahistSource } from './modules/market-data/infrastructure/b3-cotahist-source.js';
+import { BcbSgsSource } from './modules/market-data/infrastructure/bcb-sgs-source.js';
 import { BrapiLogoSource } from './modules/market-data/infrastructure/brapi-logo-source.js';
 import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
 import { PrismaIntradayQuoteRepository } from './modules/market-data/infrastructure/prisma-intraday-quote-repository.js';
 import { PrismaB3TradeRepository } from './modules/market-data/infrastructure/prisma-b3-trade-repository.js';
 import { PrismaCalendarRepository } from './modules/market-data/infrastructure/prisma-calendar-repository.js';
 import { PrismaCatalogImportRepository } from './modules/market-data/infrastructure/prisma-catalog-import-repository.js';
+import { PrismaIndexRateRepository } from './modules/market-data/infrastructure/prisma-index-rate-repository.js';
 import { PrismaLogoRepository } from './modules/market-data/infrastructure/prisma-logo-repository.js';
 import {
   PrismaQuoteRepository,
@@ -94,6 +98,14 @@ async function main(): Promise<void> {
   });
   // SPEC-005 §10: os anos fechados do calendário pelos mesmos arquivos anuais da B3.
   const calendarImport = new B3CalendarImport({ source: cotahist, calendars, runs });
+  // SPEC-007: série do CDI pela API SGS do Banco Central.
+  const indexRates = new PrismaIndexRateRepository(prisma);
+  const cdi = new CdiIngestion({
+    source: new BcbSgsSource({ baseUrl: config.bcbSgsBaseUrl }),
+    rates: indexRates,
+    runs,
+    calendars,
+  });
 
   if (mode === 'server') {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
@@ -131,6 +143,7 @@ async function main(): Promise<void> {
         imports: catalogImport,
         prices: quotes,
       }),
+      cdi: new CdiStatusService({ rates: indexRates, runs, calendars }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -178,6 +191,10 @@ async function main(): Promise<void> {
           dailyAtHour: 8,
           dailyAtMinute: 30,
         },
+        // SPEC-007: CDI às 09:00 e às 18:00 (o do dia sai no dia útil seguinte). As duas rodam ao
+        // iniciar; a segunda encontra a primeira em andamento e não faz nada.
+        { name: 'CDI (manhã)', run: async () => (await cdi.run())?.records ?? 0, dailyAtHour: 9 },
+        { name: 'CDI (tarde)', run: async () => (await cdi.run())?.records ?? 0, dailyAtHour: 18 },
         // SPEC-009: confere a cada 5 minutos se chegou a hora de uma coleta do pregão.
         {
           name: 'cotações do pregão',

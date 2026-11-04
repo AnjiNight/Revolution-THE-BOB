@@ -24,7 +24,17 @@ describe('loadConfig (CA08)', () => {
       workerHeartbeatSeconds: 60,
       b3CacheDir: '.cache/b3',
       brapi: { token: null, monthlyQuota: 15_000, baseUrl: 'https://brapi.dev' },
+      bcbSgsBaseUrl: 'https://api.bcb.gov.br',
     });
+  });
+
+  it('endereço da API SGS do Banco Central (SPEC-007)', () => {
+    expect(loadConfig({ ...base, BCB_SGS_BASE_URL: 'http://127.0.0.1:9998' }).bcbSgsBaseUrl).toBe(
+      'http://127.0.0.1:9998',
+    );
+    expect(() => loadConfig({ ...base, BCB_SGS_BASE_URL: 'api.bcb.gov.br' })).toThrow(
+      /BCB_SGS_BASE_URL/,
+    );
   });
 
   it('token, cota e endereço da brapi (SPEC-009)', () => {

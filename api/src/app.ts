@@ -16,7 +16,9 @@ import { registerAuthRoutes } from './modules/identity/controllers/auth-routes.j
 import { registerPasswordResetRoutes } from './modules/identity/controllers/password-reset-routes.js';
 import { registerProfileRoutes } from './modules/identity/controllers/profile-routes.js';
 import type { CalendarService } from './modules/market-data/application/calendar-service.js';
+import type { CdiStatusService } from './modules/market-data/application/cdi-status-service.js';
 import { registerCalendarRoutes } from './modules/market-data/controllers/calendar-routes.js';
+import { registerIndexRoutes } from './modules/market-data/controllers/index-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { HttpError } from './shared/http/http-error.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
@@ -34,6 +36,8 @@ export interface AppDependencies {
   calendar: CalendarService;
   /** SPEC-006: catálogo de ativos. */
   catalog: AssetCatalogService;
+  /** SPEC-007: situação da série do CDI. */
+  cdi: CdiStatusService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -76,6 +80,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
   });
   registerCalendarRoutes(app, { calendar: deps.calendar, accessTokens: deps.accessTokens });
   registerAssetRoutes(app, { catalog: deps.catalog, accessTokens: deps.accessTokens });
+  registerIndexRoutes(app, { cdi: deps.cdi, accessTokens: deps.accessTokens });
 
   return app;
 }

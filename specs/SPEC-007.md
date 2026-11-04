@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | ⏳ **Aguardando aprovação** (escrita em 04/11/2026). As decisões do §4.2 são propostas |
+| Status | Aprovada pela Nicoly em 04/11/2026, como escrita, e implementada (ver §9) |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)) |
 | Prioridade | *Should* (RF10, Requisitos v1.3) |
 | Depende de | [SPEC-008](SPEC-008.md) (padrão de ingestão: adaptador, execução registrada, novas tentativas); [SPEC-005](SPEC-005.md) só para a conferência do §4.2 (pregão sem CDI) |
@@ -62,7 +62,7 @@ O colaborador vê, no Início, até que dia a série está carregada e como foi 
 | 22/12/2025 a 05/01/2026 | **24/12 e 31/12 têm CDI**, e a B3 não abre nesses dias. O CDI segue os **dias úteis bancários**, não o calendário de pregão |
 | Feriado de 02/11/2026 | Sem linha (correto) |
 
-### 4.2 Propostas (para aprovar junto com a Spec)
+### 4.2 Aprovadas junto com a Spec (Nicoly, 04/11/2026)
 
 | Tema | Proposta | Motivo |
 |---|---|---|
@@ -151,8 +151,29 @@ Configuração nova do processador: `BCB_SGS_BASE_URL` (padrão `https://api.bcb
 
 | ID | Situação |
 |---|---|
-| — | ⏳ **Aprovação** das propostas do §4.2, em especial: guardar a taxa como publicada (% ao dia), janela desde 2016, horários 09:00 e 18:00 e o aviso só no Início do colaborador |
+| — | ✅ Propostas do §4.2 aprovadas como escritas (Nicoly, 04/11/2026) |
 | SPEC-020 | Ao acumular o CDI de um período, usar **todos os dias da série**, inclusive os sem pregão (24/12, 31/12): é rendimento verdadeiro. A data inicial e final do período vêm da carteira (pregões) |
 | OPEN-21 | Fonte do Ibovespa continua em aberto (SPEC-020) |
-| OPEN-40 | ✅ Série do CDI guardada para sempre (proposta) |
+| OPEN-40 | ✅ Série do CDI guardada para sempre |
 | — | Selic e IPCA (fase de renda fixa) reaproveitam o adaptador com outra série (11 e 433); o IPCA é mensal e vai precisar de outra unidade |
+
+## 9. Verificação (04/11/2026)
+
+| Critério | Resultado |
+|---|---|
+| CA01 | ✅ Adaptador (`bcb-sgs-source.test.ts`, com `fetch` falso): consulta com `dataInicial` e `dataFinal` em `dd/mm/aaaa`; `404` vira "nada publicado"; rede, `5xx` e `429` (com nova tentativa), `406` e resposta que não é JSON ou não é lista (sem nova tentativa) viram erros distintos. Leitura das linhas em decimal pelo texto (`cdi.test.ts`) |
+| CA02 | ✅ Banco vazio: uma consulta por ano, de 04/01/2016 até o último publicado, com os anos fechados marcados (`cdi-ingestion.test.ts`). **De verdade:** 2.719 dias, de 04/01/2016 a 03/11/2026, em 11 consultas e 5 segundos |
+| CA03 | ✅ Série em dia não consulta; no dia seguinte, só do dia depois do último guardado; ano fechado marcado não é consultado de novo |
+| CA04 | ✅ Em memória e no PostgreSQL: a mesma gravação não muda nada; valor revisado substitui só ele ("0.05" = "0.050000") |
+| CA05 | ✅ 24/12 e 31/12 gravados; fim de semana, data futura, antes da janela e valor fora de 0 a 1% (ou com mais de 6 casas) viram erro, e o resto é gravado |
+| CA06 | ✅ Pregão publicado sem CDI depois de 3 dias úteis vira erro com a data. **De verdade:** com 2016–2026 publicados, nenhum pregão sem CDI |
+| CA07 | ✅ Banco Central fora do ar: 3 novas tentativas com espera e `falha`, sem mexer no guardado; nada publicado termina como `aguardando_publicacao`, sem erro |
+| CA08 | ✅ Execução com situação, registros, período e consultas; série em dia não grava execução. As tarefas das 09:00 e das 18:00, que rodam juntas ao iniciar, não fazem duas execuções |
+| CA09 | ✅ Rota `GET /api/collaborator/cdi` (`index-routes.test.ts`): período, última execução terminada, série parada há mais de 3 dias úteis e pregões sem CDI; 403 para usuário, 401 sem sessão. Início do colaborador com a linha da série e os avisos em âmbar, em português e inglês (paridade dos idiomas coberta por teste). ⏳ Conferir na tela do Electron |
+| CA10 | ✅ PostgreSQL: CDI cadastrado pela migração (série 12, % ao dia); fim de semana, valor 1 ou negativo e registros negativos recusados. Migração `20261104130000_serie_cdi` sem diferença para o esquema do Prisma, desfeita e refeita |
+| CA11 | ✅ Nenhum teste acessa a internet: respostas do SGS montadas nos testes (`FakeIndexSource` e `fetch` falso) |
+| Conferência dos valores | ✅ CDI acumulado por ano calculado da série gravada: 14,00% (2016), 9,93% (2017), 6,42% (2018), 5,96% (2019), 2,76% (2020), 4,42% (2021), 12,39% (2022), 13,04% (2023), 10,88% (2024), 14,32% (2025), iguais aos números publicados do CDI |
+
+Total: **713 testes** passando (com o banco real), lint, tipos e formatação.
+
+**Para as próximas Specs:** a SPEC-020 lê a série em `taxa_diaria` (indexador `CDI`) e acumula o período com todos os dias da série, inclusive os sem pregão (§8). A SPEC-011 mostra as execuções de `cdi_diario`.

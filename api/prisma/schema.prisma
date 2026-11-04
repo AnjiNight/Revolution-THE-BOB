@@ -263,8 +263,63 @@ enum TarefaIngestao {
   cotacao_pregao
   importacao_catalogo
   calendario_b3
+  cdi_diario
 
   @@map("tarefa_ingestao")
+}
+
+enum UnidadeIndexador {
+  percentual_ao_dia
+
+  @@map("unidade_indexador")
+}
+
+enum FonteTaxa {
+  bcb_sgs
+
+  @@map("fonte_taxa")
+}
+
+/// Índice de referência (SPEC-007). No escopo atual, só o CDI, cadastrado pela migração.
+model Indexador {
+  id       String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sigla    String           @unique @db.VarChar(10)
+  nome     String           @db.VarChar(100)
+  serieSgs Int              @map("serie_sgs")
+  unidade  UnidadeIndexador
+
+  taxas  TaxaDiaria[]
+  cargas CargaIndexador[]
+
+  @@map("indexador")
+}
+
+/// Taxa do dia como o Banco Central publica (SPEC-007): % ao dia, 6 casas, entre 0 e 1. Os dias
+/// são os úteis bancários, não os do calendário de pregão; fim de semana é recusado (CHECK).
+model TaxaDiaria {
+  indexadorId String    @map("indexador_id") @db.Uuid
+  data        DateTime  @db.Date
+  valor       Decimal   @db.Decimal(10, 6)
+  fonte       FonteTaxa
+  gravadoEm   DateTime  @map("gravado_em") @db.Timestamptz(3)
+
+  indexador Indexador @relation(fields: [indexadorId], references: [id], onDelete: Restrict)
+
+  @@id([indexadorId, data])
+  @@map("taxa_diaria")
+}
+
+/// Ano fechado da série já carregado (SPEC-007): não é consultado de novo.
+model CargaIndexador {
+  indexadorId String   @map("indexador_id") @db.Uuid
+  ano         Int      @db.SmallInt
+  carregadaEm DateTime @map("carregada_em") @db.Timestamptz(3)
+  registros   Int
+
+  indexador Indexador @relation(fields: [indexadorId], references: [id], onDelete: Restrict)
+
+  @@id([indexadorId, ano])
+  @@map("carga_indexador")
 }
 
 enum SituacaoExecucao {

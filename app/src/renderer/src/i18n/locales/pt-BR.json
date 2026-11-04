@@ -89,6 +89,15 @@
       "nextYear": "O calendário de pregão de {{year}} ainda não foi publicado. Publique até 31 de dezembro.",
       "open": "Abrir o calendário"
     },
+    "cdi": {
+      "loaded": "Série do CDI: de {{from}} a {{to}}",
+      "updated": "atualizada em {{at}}",
+      "loading": "Série do CDI: carregando (o processador busca no Banco Central)",
+      "stale": "A série do CDI está parada em {{date}}. Confira se o processador está ligado.",
+      "failed": "A última atualização do CDI terminou com falha ({{at}}).",
+      "missing_one": "Há {{count}} pregão sem CDI na série.",
+      "missing_other": "Há {{count}} pregões sem CDI na série."
+    },
     "availableTitle": "Disponível agora",
     "open": "Abrir",
     "tools": {

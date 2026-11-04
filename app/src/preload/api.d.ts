@@ -4,6 +4,7 @@ import type {
   CalendarSuggestion,
   CatalogAsset,
   CatalogListResult,
+  CdiStatus,
   ConsentList,
   PriceHistory,
   PriceHistoryPeriod,
@@ -75,6 +76,10 @@ export interface DesktopApi {
     suggestion(year: number): Promise<ClientResult<CalendarSuggestion>>;
     /** Substitui a lista inteira do ano. */
     publish(year: number, input: CalendarPublication): Promise<ClientResult<TradingCalendarYear>>;
+  };
+  /** Indexadores (SPEC-007): situação da série do CDI, só colaborador (403 para usuário). */
+  indexes: {
+    cdi(): Promise<ClientResult<CdiStatus>>;
   };
   /**
    * Catálogo de ativos (SPECs 006, 010 e 040). Busca, ficha e logos para todos; o resto só

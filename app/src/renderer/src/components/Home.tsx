@@ -2,6 +2,7 @@ import {
   calendarYearsToCheck,
   isoDateInBrasilia,
   yearOf,
+  type CdiStatus,
   type ConsentList,
   type PublicUser,
 } from '@simulador/shared';
@@ -17,6 +18,7 @@ import {
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { formatCalendarDay, formatDate } from '../format';
 import { isTermsOutdated, TermsUpdateNotice } from './Profile';
 
 interface HomeProps {
@@ -92,6 +94,7 @@ export function Home({ user, onOpenProfile, onOpenCalendar, onOpenAssets }: Home
         <TermsUpdateNotice submitting={accepting} onAccept={() => void accept()} />
       )}
       {user.role === 'collaborator' && <CalendarReminder onOpen={onOpenCalendar} />}
+      {user.role === 'collaborator' && <CdiStatusPanel />}
 
       <header className="page-hero">
         <p className={user.role === 'collaborator' ? 'eyebrow eyebrow-warn' : 'eyebrow'}>
@@ -165,6 +168,60 @@ export function Home({ user, onOpenProfile, onOpenCalendar, onOpenAssets }: Home
           ))}
         </ul>
       </section>
+    </div>
+  );
+}
+
+/**
+ * SPEC-007 (§5.3): até que dia a série do CDI está carregada e a última atualização. Os problemas
+ * (série parada, falha, pregões sem CDI) aparecem em âmbar. Falha na consulta não mostra nada.
+ */
+function CdiStatusPanel() {
+  const { t, i18n } = useTranslation();
+  const [status, setStatus] = useState<CdiStatus | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    void window.api.indexes.cdi().then((result) => current && result.ok && setStatus(result.data));
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  if (!status) return null;
+  const day = (date: string) => formatCalendarDay(date, i18n.language);
+  const summary =
+    status.from && status.to
+      ? t('home.cdi.loaded', { from: day(status.from), to: day(status.to) }) +
+        (status.lastRun
+          ? ` · ${t('home.cdi.updated', { at: formatDate(status.lastRun.at, i18n.language, true) })}`
+          : '')
+      : t('home.cdi.loading');
+  const warnings = [
+    status.stale && status.to ? t('home.cdi.stale', { date: day(status.to) }) : null,
+    status.lastRun?.status === 'falha'
+      ? t('home.cdi.failed', { at: formatDate(status.lastRun.at, i18n.language, true) })
+      : null,
+    status.missingTradingDays > 0
+      ? t('home.cdi.missing', { count: status.missingTradingDays })
+      : null,
+  ].filter((warning): warning is string => warning !== null);
+
+  if (warnings.length === 0) {
+    return (
+      <p className="cdi-status" role="status">
+        {summary}
+      </p>
+    );
+  }
+  return (
+    <div className="calendar-reminder" role="status">
+      <ul>
+        <li>{summary}</li>
+        {warnings.map((warning) => (
+          <li key={warning}>{warning}</li>
+        ))}
+      </ul>
     </div>
   );
 }

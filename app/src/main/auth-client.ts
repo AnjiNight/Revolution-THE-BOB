@@ -4,6 +4,7 @@ import {
   AUTH_PATHS,
   CALENDAR_PATHS,
   calendarPath,
+  INDEX_PATHS,
   isPriceHistoryPeriod,
   parseCalendarYear,
   PROFILE_PATHS,
@@ -23,6 +24,7 @@ import {
   type CatalogErrorCode,
   type CatalogListResult,
   type CatalogQuery,
+  type CdiStatus,
   type ChangeEmailInput,
   type ChangePasswordInput,
   type ConfirmEmailChangeInput,
@@ -270,6 +272,11 @@ export class AuthClient {
   // --- Calendário de pregão (SPEC-005) ---
 
   /** Qualquer pessoa conectada: ano não publicado vem com `published: false`. */
+  /** Colaborador (SPEC-007): até que dia a série do CDI está carregada e a última atualização. */
+  cdiStatus(): Promise<ClientResult<CdiStatus>> {
+    return this.call(() => this.authorizedRequest<CdiStatus>('GET', INDEX_PATHS.cdi));
+  }
+
   getCalendar(year: number): Promise<ClientResult<TradingCalendarYear>> {
     return this.call(() =>
       this.authorizedRequest<TradingCalendarYear>('GET', calendarUrl(CALENDAR_PATHS.year, year)),

@@ -90,6 +90,8 @@ O colaborador entra pela **Área do colaborador**, na tela de login.
 
 **Histórico de cotações** ([SPEC-008](specs/SPEC-008.md)): o processador (`npm run dev:worker`) carrega o fechamento diário dos ativos do catálogo a partir dos arquivos públicos da B3, desde 2016. Ativo novo ganha o histórico em até 15 minutos; os pregões que faltam são buscados todo dia às 08:00. Só entram os anos com calendário publicado: publique de 2016 até o ano atual (a tela **Ativos** do colaborador avisa quais faltam). Os arquivos anuais (uns 60 a 90 MB cada) ficam guardados em `api/.cache/b3`.
 
+**Série do CDI** ([SPEC-007](specs/SPEC-007.md)): o processador carrega o CDI diário da API SGS do Banco Central (pública, sem token) desde 04/01/2016 e o atualiza às 09:00 e às 18:00; o CDI de um dia sai no dia útil seguinte. O Início do colaborador mostra até que dia a série está carregada e avisa se ela parar. O usuário vê o CDI na comparação com benchmarks (SPEC-020).
+
 **Ficha do ativo** ([SPEC-010](specs/SPEC-010.md)): na tela **Ativos**, clique no ticker. A ficha mostra a última cotação (a do pregão ou o fechamento da B3, a mais recente), o último pregão da B3 e o gráfico dos fechamentos, de 1 mês até tudo desde 2016. Os preços estão como a B3 publica, sem ajuste por dividendos, desdobramentos ou grupamentos: saltos grandes de um pregão para o seguinte ficam marcados no gráfico.
 
 ### Token da brapi (opcional)

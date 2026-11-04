@@ -9,7 +9,12 @@ import { hashRefreshToken } from '../application/refresh-token.js';
 import { EmailInUseError } from '../domain/errors.js';
 import { createIdentityServices } from '../identity-services.js';
 import { CalendarService } from '../../market-data/application/calendar-service.js';
-import { InMemoryCalendarRepository } from '../../market-data/testing/fakes.js';
+import { CdiStatusService } from '../../market-data/application/cdi-status-service.js';
+import {
+  InMemoryCalendarRepository,
+  InMemoryIndexRates,
+  InMemoryTaskRuns,
+} from '../../market-data/testing/fakes.js';
 import { AssetCatalogService } from '../../asset-catalog/application/asset-catalog-service.js';
 import { InMemoryAssetRepository } from '../../asset-catalog/testing/fakes.js';
 import { BackgroundTasks, FakeEmailSender } from '../testing/fakes.js';
@@ -113,6 +118,11 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       accessTokens,
       calendar: new CalendarService({ calendars: new InMemoryCalendarRepository() }),
       catalog: new AssetCatalogService({ assets: new InMemoryAssetRepository() }),
+      cdi: new CdiStatusService({
+        rates: new InMemoryIndexRates(),
+        runs: new InMemoryTaskRuns(),
+        calendars: new InMemoryCalendarRepository(),
+      }),
     });
     return { app, mailer, background };
   }

@@ -134,7 +134,8 @@ export type IngestionTask =
   | 'fechamento_diario'
   | 'cotacao_pregao'
   | 'importacao_catalogo'
-  | 'calendario_b3';
+  | 'calendario_b3'
+  | 'cdi_diario';
 export type RunStatus = 'sucesso' | 'parcial' | 'falha' | 'aguardando_publicacao' | 'cota_esgotada';
 
 export interface RunError {
@@ -380,4 +381,54 @@ export interface LogoRepository {
   find(assetId: string): Promise<LogoImage | null>;
   /** Ativos que têm logo próprio. */
   withLogo(): Promise<Set<string>>;
+}
+
+/**
+ * Série de um indexador no SGS do Banco Central (SPEC-007, DA06). Devolve as linhas da resposta, ou
+ * `null` quando não há nada publicado no intervalo (404). Falha lança IndexSourceError.
+ */
+export interface IndexSource {
+  series(code: number, from: IsoDate, to: IsoDate): Promise<unknown[] | null>;
+}
+
+/**
+ * `retryable`: rede, 5xx e 429 (novas tentativas, §4.2). `rejected` (406) e `bad_response`
+ * (resposta malformada) não mudam numa nova tentativa.
+ */
+export type IndexSourceErrorKind = 'retryable' | 'rejected' | 'bad_response';
+
+export class IndexSourceError extends Error {
+  constructor(
+    readonly kind: IndexSourceErrorKind,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'IndexSourceError';
+  }
+}
+
+/** Indexador cadastrado (SPEC-007 §6): só o CDI no escopo atual. */
+export interface StoredIndexer {
+  id: string;
+  code: string;
+  sgsSeries: number;
+}
+
+export interface IndexRateRepository {
+  /** Pelo código (`CDI`); `null` se a migração não o cadastrou. */
+  findIndexer(code: string): Promise<StoredIndexer | null>;
+  /** Todas as datas guardadas, em ordem. */
+  rateDates(indexerId: string): Promise<IsoDate[]>;
+  /** Anos fechados já carregados. */
+  loadedYears(indexerId: string): Promise<Set<number>>;
+  /**
+   * Insere ou atualiza (§4.2: revisão do Banco Central substitui). Devolve quantas linhas mudaram:
+   * novas ou com valor diferente.
+   */
+  save(
+    indexerId: string,
+    rates: ReadonlyArray<{ date: IsoDate; value: string }>,
+    at: Date,
+  ): Promise<number>;
+  markYearLoaded(indexerId: string, year: number, records: number, at: Date): Promise<void>;
 }
