@@ -17,6 +17,9 @@ import type {
   FundamentalsErrorCode,
   LoginInput,
   NewAssetInput,
+  NewPortfolioInput,
+  PortfolioErrorCode,
+  RenamePortfolioInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   PublicUser,
@@ -88,12 +91,22 @@ export const FUNDAMENTALS_CHANNELS = {
   collection: 'fundamentals:collection',
 } as const;
 
+/** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */
+export const PORTFOLIO_CHANNELS = {
+  list: 'portfolios:list',
+  create: 'portfolios:create',
+  get: 'portfolios:get',
+  rename: 'portfolios:rename',
+  delete: 'portfolios:delete',
+} as const;
+
 /** Erros que a interface sabe traduzir. */
 export type ClientAuthError =
   | AuthErrorCode
   | CalendarErrorCode
   | CatalogErrorCode
   | FundamentalsErrorCode
+  | PortfolioErrorCode
   | 'server_unavailable'
   | 'invalid_url'
   | 'unexpected'
@@ -120,8 +133,10 @@ export type {
   EmailConfirmationResendInput,
   LoginInput,
   NewAssetInput,
+  NewPortfolioInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   RegisterInput,
+  RenamePortfolioInput,
   UpdateNameInput,
 };

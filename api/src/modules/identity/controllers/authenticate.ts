@@ -33,6 +33,16 @@ export async function requireCollaborator(
   }
 }
 
+/**
+ * preHandler das rotas do usuário (SPEC-012: carteiras), depois de `authenticate`: 403 para o
+ * colaborador, que não tem carteiras (DA12).
+ */
+export async function requireUser(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
+  if (requireAuth(request).role !== 'user') {
+    throw new HttpError(403, 'forbidden', 'Esta área é só das contas de usuário.');
+  }
+}
+
 /** Claims do usuário autenticado; só use em rotas com o preHandler `authenticate`. */
 export function requireAuth(request: FastifyRequest): AccessTokenClaims {
   if (!request.auth) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');

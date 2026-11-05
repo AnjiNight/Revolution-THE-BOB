@@ -1,0 +1,143 @@
+/* Carteiras (SPEC-012). */
+
+.portfolio-new {
+  margin-bottom: 1.5rem;
+}
+
+.portfolio-types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.portfolio-types legend {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.type-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.35));
+  border-radius: 14px;
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.type-card.is-selected {
+  border-color: var(--accent, currentColor);
+  box-shadow: 0 0 0 1px var(--accent, currentColor);
+}
+
+.type-card:focus-within {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: 2px;
+}
+
+/* O rádio fica acessível pelo teclado, mas o cartão inteiro é o alvo do clique. */
+.type-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.type-card-title {
+  font-weight: 650;
+}
+
+.type-card-text {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.portfolio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portfolio-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.25));
+  border-radius: 16px;
+}
+
+.portfolio-row .danger-zone {
+  flex-basis: 100%;
+}
+
+button.link.portfolio-open {
+  font-size: 1.05rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.portfolio-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.portfolio-type {
+  font-weight: 600;
+}
+
+.portfolio-type-historical {
+  color: var(--warn);
+}
+
+.portfolio-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.portfolio-rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 20rem;
+}
+
+.portfolio-rename input {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.portfolio-rename .field-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.portfolio-page .portfolio-meta {
+  font-size: 0.95rem;
+}
+
+/* ---------- Janela estreita (até 480px) ---------- */
+
+@media (max-width: 640px) {
+  .portfolio-types {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portfolio-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

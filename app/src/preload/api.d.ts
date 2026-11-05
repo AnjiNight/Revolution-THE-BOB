@@ -10,6 +10,8 @@ import type {
   ConsentList,
   DividendPeriod,
   Investidor10Status,
+  Portfolio,
+  PortfolioList,
   PriceHistory,
   PriceHistoryPeriod,
   TradingCalendarYear,
@@ -31,9 +33,11 @@ import type {
   EmailConfirmationResendInput,
   LoginInput,
   NewAssetInput,
+  NewPortfolioInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   RegisterInput,
+  RenamePortfolioInput,
   UpdateNameInput,
 } from '../shared/auth-ipc.js';
 import type { ServerStatus } from '../shared/server-status.js';
@@ -84,6 +88,15 @@ export interface DesktopApi {
   /** Indexadores (SPEC-007): situação da série do CDI, só colaborador (403 para usuário). */
   indexes: {
     cdi(): Promise<ClientResult<CdiStatus>>;
+  };
+  /** Carteiras (SPEC-012): só a conta de usuário; carteira de outra pessoa é `portfolio_not_found`. */
+  portfolios: {
+    list(): Promise<ClientResult<PortfolioList>>;
+    create(input: NewPortfolioInput): Promise<ClientResult<Portfolio>>;
+    get(id: string): Promise<ClientResult<Portfolio>>;
+    rename(id: string, input: RenamePortfolioInput): Promise<ClientResult<Portfolio>>;
+    /** Apaga a carteira e os lançamentos dela, sem volta. */
+    delete(id: string): Promise<ClientResult<null>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

@@ -107,6 +107,10 @@
     "availableTitle": "Available now",
     "open": "Open",
     "tools": {
+      "portfolios": {
+        "title": "Portfolios",
+        "text": "Create live or historical portfolios and simulate your investments."
+      },
       "search": {
         "title": "Search assets",
         "text": "Find stocks and REITs (FIIs) by ticker, name, sector or segment."
@@ -119,6 +123,10 @@
         "title": "Asset catalog",
         "text": "Add and maintain the stocks and REITs (FIIs) users find in the search."
       }
+    },
+    "firstPortfolio": {
+      "text": "You don't have any portfolios yet. Create one to start simulating.",
+      "create": "Create portfolio"
     }
   },
   "profile": {
@@ -187,7 +195,10 @@
     "invalid_ticker": "Use the B3 code: 4 characters and 1 or 2 digits, like PETR4 or MXRF11.",
     "invalid_option": "Choose an option from the list.",
     "wrong_class": "This option doesn't belong to the asset's class.",
-    "immutable": "The class can't be changed after the asset is created."
+    "immutable": "The class can't be changed after the asset is created.",
+    "before_history": "The price history starts on 01/04/2016: choose that date or later.",
+    "future": "Choose a day before today: today doesn't have B3's close yet.",
+    "not_trading_day": "There was no trading session that day (weekend or holiday). Choose a trading day."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -218,7 +229,10 @@
     "calendar_not_published": "The team hasn't published the trading calendar for that year yet. Without it, the app doesn't know which days the exchange was open.",
     "ticker_in_use": "Another asset already uses this ticker.",
     "asset_not_found": "This asset no longer exists. The list has been refreshed.",
-    "source_disabled": "Investidor10 indicators are turned off."
+    "source_disabled": "Investidor10 indicators are turned off.",
+    "portfolio_not_found": "This portfolio no longer exists.",
+    "portfolio_name_in_use": "You already have a portfolio with this name.",
+    "portfolio_limit_reached": "You already have the maximum of 20 portfolios. Delete one to create another."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -353,7 +367,8 @@
     "home": "Home",
     "calendar": "Calendar",
     "assets": "Assets",
-    "logoutLabel": "Sign out of your account"
+    "logoutLabel": "Sign out of your account",
+    "portfolios": "Portfolios"
   },
   "calendar": {
     "title": "Trading calendar",
@@ -532,6 +547,48 @@
       "eventsSource": "Source: B3. The date is the record date: the price changes on the next session."
     }
   },
+  "portfolios": {
+    "title": "Portfolios",
+    "subtitle": "Each portfolio is a simulation: live, with current prices, or historical, in the past.",
+    "count": "{{count}} of {{limit}} portfolios",
+    "new": "New portfolio",
+    "newTitle": "New portfolio",
+    "loading": "Loading the portfolios…",
+    "empty": "You don't have any portfolios yet. Create one to start simulating.",
+    "name": "Name",
+    "nameHint": "Up to {{max}} characters. Each of your portfolios has a different name.",
+    "type": "Type (can't change later)",
+    "types": {
+      "live": {
+        "title": "Live",
+        "text": "Trades at current prices: purchases and sales use the latest quote."
+      },
+      "historical": {
+        "title": "Historical",
+        "text": "Trades in the past, with data already known: you choose the day the portfolio starts."
+      }
+    },
+    "startDate": "Start date",
+    "startDateHint": "A trading day, from {{first}} until yesterday.",
+    "create": "Create portfolio",
+    "creating": "Creating…",
+    "cancel": "Cancel",
+    "save": "Save",
+    "rename": "Rename",
+    "renameLabel": "Rename the portfolio {{name}}",
+    "delete": "Delete",
+    "deleteLabel": "Delete the portfolio {{name}}",
+    "deleteConfirm": "Delete the portfolio {{name}}? This deletes the portfolio and all its entries. It can't be undone.",
+    "deleteButton": "Delete portfolio",
+    "deleted": "Portfolio {{name}} deleted.",
+    "since": "since {{date}}",
+    "label": {
+      "live": "Live simulation",
+      "historical": "Historical simulation: result calculated with data already known"
+    },
+    "back": "Back to portfolios",
+    "comingSoon": "Deposits, purchases and sales arrive in the next steps."
+  },
   "fundamentals": {
     "title": "Indicators",
     "loading": "Loading the indicators…",
@@ -584,8 +641,14 @@
         "name": "EV/EBIT",
         "help": "Enterprise value divided by operating profit (EBIT)."
       },
-      "p_ebitda": { "name": "P/EBITDA", "help": "Market value divided by EBITDA." },
-      "p_ebit": { "name": "P/EBIT", "help": "Market value divided by operating profit (EBIT)." },
+      "p_ebitda": {
+        "name": "P/EBITDA",
+        "help": "Market value divided by EBITDA."
+      },
+      "p_ebit": {
+        "name": "P/EBIT",
+        "help": "Market value divided by operating profit (EBIT)."
+      },
       "p_ativo": {
         "name": "P/Assets",
         "help": "Market value divided by the company's total assets."
@@ -630,7 +693,10 @@
         "name": "ROE",
         "help": "Return on equity: net income divided by shareholders' equity."
       },
-      "roa": { "name": "ROA", "help": "Return on assets: net income divided by total assets." },
+      "roa": {
+        "name": "ROA",
+        "help": "Return on assets: net income divided by total assets."
+      },
       "roic": {
         "name": "ROIC",
         "help": "Return on the capital invested (equity plus debt) in operations."
@@ -711,7 +777,10 @@
         "name": "Unitholders",
         "help": "How many people and institutions hold units of the fund."
       },
-      "fii_cotas_emitidas": { "name": "Units issued", "help": "How many units the fund has." }
+      "fii_cotas_emitidas": {
+        "name": "Units issued",
+        "help": "How many units the fund has."
+      }
     }
   },
   "dividends": {
@@ -734,7 +803,11 @@
       "amortizacao": "Amortization"
     },
     "periodLabel": "Dividends period",
-    "periods": { "12m": "12 months", "5y": "5 years", "all": "All" },
+    "periods": {
+      "12m": "12 months",
+      "5y": "5 years",
+      "all": "All"
+    },
     "source": "Source: Investidor10 · collected on {{date}}",
     "sourceOnly": "Source: Investidor10",
     "notice": "Record date: the last day on which holders of the asset are entitled to the payment. Interest on equity is shown gross, before tax. Amortization returns part of the capital invested in the fund."

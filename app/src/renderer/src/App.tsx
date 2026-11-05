@@ -12,6 +12,7 @@ import { ConfirmEmailForm } from './components/ConfirmEmailForm';
 import { ForgotPasswordForm } from './components/ForgotPasswordForm';
 import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
+import { PortfolioPage, Portfolios } from './components/Portfolios';
 import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
 import { TradingCalendar } from './components/TradingCalendar';
@@ -33,7 +34,9 @@ type View =
   | { kind: 'profile'; user: PublicUser }
   | { kind: 'calendar'; user: PublicUser; year?: number }
   /** `assetId`: a ficha do ativo aberta por cima da lista (SPEC-010). */
-  | { kind: 'assets'; user: PublicUser; assetId?: string };
+  | { kind: 'assets'; user: PublicUser; assetId?: string }
+  /** SPEC-012: `portfolioId` abre a carteira; `creating` abre já com o formulário de nova. */
+  | { kind: 'portfolios'; user: PublicUser; portfolioId?: string; creating?: boolean };
 
 /**
  * Fluxo de telas da SPEC-002 (§5.3), da SPEC-003 (Meu perfil), da SPEC-004 (recuperar senha), da
@@ -83,7 +86,8 @@ export function App() {
     view.kind === 'home' ||
     view.kind === 'profile' ||
     view.kind === 'calendar' ||
-    view.kind === 'assets'
+    view.kind === 'assets' ||
+    view.kind === 'portfolios'
   ) {
     const { user } = view;
     const openCalendar = (year?: number) =>
@@ -97,6 +101,7 @@ export function App() {
         user={user}
         current={view.kind}
         onHome={() => setView({ kind: 'home', user })}
+        onPortfolios={() => setView({ kind: 'portfolios', user })}
         onProfile={() => setView({ kind: 'profile', user })}
         onCalendar={() => openCalendar()}
         onAssets={() => setView({ kind: 'assets', user })}
@@ -108,8 +113,26 @@ export function App() {
             onOpenProfile={() => setView({ kind: 'profile', user })}
             onOpenCalendar={openCalendar}
             onOpenAssets={() => setView({ kind: 'assets', user })}
+            onOpenPortfolios={(creating) =>
+              setView({ kind: 'portfolios', user, ...(creating ? { creating: true } : {}) })
+            }
           />
         )}
+        {view.kind === 'portfolios' &&
+          (view.portfolioId ? (
+            <PortfolioPage
+              key={view.portfolioId}
+              portfolioId={view.portfolioId}
+              onBack={() => setView({ kind: 'portfolios', user })}
+              onSessionExpired={sessionExpired}
+            />
+          ) : (
+            <Portfolios
+              startCreating={view.creating === true}
+              onOpen={(portfolioId) => setView({ kind: 'portfolios', user, portfolioId })}
+              onSessionExpired={sessionExpired}
+            />
+          ))}
         {view.kind === 'calendar' && (
           // A chave reabre a tela no ano pedido pelo aviso do Início.
           <TradingCalendar

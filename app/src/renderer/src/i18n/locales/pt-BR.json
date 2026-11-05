@@ -107,6 +107,10 @@
     "availableTitle": "Disponível agora",
     "open": "Abrir",
     "tools": {
+      "portfolios": {
+        "title": "Carteiras",
+        "text": "Crie carteiras ao vivo ou históricas e simule seus investimentos."
+      },
       "search": {
         "title": "Buscar ativos",
         "text": "Encontre ações e FIIs por ticker, nome, setor ou segmento."
@@ -119,6 +123,10 @@
         "title": "Catálogo de ativos",
         "text": "Cadastre e mantenha as ações e os FIIs que os usuários encontram na busca."
       }
+    },
+    "firstPortfolio": {
+      "text": "Você ainda não tem carteiras. Crie uma para começar a simular.",
+      "create": "Criar carteira"
     }
   },
   "profile": {
@@ -187,7 +195,10 @@
     "invalid_ticker": "Use o código da B3: 4 caracteres e 1 ou 2 números, como PETR4 ou MXRF11.",
     "invalid_option": "Escolha uma opção da lista.",
     "wrong_class": "Esta opção não é da classe do ativo.",
-    "immutable": "A classe não pode ser mudada depois do cadastro."
+    "immutable": "A classe não pode ser mudada depois do cadastro.",
+    "before_history": "O histórico de cotações começa em 04/01/2016: escolha essa data ou depois.",
+    "future": "Escolha um dia antes de hoje: hoje ainda não tem o fechamento da B3.",
+    "not_trading_day": "Não houve pregão nesse dia (fim de semana ou feriado). Escolha um dia de pregão."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -218,7 +229,10 @@
     "calendar_not_published": "O calendário de pregão desse ano ainda não foi publicado pela equipe. Sem ele, o app não sabe em quais dias a bolsa abriu.",
     "ticker_in_use": "Outro ativo já usa este ticker.",
     "asset_not_found": "Este ativo não existe mais. A lista foi atualizada.",
-    "source_disabled": "Os indicadores do Investidor10 estão desligados."
+    "source_disabled": "Os indicadores do Investidor10 estão desligados.",
+    "portfolio_not_found": "Esta carteira não existe mais.",
+    "portfolio_name_in_use": "Você já tem uma carteira com este nome.",
+    "portfolio_limit_reached": "Você já tem o máximo de 20 carteiras. Exclua uma para criar outra."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -353,7 +367,8 @@
     "home": "Início",
     "calendar": "Calendário",
     "assets": "Ativos",
-    "logoutLabel": "Sair da conta"
+    "logoutLabel": "Sair da conta",
+    "portfolios": "Carteiras"
   },
   "calendar": {
     "title": "Calendário de pregão",
@@ -532,6 +547,48 @@
       "eventsSource": "Fonte: B3. A data é a data com: o preço muda no pregão seguinte."
     }
   },
+  "portfolios": {
+    "title": "Carteiras",
+    "subtitle": "Cada carteira é uma simulação: ao vivo, com o preço de agora, ou histórica, no passado.",
+    "count": "{{count}} de {{limit}} carteiras",
+    "new": "Nova carteira",
+    "newTitle": "Nova carteira",
+    "loading": "Carregando as carteiras…",
+    "empty": "Você ainda não tem carteiras. Crie uma para começar a simular.",
+    "name": "Nome",
+    "nameHint": "Até {{max}} caracteres. Cada carteira sua tem um nome diferente.",
+    "type": "Tipo (não muda depois)",
+    "types": {
+      "live": {
+        "title": "Ao vivo",
+        "text": "Opera com o preço de agora: as compras e vendas usam a cotação mais recente."
+      },
+      "historical": {
+        "title": "Histórica",
+        "text": "Opera no passado, com dados já conhecidos: você escolhe o dia em que a carteira começa."
+      }
+    },
+    "startDate": "Data de início",
+    "startDateHint": "Um dia de pregão, de {{first}} até ontem.",
+    "create": "Criar carteira",
+    "creating": "Criando…",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "rename": "Renomear",
+    "renameLabel": "Renomear a carteira {{name}}",
+    "delete": "Excluir",
+    "deleteLabel": "Excluir a carteira {{name}}",
+    "deleteConfirm": "Excluir a carteira {{name}}? Isso apaga a carteira e todos os lançamentos dela. Não dá para desfazer.",
+    "deleteButton": "Excluir carteira",
+    "deleted": "Carteira {{name}} excluída.",
+    "since": "desde {{date}}",
+    "label": {
+      "live": "Simulação ao vivo",
+      "historical": "Simulação histórica: resultado calculado com dados já conhecidos"
+    },
+    "back": "Voltar para as carteiras",
+    "comingSoon": "Os aportes, as compras e as vendas chegam nas próximas etapas."
+  },
   "fundamentals": {
     "title": "Indicadores",
     "loading": "Carregando os indicadores…",
@@ -584,7 +641,10 @@
         "name": "EV/EBIT",
         "help": "Valor da firma dividido pelo lucro operacional (EBIT)."
       },
-      "p_ebitda": { "name": "P/EBITDA", "help": "Valor de mercado dividido pelo EBITDA." },
+      "p_ebitda": {
+        "name": "P/EBITDA",
+        "help": "Valor de mercado dividido pelo EBITDA."
+      },
       "p_ebit": {
         "name": "P/EBIT",
         "help": "Valor de mercado dividido pelo lucro operacional (EBIT)."
@@ -717,7 +777,10 @@
         "name": "Cotistas",
         "help": "Quantas pessoas e instituições têm cotas do fundo."
       },
-      "fii_cotas_emitidas": { "name": "Cotas emitidas", "help": "Quantas cotas o fundo tem." }
+      "fii_cotas_emitidas": {
+        "name": "Cotas emitidas",
+        "help": "Quantas cotas o fundo tem."
+      }
     }
   },
   "dividends": {
@@ -740,7 +803,11 @@
       "amortizacao": "Amortização"
     },
     "periodLabel": "Período dos proventos",
-    "periods": { "12m": "12 meses", "5y": "5 anos", "all": "Tudo" },
+    "periods": {
+      "12m": "12 meses",
+      "5y": "5 anos",
+      "all": "Tudo"
+    },
     "source": "Fonte: Investidor10 · coletado em {{date}}",
     "sourceOnly": "Fonte: Investidor10",
     "notice": "Data com: o último dia em que quem tem o ativo ganha o provento. JCP (juros sobre capital próprio) aparece com o valor bruto, antes do imposto. Amortização devolve parte do capital investido no fundo."

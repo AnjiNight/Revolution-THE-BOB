@@ -34,6 +34,7 @@
 | 1.24 | Novas SPEC-041 (indicadores fundamentalistas, [SPEC-041.md](SPEC-041.md)) e SPEC-042 (proventos e eventos corporativos, [SPEC-042.md](SPEC-042.md)), na Fase 2, depois da SPEC-010, pedidas pela Nicoly em 04/11/2026 e aguardando a aprovação. Investidor10 autorizado por escrito (04/11/2026) para dados e indicadores, só neste projeto acadêmico: OPEN-28 resolvida na parte de dados; OPEN-06 com fonte proposta na SPEC-042 |
 | 1.25 | SPECs 041 e 042 aprovadas (Nicoly, 04/11/2026, como escritas) e implementadas: indicadores e proventos do Investidor10 (interruptor `INVESTIDOR10_ENABLED`), eventos corporativos da B3 e o gráfico da ficha ajustado; fonte da OPEN-06 resolvida |
 | 1.26 | SPEC-012 detalhada ([SPEC-012.md](SPEC-012.md)), aguardando a aprovação; OPEN-09 (parte da carteira), OPEN-11 e OPEN-15 decididas pelo Luís em 05/11/2026; Requisitos v1.8 (RB07 reescrita, RF11, RB24 a RB26) |
+| 1.27 | SPEC-012 aprovada (Nicoly, 05/11/2026) e implementada: carteiras ao vivo e históricas, com nome único por usuário, até 20, exclusão definitiva com registro sem dado pessoal e a seção `portfolios` na exportação (versão 2) |
 ---
 
 ## 0. Como ler este documento
@@ -667,7 +668,7 @@ Visão geral por fase:
 
 #### SPEC-012 — Criação e gestão de carteiras (ao vivo e histórica)
 
-📄 Detalhada em [SPEC-012.md](SPEC-012.md) — escrita, aguardando a aprovação.
+📄 Detalhada em [SPEC-012.md](SPEC-012.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|

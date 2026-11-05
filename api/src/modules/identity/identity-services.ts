@@ -1,4 +1,7 @@
-import { AccountDataService } from './application/account-data-service.js';
+import {
+  AccountDataService,
+  type PortfolioExportReader,
+} from './application/account-data-service.js';
 import { AuthService } from './application/auth-service.js';
 import type { EmailCodeHasher } from './application/email-code.js';
 import { EmailCodes } from './application/email-codes.js';
@@ -32,6 +35,8 @@ export interface IdentityInfrastructure {
   clock?: Clock | undefined;
   runInBackground?: BackgroundRunner | undefined;
   generateCode?: (() => string) | undefined;
+  /** SPEC-012: carteiras na exportação de dados pessoais. */
+  portfolios?: PortfolioExportReader | undefined;
 }
 
 /** Monta os serviços do módulo de identidade com a mesma ligação no servidor e nos testes. */
@@ -83,6 +88,7 @@ export function createIdentityServices(infra: IdentityInfrastructure) {
     users: infra.users,
     refreshTokens: infra.refreshTokens,
     codes,
+    ...(infra.portfolios ? { portfolios: infra.portfolios } : {}),
     ...mailer,
     ...optional,
   });

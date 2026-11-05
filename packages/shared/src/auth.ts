@@ -98,7 +98,8 @@ export interface ConsentList {
 
 /** Identificação do arquivo de exportação (SPEC-034). Cada Spec que acrescentar dados sobe a versão. */
 export const PERSONAL_DATA_FORMAT = 'simulador-investimentos/dados-pessoais';
-export const PERSONAL_DATA_VERSION = 1;
+/** 2: SPEC-012, carteiras. */
+export const PERSONAL_DATA_VERSION = 2;
 
 /**
  * Arquivo "Baixar meus dados" (SPEC-034, LGPD). Tudo o que o app guarda sobre a pessoa, sem
@@ -126,6 +127,15 @@ export interface PersonalDataExport {
     lastRenewedAt: string;
     expiresAt: string;
     ended: boolean;
+  }>;
+  /** SPEC-012: as carteiras (os lançamentos entram com as Specs deles). */
+  portfolios: Array<{
+    id: string;
+    name: string;
+    type: 'live' | 'historical';
+    startDate: string;
+    createdAt: string;
+    updatedAt: string;
   }>;
 }
 
@@ -157,7 +167,11 @@ export type FieldErrorCode =
   | 'invalid_ticker'
   | 'invalid_option'
   | 'wrong_class'
-  | 'immutable';
+  | 'immutable'
+  // SPEC-012: data de início da carteira histórica.
+  | 'before_history'
+  | 'future'
+  | 'not_trading_day';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 

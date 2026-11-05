@@ -33,7 +33,7 @@ describe('GET /api/me/export (SPEC-034 CA01, CA02)', () => {
     );
     expect(res.json()).toMatchObject({
       format: 'simulador-investimentos/dados-pessoais',
-      version: 1,
+      version: 2,
       account: { email: 'ana@exemplo.com', signInMethods: ['password'] },
       consents: [{ type: 'terms' }],
     });

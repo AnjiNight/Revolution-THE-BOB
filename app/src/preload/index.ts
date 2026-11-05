@@ -9,6 +9,8 @@ import type {
   CdiStatus,
   ConsentList,
   Investidor10Status,
+  Portfolio,
+  PortfolioList,
   PriceHistory,
   TradingCalendarYear,
   UserProfile,
@@ -20,6 +22,7 @@ import {
   CALENDAR_CHANNELS,
   FUNDAMENTALS_CHANNELS,
   INDEX_CHANNELS,
+  PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
   type AuthResult,
   type ClientResult,
@@ -71,6 +74,13 @@ const api: DesktopApi = {
   },
   indexes: {
     cdi: () => invoke<ClientResult<CdiStatus>>(INDEX_CHANNELS.cdi),
+  },
+  portfolios: {
+    list: () => invoke<ClientResult<PortfolioList>>(PORTFOLIO_CHANNELS.list),
+    create: (input) => invoke<ClientResult<Portfolio>>(PORTFOLIO_CHANNELS.create, input),
+    get: (id) => invoke<ClientResult<Portfolio>>(PORTFOLIO_CHANNELS.get, id),
+    rename: (id, input) => invoke<ClientResult<Portfolio>>(PORTFOLIO_CHANNELS.rename, id, input),
+    delete: (id) => invoke<ClientResult<null>>(PORTFOLIO_CHANNELS.delete, id),
   },
   fundamentals: {
     get: (id) => invoke<ClientResult<AssetFundamentals>>(FUNDAMENTALS_CHANNELS.fundamentals, id),

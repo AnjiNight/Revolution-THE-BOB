@@ -55,8 +55,47 @@ model Usuario {
   consentimentos  Consentimento[]
   tokensRenovacao TokenRenovacao[]
   codigosEmail    CodigoEmail[]
+  carteiras       Carteira[]
 
   @@map("usuario")
+}
+
+/// Tipo da carteira (DA17): escolhido na criação e imutável (RB24, gatilho na migração).
+enum TipoCarteira {
+  ao_vivo
+  historica
+
+  @@map("tipo_carteira")
+}
+
+/// Carteira de simulação (SPEC-012). "nome_chave": o nome sem maiúsculas nem acentos, único para
+/// cada usuário. Não há saldo guardado: o caixa vem só dos lançamentos (OPEN-11, DA09).
+model Carteira {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId    String       @map("usuario_id") @db.Uuid
+  nome         String       @db.VarChar(60)
+  nomeChave    String       @map("nome_chave") @db.VarChar(60)
+  tipo         TipoCarteira
+  inicioEm     DateTime     @map("inicio_em") @db.Date
+  criadaEm     DateTime     @default(now()) @map("criada_em") @db.Timestamptz(3)
+  atualizadaEm DateTime     @map("atualizada_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, nomeChave])
+  @@index([usuarioId, criadaEm])
+  @@map("carteira")
+}
+
+/// Exclusão de uma carteira (OPEN-15), sem dado pessoal: nem nome, nem dono.
+model ExclusaoCarteira {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carteiraId  String       @map("carteira_id") @db.Uuid
+  tipo        TipoCarteira
+  lancamentos Int
+  excluidaEm  DateTime     @map("excluida_em") @db.Timestamptz(3)
+
+  @@map("exclusao_carteira")
 }
 
 /// Aceite dos termos de uso e da política de privacidade (RNF11).

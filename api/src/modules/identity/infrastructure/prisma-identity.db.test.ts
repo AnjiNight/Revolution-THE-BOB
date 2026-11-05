@@ -11,6 +11,8 @@ import { createIdentityServices } from '../identity-services.js';
 import { CalendarService } from '../../market-data/application/calendar-service.js';
 import { CdiStatusService } from '../../market-data/application/cdi-status-service.js';
 import { FundamentalsService } from '../../market-data/application/fundamentals-service.js';
+import { PortfolioService } from '../../portfolios/application/portfolio-service.js';
+import { InMemoryPortfolioRepository } from '../../portfolios/testing/fakes.js';
 import {
   InMemoryCalendarRepository,
   InMemoryFundamentals,
@@ -129,6 +131,10 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
         enabled: false,
         fundamentals: new InMemoryFundamentals(),
         runs: new InMemoryTaskRuns(),
+      }),
+      portfolios: new PortfolioService({
+        portfolios: new InMemoryPortfolioRepository(),
+        calendar: new CalendarService({ calendars: new InMemoryCalendarRepository() }),
       }),
     });
     return { app, mailer, background };

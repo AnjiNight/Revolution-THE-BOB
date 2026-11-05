@@ -21,6 +21,8 @@ import type { FundamentalsService } from './modules/market-data/application/fund
 import { registerCalendarRoutes } from './modules/market-data/controllers/calendar-routes.js';
 import { registerFundamentalsRoutes } from './modules/market-data/controllers/fundamentals-routes.js';
 import { registerIndexRoutes } from './modules/market-data/controllers/index-routes.js';
+import type { PortfolioService } from './modules/portfolios/application/portfolio-service.js';
+import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfolio-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { HttpError } from './shared/http/http-error.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
@@ -42,6 +44,8 @@ export interface AppDependencies {
   cdi: CdiStatusService;
   /** SPECs 041 e 042: indicadores e proventos (Investidor10). */
   fundamentals: FundamentalsService;
+  /** SPEC-012: carteiras de simulação. */
+  portfolios: PortfolioService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -89,6 +93,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     fundamentals: deps.fundamentals,
     accessTokens: deps.accessTokens,
   });
+  registerPortfolioRoutes(app, { portfolios: deps.portfolios, accessTokens: deps.accessTokens });
 
   return app;
 }

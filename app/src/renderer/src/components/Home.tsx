@@ -14,7 +14,9 @@ import {
   Database,
   Lightning,
   MagnifyingGlass,
+  Plus,
   Pulse,
+  Wallet,
   type Icon,
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
@@ -29,13 +31,18 @@ interface HomeProps {
   onOpenCalendar: (year?: number) => void;
   /** SPEC-006: busca (usuário) ou catálogo (colaborador). */
   onOpenAssets: () => void;
+  /** SPEC-012: carteiras do usuário; `creating` abre já com o formulário de nova. */
+  onOpenPortfolios: (creating?: boolean) => void;
 }
 
-type Tool = 'search' | 'calendar' | 'assets';
+type Tool = 'portfolios' | 'search' | 'calendar' | 'assets';
 
-/** O que já funciona: a busca para o usuário; o calendário e o catálogo para o colaborador. */
+/** O que já funciona: carteiras e busca para o usuário; o calendário e o catálogo para o colaborador. */
 const AVAILABLE: Record<PublicUser['role'], ReadonlyArray<{ tool: Tool; icon: Icon }>> = {
-  user: [{ tool: 'search', icon: MagnifyingGlass }],
+  user: [
+    { tool: 'portfolios', icon: Wallet },
+    { tool: 'search', icon: MagnifyingGlass },
+  ],
   collaborator: [
     { tool: 'calendar', icon: CalendarBlank },
     { tool: 'assets', icon: Database },
@@ -68,7 +75,13 @@ const UPCOMING: Record<
   ],
 };
 
-export function Home({ user, onOpenProfile, onOpenCalendar, onOpenAssets }: HomeProps) {
+export function Home({
+  user,
+  onOpenProfile,
+  onOpenCalendar,
+  onOpenAssets,
+  onOpenPortfolios,
+}: HomeProps) {
   const { t } = useTranslation();
   const [consents, setConsents] = useState<ConsentList | null>(null);
   const [accepting, setAccepting] = useState(false);
@@ -97,6 +110,7 @@ export function Home({ user, onOpenProfile, onOpenCalendar, onOpenAssets }: Home
       {user.role === 'collaborator' && <CalendarReminder onOpen={onOpenCalendar} />}
       {user.role === 'collaborator' && <CdiStatusPanel />}
       {user.role === 'collaborator' && <Investidor10Panel />}
+      {user.role === 'user' && <FirstPortfolio onCreate={() => onOpenPortfolios(true)} />}
 
       <header className="page-hero">
         <p className={user.role === 'collaborator' ? 'eyebrow eyebrow-warn' : 'eyebrow'}>
@@ -135,7 +149,13 @@ export function Home({ user, onOpenProfile, onOpenCalendar, onOpenAssets }: Home
                     type="button"
                     className="pill pill-ghost pill-small"
                     aria-label={`${t('home.open')}: ${title}`}
-                    onClick={() => (tool === 'calendar' ? onOpenCalendar() : onOpenAssets())}
+                    onClick={() =>
+                      tool === 'calendar'
+                        ? onOpenCalendar()
+                        : tool === 'portfolios'
+                          ? onOpenPortfolios()
+                          : onOpenAssets()
+                    }
                   >
                     {t('home.open')}
                     <span className="pill-icon" aria-hidden="true">
@@ -224,6 +244,35 @@ function CdiStatusPanel() {
           <li key={warning}>{warning}</li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/** SPEC-012 (§4.2): o atalho "Criar carteira" enquanto a pessoa ainda não tem nenhuma. */
+function FirstPortfolio({ onCreate }: { onCreate: () => void }) {
+  const { t } = useTranslation();
+  const [empty, setEmpty] = useState(false);
+
+  useEffect(() => {
+    let current = true;
+    void window.api.portfolios
+      .list()
+      .then((result) => current && result.ok && setEmpty(result.data.portfolios.length === 0));
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  if (!empty) return null;
+  return (
+    <div className="first-portfolio" role="status">
+      <p>{t('home.firstPortfolio.text')}</p>
+      <button type="button" className="pill pill-primary pill-small" onClick={onCreate}>
+        {t('home.firstPortfolio.create')}
+        <span className="pill-icon" aria-hidden="true">
+          <Plus weight="bold" />
+        </span>
+      </button>
     </div>
   );
 }

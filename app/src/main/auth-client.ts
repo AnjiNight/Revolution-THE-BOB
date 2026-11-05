@@ -9,6 +9,8 @@ import {
   isDividendPeriod,
   isPriceHistoryPeriod,
   parseCalendarYear,
+  PORTFOLIO_PATHS,
+  portfolioPath,
   PROFILE_PATHS,
   TERMS_VERSION,
   type AccountDeletionConfirmInput,
@@ -41,13 +43,18 @@ import {
   type Investidor10Status,
   type LoginInput,
   type NewAssetInput,
+  type NewPortfolioInput,
   type PasswordResetConfirmInput,
   type PasswordResetRequestInput,
   type PersonalDataExport,
+  type Portfolio,
+  type PortfolioErrorCode,
+  type PortfolioList,
   type PriceHistory,
   type PriceHistoryPeriod,
   type PublicUser,
   type RegisterInput,
+  type RenamePortfolioInput,
   type TokenPair,
   type TradingCalendarYear,
   type UpdateNameInput,
@@ -66,7 +73,7 @@ export interface AuthClientOptions {
 }
 
 const KNOWN_ERRORS: ReadonlyArray<
-  AuthErrorCode | CalendarErrorCode | CatalogErrorCode | FundamentalsErrorCode
+  AuthErrorCode | CalendarErrorCode | CatalogErrorCode | FundamentalsErrorCode | PortfolioErrorCode
 > = [
   'validation_error',
   'email_in_use',
@@ -93,6 +100,9 @@ const KNOWN_ERRORS: ReadonlyArray<
   'ticker_in_use',
   'asset_not_found',
   'source_disabled',
+  'portfolio_not_found',
+  'portfolio_name_in_use',
+  'portfolio_limit_reached',
 ];
 
 class RequestFailed extends Error {
@@ -282,6 +292,47 @@ export class AuthClient {
   // --- Calendário de pregão (SPEC-005) ---
 
   /** Qualquer pessoa conectada: ano não publicado vem com `published: false`. */
+  /** SPEC-012: carteiras do usuário, da mais recente para a mais antiga. */
+  listPortfolios(): Promise<ClientResult<PortfolioList>> {
+    return this.call(() => this.authorizedRequest<PortfolioList>('GET', PORTFOLIO_PATHS.list));
+  }
+
+  createPortfolio(input: NewPortfolioInput): Promise<ClientResult<Portfolio>> {
+    return this.call(async () => {
+      const body = await this.authorizedRequest<{ portfolio: Portfolio }>(
+        'POST',
+        PORTFOLIO_PATHS.list,
+        input,
+      );
+      return body.portfolio;
+    });
+  }
+
+  getPortfolio(id: string): Promise<ClientResult<Portfolio>> {
+    return this.call(async () => {
+      const body = await this.authorizedRequest<{ portfolio: Portfolio }>('GET', portfolioUrl(id));
+      return body.portfolio;
+    });
+  }
+
+  renamePortfolio(id: string, input: RenamePortfolioInput): Promise<ClientResult<Portfolio>> {
+    return this.call(async () => {
+      const body = await this.authorizedRequest<{ portfolio: Portfolio }>(
+        'PATCH',
+        portfolioUrl(id),
+        { name: input.name },
+      );
+      return body.portfolio;
+    });
+  }
+
+  deletePortfolio(id: string): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      await this.authorizedRequest<undefined>('DELETE', portfolioUrl(id));
+      return null;
+    });
+  }
+
   /** Colaborador (SPEC-007): até que dia a série do CDI está carregada e a última atualização. */
   cdiStatus(): Promise<ClientResult<CdiStatus>> {
     return this.call(() => this.authorizedRequest<CdiStatus>('GET', INDEX_PATHS.cdi));
@@ -607,6 +658,12 @@ function withQuery(path: string, query: AssetSearchQuery | CatalogQuery): string
   }
   const text = params.toString();
   return text ? `${path}?${text}` : path;
+}
+
+/** O id da carteira vem da interface: só um UUID entra no caminho da rota. */
+function portfolioUrl(id: string): string {
+  if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+  return portfolioPath(id);
 }
 
 /** O ano vem da interface: só um ano aceito entra no caminho da rota. */

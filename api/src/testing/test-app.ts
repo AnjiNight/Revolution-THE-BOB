@@ -23,6 +23,8 @@ import { CalendarService } from '../modules/market-data/application/calendar-ser
 import { CatalogImport } from '../modules/market-data/application/catalog-import.js';
 import { CdiStatusService } from '../modules/market-data/application/cdi-status-service.js';
 import { FundamentalsService } from '../modules/market-data/application/fundamentals-service.js';
+import { PortfolioService } from '../modules/portfolios/application/portfolio-service.js';
+import { InMemoryPortfolioRepository } from '../modules/portfolios/testing/fakes.js';
 import { HistoryStatusService } from '../modules/market-data/application/history-status-service.js';
 import { IntradayCollection } from '../modules/market-data/application/intraday-collection.js';
 import {
@@ -75,7 +77,15 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   const accessTokens = new JwtAccessTokenService(TEST_JWT_SECRET, 15);
   const mailer = new FakeEmailSender();
   const background = new BackgroundTasks();
+  // Carteiras (SPEC-012) em memória; o calendário é o mesmo das rotas (definido mais abaixo).
+  const portfolioRepo = new InMemoryPortfolioRepository();
+  const portfolios = new PortfolioService({
+    portfolios: portfolioRepo,
+    calendar: { tradingCalendar: (from, to) => calendar.tradingCalendar(from, to) },
+    ...(options.clock ? { clock: options.clock } : {}),
+  });
   const services = createIdentityServices({
+    portfolios,
     users,
     refreshTokens,
     emailCodes,
@@ -197,6 +207,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     catalog,
     cdi,
     fundamentals,
+    portfolios,
     logStream: logs,
   });
 
@@ -257,6 +268,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     catalogImport,
     indexRates,
     cdi,
+    portfolioRepo,
+    portfolios,
     fundamentalsRepo,
     syncFundamentalAssets,
     fundamentals,

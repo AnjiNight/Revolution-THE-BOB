@@ -24,9 +24,18 @@ import {
   type UserRepository,
 } from './ports.js';
 
+/**
+ * SPEC-012: as carteiras da pessoa, que o módulo Carteiras fornece (a identidade não depende dele).
+ * Sem ele (testes antigos), a seção vem vazia.
+ */
+export interface PortfolioExportReader {
+  exportForUser(userId: string): Promise<PersonalDataExport['portfolios']>;
+}
+
 export interface AccountDataServiceDeps {
   users: UserRepository;
   refreshTokens: RefreshTokenRepository;
+  portfolios?: PortfolioExportReader;
   codes: EmailCodes;
   /** Ausente sem SMTP (só fora de produção): a exclusão fica desligada; a exportação, não. */
   mailer?: EmailSender;
@@ -53,9 +62,10 @@ export class AccountDataService {
    */
   async exportData(userId: string): Promise<PersonalDataExport> {
     const user = await this.load(userId);
-    const [consents, sessions] = await Promise.all([
+    const [consents, sessions, portfolios] = await Promise.all([
       this.deps.users.listConsents(userId),
       this.deps.refreshTokens.listSessions(userId),
+      this.deps.portfolios?.exportForUser(userId) ?? Promise.resolve([]),
     ]);
     return {
       format: PERSONAL_DATA_FORMAT,
@@ -85,6 +95,7 @@ export class AccountDataService {
         expiresAt: session.expiresAt.toISOString(),
         ended: session.ended,
       })),
+      portfolios,
     };
   }
 

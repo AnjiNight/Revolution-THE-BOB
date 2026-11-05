@@ -44,6 +44,8 @@ import {
   PrismaQuoteRepository,
   PrismaTaskRunRepository,
 } from './modules/market-data/infrastructure/prisma-quote-repository.js';
+import { PortfolioService } from './modules/portfolios/application/portfolio-service.js';
+import { PrismaPortfolioRepository } from './modules/portfolios/infrastructure/prisma-portfolio-repository.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 import { readVersion } from './version.js';
@@ -137,7 +139,14 @@ async function main(): Promise<void> {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
     // Sem SMTP (só fora de produção), a confirmação de e-mail e a recuperação de senha ficam
     // desligadas (503); o login com Google continua funcionando.
+    // SPEC-012: carteiras; o calendário confere a data de início da histórica.
+    const calendar = new CalendarService({ calendars });
+    const portfolios = new PortfolioService({
+      portfolios: new PrismaPortfolioRepository(prisma),
+      calendar,
+    });
     const { auth, profile, passwordReset, accountData } = createIdentityServices({
+      portfolios,
       users: new PrismaUserRepository(prisma),
       refreshTokens: new PrismaRefreshTokenRepository(prisma),
       emailCodes: new PrismaEmailCodeRepository(prisma),
@@ -159,7 +168,8 @@ async function main(): Promise<void> {
       passwordReset,
       accountData,
       accessTokens,
-      calendar: new CalendarService({ calendars }),
+      calendar,
+      portfolios,
       catalog: new AssetCatalogService({
         assets: new PrismaAssetRepository(prisma),
         history: new HistoryStatusService({ quotes, calendars }),

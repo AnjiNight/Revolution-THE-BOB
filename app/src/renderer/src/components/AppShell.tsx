@@ -8,8 +8,10 @@ import { ServerStatusPanel } from './ServerStatusPanel';
 
 interface AppShellProps {
   user: PublicUser;
-  current: 'home' | 'profile' | 'calendar' | 'assets';
+  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios';
   onHome: () => void;
+  /** SPEC-012: só para o usuário. */
+  onPortfolios: () => void;
   onProfile: () => void;
   /** SPEC-005: só na Área do colaborador. */
   onCalendar: () => void;
@@ -28,6 +30,7 @@ export function AppShell({
   user,
   current,
   onHome,
+  onPortfolios,
   onProfile,
   onCalendar,
   onAssets,
@@ -58,6 +61,17 @@ export function AppShell({
                 {t('shell.home')}
               </button>
             </li>
+            {user.role === 'user' && (
+              <li>
+                <button
+                  type="button"
+                  aria-current={ariaCurrent('portfolios')}
+                  onClick={onPortfolios}
+                >
+                  {t('shell.portfolios')}
+                </button>
+              </li>
+            )}
             {user.role === 'collaborator' && (
               <li>
                 <button type="button" aria-current={ariaCurrent('calendar')} onClick={onCalendar}>

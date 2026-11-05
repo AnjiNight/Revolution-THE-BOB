@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Escrita em 05/11/2026 com as recomendações aceitas pelo Luís para as OPEN-09, OPEN-11 e OPEN-15 (§4.1). Aguarda a aprovação da Spec inteira |
+| Status | Escrita em 05/11/2026 com as recomendações aceitas pelo Luís para as OPEN-09, OPEN-11 e OPEN-15 (§4.1). Aprovada pela Nicoly em 05/11/2026, ao pedir a implementação, e implementada (ver §9) |
 | Fase | 3 — Núcleo da carteira ([mapa de specs](mapa_specs.md)), a primeira |
 | Prioridade | *Must* (RF11) |
 | Depende de | [SPEC-002](SPEC-002.md) (contas), [SPEC-005](SPEC-005.md) (calendário: a data de início da carteira histórica é um dia de pregão), [SPEC-034](SPEC-034.md) (exportação e exclusão de dados pessoais) |
@@ -60,7 +60,7 @@ Esta Spec também fecha as regras que as próximas precisam: o preço de cada ti
 | 2 | **Saldo inicial × aportes (OPEN-11)** | **Sai o `saldo_inicial`** do modelo: o caixa vem **só dos lançamentos** de aporte e retirada, no livro-razão (DA09). Para não perder a praticidade, a SPEC-013 acrescenta na criação o campo opcional **"Valor inicial"**, que registra o primeiro aporte (na histórica, com a data de início). **Retirada maior que o caixa é recusada** (nova **RB26**: o caixa nunca fica negativo), como a compra sem saldo (RB05) | Uma só fonte para o caixa; nenhum número que possa discordar dos lançamentos |
 | 3 | **Exclusão de carteira (OPEN-15)** | **Exclusão definitiva**, com confirmação, levando junto todos os lançamentos. Fica um **registro sem dado pessoal**: o id da carteira, o tipo, quantos lançamentos tinha e quando foi excluída (sem nome nem dono) | São simulações, sem dinheiro de verdade; a LGPD favorece apagar o que a pessoa pediu (RB04, DA13). A RB08 (lançamento imutável) vale enquanto a carteira existe: apagar a carteira inteira não é editar o histórico |
 
-### 4.2 Propostas para aprovar junto com a Spec
+### 4.2 Aprovadas junto com a Spec (Nicoly, 05/11/2026)
 
 | Tema | Proposta | Motivo |
 |---|---|---|
@@ -149,3 +149,31 @@ A migração tem `down.sql` (RNF17). No `modelo_dominio.md`, CARTEIRA perde `sal
 | OPEN-15 | ✅ Decidida (§4.1, decisão 3) |
 | OPEN-08 | ⏳ Compra e venda com a bolsa fechada: fica com a SPEC-014 |
 | DA17, ponto 3 | ⏳ Comparar carteiras ao vivo e históricas (RF19): SPEC-022, sugestão de permitir sempre com o rótulo visível |
+
+## 9. Verificação (05/11/2026)
+
+**Ajustes da implementação:**
+
+| Tema | Ajuste |
+|---|---|
+| Fim de semana | O banco recusa fim de semana só no início da **histórica**: a ao vivo começa no dia da criação, que pode ser um sábado (o §6 dizia "nunca em fim de semana" para as duas) |
+| Data de início | A validação compartilhada confere o formato e o começo do histórico (`before_history`); "hoje ou depois" (`future`) e "não teve pregão" (`not_trading_day`) dependem do dia em Brasília e do calendário, e ficam com o servidor |
+| Log da tentativa | Carteira de outra pessoa grava no log só o id de quem tentou, nada da carteira (nem id, nem nome) |
+| Início | Além do atalho "Criar carteira" (sem carteiras), o Início do usuário ganha o cartão **Carteiras** em "Disponível agora" |
+
+| Critério | Resultado |
+|---|---|
+| CA01 | ✅ Ao vivo com início hoje em Brasília (também às 23h30, quando em UTC já é o dia seguinte); histórica com o início escolhido; nome limpo; 21ª recusada (`portfolio-routes.test.ts`) |
+| CA02 | ✅ Natal, sábado, antes de 2016, hoje e futuro recusados com o motivo; ontem aceito; ano sem calendário: `calendar_not_published` |
+| CA03 | ✅ "Dividendos" e "dividêndos" são o mesmo nome; outro usuário pode repetir (rotas e PostgreSQL) |
+| CA04 | ✅ `type` ou `startDate` ao renomear: `immutable`; o gatilho do banco recusa mudar o tipo |
+| CA05 | ✅ Lista só do usuário, da mais recente para a mais antiga, com o limite; carteira de outro: 404 em GET, PATCH e DELETE e o aviso no log (sem o nome da carteira); colaborador: 403; sem sessão: 401 |
+| CA06 | ✅ O mesmo nome não grava (nem muda `updatedAt`); excluir apaga e grava `exclusao_carteira` sem nome nem dono |
+| CA07 | ✅ Exportação com `portfolios` e `version` 2; excluir a conta leva as carteiras junto (PostgreSQL), sem registro de exclusão de carteira |
+| CA08 | ✅ Telas: lista (vazia e cheia, contador, "desde {data}"), nova carteira com os dois cartões do tipo e a data de início com o primeiro e o último dia aceitos, carteira, renomear no lugar (Esc cancela) e excluir com confirmação (o foco volta para a lista); menu **Carteiras** só para o usuário; português e inglês (paridade coberta por teste). ⏳ Conferir na tela do Electron |
+| CA09 | ✅ Feito pelo Luís no mesmo commit da Spec (requisitos 1.8, modelo de domínio, mapa) |
+| CA10 | ✅ Migração `20261105120000_carteiras` sem diferença para o esquema do Prisma, desfeita e refeita; o banco recusa tipo mudado, histórica no sábado e início antes de 2016. Aplicada no banco de desenvolvimento; a rota responde (401 sem sessão) |
+
+Total: **773 testes** passando (com o banco real), lint, tipos e formatação.
+
+**Para as próximas Specs:** a SPEC-013 grava os aportes e retiradas ligados a `carteira` (apagando em cascata) e passa a contar `lancamentos` no registro de exclusão; o campo "Valor inicial" entra no formulário de nova carteira.

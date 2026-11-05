@@ -15,10 +15,12 @@ import type {
   EmailConfirmationResendInput,
   LoginInput,
   NewAssetInput,
+  NewPortfolioInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   PriceHistoryPeriod,
   RegisterInput,
+  RenamePortfolioInput,
   UpdateNameInput,
 } from '@simulador/shared';
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
@@ -28,6 +30,7 @@ import {
   CALENDAR_CHANNELS,
   FUNDAMENTALS_CHANNELS,
   INDEX_CHANNELS,
+  PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
 } from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL } from '../shared/server-status.js';
@@ -191,6 +194,17 @@ app.whenReady().then(() => {
   ipcMain.handle(CALENDAR_CHANNELS.publish, (_event, year: number, input: CalendarPublication) =>
     auth.publishCalendar(year, input),
   );
+
+  // Carteiras (SPEC-012): o servidor confere o dono de cada uma.
+  ipcMain.handle(PORTFOLIO_CHANNELS.list, () => auth.listPortfolios());
+  ipcMain.handle(PORTFOLIO_CHANNELS.create, (_event, input: NewPortfolioInput) =>
+    auth.createPortfolio(input),
+  );
+  ipcMain.handle(PORTFOLIO_CHANNELS.get, (_event, id: string) => auth.getPortfolio(id));
+  ipcMain.handle(PORTFOLIO_CHANNELS.rename, (_event, id: string, input: RenamePortfolioInput) =>
+    auth.renamePortfolio(id, input),
+  );
+  ipcMain.handle(PORTFOLIO_CHANNELS.delete, (_event, id: string) => auth.deletePortfolio(id));
 
   // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.
   ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());

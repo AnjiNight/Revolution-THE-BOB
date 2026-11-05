@@ -86,7 +86,8 @@ describe('exportação (SPEC-034 CA01, CA02)', () => {
     const data = await services.accountData.exportData(user.id);
     expect(data).toEqual({
       format: PERSONAL_DATA_FORMAT,
-      version: 1,
+      // 2: SPEC-012 acrescentou as carteiras.
+      version: 2,
       exportedAt: '2026-10-13T16:00:00.000Z',
       account: {
         id: user.id,
@@ -113,6 +114,7 @@ describe('exportação (SPEC-034 CA01, CA02)', () => {
           ended: false,
         },
       ],
+      portfolios: [],
     });
   });
 
