@@ -122,6 +122,8 @@ async function main(): Promise<void> {
     source: new Investidor10HttpSource({ baseUrl: config.investidor10.baseUrl }),
     fundamentals: fundamentalsRepo,
     runs,
+    // Os mais negociados primeiro: numa primeira coleta, o topo da lista Ativos sai logo.
+    volumes: quotes,
   });
   const b3Events = new B3EventsCollection({
     source: new B3CompanyHttpSource({ baseUrl: config.b3ListedBaseUrl }),

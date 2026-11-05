@@ -289,6 +289,10 @@ export function DividendsPanel({
         {t('dividends.failed')}
       </p>
     );
+  } else if (state.data.collectedAt === null) {
+    // Nunca visitado pela coleta (ex.: a primeira coleta ainda não chegou nele): não é "sem
+    // proventos" (mudança de 05/11/2026).
+    content = <p className="assets-empty">{t('dividends.notCollected')}</p>;
   } else {
     const data = state.data;
     content = (

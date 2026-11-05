@@ -28,6 +28,11 @@ export interface Investidor10CollectionDeps {
   source: Investidor10Source;
   fundamentals: FundamentalsRepository;
   runs: TaskRunRepository;
+  /**
+   * Volume do último pregão de cada ativo: a coleta começa pelos mais negociados, os primeiros da
+   * lista Ativos (mudança de 05/11/2026). Sem ele, a ordem do repositório (por ticker).
+   */
+  volumes?: { lastVolumes(): Promise<Map<string, string>> };
   clock?: () => Date;
   sleep?: (ms: number) => Promise<void>;
   pauseMs?: number;
@@ -73,9 +78,15 @@ export class Investidor10Collection {
   }
 
   private async collect(scope: 'all' | 'new'): Promise<RunResult | null> {
-    const assets = await this.deps.fundamentals.listActiveAssets();
+    const [assets, volumes] = await Promise.all([
+      this.deps.fundamentals.listActiveAssets(),
+      this.deps.volumes?.lastVolumes(),
+    ]);
     const visited = scope === 'new' ? await this.deps.fundamentals.visitedAssets() : null;
-    const work = visited ? assets.filter((asset) => !visited.has(asset.id)) : assets;
+    const work = byVolume(
+      visited ? assets.filter((asset) => !visited.has(asset.id)) : assets,
+      volumes,
+    );
     if (work.length === 0) return null;
 
     const runId = await this.deps.runs.start('investidor10', this.clock());
@@ -204,6 +215,19 @@ export class Investidor10Collection {
       }
     }
   }
+}
+
+/**
+ * Os mais negociados primeiro (volume do último pregão); sem volume, por último, na ordem que
+ * vieram. O número só ordena: a precisão não importa aqui.
+ */
+function byVolume<T extends { id: string }>(
+  assets: readonly T[],
+  volumes: Map<string, string> | undefined,
+): T[] {
+  if (!volumes || volumes.size === 0) return [...assets];
+  const volumeOf = (asset: T) => Number(volumes.get(asset.id) ?? -1);
+  return [...assets].sort((a, b) => volumeOf(b) - volumeOf(a));
 }
 
 class CollectionLog {

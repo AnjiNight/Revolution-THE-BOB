@@ -179,3 +179,5 @@ Nenhuma tabela guarda dado pessoal (DA13). A migração tem `down.sql` (RNF17), 
 | **De verdade** | ✅ Primeira coleta (04 e 05/11/2026): **687 ativos com dados, 23 sem página no Investidor10**, 113.539 valores de indicadores. PETR4: P/L 4,55, LPA 10,35 (2025: 8,5446, igual ao balanço da CVM), histórico desde 2016; MXRF11: valor patrimonial de R$ 9,35 por cota, igual ao Informe Mensal da CVM |
 
 Total: **753 testes** passando (com o banco real), lint, tipos e formatação.
+
+> **Mudança (05/11/2026, pedido do Luís):** a coleta visita os ativos **dos mais negociados para os menos** (volume do último pregão da B3, a mesma ordem da lista Ativos), em vez da ordem do ticker; sem volume, por último. Numa primeira coleta, que leva uma hora no ritmo de uma consulta a cada 3 segundos (5,6 s por ativo, contando o histórico das ações), o topo da lista ganha os dados nos primeiros minutos. O ritmo não muda. Teste: `investidor10-collection.test.ts`.

@@ -721,6 +721,7 @@
     "total12m": "Total paid over the last 12 months: {{value}} per share or unit",
     "noTotal": "No dividends over the last 12 months.",
     "none": "No dividends recorded for this asset in the period.",
+    "notCollected": "The dividends of this asset have not been collected yet. The Investidor10 collection goes through every asset, starting with the most traded, and then updates them once a week.",
     "tableLabel": "Dividends per share or unit",
     "kind": "Type",
     "exDate": "Record date",

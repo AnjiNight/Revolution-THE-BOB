@@ -70,6 +70,24 @@ describe('coleta do Investidor10 (SPEC-041)', () => {
     expect(fundamentals.visits.get(ZZZZ3.id)?.status).toBe('sem_pagina');
   });
 
+  it('os mais negociados primeiro; sem volume, por último, na ordem do ticker (05/11/2026)', async () => {
+    const volumes = new Map([
+      [PETR4.id, '3265521701.00'],
+      [MXRF11.id, '31213326.76'],
+    ]);
+    await new Investidor10Collection({
+      enabled: true,
+      source,
+      fundamentals,
+      runs,
+      volumes: { lastVolumes: () => Promise.resolve(volumes) },
+      clock: () => now,
+      sleep,
+      pauseMs: 3000,
+    }).run('all');
+    expect(source.requests).toEqual(['acoes/petr4', 'historico/4', 'fiis/mxrf11', 'acoes/zzzz3']);
+  });
+
   it('interruptor desligado: nenhuma visita ao site (CA04)', async () => {
     expect(await collection(false).run('all')).toBeNull();
     expect(source.requests).toEqual([]);

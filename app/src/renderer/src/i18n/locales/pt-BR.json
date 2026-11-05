@@ -727,6 +727,7 @@
     "total12m": "Total pago nos últimos 12 meses: {{value}} por ação ou cota",
     "noTotal": "Nenhum provento nos últimos 12 meses.",
     "none": "Nenhum provento registrado para este ativo no período.",
+    "notCollected": "Os proventos deste ativo ainda não foram coletados. A coleta do Investidor10 passa por todos os ativos, começando pelos mais negociados, e depois os atualiza uma vez por semana.",
     "tableLabel": "Proventos por ação ou cota",
     "kind": "Tipo",
     "exDate": "Data com",

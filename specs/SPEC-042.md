@@ -161,3 +161,5 @@ PROVENTO e EVENTO_CORPORATIVO passam a existir como na arquitetura §9. Nenhuma 
 | **De verdade** | ✅ Proventos: **32.657 de 598 ativos** (PETR4: 142, desde 2000; MXRF11: 126, desde 06/2016; ITUB4: 195, desde 2007). Eventos: **472 de 260 ativos** em 297 consultas à B3 (11 min 46 s, sem erros): 181 grupamentos, 146 desdobramentos, 145 bonificações. MGLU3: desdobramento de 1 para 4 em 13/10/2020, grupamento de 10 para 1 em 24/05/2024 e bonificação de 5% em 29/12/2025 |
 
 Total: **753 testes** passando (com o banco real), lint, tipos e formatação.
+
+> **Mudança (05/11/2026, pedido do Luís):** ativo que a coleta do Investidor10 ainda não visitou (sem data de coleta) mostra "Os proventos deste ativo ainda não foram coletados…", em vez de "Nenhum provento nos últimos 12 meses", que fazia parecer que o fundo não paga nada. A ordem da coleta passou a ser a dos mais negociados (nota na SPEC-041).
