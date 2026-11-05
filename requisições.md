@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.7
+**Versão:** 1.8
 
 | Versão | Alteração |
 |---|---|
@@ -15,6 +15,7 @@
 | 1.5 | Classes de ativo separadas como nas corretoras: Ação (inclui units) e FII; ETFs, BDRs e opções fora do escopo; RF07, RF18 e nova RB22 ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)) |
 | 1.6 | Ator "Administrador" renomeado para **Colaborador**; novos RF41 (entrar com Google) e RF42 (Área do colaborador) |
 | 1.7 | Novo RF43 (confirmação de e-mail por código, no cadastro e na troca de e-mail) e nova RB23 (conta só liberada depois de confirmar o e-mail); ver [SPEC-039](specs/SPEC-039.md) |
+| 1.8 | Carteiras ao vivo e histórica ([DA17](adr/DA17-carteira-ao-vivo-e-historica.md), [SPEC-012](specs/SPEC-012.md)): RF11 inclui a escolha do tipo; RB07 reescrita para os dois tipos (preço por plano na ao vivo, [DA16](adr/DA16-cotacoes-por-plano.md)); novas RB24 (tipo imutável), RB25 (ordem dos lançamentos na histórica) e RB26 (retirada não deixa o caixa negativo) |
 
 ---
 
@@ -75,7 +76,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 
 | ID | Requisito | Ator | Prioridade |
 |---|---|---|---|
-| RF11 | Criar, renomear e excluir carteiras de simulação | Usuário | Must |
+| RF11 | Criar, renomear e excluir carteiras de simulação, escolhendo na criação o tipo: ao vivo ou histórica ([DA17](adr/DA17-carteira-ao-vivo-e-historica.md)) | Usuário | Must |
 | RF12 | Registrar transações de compra e venda de ativos | Usuário | Must |
 | RF13 | Registrar aportes e retiradas de caixa | Usuário | Must |
 | RF14 | Calcular posição consolidada e preço médio por ativo | Sistema | Must |
@@ -178,7 +179,7 @@ Restrições do domínio, independentes de tecnologia.
 |---|---|
 | RB05 | Não é permitida compra sem saldo suficiente em caixa |
 | RB06 | Não é permitida venda de quantidade superior à posição atual |
-| RB07 | A transação utiliza a cotação da data do lançamento, não a data atual |
+| RB07 | Na carteira ao vivo, a transação usa a última cotação disponível para o plano do usuário e guarda o horário e o nível dessa cotação; na carteira histórica, usa o fechamento do pregão da data escolhida |
 | RB08 | Transação registrada é imutável; correção ocorre por lançamento de estorno |
 | RB09 | A posição é sempre derivada do histórico de transações, nunca editada diretamente |
 | RB10 | O preço médio é recalculado na compra e não se altera na venda |
@@ -187,6 +188,9 @@ Restrições do domínio, independentes de tecnologia.
 | RB13 | Valores monetários usam duas casas decimais com arredondamento meio para cima |
 | RB20 | Custos de operação (corretagem, emolumentos da B3 e taxa de custódia) não são considerados no preço médio, no caixa nem na rentabilidade |
 | RB21 | Ao registrar uma compra ou venda de ações ou de FIIs, o sistema exibe aviso de que os custos de operação não são considerados na simulação |
+| RB24 | O tipo da carteira (ao vivo ou histórica) é escolhido na criação e não pode ser alterado |
+| RB25 | Na carteira histórica, cada lançamento tem data igual ou posterior à do último lançamento da carteira e nunca anterior à data de início dela |
+| RB26 | Não é permitida retirada maior que o saldo em caixa: o caixa nunca fica negativo |
 
 ### 4.3 Renda fixa
 
@@ -217,7 +221,9 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | RB23 | `Usuario.email_confirmado_em` vazio bloqueia a sessão; limpeza diária das contas não confirmadas pelo processador de tarefas |
 | RB02 | Chave estrangeira obrigatória `Carteira.usuario_id` |
 | RB05, RB06 | Validação na camada de serviço, sobre saldo e posição calculados |
-| RB07 | `Transacao.data` referencia `Cotacao` pela mesma data |
+| RB07 | Ao vivo: `Transacao` guarda o preço, o horário e o nível da cotação usada; histórica: `Transacao.data` referencia `Cotacao` (fechamento) pela mesma data |
+| RB24 | `Carteira.tipo` com domínio fechado (ao vivo, histórica), preenchido na criação e sem operação de alteração (gatilho no banco) |
+| RB25, RB26 | Validação na camada de serviço, sobre a data do último lançamento e o caixa calculado |
 | RB08 | Ausência de operação de atualização em `Transacao`; tipo de lançamento de estorno |
 | RB09 | Inexistência de tabela `Posicao` persistida; cálculo derivado de `Transacao` |
 | RB11 | Tabela `CalendarioPregao` com dias úteis e feriados da B3 |

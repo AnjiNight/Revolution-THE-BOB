@@ -33,6 +33,7 @@
 | 1.23 | SPEC-007 aprovada (Nicoly, 04/11/2026, como escrita) e implementada: série do CDI desde 2016 pelo SGS do Banco Central; OPEN-40 decidida para o CDI (guardado para sempre) |
 | 1.24 | Novas SPEC-041 (indicadores fundamentalistas, [SPEC-041.md](SPEC-041.md)) e SPEC-042 (proventos e eventos corporativos, [SPEC-042.md](SPEC-042.md)), na Fase 2, depois da SPEC-010, pedidas pela Nicoly em 04/11/2026 e aguardando a aprovação. Investidor10 autorizado por escrito (04/11/2026) para dados e indicadores, só neste projeto acadêmico: OPEN-28 resolvida na parte de dados; OPEN-06 com fonte proposta na SPEC-042 |
 | 1.25 | SPECs 041 e 042 aprovadas (Nicoly, 04/11/2026, como escritas) e implementadas: indicadores e proventos do Investidor10 (interruptor `INVESTIDOR10_ENABLED`), eventos corporativos da B3 e o gráfico da ficha ajustado; fonte da OPEN-06 resolvida |
+| 1.26 | SPEC-012 detalhada ([SPEC-012.md](SPEC-012.md)), aguardando a aprovação; OPEN-09 (parte da carteira), OPEN-11 e OPEN-15 decididas pelo Luís em 05/11/2026; Requisitos v1.8 (RB07 reescrita, RF11, RB24 a RB26) |
 ---
 
 ## 0. Como ler este documento
@@ -142,7 +143,7 @@ Pontos de dependência que definem a ordem:
 | RB04 | Pedido de exclusão concluído em até 30 dias | 034 |
 | RB05 | Caixa após uma compra nunca fica negativo | 014, 016 |
 | RB06 | Posição de um ativo nunca fica negativa | 014, 015, 016 |
-| RB07 | Preço do lançamento vem da cotação de referência (**regra em conflito com DA16/DA17**, ver OPEN-09) | 014, 016 |
+| RB07 | Preço do lançamento: na ao vivo, a última cotação do plano do usuário; na histórica, o fechamento do dia (reescrita na v1.8 dos requisitos, SPEC-012) | 014, 016 |
 | RB08 | Lançamentos nunca são alterados nem apagados; correção só por estorno | 013, 014, 015 |
 | RB09 | Posição sempre derivada do histórico; não existe posição persistida como fonte da verdade | 013, 014, 019 |
 | RB10 | Preço médio muda só em compras | 014 |
@@ -270,13 +271,13 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo). Fonte proposta na [SPEC-042](SPEC-042.md) (proventos do Investidor10, eventos da B3); o tratamento na carteira continua com as SPECs 016 e 019 | PE05, DA22 | 008, 014, 016, 019, 042 |
 | OPEN-07 | ✅ **Resolvida na [SPEC-009](SPEC-009.md):** a brapi é usada só para mostrar as cotações no próprio app, com fonte e horário, nunca "tempo real" e sem repassar os dados a terceiros | PE02 | 009, 026 |
 | OPEN-08 | Compra/venda na carteira ao vivo com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
-| OPEN-09 | Reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
+| OPEN-09 | ✅ **Parte da carteira resolvida na [SPEC-012](SPEC-012.md)** (RB07, RF11, RB24 e RB25 nos requisitos v1.8); RF09 e RF33 ficam com a SPEC-026. Original: reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
 | OPEN-10 | RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
-| OPEN-11 | Relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
+| OPEN-11 | ✅ **Resolvida na [SPEC-012](SPEC-012.md):** sem `saldo_inicial`; o caixa vem só dos aportes ("Valor inicial" na SPEC-013), e retirada maior que o caixa é recusada (RB26). Original: relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
 | OPEN-12 | Quantidade fracionária de ações e regras de lote | INC-18 | 014, 016 |
 | OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra e na venda de ações e FIIs (RB20, RB21); o aviso na aplicação no Tesouro Direto volta com a renda fixa (DA22) | INC-19 | 014, 016, 019; 024 na fase de renda fixa |
 | OPEN-14 | Regras do estorno: o que pode ser estornado, efeito em lançamentos posteriores, estorno de estorno, estorno na carteira histórica | RB08 | 015, 016 |
-| OPEN-15 | Exclusão de carteira: exclusão definitiva ou arquivamento, preservando auditoria | INC-17 | 012, 034 |
+| OPEN-15 | ✅ **Resolvida na [SPEC-012](SPEC-012.md):** exclusão definitiva, com confirmação e registro sem dado pessoal. Original: exclusão de carteira: exclusão definitiva ou arquivamento, preservando auditoria | INC-17 | 012, 034 |
 | OPEN-16 | ⏸ **Adiada com a renda fixa (DA22).** Tipos de remuneração da renda fixa (prefixado, % do CDI, IPCA + taxa) e atributos da aplicação (taxa contratada, carência) | Modelo, arquitetura §9 | 017 |
 | OPEN-17 | ⏸ **Adiada com a renda fixa (DA22).** Tratamento fiscal por produto (ex.: LCI/LCA) | INC-13 | 018, 024 |
 | OPEN-18 | ⏸ **Adiada com a renda fixa (DA22).** Valorização e resgate do Tesouro Direto (preço publicado × curva); confirmar a fonte (hoje "Sugerida") | Decisões técnicas §3 | 024 |
@@ -665,6 +666,8 @@ Visão geral por fase:
 ### Fase 3 — Núcleo da carteira
 
 #### SPEC-012 — Criação e gestão de carteiras (ao vivo e histórica)
+
+📄 Detalhada em [SPEC-012.md](SPEC-012.md) — escrita, aguardando a aprovação.
 
 | Campo | Conteúdo |
 |---|---|

@@ -46,9 +46,12 @@ Conjunto de posições de um usuário. Um usuário pode ter várias carteiras.
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
-| nome | string | Identificação da carteira |
-| saldo_inicial | decimal | Valor aportado no início |
+| nome | string | Identificação da carteira, única para cada usuário — [SPEC-012](specs/SPEC-012.md) |
+| tipo | enum | `ao_vivo` ou `historica`, escolhido na criação e imutável (RB24, [DA17](adr/DA17-carteira-ao-vivo-e-historica.md)) |
+| inicio_em | date | Ao vivo: o dia da criação; histórica: o dia de pregão escolhido, desde 04/01/2016 |
 | criada_em | date | Data de criação |
+
+Não há saldo guardado na carteira: o caixa vem só dos aportes e retiradas (livro-razão, [DA09](adr/DA09-lancamentos-imutaveis.md); OPEN-11 decidida na SPEC-012).
 
 ### TRANSACAO
 Operação de compra ou venda registrada em uma carteira sobre um ativo.
