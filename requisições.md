@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.8
+**Versão:** 1.9
 
 | Versão | Alteração |
 |---|---|
@@ -16,6 +16,7 @@
 | 1.6 | Ator "Administrador" renomeado para **Colaborador**; novos RF41 (entrar com Google) e RF42 (Área do colaborador) |
 | 1.7 | Novo RF43 (confirmação de e-mail por código, no cadastro e na troca de e-mail) e nova RB23 (conta só liberada depois de confirmar o e-mail); ver [SPEC-039](specs/SPEC-039.md) |
 | 1.8 | Carteiras ao vivo e histórica ([DA17](adr/DA17-carteira-ao-vivo-e-historica.md), [SPEC-012](specs/SPEC-012.md)): RF11 inclui a escolha do tipo; RB07 reescrita para os dois tipos (preço por plano na ao vivo, [DA16](adr/DA16-cotacoes-por-plano.md)); novas RB24 (tipo imutável), RB25 (ordem dos lançamentos na histórica) e RB26 (retirada não deixa o caixa negativo) |
+| 1.9 | RB11 passa a valer só para compra e venda: aporte e retirada na carteira ao vivo podem ser feitos em qualquer dia ([SPEC-013](specs/SPEC-013.md)) |
 
 ---
 
@@ -183,7 +184,7 @@ Restrições do domínio, independentes de tecnologia.
 | RB08 | Transação registrada é imutável; correção ocorre por lançamento de estorno |
 | RB09 | A posição é sempre derivada do histórico de transações, nunca editada diretamente |
 | RB10 | O preço médio é recalculado na compra e não se altera na venda |
-| RB11 | Não há movimentação em dias sem pregão |
+| RB11 | Não há compra nem venda em dias sem pregão; na carteira histórica, nenhum lançamento (nem aporte ou retirada) tem data em dia sem pregão. Aporte e retirada na carteira ao vivo podem ser feitos em qualquer dia |
 | RB12 | Não é permitido lançamento com data futura |
 | RB13 | Valores monetários usam duas casas decimais com arredondamento meio para cima |
 | RB20 | Custos de operação (corretagem, emolumentos da B3 e taxa de custódia) não são considerados no preço médio, no caixa nem na rentabilidade |

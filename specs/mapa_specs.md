@@ -34,6 +34,7 @@
 | 1.24 | Novas SPEC-041 (indicadores fundamentalistas, [SPEC-041.md](SPEC-041.md)) e SPEC-042 (proventos e eventos corporativos, [SPEC-042.md](SPEC-042.md)), na Fase 2, depois da SPEC-010, pedidas pela Nicoly em 04/11/2026 e aguardando a aprovação. Investidor10 autorizado por escrito (04/11/2026) para dados e indicadores, só neste projeto acadêmico: OPEN-28 resolvida na parte de dados; OPEN-06 com fonte proposta na SPEC-042 |
 | 1.25 | SPECs 041 e 042 aprovadas (Nicoly, 04/11/2026, como escritas) e implementadas: indicadores e proventos do Investidor10 (interruptor `INVESTIDOR10_ENABLED`), eventos corporativos da B3 e o gráfico da ficha ajustado; fonte da OPEN-06 resolvida |
 | 1.26 | SPEC-012 detalhada ([SPEC-012.md](SPEC-012.md)), aguardando a aprovação; OPEN-09 (parte da carteira), OPEN-11 e OPEN-15 decididas pelo Luís em 05/11/2026; Requisitos v1.8 (RB07 reescrita, RF11, RB24 a RB26) |
+| 1.27 | SPEC-013 detalhada ([SPEC-013.md](SPEC-013.md)), aguardando a aprovação: aportes e retiradas nas carteiras ao vivo e histórica, com "Valor inicial" na criação; a SPEC-016 passa a cuidar só de compra e venda na histórica; Requisitos v1.9 (RB11 só para compra e venda) |
 ---
 
 ## 0. Como ler este documento
@@ -687,6 +688,8 @@ Visão geral por fase:
 
 #### SPEC-013 — Aportes e retiradas de caixa
 
+📄 Detalhada em [SPEC-013.md](SPEC-013.md) — escrita, aguardando a aprovação.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Registrar aportes e retiradas como lançamentos imutáveis; o saldo de caixa é sempre calculado a partir do livro-razão |
@@ -743,7 +746,7 @@ Visão geral por fase:
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Na carteira histórica, o usuário registra aportes, compras e vendas com data passada escolhida; o preço é o fechamento do pregão da data; os lançamentos seguem ordem cronológica; a interface rotula o resultado como calculado com dados já conhecidos |
+| Objetivo | Na carteira histórica, o usuário registra compras e vendas com data passada escolhida (os aportes e retiradas da histórica ficaram com a [SPEC-013](SPEC-013.md), v1.27); o preço é o fechamento do pregão da data; os lançamentos seguem ordem cronológica; a interface rotula o resultado como calculado com dados já conhecidos |
 | Valor | **Usuário:** responde "e se eu tivesse investido?" (P01, Visão §12) |
 | RF | RF12, RF13 (no contexto da carteira histórica) |
 | RB | RB05, RB06, RB07, RB11, RB12, RB13, RB20, RB21 |
