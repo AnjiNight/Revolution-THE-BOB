@@ -132,6 +132,8 @@ describe('quem negociou (SPEC-040)', () => {
       ticker: 'PETR4',
       date: '2026-10-28',
       assetClass: 'stock',
+      // SPEC-042: o ISIN do papel (CODISI), que liga o evento corporativo à classe certa.
+      isin: 'BRXXXXACNOR0',
     });
     expect(peekCotahistTrade(cotahistLine({ ...petr4, ticker: 'TAEE11' }))?.assetClass).toBe(
       'stock',

@@ -2,15 +2,26 @@ import {
   isoDateInBrasilia,
   type AssetClass,
   type AssetOrigin,
+  type IndicatorCode,
   type IsoDate,
   type NonTradingDay,
   type SectorCode,
 } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import { InMemoryAuditTrail } from '../../audit/testing/fakes.js';
+import type { PriceEventInput } from '../../financial-calculation/price-adjustment.js';
+import type { CorporateEvent } from '../domain/b3-events.js';
+import type { ParsedDividend } from '../domain/investidor10-page.js';
 import {
   QuoteSourceError,
+  type AssetCollection,
   type AssetListing,
+  type B3CompanySource,
+  type CorporateEventRepository,
+  type FundamentalsAsset,
+  type FundamentalsRepository,
+  type Investidor10Source,
+  type StoredFundamentals,
   type AutomaticChange,
   type B3Trade,
   type B3TradeRepository,
@@ -54,6 +65,134 @@ import {
   type TaskRunRepository,
 } from '../application/ports.js';
 import { cotahistFile, type CotahistLineFields } from './cotahist-fixtures.js';
+
+/** O que veio do Investidor10, em memória (SPECs 041 e 042), sobre uma lista de ativos. */
+export class InMemoryFundamentals implements FundamentalsRepository {
+  readonly saved = new Map<string, { collection: AssetCollection; at: Date }>();
+  readonly visits = new Map<string, { status: 'ok' | 'sem_pagina' | 'erro'; at: Date }>();
+
+  constructor(readonly assets: FundamentalsAsset[] = []) {}
+
+  listActiveAssets(): Promise<FundamentalsAsset[]> {
+    return Promise.resolve([...this.assets].sort((a, b) => a.ticker.localeCompare(b.ticker)));
+  }
+
+  visitedAssets(): Promise<Set<string>> {
+    return Promise.resolve(new Set(this.visits.keys()));
+  }
+
+  save(collection: AssetCollection, at: Date): Promise<void> {
+    this.saved.set(collection.assetId, { collection, at });
+    this.visits.set(collection.assetId, { status: 'ok', at });
+    return Promise.resolve();
+  }
+
+  markVisit(assetId: string, status: 'sem_pagina' | 'erro', at: Date): Promise<void> {
+    this.visits.set(assetId, { status, at });
+    return Promise.resolve();
+  }
+
+  fundamentals(assetId: string): Promise<StoredFundamentals | null> {
+    const asset = this.assets.find((item) => item.id === assetId);
+    if (!asset) return Promise.resolve(null);
+    const entry = this.saved.get(assetId);
+    const values = new Map<IndicatorCode, Map<string, string | null>>();
+    for (const [code, value] of entry?.collection.current ?? []) {
+      values.set(code, new Map([['atual', value]]));
+    }
+    for (const [code, years] of entry?.collection.history ?? []) {
+      const byPeriod = values.get(code) ?? new Map<string, string | null>();
+      for (const [year, value] of years) byPeriod.set(year, value);
+      values.set(code, byPeriod);
+    }
+    return Promise.resolve({
+      assetClass: asset.assetClass,
+      status: this.visits.get(assetId)?.status ?? null,
+      collectedAt: entry?.at ?? null,
+      values,
+      fund: entry?.collection.fund ?? null,
+    });
+  }
+
+  dividends(assetId: string, since: IsoDate | null): Promise<ParsedDividend[]> {
+    const list = this.saved.get(assetId)?.collection.dividends ?? [];
+    return Promise.resolve(
+      list
+        .filter((dividend) => since === null || dividend.exDate >= since)
+        .sort((a, b) => b.exDate.localeCompare(a.exDate)),
+    );
+  }
+
+  visitCounts(): Promise<{ ok: number; sem_pagina: number; erro: number }> {
+    const counts = { ok: 0, sem_pagina: 0, erro: 0 };
+    for (const visit of this.visits.values()) counts[visit.status] += 1;
+    return Promise.resolve(counts);
+  }
+
+  clear(): Promise<number> {
+    const removed = this.saved.size + this.visits.size;
+    this.saved.clear();
+    this.visits.clear();
+    return Promise.resolve(removed);
+  }
+}
+
+/**
+ * "Investidor10" em memória: HTML por caminho e histórico por id. Página sem entrada é "não existe";
+ * `failures` faz as próximas consultas falharem, uma por item.
+ */
+export class FakeInvestidor10Source implements Investidor10Source {
+  readonly pages = new Map<string, string>();
+  readonly histories = new Map<number, unknown>();
+  readonly requests: string[] = [];
+  failures: Error[] = [];
+
+  page(path: string): Promise<string | null> {
+    this.requests.push(path);
+    const failure = this.failures.shift();
+    if (failure) return Promise.reject(failure);
+    return Promise.resolve(this.pages.get(path) ?? null);
+  }
+
+  history(id: number): Promise<unknown> {
+    this.requests.push(`historico/${id}`);
+    const failure = this.failures.shift();
+    if (failure) return Promise.reject(failure);
+    return Promise.resolve(this.histories.get(id) ?? null);
+  }
+}
+
+/** Eventos corporativos em memória (SPEC-042). */
+export class InMemoryEvents implements CorporateEventRepository {
+  readonly byAsset = new Map<string, CorporateEvent[]>();
+
+  replace(assetId: string, events: CorporateEvent[], _at?: Date): Promise<void> {
+    this.byAsset.set(assetId, [...events]);
+    return Promise.resolve();
+  }
+
+  forAsset(assetId: string): Promise<PriceEventInput[]> {
+    return Promise.resolve(
+      (this.byAsset.get(assetId) ?? [])
+        .map(({ kind, exDate, factor }) => ({ kind, exDate, factor }))
+        .sort((a, b) => a.exDate.localeCompare(b.exDate)),
+    );
+  }
+}
+
+/** "B3" em memória: a resposta da página de cada empresa, pelo código de 4 letras. */
+export class FakeB3CompanySource implements B3CompanySource {
+  readonly companies = new Map<string, unknown>();
+  readonly requests: string[] = [];
+  failures: Error[] = [];
+
+  company(code: string): Promise<unknown> {
+    this.requests.push(code);
+    const failure = this.failures.shift();
+    if (failure) return Promise.reject(failure);
+    return Promise.resolve(this.companies.get(code) ?? null);
+  }
+}
 
 /** Série dos indexadores em memória (SPEC-007), com o CDI cadastrado como na migração. */
 export class InMemoryIndexRates implements IndexRateRepository {

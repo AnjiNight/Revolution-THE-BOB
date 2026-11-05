@@ -98,6 +98,12 @@
       "missing_one": "Há {{count}} pregão sem CDI na série.",
       "missing_other": "Há {{count}} pregões sem CDI na série."
     },
+    "investidor10": {
+      "summary": "Indicadores (Investidor10): última coleta em {{at}} · {{collected}} de {{total}} ativos",
+      "never": "Indicadores (Investidor10): ainda não coletados (o processador visita as páginas aos poucos)",
+      "failed": "A última coleta do Investidor10 terminou com falha. Confira o registro do processador.",
+      "disabled": "Indicadores e proventos do Investidor10 desligados (INVESTIDOR10_ENABLED). Ligue só com a autorização por escrito, válida até a apresentação."
+    },
     "availableTitle": "Disponível agora",
     "open": "Abrir",
     "tools": {
@@ -211,7 +217,8 @@
     "forbidden": "Esta área é só da equipe.",
     "calendar_not_published": "O calendário de pregão desse ano ainda não foi publicado pela equipe. Sem ele, o app não sabe em quais dias a bolsa abriu.",
     "ticker_in_use": "Outro ativo já usa este ticker.",
-    "asset_not_found": "Este ativo não existe mais. A lista foi atualizada."
+    "asset_not_found": "Este ativo não existe mais. A lista foi atualizada.",
+    "source_disabled": "Os indicadores do Investidor10 estão desligados."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -511,8 +518,231 @@
       "jump": "{{date}}: {{change}} de um pregão para o seguinte",
       "jumpsExplain": "Desdobramentos e grupamentos mudam o preço sem mudar o valor de quem tem o ativo; também pode ter sido uma variação real.",
       "notice": "Preços como a B3 publica, sem ajuste por dividendos, rendimentos de FIIs, desdobramentos ou grupamentos. A variação não é a rentabilidade de quem tinha o ativo.",
-      "source": "Fonte: arquivos da B3 · último fechamento em {{date}}"
+      "source": "Fonte: arquivos da B3 · último fechamento em {{date}}",
+      "priceMode": "Como mostrar os preços",
+      "adjusted": "Ajustado por desdobramentos e grupamentos",
+      "asPublished": "Como a B3 publicou",
+      "noticeAdjusted": "Preços ajustados por desdobramentos, grupamentos e bonificações (eventos da B3), sem ajuste por dividendos ou rendimentos de FIIs. A variação não é a rentabilidade de quem tinha o ativo.",
+      "eventsTitle": "Eventos no período",
+      "event": {
+        "desdobramento": "{{date}}: desdobramento, 1 ação virou {{multiplier}}",
+        "grupamento": "{{date}}: grupamento, 1 ação virou {{multiplier}}",
+        "bonificacao": "{{date}}: bonificação, 1 ação virou {{multiplier}}"
+      },
+      "eventsSource": "Fonte: B3. A data é a data com: o preço muda no pregão seguinte."
     }
+  },
+  "fundamentals": {
+    "title": "Indicadores",
+    "loading": "Carregando os indicadores…",
+    "failed": "Não foi possível carregar os indicadores agora.",
+    "noPage": "Este ativo não tem página no Investidor10.",
+    "notCollected": "Os indicadores deste ativo ainda não foram coletados.",
+    "source": "Fonte: Investidor10 · coletado em {{date}}",
+    "notice": "Indicadores do Investidor10, usados com autorização para este projeto acadêmico. Não são recomendação de compra ou venda.",
+    "group": {
+      "valuation": "Valuation",
+      "efficiency": "Eficiência",
+      "profitability": "Rentabilidade",
+      "dividends": "Dividendos",
+      "debt": "Endividamento",
+      "growth": "Crescimento",
+      "fund": "Fundo"
+    },
+    "fund": {
+      "fundType": "Tipo de fundo",
+      "segment": "Segmento",
+      "mandate": "Mandato",
+      "management": "Gestão",
+      "adminFee": "Taxa de administração",
+      "term": "Prazo",
+      "audience": "Público-alvo"
+    },
+    "history": {
+      "toggle": "Histórico anual dos indicadores",
+      "label": "Histórico anual dos indicadores de {{ticker}}",
+      "indicator": "Indicador"
+    },
+    "indicator": {
+      "p_l": {
+        "name": "P/L",
+        "help": "Preço dividido pelo lucro por ação: quantos anos de lucro pagariam o preço atual."
+      },
+      "p_vp": {
+        "name": "P/VP",
+        "help": "Preço dividido pelo valor patrimonial por ação. Abaixo de 1, a ação custa menos que o patrimônio que representa."
+      },
+      "psr": {
+        "name": "P/Receita (PSR)",
+        "help": "Valor de mercado dividido pela receita dos últimos 12 meses."
+      },
+      "ev_ebitda": {
+        "name": "EV/EBITDA",
+        "help": "Valor da firma (mercado mais dívida líquida) dividido pelo EBITDA: quantos anos de geração de caixa operacional pagariam a empresa."
+      },
+      "ev_ebit": {
+        "name": "EV/EBIT",
+        "help": "Valor da firma dividido pelo lucro operacional (EBIT)."
+      },
+      "p_ebitda": { "name": "P/EBITDA", "help": "Valor de mercado dividido pelo EBITDA." },
+      "p_ebit": {
+        "name": "P/EBIT",
+        "help": "Valor de mercado dividido pelo lucro operacional (EBIT)."
+      },
+      "p_ativo": {
+        "name": "P/Ativo",
+        "help": "Valor de mercado dividido pelo total de ativos da empresa."
+      },
+      "p_ativo_circ_liq": {
+        "name": "P/Ativo circulante líquido",
+        "help": "Valor de mercado dividido pelo ativo circulante menos todo o passivo. Negativo quando as dívidas passam o ativo de curto prazo."
+      },
+      "p_cap_giro": {
+        "name": "P/Capital de giro",
+        "help": "Valor de mercado dividido pelo capital de giro (ativo circulante menos passivo circulante)."
+      },
+      "lpa": {
+        "name": "LPA",
+        "help": "Lucro por ação: o lucro dos últimos 12 meses dividido pelo número de ações."
+      },
+      "vpa": {
+        "name": "VPA",
+        "help": "Valor patrimonial por ação: o patrimônio líquido dividido pelo número de ações."
+      },
+      "margem_bruta": {
+        "name": "Margem bruta",
+        "help": "Quanto sobra da receita depois do custo do que foi vendido."
+      },
+      "margem_ebitda": {
+        "name": "Margem EBITDA",
+        "help": "EBITDA (resultado operacional antes de depreciação) dividido pela receita."
+      },
+      "margem_ebit": {
+        "name": "Margem EBIT",
+        "help": "Lucro operacional (EBIT) dividido pela receita."
+      },
+      "margem_liquida": {
+        "name": "Margem líquida",
+        "help": "Lucro líquido dividido pela receita: quanto de cada real vendido vira lucro."
+      },
+      "giro_ativos": {
+        "name": "Giro dos ativos",
+        "help": "Receita dividida pelo total de ativos: quanto a empresa vende para cada real de ativo."
+      },
+      "roe": {
+        "name": "ROE",
+        "help": "Retorno sobre o patrimônio: lucro líquido dividido pelo patrimônio líquido."
+      },
+      "roa": {
+        "name": "ROA",
+        "help": "Retorno sobre os ativos: lucro líquido dividido pelo total de ativos."
+      },
+      "roic": {
+        "name": "ROIC",
+        "help": "Retorno sobre o capital investido (patrimônio mais dívidas) pela operação."
+      },
+      "dividend_yield": {
+        "name": "Dividend yield",
+        "help": "Proventos pagos nos últimos 12 meses divididos pelo preço atual."
+      },
+      "payout": {
+        "name": "Payout",
+        "help": "Parte do lucro que foi distribuída como dividendos e juros sobre capital próprio."
+      },
+      "liquidez_corrente": {
+        "name": "Liquidez corrente",
+        "help": "Ativo circulante dividido pelo passivo circulante. Acima de 1, o que vence no curto prazo está coberto."
+      },
+      "div_liq_ebitda": {
+        "name": "Dívida líquida/EBITDA",
+        "help": "Quantos anos de EBITDA pagariam a dívida líquida."
+      },
+      "div_liq_ebit": {
+        "name": "Dívida líquida/EBIT",
+        "help": "Quantos anos de lucro operacional pagariam a dívida líquida."
+      },
+      "div_liq_pl": {
+        "name": "Dívida líquida/Patrimônio",
+        "help": "Dívida líquida dividida pelo patrimônio líquido."
+      },
+      "div_bruta_pl": {
+        "name": "Dívida bruta/Patrimônio",
+        "help": "Toda a dívida financeira dividida pelo patrimônio líquido."
+      },
+      "pl_ativos": {
+        "name": "Patrimônio/Ativos",
+        "help": "Parte dos ativos que é financiada com capital próprio."
+      },
+      "passivos_ativos": {
+        "name": "Passivos/Ativos",
+        "help": "Parte dos ativos que é financiada com dívidas e outras obrigações."
+      },
+      "cagr_receitas_5a": {
+        "name": "CAGR das receitas (5 anos)",
+        "help": "Crescimento médio da receita por ano nos últimos 5 anos."
+      },
+      "cagr_lucros_5a": {
+        "name": "CAGR dos lucros (5 anos)",
+        "help": "Crescimento médio do lucro por ano nos últimos 5 anos."
+      },
+      "fii_dy_12m": {
+        "name": "Dividend yield (12 meses)",
+        "help": "Rendimentos pagos nos últimos 12 meses divididos pelo preço atual da cota."
+      },
+      "fii_p_vp": {
+        "name": "P/VP",
+        "help": "Preço da cota dividido pelo valor patrimonial por cota. Abaixo de 1, a cota custa menos que o patrimônio que representa."
+      },
+      "fii_vp_cota": {
+        "name": "Valor patrimonial por cota",
+        "help": "Patrimônio do fundo dividido pelo número de cotas."
+      },
+      "fii_valor_patrimonial": {
+        "name": "Patrimônio do fundo",
+        "help": "Valor de tudo o que o fundo tem, menos o que ele deve."
+      },
+      "fii_ultimo_rendimento": {
+        "name": "Último rendimento",
+        "help": "O último valor distribuído por cota."
+      },
+      "fii_liquidez_diaria": {
+        "name": "Liquidez diária",
+        "help": "Quanto é negociado por dia, em média, na bolsa."
+      },
+      "fii_vacancia": {
+        "name": "Vacância",
+        "help": "Parte dos imóveis do fundo que está sem inquilino."
+      },
+      "fii_cotistas": {
+        "name": "Cotistas",
+        "help": "Quantas pessoas e instituições têm cotas do fundo."
+      },
+      "fii_cotas_emitidas": { "name": "Cotas emitidas", "help": "Quantas cotas o fundo tem." }
+    }
+  },
+  "dividends": {
+    "title": "Proventos",
+    "loading": "Carregando os proventos…",
+    "failed": "Não foi possível carregar os proventos agora.",
+    "total12m": "Total pago nos últimos 12 meses: {{value}} por ação ou cota",
+    "noTotal": "Nenhum provento nos últimos 12 meses.",
+    "none": "Nenhum provento registrado para este ativo no período.",
+    "tableLabel": "Proventos por ação ou cota",
+    "kind": "Tipo",
+    "exDate": "Data com",
+    "paymentDate": "Pagamento",
+    "value": "Valor",
+    "kinds": {
+      "dividendo": "Dividendo",
+      "jcp": "JCP",
+      "rendimento": "Rendimento",
+      "amortizacao": "Amortização"
+    },
+    "periodLabel": "Período dos proventos",
+    "periods": { "12m": "12 meses", "5y": "5 anos", "all": "Tudo" },
+    "source": "Fonte: Investidor10 · coletado em {{date}}",
+    "sourceOnly": "Fonte: Investidor10",
+    "notice": "Data com: o último dia em que quem tem o ativo ganha o provento. JCP (juros sobre capital próprio) aparece com o valor bruto, antes do imposto. Amortização devolve parte do capital investido no fundo."
   },
   "catalog": {
     "title": "Catálogo de ativos",

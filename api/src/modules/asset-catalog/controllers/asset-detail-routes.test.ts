@@ -218,6 +218,8 @@ describe('ficha do ativo (SPEC-010)', () => {
     it('sem período, 1 ano até o último fechamento, com o resumo (CA04, CA05)', async () => {
       expect(await history(petr4.id)).toEqual({
         period: '1y',
+        adjusted: true,
+        events: [],
         from: '2025-10-30',
         to: '2026-10-30',
         shorterThanPeriod: false,
@@ -257,6 +259,38 @@ describe('ficha do ativo (SPEC-010)', () => {
       expect(body.summary?.change).toBeNull();
     });
 
+    it('SPEC-042: com o desdobramento da B3, o gráfico sai ajustado e o salto deixa de ser marcado', async () => {
+      await closes(petr4.id, [['2026-10-28', '104.40']]);
+      // Desdobramento de 1 para 2 (a B3 publica 100: 100% de ações novas), data com em 28/10.
+      await t.events.replace(
+        petr4.id,
+        [
+          {
+            kind: 'desdobramento',
+            exDate: '2026-10-28',
+            factor: '100',
+            approvedOn: null,
+            isin: 'BRPETRACNPR6',
+          },
+        ],
+        new Date(),
+      );
+
+      const adjusted = await history(petr4.id, '?period=1m');
+      expect(adjusted.points[0]).toEqual({ date: '2026-10-28', close: '52.200000' });
+      expect(adjusted.jumps).toEqual([]);
+      expect(adjusted.summary?.change).not.toBeNull();
+      expect(adjusted.events).toEqual([
+        { kind: 'desdobramento', date: '2026-10-28', multiplier: '2', source: 'b3' },
+      ]);
+
+      const published = await history(petr4.id, '?period=1m&adjusted=false');
+      expect(published).toMatchObject({ adjusted: false, jumps: [] });
+      expect(published.points[0]).toEqual({ date: '2026-10-28', close: '104.40' });
+      // Sem ajuste, a variação misturaria preços de antes e de depois do evento.
+      expect(published.summary?.change).toBeNull();
+    });
+
     it('sem histórico carregado: série vazia (CA08)', async () => {
       const fii = await create({
         ticker: 'HGLG11',
@@ -266,6 +300,8 @@ describe('ficha do ativo (SPEC-010)', () => {
       });
       expect(await history(fii.id)).toEqual({
         period: '1y',
+        adjusted: true,
+        events: [],
         from: null,
         to: null,
         shorterThanPeriod: false,

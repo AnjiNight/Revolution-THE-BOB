@@ -10,6 +10,7 @@ import type {
   SectorCode,
 } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
+import type { PriceEventInput } from '../../financial-calculation/price-adjustment.js';
 import type { StoredAsset } from '../domain/asset.js';
 
 export interface AssetFilter {
@@ -73,6 +74,12 @@ export interface AssetPriceReader {
   sessions(assetId: string, count: number): Promise<StoredSession[]>;
   /** Fechamentos desde `from` (Tudo: desde o primeiro), em ordem de data. */
   closes(assetId: string, from: IsoDate | null): Promise<PricePoint[]>;
+}
+
+/** SPEC-042: eventos corporativos de um ativo (B3), que o módulo Dados de Mercado fornece. */
+export interface AssetEventReader {
+  /** Desdobramentos, grupamentos e bonificações, em ordem de data com. */
+  forAsset(assetId: string): Promise<PriceEventInput[]>;
 }
 
 /** Volume financeiro do último pregão de cada ativo (SPEC-040: a busca sem texto ordena por ele). */

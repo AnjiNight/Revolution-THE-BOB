@@ -25,7 +25,16 @@ describe('loadConfig (CA08)', () => {
       b3CacheDir: '.cache/b3',
       brapi: { token: null, monthlyQuota: 15_000, baseUrl: 'https://brapi.dev' },
       bcbSgsBaseUrl: 'https://api.bcb.gov.br',
+      investidor10: { enabled: false, baseUrl: 'https://investidor10.com.br' },
+      b3ListedBaseUrl: 'https://sistemaswebb3-listados.b3.com.br',
     });
+  });
+
+  it('Investidor10 só ligado de propósito (SPEC-041)', () => {
+    expect(loadConfig({ ...base, INVESTIDOR10_ENABLED: 'true' }).investidor10.enabled).toBe(true);
+    expect(() => loadConfig({ ...base, INVESTIDOR10_ENABLED: 'sim' })).toThrow(
+      /INVESTIDOR10_ENABLED/,
+    );
   });
 
   it('endereço da API SGS do Banco Central (SPEC-007)', () => {

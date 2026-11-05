@@ -81,6 +81,24 @@ const configSchema = z
       .trim()
       .regex(/^https?:\/\//, 'BCB_SGS_BASE_URL deve começar com http:// ou https://')
       .default('https://api.bcb.gov.br'),
+    /**
+     * SPEC-041: coleta do Investidor10, só com a autorização por escrito da equipe (uso acadêmico,
+     * válida até a apresentação). Desligado por padrão.
+     */
+    INVESTIDOR10_ENABLED: z
+      .enum(['true', 'false'], { error: 'INVESTIDOR10_ENABLED deve ser true ou false' })
+      .default('false'),
+    INVESTIDOR10_BASE_URL: z
+      .string()
+      .trim()
+      .regex(/^https?:\/\//, 'INVESTIDOR10_BASE_URL deve começar com http:// ou https://')
+      .default('https://investidor10.com.br'),
+    /** SPEC-042: página das empresas no site da B3 (eventos corporativos). */
+    B3_LISTED_BASE_URL: z
+      .string()
+      .trim()
+      .regex(/^https?:\/\//, 'B3_LISTED_BASE_URL deve começar com http:// ou https://')
+      .default('https://sistemaswebb3-listados.b3.com.br'),
   })
   .refine((c) => c.NODE_ENV !== 'production' || !c.JWT_SECRET.includes('troque'), {
     error: 'o JWT_SECRET de exemplo não pode ser usado em produção',
@@ -125,6 +143,10 @@ export interface AppConfig {
   brapi: { token: string | null; monthlyQuota: number; baseUrl: string };
   /** SPEC-007: série do CDI pela API SGS do Banco Central (sem token). */
   bcbSgsBaseUrl: string;
+  /** SPEC-041: Investidor10, só ligado com a autorização (uso acadêmico). */
+  investidor10: { enabled: boolean; baseUrl: string };
+  /** SPEC-042: eventos corporativos pelo site da B3. */
+  b3ListedBaseUrl: string;
 }
 
 export class ConfigError extends Error {
@@ -171,5 +193,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       baseUrl: c.BRAPI_BASE_URL,
     },
     bcbSgsBaseUrl: c.BCB_SGS_BASE_URL,
+    investidor10: {
+      enabled: c.INVESTIDOR10_ENABLED === 'true',
+      baseUrl: c.INVESTIDOR10_BASE_URL,
+    },
+    b3ListedBaseUrl: c.B3_LISTED_BASE_URL,
   };
 }

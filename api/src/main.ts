@@ -18,13 +18,20 @@ import { SmtpEmailSender } from './modules/identity/infrastructure/smtp-email-se
 import { B3CalendarImport } from './modules/market-data/application/b3-calendar-import.js';
 import { CalendarService } from './modules/market-data/application/calendar-service.js';
 import { CatalogImport } from './modules/market-data/application/catalog-import.js';
+import { B3EventsCollection } from './modules/market-data/application/b3-events-collection.js';
 import { CdiIngestion } from './modules/market-data/application/cdi-ingestion.js';
+import { FundamentalsService } from './modules/market-data/application/fundamentals-service.js';
+import { Investidor10Collection } from './modules/market-data/application/investidor10-collection.js';
 import { CdiStatusService } from './modules/market-data/application/cdi-status-service.js';
 import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
 import { IntradayCollection } from './modules/market-data/application/intraday-collection.js';
 import { HistoryStatusService } from './modules/market-data/application/history-status-service.js';
 import { B3CotahistSource } from './modules/market-data/infrastructure/b3-cotahist-source.js';
+import { B3CompanyHttpSource } from './modules/market-data/infrastructure/b3-company-source.js';
 import { BcbSgsSource } from './modules/market-data/infrastructure/bcb-sgs-source.js';
+import { Investidor10HttpSource } from './modules/market-data/infrastructure/investidor10-source.js';
+import { PrismaEventRepository } from './modules/market-data/infrastructure/prisma-event-repository.js';
+import { PrismaFundamentalsRepository } from './modules/market-data/infrastructure/prisma-fundamentals-repository.js';
 import { BrapiLogoSource } from './modules/market-data/infrastructure/brapi-logo-source.js';
 import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
 import { PrismaIntradayQuoteRepository } from './modules/market-data/infrastructure/prisma-intraday-quote-repository.js';
@@ -106,6 +113,23 @@ async function main(): Promise<void> {
     runs,
     calendars,
   });
+  // SPECs 041 e 042: Investidor10 (com autorização, só ligado com INVESTIDOR10_ENABLED) e eventos
+  // corporativos da B3.
+  const fundamentalsRepo = new PrismaFundamentalsRepository(prisma);
+  const events = new PrismaEventRepository(prisma);
+  const investidor10 = new Investidor10Collection({
+    enabled: config.investidor10.enabled,
+    source: new Investidor10HttpSource({ baseUrl: config.investidor10.baseUrl }),
+    fundamentals: fundamentalsRepo,
+    runs,
+  });
+  const b3Events = new B3EventsCollection({
+    source: new B3CompanyHttpSource({ baseUrl: config.b3ListedBaseUrl }),
+    assets: fundamentalsRepo,
+    trades,
+    events,
+    runs,
+  });
 
   if (mode === 'server') {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
@@ -142,8 +166,14 @@ async function main(): Promise<void> {
         logos,
         imports: catalogImport,
         prices: quotes,
+        events,
       }),
       cdi: new CdiStatusService({ rates: indexRates, runs, calendars }),
+      fundamentals: new FundamentalsService({
+        enabled: config.investidor10.enabled,
+        fundamentals: fundamentalsRepo,
+        runs,
+      }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -195,6 +225,19 @@ async function main(): Promise<void> {
         // iniciar; a segunda encontra a primeira em andamento e não faz nada.
         { name: 'CDI (manhã)', run: async () => (await cdi.run())?.records ?? 0, dailyAtHour: 9 },
         { name: 'CDI (tarde)', run: async () => (await cdi.run())?.records ?? 0, dailyAtHour: 18 },
+        // SPEC-041: Investidor10 às 03:00 (todos no domingo; nos outros dias e ao iniciar, só os
+        // nunca visitados). Desligado sem a autorização.
+        {
+          name: 'indicadores e proventos (Investidor10)',
+          run: async () => (await investidor10.scheduled())?.records ?? 0,
+          dailyAtHour: 3,
+        },
+        // SPEC-042: eventos corporativos da B3 às 04:00 (no domingo, ou se nunca rodou).
+        {
+          name: 'eventos corporativos (B3)',
+          run: async () => (await b3Events.scheduled())?.records ?? 0,
+          dailyAtHour: 4,
+        },
         // SPEC-009: confere a cada 5 minutos se chegou a hora de uma coleta do pregão.
         {
           name: 'cotações do pregão',

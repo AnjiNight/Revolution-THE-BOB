@@ -52,6 +52,7 @@ const FIELD = {
   trades: [148, 152],
   volume: [171, 188],
   quoteFactor: [211, 217],
+  isin: [231, 242],
 } as const satisfies Record<string, readonly [number, number]>;
 
 function field(line: string, name: keyof typeof FIELD): string {
@@ -108,7 +109,11 @@ export interface CotahistTrade {
   ticker: string;
   date: IsoDate;
   assetClass: AssetClass;
+  /** SPEC-042: código ISIN do papel (`CODISI`), que liga o evento corporativo à classe certa. */
+  isin: string | null;
 }
+
+const ISIN_PATTERN = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
 
 /** `CODBDI 12`: FII. Lote padrão (`02`) e empresas em situação especial (`05` a `09`): ação. */
 const FII_BDI = '12';
@@ -132,7 +137,8 @@ export function peekCotahistTrade(rawLine: string): CotahistTrade | null {
   const rawDate = field(line, 'date');
   const date = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`;
   if (!/^\d{8}$/.test(rawDate) || !isIsoDate(date)) return null;
-  return { ticker, date, assetClass };
+  const isin = field(line, 'isin').trim();
+  return { ticker, date, assetClass, isin: ISIN_PATTERN.test(isin) ? isin : null };
 }
 
 /**

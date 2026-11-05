@@ -1,11 +1,15 @@
 import type {
   AssetDetail,
+  AssetDividends,
+  AssetFundamentals,
   AssetSearchResult,
   CalendarSuggestion,
   CatalogAsset,
   CatalogListResult,
   CdiStatus,
   ConsentList,
+  DividendPeriod,
+  Investidor10Status,
   PriceHistory,
   PriceHistoryPeriod,
   TradingCalendarYear,
@@ -82,6 +86,15 @@ export interface DesktopApi {
     cdi(): Promise<ClientResult<CdiStatus>>;
   };
   /**
+   * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto
+   * acadêmico. `source_disabled` quando a coleta foi desligada. A situação da coleta: só colaborador.
+   */
+  fundamentals: {
+    get(id: string): Promise<ClientResult<AssetFundamentals>>;
+    dividends(id: string, period: DividendPeriod): Promise<ClientResult<AssetDividends>>;
+    collection(): Promise<ClientResult<Investidor10Status>>;
+  };
+  /**
    * Catálogo de ativos (SPECs 006, 010 e 040). Busca, ficha e logos para todos; o resto só
    * colaborador (403 para usuário).
    */
@@ -90,8 +103,15 @@ export interface DesktopApi {
     search(query: AssetSearchQuery): Promise<ClientResult<AssetSearchResult>>;
     /** SPEC-010: ficha do ativo, também de ativo desativado. */
     detail(id: string): Promise<ClientResult<AssetDetail>>;
-    /** SPEC-010: fechamentos do período, com o resumo e os saltos. */
-    history(id: string, period: PriceHistoryPeriod): Promise<ClientResult<PriceHistory>>;
+    /**
+     * SPEC-010: fechamentos do período, com o resumo e os saltos. SPEC-042: ajustados pelos
+     * eventos corporativos (padrão) ou como a B3 publicou.
+     */
+    history(
+      id: string,
+      period: PriceHistoryPeriod,
+      adjusted?: boolean,
+    ): Promise<ClientResult<PriceHistory>>;
     catalog(query: CatalogQuery): Promise<ClientResult<CatalogListResult>>;
     create(input: NewAssetInput): Promise<ClientResult<CatalogAsset>>;
     /** Só o que muda; a classe nunca (RB22). */

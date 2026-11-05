@@ -206,6 +206,11 @@ model Ativo {
   cargasHistorico CargaHistorico[]
   cotacoesPregao  CotacaoPregao[]
   logo            LogoAtivo?
+  indicadores     IndicadorAtivo[]
+  informacaoFii   InformacaoFii?
+  coleta          ColetaInvestidor10?
+  proventos       Provento[]
+  eventos         EventoCorporativo[]
 
   @@index([classe, setor])
   @@map("ativo")
@@ -264,6 +269,8 @@ enum TarefaIngestao {
   importacao_catalogo
   calendario_b3
   cdi_diario
+  investidor10
+  eventos_b3
 
   @@map("tarefa_ingestao")
 }
@@ -450,8 +457,123 @@ model NegociacaoB3 {
   classe       ClasseAtivo
   ultimoPregao DateTime    @map("ultimo_pregao") @db.Date
   atualizadoEm DateTime    @map("atualizado_em") @db.Timestamptz(3)
+  /// SPEC-042: ISIN do ticker no arquivo da B3 (CODISI), para ligar o evento à classe certa.
+  isin         String?     @db.VarChar(12)
 
   @@map("negociacao_b3")
+}
+
+enum SituacaoColeta {
+  ok
+  sem_pagina
+  erro
+
+  @@map("situacao_coleta")
+}
+
+enum TipoProvento {
+  dividendo
+  jcp
+  rendimento
+  amortizacao
+
+  @@map("tipo_provento")
+}
+
+enum FonteProvento {
+  investidor10
+
+  @@map("fonte_provento")
+}
+
+enum TipoEvento {
+  desdobramento
+  grupamento
+  bonificacao
+
+  @@map("tipo_evento")
+}
+
+enum FonteEvento {
+  b3
+
+  @@map("fonte_evento")
+}
+
+/// Indicador do Investidor10 (SPEC-041), com autorização só neste projeto acadêmico. "periodo":
+/// "atual" ou o ano do histórico; o código vem do cadastro fixo do servidor.
+model IndicadorAtivo {
+  ativoId    String   @map("ativo_id") @db.Uuid
+  indicador  String   @db.VarChar(40)
+  periodo    String   @db.VarChar(5)
+  valor      Decimal? @db.Decimal(24, 6)
+  coletadoEm DateTime @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, indicador, periodo])
+  @@map("indicador_ativo")
+}
+
+/// Informações em texto de um FII, como o Investidor10 mostra (SPEC-041).
+model InformacaoFii {
+  ativoId           String   @id @map("ativo_id") @db.Uuid
+  tipoFundo         String?  @map("tipo_fundo") @db.VarChar(100)
+  segmento          String?  @db.VarChar(100)
+  mandato           String?  @db.VarChar(100)
+  publicoAlvo       String?  @map("publico_alvo") @db.VarChar(100)
+  prazo             String?  @db.VarChar(100)
+  gestao            String?  @db.VarChar(100)
+  taxaAdministracao String?  @map("taxa_administracao") @db.VarChar(200)
+  coletadoEm        DateTime @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@map("informacao_fii")
+}
+
+/// Última visita do processador à página do ativo no Investidor10 (SPEC-041).
+model ColetaInvestidor10 {
+  ativoId    String         @id @map("ativo_id") @db.Uuid
+  situacao   SituacaoColeta
+  coletadoEm DateTime       @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@map("coleta_investidor10")
+}
+
+/// Provento por ação ou cota (SPEC-042), valor bruto como a fonte publica.
+model Provento {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativoId       String        @map("ativo_id") @db.Uuid
+  tipo          TipoProvento
+  dataCom       DateTime      @map("data_com") @db.Date
+  dataPagamento DateTime?     @map("data_pagamento") @db.Date
+  valor         Decimal       @db.Decimal(20, 10)
+  fonte         FonteProvento
+  coletadoEm    DateTime      @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@index([ativoId, dataCom])
+  @@map("provento")
+}
+
+/// Desdobramento, grupamento ou bonificação de uma ação, pela B3 (SPEC-042).
+model EventoCorporativo {
+  ativoId    String      @map("ativo_id") @db.Uuid
+  tipo       TipoEvento
+  dataCom    DateTime    @map("data_com") @db.Date
+  fator      Decimal     @db.Decimal(24, 10)
+  aprovadoEm DateTime?   @map("aprovado_em") @db.Date
+  fonte      FonteEvento
+  coletadoEm DateTime    @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, tipo, dataCom])
+  @@map("evento_corporativo")
 }
 
 enum SituacaoLogo {

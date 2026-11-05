@@ -178,8 +178,15 @@ describe.skipIf(!url)('catálogo completo da B3 no PostgreSQL (SPEC-040)', () =>
       );
       expect(await trades.all()).toEqual(
         new Map([
-          ['PETR4', { ticker: 'PETR4', assetClass: 'stock', lastTradingDay: '2026-10-29' }],
-          ['XPTO11', { ticker: 'XPTO11', assetClass: 'fii', lastTradingDay: '2026-10-30' }],
+          // SPEC-042: sem ISIN nos negócios gravados, a coluna fica vazia.
+          [
+            'PETR4',
+            { ticker: 'PETR4', assetClass: 'stock', lastTradingDay: '2026-10-29', isin: null },
+          ],
+          [
+            'XPTO11',
+            { ticker: 'XPTO11', assetClass: 'fii', lastTradingDay: '2026-10-30', isin: null },
+          ],
         ]),
       );
     });

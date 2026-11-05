@@ -9,15 +9,29 @@ import type { AssetQuote } from './assets.js';
 const quote = (at: string): AssetQuote => ({ price: '53.10', change: '0.74', at, source: 'brapi' });
 
 describe('período do gráfico (SPEC-010)', () => {
-  it('sem período, abre em 1 ano (decisão 2)', () => {
-    expect(validatePriceHistoryQuery({})).toEqual({ success: true, data: { period: '1y' } });
+  it('sem período, abre em 1 ano (decisão 2), ajustado pelos eventos (SPEC-042)', () => {
+    expect(validatePriceHistoryQuery({})).toEqual({
+      success: true,
+      data: { period: '1y', adjusted: true },
+    });
   });
 
   it('aceita os cinco períodos', () => {
     for (const period of ['1m', '6m', '1y', '5y', 'max']) {
-      expect(validatePriceHistoryQuery({ period })).toEqual({ success: true, data: { period } });
+      expect(validatePriceHistoryQuery({ period })).toEqual({
+        success: true,
+        data: { period, adjusted: true },
+      });
       expect(isPriceHistoryPeriod(period)).toBe(true);
     }
+  });
+
+  it('SPEC-042: adjusted=false mostra como a B3 publicou; outro valor dá invalid_option', () => {
+    expect(validatePriceHistoryQuery({ adjusted: 'false' })).toEqual({
+      success: true,
+      data: { period: '1y', adjusted: false },
+    });
+    expect(validatePriceHistoryQuery({ adjusted: 'sim' }).success).toBe(false);
   });
 
   it('outro período dá invalid_option', () => {

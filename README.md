@@ -94,6 +94,14 @@ O colaborador entra pela **Área do colaborador**, na tela de login.
 
 **Ficha do ativo** ([SPEC-010](specs/SPEC-010.md)): na tela **Ativos**, clique no ticker. A ficha mostra a última cotação (a do pregão ou o fechamento da B3, a mais recente), o último pregão da B3 e o gráfico dos fechamentos, de 1 mês até tudo desde 2016. Os preços estão como a B3 publica, sem ajuste por dividendos, desdobramentos ou grupamentos: saltos grandes de um pregão para o seguinte ficam marcados no gráfico.
 
+**Indicadores e proventos** ([SPEC-041](specs/SPEC-041.md) e [SPEC-042](specs/SPEC-042.md)): a ficha do ativo mostra os indicadores fundamentalistas (P/L, P/VP, ROE, margens, dívida, dividend yield… e, nos FIIs, valor patrimonial, vacância, cotistas) com o histórico anual desde 2016, e a lista de proventos (dividendos, JCP, rendimentos, amortizações). Os dados vêm do **Investidor10**, que autorizou por escrito o uso **só neste projeto acadêmico**, com "Fonte: Investidor10" e **até a apresentação**. Por isso a coleta só roda com `INVESTIDOR10_ENABLED=true` no `api/.env` (no `.env.example` ela vem `false`). O processador visita a página de cada ativo devagar (uma consulta a cada 3 segundos): todos aos domingos às 03:00 e, nos outros dias, só os que nunca foram visitados; a primeira coleta leva cerca de uma hora. Depois da apresentação, desligue (`INVESTIDOR10_ENABLED=false`) e apague o que foi coletado:
+
+```bash
+npm run investidor10:apagar --workspace api
+```
+
+O gráfico da ficha passa a abrir **ajustado** por desdobramentos, grupamentos e bonificações, pelos eventos da página de cada empresa no site da B3 (domingo às 04:00), com a opção "Como a B3 publicou".
+
 ### Token da brapi (opcional)
 
 As cotações do pregão e a lista de ativos ([SPEC-009](specs/SPEC-009.md) e [SPEC-040](specs/SPEC-040.md)) vêm da [brapi](https://brapi.dev). Desde a SPEC-040, o app usa a **lista** da brapi, que responde sem token e não desconta da cota: **o token é opcional**. Se você quiser usar um (para o caso de a brapi mudar a regra), **gere o seu**: a cota de 15 mil consultas por mês é por chave, então dois computadores com o mesmo token gastam a mesma cota.

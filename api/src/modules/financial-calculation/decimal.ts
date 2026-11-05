@@ -55,6 +55,22 @@ export function decimalFromJson(value: unknown): string | null {
   return isDecimalText(text) ? text : null;
 }
 
+/**
+ * SPEC-042: soma de valores por ação com até 10 casas (proventos), sem arredondar: "0.20250435" +
+ * "0.67407131" = "0.87657566". Zeros à direita saem.
+ */
+export function sumDecimals(values: readonly string[]): string {
+  const scale = 10;
+  const total = values.reduce((sum, value) => {
+    if (!/^-?\d+(\.\d{1,10})?$/.test(value)) throw new RangeError(`decimal inválido: "${value}"`);
+    const negative = value.startsWith('-');
+    const [whole = '0', fraction = ''] = value.replace('-', '').split('.');
+    const scaled = BigInt(whole) * 10n ** BigInt(scale) + BigInt(fraction.padEnd(scale, '0'));
+    return sum + (negative ? -scaled : scaled);
+  }, 0n);
+  return format(total, scale).replace(/\.?0+$/, '');
+}
+
 export function compareDecimals(a: string, b: string): number {
   const difference = toMicros(a) - toMicros(b);
   return difference === 0n ? 0 : difference < 0n ? -1 : 1;

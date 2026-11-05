@@ -14,6 +14,7 @@ import type {
   EmailConfirmationInput,
   EmailConfirmationResendInput,
   FieldErrors,
+  FundamentalsErrorCode,
   LoginInput,
   NewAssetInput,
   PasswordResetConfirmInput,
@@ -80,11 +81,19 @@ export const INDEX_CHANNELS = {
   cdi: 'indexes:cdi',
 } as const;
 
+/** Canais IPC dos indicadores e proventos (SPECs 041 e 042); a situação da coleta é do colaborador. */
+export const FUNDAMENTALS_CHANNELS = {
+  fundamentals: 'fundamentals:get',
+  dividends: 'fundamentals:dividends',
+  collection: 'fundamentals:collection',
+} as const;
+
 /** Erros que a interface sabe traduzir. */
 export type ClientAuthError =
   | AuthErrorCode
   | CalendarErrorCode
   | CatalogErrorCode
+  | FundamentalsErrorCode
   | 'server_unavailable'
   | 'invalid_url'
   | 'unexpected'

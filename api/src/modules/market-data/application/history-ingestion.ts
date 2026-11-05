@@ -356,6 +356,7 @@ class TradeLog {
       ticker: trade.ticker,
       assetClass: trade.assetClass,
       lastTradingDay: trade.date,
+      isin: trade.isin,
     }));
   }
 }

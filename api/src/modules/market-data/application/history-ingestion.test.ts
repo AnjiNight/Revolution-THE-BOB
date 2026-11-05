@@ -397,10 +397,11 @@ describe('quem negociou, para a importação do catálogo (SPEC-040)', () => {
       { ...q('PETR4F', '2026-10-28'), market: '020' }, // fracionário: fica de fora
     ]);
     await ingestion.loadRetroactive();
+    const isin = 'BRXXXXACNOR0'; // o ISIN de exemplo das linhas de teste (SPEC-042)
     expect([...trades.trades.values()]).toEqual([
-      { ticker: 'PETR4', assetClass: 'stock', lastTradingDay: '2026-10-28' },
-      { ticker: 'ITUB4', assetClass: 'stock', lastTradingDay: '2026-10-26' },
-      { ticker: 'MXRF11', assetClass: 'fii', lastTradingDay: '2026-10-28' },
+      { ticker: 'PETR4', assetClass: 'stock', lastTradingDay: '2026-10-28', isin },
+      { ticker: 'ITUB4', assetClass: 'stock', lastTradingDay: '2026-10-26', isin },
+      { ticker: 'MXRF11', assetClass: 'fii', lastTradingDay: '2026-10-28', isin },
     ]);
     // As cotações continuam só as do catálogo.
     expect(quotes.quotes.size).toBe(2);

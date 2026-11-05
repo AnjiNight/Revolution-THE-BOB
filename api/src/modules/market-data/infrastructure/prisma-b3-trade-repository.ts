@@ -26,17 +26,21 @@ export class PrismaB3TradeRepository implements B3TradeRepository {
     for (let start = 0; start < trades.length; start += BATCH_SIZE) {
       const batch = trades.slice(start, start + BATCH_SIZE);
       await this.prisma.$executeRaw`
-        INSERT INTO negociacao_b3 (ticker, classe, ultimo_pregao, atualizado_em)
-        SELECT t.ticker, t.classe::classe_ativo, t.ultimo_pregao, ${at}
+        INSERT INTO negociacao_b3 (ticker, classe, ultimo_pregao, atualizado_em, isin)
+        SELECT t.ticker, t.classe::classe_ativo, t.ultimo_pregao, ${at}, t.isin
         FROM unnest(
           ${batch.map((trade) => trade.ticker)}::text[],
           ${batch.map((trade) => CLASS_TO_CLASSE[trade.assetClass])}::text[],
-          ${batch.map((trade) => trade.lastTradingDay)}::date[]
-        ) AS t(ticker, classe, ultimo_pregao)
+          ${batch.map((trade) => trade.lastTradingDay)}::date[],
+          ${batch.map((trade) => trade.isin ?? null)}::text[]
+        ) AS t(ticker, classe, ultimo_pregao, isin)
         ON CONFLICT (ticker) DO UPDATE SET
           classe = CASE WHEN EXCLUDED.ultimo_pregao >= negociacao_b3.ultimo_pregao
             THEN EXCLUDED.classe ELSE negociacao_b3.classe END,
           ultimo_pregao = GREATEST(negociacao_b3.ultimo_pregao, EXCLUDED.ultimo_pregao),
+          -- SPEC-042: o ISIN do negócio mais recente; sem ISIN, fica o que já estava.
+          isin = CASE WHEN EXCLUDED.ultimo_pregao >= negociacao_b3.ultimo_pregao
+            THEN COALESCE(EXCLUDED.isin, negociacao_b3.isin) ELSE COALESCE(negociacao_b3.isin, EXCLUDED.isin) END,
           atualizado_em = EXCLUDED.atualizado_em`;
     }
   }
@@ -50,6 +54,7 @@ export class PrismaB3TradeRepository implements B3TradeRepository {
           ticker: row.ticker,
           assetClass: row.classe === 'fii' ? 'fii' : 'stock',
           lastTradingDay: toIsoDate(row.ultimoPregao),
+          isin: row.isin,
         },
       ]),
     );

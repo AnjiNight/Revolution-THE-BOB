@@ -1,11 +1,14 @@
 import type {
   AssetDetail,
+  AssetDividends,
+  AssetFundamentals,
   AssetSearchResult,
   CalendarSuggestion,
   CatalogAsset,
   CatalogListResult,
   CdiStatus,
   ConsentList,
+  Investidor10Status,
   PriceHistory,
   TradingCalendarYear,
   UserProfile,
@@ -15,6 +18,7 @@ import {
   ASSET_CHANNELS,
   AUTH_CHANNELS,
   CALENDAR_CHANNELS,
+  FUNDAMENTALS_CHANNELS,
   INDEX_CHANNELS,
   PROFILE_CHANNELS,
   type AuthResult,
@@ -68,10 +72,17 @@ const api: DesktopApi = {
   indexes: {
     cdi: () => invoke<ClientResult<CdiStatus>>(INDEX_CHANNELS.cdi),
   },
+  fundamentals: {
+    get: (id) => invoke<ClientResult<AssetFundamentals>>(FUNDAMENTALS_CHANNELS.fundamentals, id),
+    dividends: (id, period) =>
+      invoke<ClientResult<AssetDividends>>(FUNDAMENTALS_CHANNELS.dividends, id, period),
+    collection: () => invoke<ClientResult<Investidor10Status>>(FUNDAMENTALS_CHANNELS.collection),
+  },
   assets: {
     search: (query) => invoke<ClientResult<AssetSearchResult>>(ASSET_CHANNELS.search, query),
     detail: (id) => invoke<ClientResult<AssetDetail>>(ASSET_CHANNELS.detail, id),
-    history: (id, period) => invoke<ClientResult<PriceHistory>>(ASSET_CHANNELS.history, id, period),
+    history: (id, period, adjusted = true) =>
+      invoke<ClientResult<PriceHistory>>(ASSET_CHANNELS.history, id, period, adjusted),
     catalog: (query) => invoke<ClientResult<CatalogListResult>>(ASSET_CHANNELS.catalog, query),
     create: (input) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.create, input),
     update: (id, input) => invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.update, id, input),

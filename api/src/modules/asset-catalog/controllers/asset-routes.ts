@@ -90,8 +90,8 @@ export function registerAssetRoutes(app: FastifyInstance, options: AssetRoutesOp
 
   app.get<{ Params: IdParams }>(ASSET_PATHS.history, authenticated, async (request, reply) => {
     const id = assetId(request);
-    const { period } = ensureValid(validatePriceHistoryQuery(request.query));
-    return reply.send(await run(() => catalog.priceHistory(id, period)));
+    const { period, adjusted } = ensureValid(validatePriceHistoryQuery(request.query));
+    return reply.send(await run(() => catalog.priceHistory(id, period, adjusted)));
   });
 
   app.get<{ Params: IdParams }>(ASSET_PATHS.logo, authenticated, async (request, reply) => {

@@ -8,6 +8,7 @@ import {
   type PriceSummary,
 } from '@simulador/shared';
 import { compareDecimals, percentChange, toMicros } from './decimal.js';
+import { eventBetween, type PriceEventInput } from './price-adjustment.js';
 
 const PERIOD_MONTHS: Readonly<Record<Exclude<PriceHistoryPeriod, 'max'>, number>> = {
   '1m': 1,
@@ -45,16 +46,27 @@ export function isPriceJump(previous: string, close: string): boolean {
  * Resumo do período (SPEC-010 §4.2), em decimal (RNF12): variação do primeiro ao último
  * fechamento, mínima e máxima (no empate, a data mais antiga) e os saltos entre pregões seguidos.
  * Com salto no período, a variação não é calculada. Com menos de dois pregões, sem resumo.
+ *
+ * SPEC-042: salto que um evento corporativo explica (data com entre os dois pregões) não é marcado.
+ * Com os preços sem ajuste (`adjusted: false`) e um evento no período, a variação também não é
+ * calculada: ela misturaria preços de antes e de depois do evento.
  */
-export function summarizePeriod(points: readonly PricePoint[]): {
+export function summarizePeriod(
+  points: readonly PricePoint[],
+  options: { events?: readonly Pick<PriceEventInput, 'exDate'>[]; adjusted?: boolean } = {},
+): {
   summary: PriceSummary | null;
   jumps: PriceJump[];
 } {
+  const events = options.events ?? [];
   const jumps: PriceJump[] = [];
   for (let i = 1; i < points.length; i += 1) {
     const previous = points[i - 1] as PricePoint;
     const current = points[i] as PricePoint;
-    if (isPriceJump(previous.close, current.close)) {
+    if (
+      isPriceJump(previous.close, current.close) &&
+      !eventBetween(events, previous.date, current.date)
+    ) {
       jumps.push({ date: current.date, change: percentChange(current.close, previous.close) });
     }
   }
@@ -68,6 +80,8 @@ export function summarizePeriod(points: readonly PricePoint[]): {
     if (compareDecimals(point.close, min.price) < 0) min = { date: point.date, price: point.close };
     if (compareDecimals(point.close, max.price) > 0) max = { date: point.date, price: point.close };
   }
-  const change = jumps.length > 0 ? null : percentChange(last.close, first.close);
+  const unadjustedEvent = options.adjusted === false && eventBetween(events, first.date, last.date);
+  const change =
+    jumps.length > 0 || unadjustedEvent ? null : percentChange(last.close, first.close);
   return { summary: { change, min, max }, jumps };
 }

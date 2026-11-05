@@ -22,6 +22,7 @@ import {
 import { CalendarService } from '../modules/market-data/application/calendar-service.js';
 import { CatalogImport } from '../modules/market-data/application/catalog-import.js';
 import { CdiStatusService } from '../modules/market-data/application/cdi-status-service.js';
+import { FundamentalsService } from '../modules/market-data/application/fundamentals-service.js';
 import { HistoryStatusService } from '../modules/market-data/application/history-status-service.js';
 import { IntradayCollection } from '../modules/market-data/application/intraday-collection.js';
 import {
@@ -31,6 +32,8 @@ import {
   InMemoryB3Trades,
   InMemoryCalendarRepository,
   InMemoryCatalogImport,
+  InMemoryEvents,
+  InMemoryFundamentals,
   InMemoryIndexRates,
   InMemoryIntradayQuoteRepository,
   InMemoryLogoRepository,
@@ -59,6 +62,8 @@ export interface TestAppOptions {
   google?: boolean;
   /** false simula um servidor sem SMTP: sem confirmação de e-mail nem recuperação de senha. */
   email?: boolean;
+  /** false desliga o Investidor10 (fim da autorização, SPEC-041 §4.1). Padrão: ligado. */
+  investidor10?: boolean;
 }
 
 /** Servidor completo com repositórios em memória, para testes HTTP sem banco. */
@@ -133,7 +138,10 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     clock,
     sleep: () => Promise.resolve(),
   });
+  // Eventos corporativos (SPEC-042) em memória, para o gráfico ajustado.
+  const events = new InMemoryEvents();
   const catalog = new AssetCatalogService({
+    events,
     assets,
     history: new HistoryStatusService({
       quotes,
@@ -154,6 +162,23 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   // Série do CDI (SPEC-007) em memória.
   const indexRates = new InMemoryIndexRates();
   const cdi = new CdiStatusService({ rates: indexRates, runs, calendars, clock });
+  // Indicadores e proventos (SPECs 041 e 042) sobre o mesmo catálogo em memória.
+  const fundamentalsRepo = new InMemoryFundamentals();
+  const syncFundamentalAssets = () => {
+    fundamentalsRepo.assets.splice(
+      0,
+      fundamentalsRepo.assets.length,
+      ...assets.assets
+        .filter((asset) => asset.deactivatedAt === null)
+        .map((asset) => ({ id: asset.id, ticker: asset.ticker, assetClass: asset.assetClass })),
+    );
+  };
+  const fundamentals = new FundamentalsService({
+    enabled: options.investidor10 !== false,
+    fundamentals: fundamentalsRepo,
+    runs,
+    clock,
+  });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -171,6 +196,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     calendar,
     catalog,
     cdi,
+    fundamentals,
     logStream: logs,
   });
 
@@ -231,6 +257,10 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     catalogImport,
     indexRates,
     cdi,
+    fundamentalsRepo,
+    syncFundamentalAssets,
+    fundamentals,
+    events,
     ...services,
   };
 }

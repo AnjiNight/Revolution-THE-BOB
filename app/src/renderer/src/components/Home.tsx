@@ -4,6 +4,7 @@ import {
   yearOf,
   type CdiStatus,
   type ConsentList,
+  type Investidor10Status,
   type PublicUser,
 } from '@simulador/shared';
 import {
@@ -95,6 +96,7 @@ export function Home({ user, onOpenProfile, onOpenCalendar, onOpenAssets }: Home
       )}
       {user.role === 'collaborator' && <CalendarReminder onOpen={onOpenCalendar} />}
       {user.role === 'collaborator' && <CdiStatusPanel />}
+      {user.role === 'collaborator' && <Investidor10Panel />}
 
       <header className="page-hero">
         <p className={user.role === 'collaborator' ? 'eyebrow eyebrow-warn' : 'eyebrow'}>
@@ -223,6 +225,56 @@ function CdiStatusPanel() {
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * SPEC-041 (§5.3): coleta semanal do Investidor10. Desligada (sem a autorização) ou com a última
+ * coleta em falha, o aviso fica em âmbar.
+ */
+function Investidor10Panel() {
+  const { t, i18n } = useTranslation();
+  const [status, setStatus] = useState<Investidor10Status | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    void window.api.fundamentals
+      .collection()
+      .then((result) => current && result.ok && setStatus(result.data));
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  if (!status) return null;
+  if (!status.enabled) {
+    return (
+      <div className="calendar-reminder" role="status">
+        <p>{t('home.investidor10.disabled')}</p>
+      </div>
+    );
+  }
+  const summary = status.lastRun
+    ? t('home.investidor10.summary', {
+        at: formatDate(status.lastRun.at, i18n.language, true),
+        collected: status.collected,
+        total: status.activeAssets,
+      })
+    : t('home.investidor10.never');
+  if (status.lastRun?.status === 'falha') {
+    return (
+      <div className="calendar-reminder" role="status">
+        <ul>
+          <li>{summary}</li>
+          <li>{t('home.investidor10.failed')}</li>
+        </ul>
+      </div>
+    );
+  }
+  return (
+    <p className="cdi-status" role="status">
+      {summary}
+    </p>
   );
 }
 

@@ -386,6 +386,105 @@ button.period-button[aria-pressed='true'] {
   margin: 0.5rem 0 0;
 }
 
+/* SPEC-042: eventos corporativos que explicam os saltos (o gráfico abre ajustado). */
+.chart-events {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.chart-events h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.chart-events ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.asset-history > .period-buttons {
+  margin-bottom: 0.75rem;
+}
+
+/* ---------- Indicadores (SPEC-041) e proventos (SPEC-042) ---------- */
+
+.indicator-group + .indicator-group {
+  margin-top: 1.25rem;
+}
+
+.indicator-group h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fund-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem 1.5rem;
+  margin: 0 0 1.25rem;
+}
+
+.fund-info dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.fund-info dd {
+  margin: 0.1rem 0 0;
+  font-weight: 600;
+}
+
+.indicator-history {
+  margin-top: 1.25rem;
+}
+
+.indicator-history summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+.table-scroll table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table-scroll th,
+.table-scroll td {
+  padding: 0.35rem 0.75rem;
+  border-bottom: 1px solid var(--line, rgba(127, 127, 127, 0.25));
+  text-align: right;
+}
+
+.table-scroll th[scope='row'],
+.table-scroll thead th:first-child,
+.dividends-table td:first-child {
+  text-align: left;
+}
+
+.dividends-total {
+  margin: 0 0 0.5rem;
+  font-weight: 650;
+}
+
+.asset-fundamentals > .field-hint,
+.asset-dividends > .field-hint {
+  margin: 0.75rem 0 0;
+}
+
 /* ---------- Janela estreita (até 480px) ---------- */
 
 @media (max-width: 640px) {
@@ -403,5 +502,9 @@ button.period-button[aria-pressed='true'] {
 
   button.period-button {
     padding: 0.25rem 0.6rem;
+  }
+
+  .fund-info {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

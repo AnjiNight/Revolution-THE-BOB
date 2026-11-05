@@ -10,8 +10,10 @@ import { EmailInUseError } from '../domain/errors.js';
 import { createIdentityServices } from '../identity-services.js';
 import { CalendarService } from '../../market-data/application/calendar-service.js';
 import { CdiStatusService } from '../../market-data/application/cdi-status-service.js';
+import { FundamentalsService } from '../../market-data/application/fundamentals-service.js';
 import {
   InMemoryCalendarRepository,
+  InMemoryFundamentals,
   InMemoryIndexRates,
   InMemoryTaskRuns,
 } from '../../market-data/testing/fakes.js';
@@ -122,6 +124,11 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
         rates: new InMemoryIndexRates(),
         runs: new InMemoryTaskRuns(),
         calendars: new InMemoryCalendarRepository(),
+      }),
+      fundamentals: new FundamentalsService({
+        enabled: false,
+        fundamentals: new InMemoryFundamentals(),
+        runs: new InMemoryTaskRuns(),
       }),
     });
     return { app, mailer, background };

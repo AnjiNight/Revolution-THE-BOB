@@ -31,6 +31,8 @@
 | 1.21 | SPEC-007 detalhada ([SPEC-007.md](SPEC-007.md)), aguardando a aprovação; o CDI segue os dias úteis bancários (tem valor em 24/12 e 31/12, sem pregão), então a SPEC-005 deixa de ser dependência da série e serve só para conferência |
 | 1.22 | SPEC-005 mudada (aprovada pela Nicoly em 04/11/2026): anos fechados publicados pelo processador a partir do arquivo anual da B3 ([SPEC-005 §10](SPEC-005.md)) |
 | 1.23 | SPEC-007 aprovada (Nicoly, 04/11/2026, como escrita) e implementada: série do CDI desde 2016 pelo SGS do Banco Central; OPEN-40 decidida para o CDI (guardado para sempre) |
+| 1.24 | Novas SPEC-041 (indicadores fundamentalistas, [SPEC-041.md](SPEC-041.md)) e SPEC-042 (proventos e eventos corporativos, [SPEC-042.md](SPEC-042.md)), na Fase 2, depois da SPEC-010, pedidas pela Nicoly em 04/11/2026 e aguardando a aprovação. Investidor10 autorizado por escrito (04/11/2026) para dados e indicadores, só neste projeto acadêmico: OPEN-28 resolvida na parte de dados; OPEN-06 com fonte proposta na SPEC-042 |
+| 1.25 | SPECs 041 e 042 aprovadas (Nicoly, 04/11/2026, como escritas) e implementadas: indicadores e proventos do Investidor10 (interruptor `INVESTIDOR10_ENABLED`), eventos corporativos da B3 e o gráfico da ficha ajustado; fonte da OPEN-06 resolvida |
 ---
 
 ## 0. Como ler este documento
@@ -265,7 +267,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-03 | ✅ **Resolvida na [SPEC-002](SPEC-002.md):** o perfil passa a se chamar **colaborador**; colaborador nunca se cadastra pelo app, a equipe cria a conta com `npm run colaborador:criar` (senha forte gerada) e ele entra pela Área do colaborador | Lacuna | 002, 006, 011 |
 | OPEN-04 | Formato, conteúdo e forma de entrega da exportação de dados pessoais | RF06 | 034 |
 | OPEN-05 | ✅ **Resolvida na [SPEC-008](SPEC-008.md):** DA18 aceita (histórico pelos arquivos COTAHIST da B3), carregado desde o primeiro pregão de 2016 | DA18, PE04 | 008, 016 |
-| OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo) | PE05, DA22 | 008, 014, 016, 019 |
+| OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo). Fonte proposta na [SPEC-042](SPEC-042.md) (proventos do Investidor10, eventos da B3); o tratamento na carteira continua com as SPECs 016 e 019 | PE05, DA22 | 008, 014, 016, 019, 042 |
 | OPEN-07 | ✅ **Resolvida na [SPEC-009](SPEC-009.md):** a brapi é usada só para mostrar as cotações no próprio app, com fonte e horário, nunca "tempo real" e sem repassar os dados a terceiros | PE02 | 009, 026 |
 | OPEN-08 | Compra/venda na carteira ao vivo com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
 | OPEN-09 | Reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
@@ -287,7 +289,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
 | OPEN-26 | Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
-| OPEN-28 | **[Crítico]** Autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta | PE07 | 027 |
+| OPEN-28 | **[Crítico]** Autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta. **Parte de dados resolvida (04/11/2026):** autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)); a parte de **notícias** ainda precisa ser confirmada com eles | PE07 | 027, 041, 042 |
 | OPEN-29 | Lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
 | OPEN-30 | Implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 028 |
 | OPEN-31 | Fonte do histórico de notícias e janela de treino | PE09, PE11 | 028, 031 |
@@ -319,7 +321,7 @@ Visão geral por fase:
 |---|---|---|
 | 0 — Fundação | 001 | Estrutura executável |
 | 1 — Conta e acesso | 002–004, 034 | Usuário identificado e seguro; exportação e exclusão de dados desde o início |
-| 2 — Dados de mercado | 005–011, 040 | Calendário, catálogo, indexadores, cotações, ficha do ativo, monitoramento |
+| 2 — Dados de mercado | 005–011, 040–042 | Calendário, catálogo, indexadores, cotações, ficha do ativo, indicadores, proventos, monitoramento |
 | 3 — Núcleo da carteira | 012–016 | Carteiras e lançamentos (ao vivo e histórica) |
 | 4 — Renda fixa | ⏸ Adiada (DA22) | Ver "Fase futura — Renda fixa" ao fim desta seção |
 | 5 — Acompanhamento | 019–023 | Rentabilidade, benchmarks, distribuição, comparação, simulações |
@@ -599,6 +601,46 @@ Visão geral por fase:
 | Posição | Primeira capacidade de consulta visível ao usuário; base da ficha que recebe notícias em 029 |
 | Em aberto | — |
 | Prioridade derivada | Must |
+
+#### SPEC-041 — Indicadores fundamentalistas de ações e FIIs
+
+📄 Detalhada em [SPEC-041.md](SPEC-041.md) — implementada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | A ficha do ativo mostra os indicadores fundamentalistas (ações: valuation, margens, rentabilidade, dividendos, endividamento, crescimento, com 5 anos de histórico; FIIs: DY, P/VP, valor patrimonial, cotistas, vacância, taxa de administração), coletados toda semana do Investidor10 com autorização, sempre com a fonte |
+| Valor | **Usuário:** entende se o ativo está caro ou barato antes de simular (P01) |
+| RF | RF08 |
+| RB | — |
+| RNF | RNF04, RNF12, RNF13, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Buscar ativo → UC: Consultar cotação |
+| Entidades | ATIVO, INDICADOR_ATIVO†, INFORMACAO_FII† |
+| Drivers | OBJ02, FAS03, QA02, QA13, RES03, RES07 |
+| ADRs | DA06, DA07, DA14, DA15, DA23 |
+| Depende de | SPEC-006, SPEC-008, SPEC-010, SPEC-040 |
+| Posição | Logo depois da ficha (010), que ganha a seção; antes das carteiras |
+| Em aberto | OPEN-28 (notícias); fonte permanente depois da autorização (CVM ou brapi paga) |
+| Prioridade derivada | Should |
+
+#### SPEC-042 — Proventos e eventos corporativos
+
+📄 Detalhada em [SPEC-042.md](SPEC-042.md) — implementada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Guardar os proventos (dividendos, JCP, rendimentos, amortizações) de ações e FIIs pelo Investidor10 e os eventos corporativos (desdobramento, grupamento, bonificação) pela B3; mostrar os proventos na ficha e o gráfico ajustado pelos eventos |
+| Valor | **Usuário:** vê quanto o ativo pagou e um gráfico sem saltos falsos. **Sistema:** fonte da OPEN-06 para as SPECs 016 e 019 |
+| RF | RF08 |
+| RB | — |
+| RNF | RNF04, RNF12, RNF13, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Buscar ativo → UC: Consultar cotação |
+| Entidades | PROVENTO, EVENTO_CORPORATIVO |
+| Drivers | OBJ01, OBJ02, FAS03, QA02, RES03 |
+| ADRs | DA06, DA07, DA10, DA14, DA17, DA18 |
+| Depende de | SPEC-008, SPEC-010, SPEC-041 |
+| Posição | Junto com a 041 (mesma visita ao Investidor10); antes das SPECs 016 e 019, que somam os proventos na carteira |
+| Em aberto | OPEN-06 (tratamento na carteira) |
+| Prioridade derivada | Should |
 
 #### SPEC-011 — Monitoramento e reexecução das tarefas de ingestão
 

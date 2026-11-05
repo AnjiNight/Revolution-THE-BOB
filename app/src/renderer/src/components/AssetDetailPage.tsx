@@ -26,6 +26,7 @@ import {
 } from '../format';
 import { useSectorName } from './AssetFields';
 import { AssetLogo } from './AssetLogo';
+import { DividendsPanel, FundamentalsPanel } from './FundamentalsPanels';
 import { PriceChart } from './PriceChart';
 import { changeDirection } from './QuoteText';
 
@@ -140,7 +141,13 @@ export function AssetDetailPage({ assetId, onBack, onSessionExpired }: AssetDeta
         </p>
       )}
       <SessionPanel session={asset.lastSession} />
+      <FundamentalsPanel
+        assetId={asset.id}
+        ticker={asset.ticker}
+        onSessionExpired={onSessionExpired}
+      />
       <HistoryPanel asset={asset} onSessionExpired={onSessionExpired} />
+      <DividendsPanel assetId={asset.id} onSessionExpired={onSessionExpired} />
     </div>
   );
 }
@@ -312,18 +319,20 @@ function HistoryPanel({
   const language = i18n.language;
   const titleId = useId();
   const [period, setPeriod] = useState<PriceHistoryPeriod>(DEFAULT_PRICE_HISTORY_PERIOD);
+  // SPEC-042: abre ajustado pelos desdobramentos e grupamentos.
+  const [adjusted, setAdjusted] = useState(true);
   const [histories, setHistories] = useState<Record<string, PriceHistory>>({});
   const [failure, setFailure] = useState<{ key: string; error: ClientAuthError } | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   const loaded = asset.history.status === 'loaded';
-  const key = `${period}|${asset.lastSession?.date ?? ''}`;
+  const key = `${period}|${adjusted ? 'a' : 'b3'}|${asset.lastSession?.date ?? ''}`;
   const shown = histories[key];
 
   useEffect(() => {
     if (!loaded || shown) return;
     let active = true;
-    void window.api.assets.history(asset.id, period).then((result) => {
+    void window.api.assets.history(asset.id, period, adjusted).then((result) => {
       if (!active) return;
       if (!result.ok && result.error === 'unauthorized') return onSessionExpired();
       if (result.ok) setHistories((previous) => ({ ...previous, [key]: result.data }));
@@ -332,7 +341,7 @@ function HistoryPanel({
     return () => {
       active = false;
     };
-  }, [asset.id, period, key, loaded, shown, attempt, onSessionExpired]);
+  }, [asset.id, period, adjusted, key, loaded, shown, attempt, onSessionExpired]);
 
   let content: ReactNode;
   if (asset.history.status === 'pending') {
@@ -393,10 +402,30 @@ function HistoryPanel({
           </div>
         )}
       </div>
+      {loaded && (
+        <div className="period-buttons" role="group" aria-label={t('detail.history.priceMode')}>
+          <button
+            type="button"
+            className="period-button"
+            aria-pressed={adjusted}
+            onClick={() => setAdjusted(true)}
+          >
+            {t('detail.history.adjusted')}
+          </button>
+          <button
+            type="button"
+            className="period-button"
+            aria-pressed={!adjusted}
+            onClick={() => setAdjusted(false)}
+          >
+            {t('detail.history.asPublished')}
+          </button>
+        </div>
+      )}
       {content}
       <p className="assets-note chart-notice">
         <Info weight="fill" aria-hidden="true" />
-        <span>{t('detail.history.notice')}</span>
+        <span>{adjusted ? t('detail.history.noticeAdjusted') : t('detail.history.notice')}</span>
       </p>
       {loaded && asset.history.to && (
         <p className="field-hint">
@@ -484,6 +513,24 @@ function HistoryContent({
             ))}
           </ul>
           <p>{t('detail.history.jumpsExplain')}</p>
+        </div>
+      )}
+      {history.events.length > 0 && (
+        <div className="chart-events">
+          <h3>{t('detail.history.eventsTitle')}</h3>
+          <ul>
+            {history.events.map((event) => (
+              <li key={`${event.kind}-${event.date}`}>
+                {t(`detail.history.event.${event.kind}`, {
+                  date: day(event.date),
+                  multiplier: new Intl.NumberFormat(language, { maximumFractionDigits: 6 }).format(
+                    Number(event.multiplier),
+                  ),
+                })}
+              </li>
+            ))}
+          </ul>
+          <p className="field-hint">{t('detail.history.eventsSource')}</p>
         </div>
       )}
     </>

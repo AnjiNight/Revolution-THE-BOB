@@ -1,12 +1,16 @@
 import type {
   AssetClass,
   CalendarSource,
+  FundInfo,
+  IndicatorCode,
   IsoDate,
   NonTradingDay,
   SectorCode,
 } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type { CotahistQuote } from '../domain/cotahist.js';
+import type { CorporateEvent } from '../domain/b3-events.js';
+import type { ParsedDividend } from '../domain/investidor10-page.js';
 
 /** Ano publicado, como fica guardado (SPEC-005 §6 e §10). */
 export interface StoredCalendarYear {
@@ -135,7 +139,9 @@ export type IngestionTask =
   | 'cotacao_pregao'
   | 'importacao_catalogo'
   | 'calendario_b3'
-  | 'cdi_diario';
+  | 'cdi_diario'
+  | 'investidor10'
+  | 'eventos_b3';
 export type RunStatus = 'sucesso' | 'parcial' | 'falha' | 'aguardando_publicacao' | 'cota_esgotada';
 
 export interface RunError {
@@ -299,6 +305,8 @@ export interface B3Trade {
   /** Pela B3: FII (`CODBDI 12`) ou ação. */
   assetClass: AssetClass;
   lastTradingDay: IsoDate;
+  /** SPEC-042: ISIN do arquivo da B3; `null` ou ausente quando não veio. */
+  isin?: string | null;
 }
 
 export interface B3TradeRepository {
@@ -431,4 +439,83 @@ export interface IndexRateRepository {
     at: Date,
   ): Promise<number>;
   markYearLoaded(indexerId: string, year: number, records: number, at: Date): Promise<void>;
+}
+
+/**
+ * Páginas do Investidor10 (SPEC-041), usadas com autorização só neste projeto acadêmico. `null`
+ * quando a página não existe (404 ou 410). Falha lança Investidor10SourceError.
+ */
+export interface Investidor10Source {
+  /** HTML da página (`acoes/petr4`, `fiis/mxrf11`). */
+  page(path: string): Promise<string | null>;
+  /** JSON do histórico anual de indicadores de uma ação. */
+  history(id: number): Promise<unknown>;
+}
+
+/** `blocked`: o site recusou (403 ou 429), a coleta para. `retryable`: rede ou 5xx. */
+export class Investidor10SourceError extends Error {
+  constructor(
+    readonly kind: 'blocked' | 'retryable',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'Investidor10SourceError';
+  }
+}
+
+export interface FundamentalsAsset {
+  id: string;
+  ticker: string;
+  assetClass: AssetClass;
+}
+
+/** O que uma visita à página de um ativo trouxe, gravado de uma vez (SPECs 041 e 042). */
+export interface AssetCollection {
+  assetId: string;
+  current: Map<IndicatorCode, string | null>;
+  history: Map<IndicatorCode, Map<string, string | null>>;
+  fund: FundInfo | null;
+  dividends: ParsedDividend[];
+}
+
+export interface StoredFundamentals {
+  assetClass: AssetClass;
+  status: 'ok' | 'sem_pagina' | 'erro' | null;
+  /** Última coleta com dados; `null` sem nenhuma. */
+  collectedAt: Date | null;
+  /** Por indicador, por período (`atual` ou o ano). */
+  values: Map<IndicatorCode, Map<string, string | null>>;
+  fund: FundInfo | null;
+}
+
+export interface FundamentalsRepository {
+  /** Ativos ativos do catálogo, em ordem de ticker. */
+  listActiveAssets(): Promise<FundamentalsAsset[]>;
+  /** Ativos que já têm uma visita registrada (com qualquer resultado). */
+  visitedAssets(): Promise<Set<string>>;
+  /** Substitui tudo o que o ativo tinha do Investidor10, numa transação. */
+  save(collection: AssetCollection, at: Date): Promise<void>;
+  /** Visita sem dados: a página não existe ou não deu para ler. O que estava guardado fica. */
+  markVisit(assetId: string, status: 'sem_pagina' | 'erro', at: Date): Promise<void>;
+  /** `null` se o ativo não existe. */
+  fundamentals(assetId: string): Promise<StoredFundamentals | null>;
+  /** Proventos com data com desde `since` (todos com `null`), do mais recente ao mais antigo. */
+  dividends(assetId: string, since: IsoDate | null): Promise<ParsedDividend[]>;
+  /** Visitas por resultado, para o Início do colaborador. */
+  visitCounts(): Promise<{ ok: number; sem_pagina: number; erro: number }>;
+  /** Apaga tudo o que veio do Investidor10 (fim da autorização). Devolve quantas linhas. */
+  clear(): Promise<number>;
+}
+
+/**
+ * Página de uma empresa no site da B3 (SPEC-042), pelo código de 4 letras do ticker. `null` quando
+ * a B3 não conhece o código. Falha lança erro.
+ */
+export interface B3CompanySource {
+  company(code: string): Promise<unknown>;
+}
+
+export interface CorporateEventRepository {
+  /** Substitui os eventos do ativo, de uma vez. */
+  replace(assetId: string, events: CorporateEvent[], at: Date): Promise<void>;
 }

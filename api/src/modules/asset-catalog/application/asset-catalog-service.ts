@@ -22,6 +22,7 @@ import {
 } from '@simulador/shared';
 import type { AuditAction, AuditEntry, JsonValue } from '../../audit/application/audit.js';
 import { percentChange } from '../../financial-calculation/decimal.js';
+import { adjustPrices, multiplierText } from '../../financial-calculation/price-adjustment.js';
 import { periodStart, summarizePeriod } from '../../financial-calculation/price-history.js';
 import { searchAssets } from '../domain/asset-search.js';
 import {
@@ -37,6 +38,7 @@ import type {
   AssetChanges,
   AssetHistoryReader,
   AssetLogoReader,
+  AssetEventReader,
   AssetModification,
   AssetPriceReader,
   AssetQuoteReader,
@@ -82,6 +84,8 @@ export interface AssetCatalogServiceDeps {
   imports?: CatalogImportReader;
   /** SPEC-010: pregões da B3 para a ficha. Sem ele, a ficha fica sem último pregão e sem gráfico. */
   prices?: AssetPriceReader;
+  /** SPEC-042: eventos corporativos (B3), para ajustar o gráfico. Sem ele, nenhum evento. */
+  events?: AssetEventReader;
   clock?: () => Date;
   newId?: () => string;
 }
@@ -218,13 +222,19 @@ export class AssetCatalogService {
    * SPEC-010: os fechamentos do período, que termina no último fechamento guardado, com o resumo e
    * os saltos (núcleo de cálculo, DA10). Sem histórico carregado, a série vem vazia.
    */
-  async priceHistory(id: string, period: PriceHistoryPeriod): Promise<PriceHistory> {
+  async priceHistory(
+    id: string,
+    period: PriceHistoryPeriod,
+    adjusted = true,
+  ): Promise<PriceHistory> {
     const asset = await this.deps.assets.findById(id);
     if (!asset) throw new AssetNotFoundError();
     const history = await this.deps.history?.forAsset(id);
     if (!this.deps.prices || history?.status !== 'loaded' || !history.from || !history.to) {
       return {
         period,
+        adjusted,
+        events: [],
         from: null,
         to: null,
         shorterThanPeriod: false,
@@ -234,12 +244,28 @@ export class AssetCatalogService {
       };
     }
     const start = periodStart(history.to, period);
-    const points = await this.deps.prices.closes(id, start);
-    const { summary, jumps } = summarizePeriod(points);
+    const [stored, allEvents] = await Promise.all([
+      this.deps.prices.closes(id, start),
+      this.deps.events?.forAsset(id) ?? Promise.resolve([]),
+    ]);
+    // SPEC-042: o ajuste usa todos os eventos depois de cada pregão, também os de depois do período.
+    const points = adjusted ? adjustPrices(stored, allEvents) : stored;
+    const first = points[0]?.date;
+    const last = points.at(-1)?.date;
+    const events =
+      first && last ? allEvents.filter((e) => e.exDate >= first && e.exDate < last) : [];
+    const { summary, jumps } = summarizePeriod(points, { events, adjusted });
     return {
       period,
-      from: points[0]?.date ?? null,
-      to: points.at(-1)?.date ?? null,
+      adjusted,
+      events: events.map((event) => ({
+        kind: event.kind,
+        date: event.exDate,
+        multiplier: multiplierText(event),
+        source: 'b3',
+      })),
+      from: first ?? null,
+      to: last ?? null,
       shorterThanPeriod: start !== null && history.from > start,
       points,
       summary,

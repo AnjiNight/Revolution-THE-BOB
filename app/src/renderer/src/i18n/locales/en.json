@@ -98,6 +98,12 @@
       "missing_one": "{{count}} trading day has no CDI in the series.",
       "missing_other": "{{count}} trading days have no CDI in the series."
     },
+    "investidor10": {
+      "summary": "Indicators (Investidor10): last collected on {{at}} · {{collected}} of {{total}} assets",
+      "never": "Indicators (Investidor10): not collected yet (the processor visits the pages gradually)",
+      "failed": "The last Investidor10 collection failed. Check the processor log.",
+      "disabled": "Investidor10 indicators and dividends are turned off (INVESTIDOR10_ENABLED). Turn them on only with the written authorization, valid until the presentation."
+    },
     "availableTitle": "Available now",
     "open": "Open",
     "tools": {
@@ -211,7 +217,8 @@
     "forbidden": "This area is for the team only.",
     "calendar_not_published": "The team hasn't published the trading calendar for that year yet. Without it, the app doesn't know which days the exchange was open.",
     "ticker_in_use": "Another asset already uses this ticker.",
-    "asset_not_found": "This asset no longer exists. The list has been refreshed."
+    "asset_not_found": "This asset no longer exists. The list has been refreshed.",
+    "source_disabled": "Investidor10 indicators are turned off."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -511,8 +518,225 @@
       "jump": "{{date}}: {{change}} from one session to the next",
       "jumpsExplain": "Splits and reverse splits change the price without changing the value held; it may also have been a real move.",
       "notice": "Prices as B3 publishes them, not adjusted for dividends, FII distributions, splits or reverse splits. The change is not the return of someone who held the asset.",
-      "source": "Source: B3 files · last close on {{date}}"
+      "source": "Source: B3 files · last close on {{date}}",
+      "priceMode": "How to show prices",
+      "adjusted": "Adjusted for splits and reverse splits",
+      "asPublished": "As B3 published",
+      "noticeAdjusted": "Prices adjusted for splits, reverse splits and stock bonuses (B3 events), not for dividends or FII distributions. The change is not the return of someone who held the asset.",
+      "eventsTitle": "Events in the period",
+      "event": {
+        "desdobramento": "{{date}}: split, 1 share became {{multiplier}}",
+        "grupamento": "{{date}}: reverse split, 1 share became {{multiplier}}",
+        "bonificacao": "{{date}}: stock bonus, 1 share became {{multiplier}}"
+      },
+      "eventsSource": "Source: B3. The date is the record date: the price changes on the next session."
     }
+  },
+  "fundamentals": {
+    "title": "Indicators",
+    "loading": "Loading the indicators…",
+    "failed": "Couldn't load the indicators right now.",
+    "noPage": "This asset has no page on Investidor10.",
+    "notCollected": "This asset's indicators haven't been collected yet.",
+    "source": "Source: Investidor10 · collected on {{date}}",
+    "notice": "Indicators from Investidor10, used with permission for this academic project. They are not a recommendation to buy or sell.",
+    "group": {
+      "valuation": "Valuation",
+      "efficiency": "Efficiency",
+      "profitability": "Profitability",
+      "dividends": "Dividends",
+      "debt": "Debt",
+      "growth": "Growth",
+      "fund": "Fund"
+    },
+    "fund": {
+      "fundType": "Fund type",
+      "segment": "Segment",
+      "mandate": "Mandate",
+      "management": "Management",
+      "adminFee": "Management fee",
+      "term": "Term",
+      "audience": "Target investors"
+    },
+    "history": {
+      "toggle": "Yearly indicator history",
+      "label": "Yearly indicator history of {{ticker}}",
+      "indicator": "Indicator"
+    },
+    "indicator": {
+      "p_l": {
+        "name": "P/E",
+        "help": "Price divided by earnings per share: how many years of earnings would pay the current price."
+      },
+      "p_vp": {
+        "name": "P/B",
+        "help": "Price divided by book value per share. Below 1, the share costs less than the equity it represents."
+      },
+      "psr": {
+        "name": "P/Sales (PSR)",
+        "help": "Market value divided by revenue over the last 12 months."
+      },
+      "ev_ebitda": {
+        "name": "EV/EBITDA",
+        "help": "Enterprise value (market value plus net debt) divided by EBITDA: how many years of operating cash generation would pay for the company."
+      },
+      "ev_ebit": {
+        "name": "EV/EBIT",
+        "help": "Enterprise value divided by operating profit (EBIT)."
+      },
+      "p_ebitda": { "name": "P/EBITDA", "help": "Market value divided by EBITDA." },
+      "p_ebit": { "name": "P/EBIT", "help": "Market value divided by operating profit (EBIT)." },
+      "p_ativo": {
+        "name": "P/Assets",
+        "help": "Market value divided by the company's total assets."
+      },
+      "p_ativo_circ_liq": {
+        "name": "P/Net current assets",
+        "help": "Market value divided by current assets minus all liabilities. Negative when debts exceed short-term assets."
+      },
+      "p_cap_giro": {
+        "name": "P/Working capital",
+        "help": "Market value divided by working capital (current assets minus current liabilities)."
+      },
+      "lpa": {
+        "name": "EPS",
+        "help": "Earnings per share: earnings over the last 12 months divided by the number of shares."
+      },
+      "vpa": {
+        "name": "BVPS",
+        "help": "Book value per share: shareholders' equity divided by the number of shares."
+      },
+      "margem_bruta": {
+        "name": "Gross margin",
+        "help": "What is left of revenue after the cost of what was sold."
+      },
+      "margem_ebitda": {
+        "name": "EBITDA margin",
+        "help": "EBITDA (operating result before depreciation) divided by revenue."
+      },
+      "margem_ebit": {
+        "name": "EBIT margin",
+        "help": "Operating profit (EBIT) divided by revenue."
+      },
+      "margem_liquida": {
+        "name": "Net margin",
+        "help": "Net income divided by revenue: how much of each real sold becomes profit."
+      },
+      "giro_ativos": {
+        "name": "Asset turnover",
+        "help": "Revenue divided by total assets: how much the company sells for each real of assets."
+      },
+      "roe": {
+        "name": "ROE",
+        "help": "Return on equity: net income divided by shareholders' equity."
+      },
+      "roa": { "name": "ROA", "help": "Return on assets: net income divided by total assets." },
+      "roic": {
+        "name": "ROIC",
+        "help": "Return on the capital invested (equity plus debt) in operations."
+      },
+      "dividend_yield": {
+        "name": "Dividend yield",
+        "help": "Dividends paid over the last 12 months divided by the current price."
+      },
+      "payout": {
+        "name": "Payout",
+        "help": "Share of earnings paid out as dividends and interest on equity."
+      },
+      "liquidez_corrente": {
+        "name": "Current ratio",
+        "help": "Current assets divided by current liabilities. Above 1, what falls due in the short term is covered."
+      },
+      "div_liq_ebitda": {
+        "name": "Net debt/EBITDA",
+        "help": "How many years of EBITDA would pay off the net debt."
+      },
+      "div_liq_ebit": {
+        "name": "Net debt/EBIT",
+        "help": "How many years of operating profit would pay off the net debt."
+      },
+      "div_liq_pl": {
+        "name": "Net debt/Equity",
+        "help": "Net debt divided by shareholders' equity."
+      },
+      "div_bruta_pl": {
+        "name": "Gross debt/Equity",
+        "help": "All financial debt divided by shareholders' equity."
+      },
+      "pl_ativos": {
+        "name": "Equity/Assets",
+        "help": "Share of assets financed with the company's own capital."
+      },
+      "passivos_ativos": {
+        "name": "Liabilities/Assets",
+        "help": "Share of assets financed with debt and other obligations."
+      },
+      "cagr_receitas_5a": {
+        "name": "Revenue CAGR (5 years)",
+        "help": "Average yearly revenue growth over the last 5 years."
+      },
+      "cagr_lucros_5a": {
+        "name": "Earnings CAGR (5 years)",
+        "help": "Average yearly earnings growth over the last 5 years."
+      },
+      "fii_dy_12m": {
+        "name": "Dividend yield (12 months)",
+        "help": "Distributions paid over the last 12 months divided by the current unit price."
+      },
+      "fii_p_vp": {
+        "name": "P/B",
+        "help": "Unit price divided by book value per unit. Below 1, the unit costs less than the equity it represents."
+      },
+      "fii_vp_cota": {
+        "name": "Book value per unit",
+        "help": "The fund's equity divided by the number of units."
+      },
+      "fii_valor_patrimonial": {
+        "name": "Fund equity",
+        "help": "Everything the fund owns, minus what it owes."
+      },
+      "fii_ultimo_rendimento": {
+        "name": "Last distribution",
+        "help": "The last amount distributed per unit."
+      },
+      "fii_liquidez_diaria": {
+        "name": "Daily liquidity",
+        "help": "How much is traded per day on the exchange, on average."
+      },
+      "fii_vacancia": {
+        "name": "Vacancy",
+        "help": "Share of the fund's properties without a tenant."
+      },
+      "fii_cotistas": {
+        "name": "Unitholders",
+        "help": "How many people and institutions hold units of the fund."
+      },
+      "fii_cotas_emitidas": { "name": "Units issued", "help": "How many units the fund has." }
+    }
+  },
+  "dividends": {
+    "title": "Dividends",
+    "loading": "Loading the dividends…",
+    "failed": "Couldn't load the dividends right now.",
+    "total12m": "Total paid over the last 12 months: {{value}} per share or unit",
+    "noTotal": "No dividends over the last 12 months.",
+    "none": "No dividends recorded for this asset in the period.",
+    "tableLabel": "Dividends per share or unit",
+    "kind": "Type",
+    "exDate": "Record date",
+    "paymentDate": "Payment",
+    "value": "Amount",
+    "kinds": {
+      "dividendo": "Dividend",
+      "jcp": "Interest on equity",
+      "rendimento": "Distribution",
+      "amortizacao": "Amortization"
+    },
+    "periodLabel": "Dividends period",
+    "periods": { "12m": "12 months", "5y": "5 years", "all": "All" },
+    "source": "Source: Investidor10 · collected on {{date}}",
+    "sourceOnly": "Source: Investidor10",
+    "notice": "Record date: the last day on which holders of the asset are entitled to the payment. Interest on equity is shown gross, before tax. Amortization returns part of the capital invested in the fund."
   },
   "catalog": {
     "title": "Asset catalog",

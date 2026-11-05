@@ -69,9 +69,23 @@ export interface PriceSummary {
   max: PriceExtreme;
 }
 
+/** Evento corporativo no gráfico (SPEC-042), pela B3. */
+export interface PriceEvent {
+  kind: 'desdobramento' | 'grupamento' | 'bonificacao';
+  /** Data com (AAAA-MM-DD): o preço muda no pregão seguinte. */
+  date: string;
+  /** Quantas ações passa a valer uma ("4", "0.1", "1.05"). */
+  multiplier: string;
+  source: 'b3';
+}
+
 /** Corpo de `GET /api/assets/:id/history`. */
 export interface PriceHistory {
   period: PriceHistoryPeriod;
+  /** SPEC-042: preços ajustados pelos eventos corporativos (padrão) ou como a B3 publicou. */
+  adjusted: boolean;
+  /** Eventos com data com dentro do período. */
+  events: PriceEvent[];
   /** Primeiro e último pregão mostrados; `null` sem cotação. */
   from: string | null;
   to: string | null;
@@ -86,17 +100,26 @@ export interface PriceHistory {
 
 export interface PriceHistoryQuery {
   period: PriceHistoryPeriod;
+  /** SPEC-042: `false` mostra os preços como a B3 publicou. */
+  adjusted: boolean;
 }
 
 const priceHistoryQuerySchema = z.object({
   period: z.enum(PRICE_HISTORY_PERIODS, { error: 'invalid_option' }).optional(),
+  adjusted: z.enum(['true', 'false'], { error: 'invalid_option' }).optional(),
 });
 
-/** Valida a query string do gráfico; sem `period`, 1 ano. */
+/** Valida a query string do gráfico; sem `period`, 1 ano; sem `adjusted`, ajustado. */
 export function validatePriceHistoryQuery(input: unknown): ValidationResult<PriceHistoryQuery> {
   const checked = validate(priceHistoryQuerySchema, input);
   if (!checked.success) return checked;
-  return { success: true, data: { period: checked.data.period ?? DEFAULT_PRICE_HISTORY_PERIOD } };
+  return {
+    success: true,
+    data: {
+      period: checked.data.period ?? DEFAULT_PRICE_HISTORY_PERIOD,
+      adjusted: checked.data.adjusted !== 'false',
+    },
+  };
 }
 
 export function isPriceHistoryPeriod(value: unknown): value is PriceHistoryPeriod {

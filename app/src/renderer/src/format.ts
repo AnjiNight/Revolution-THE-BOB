@@ -87,6 +87,45 @@ export function formatCompactMoney(value: string, language: string): string {
 }
 
 /** Quantidade no formato do idioma: "77.862", "77,862". */
+/** SPEC-042: provento por ação ou cota, com as casas que a fonte publica (até 8): "R$ 0,20250435". */
+export function formatDividend(value: string, language: string): string {
+  return new Intl.NumberFormat(language, {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 8,
+  }).format(Number(value));
+}
+
+/**
+ * SPEC-041: valor de um indicador pela unidade: múltiplo ("4,55"), percentual ("27,73%", o valor
+ * já vem em %), reais ou contagem. Valores grandes em reais ficam abreviados ("R$ 5,3 bi").
+ */
+export function formatIndicator(
+  value: string,
+  unit: 'multiple' | 'percent' | 'money' | 'count',
+  language: string,
+): string {
+  const number = Number(value);
+  if (unit === 'percent') {
+    return new Intl.NumberFormat(language, {
+      style: 'percent',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(number / 100);
+  }
+  if (unit === 'money') {
+    return Math.abs(number) >= 1_000_000
+      ? formatCompactMoney(value, language)
+      : formatMoney(value, language);
+  }
+  if (unit === 'count') return formatCount(number, language);
+  return new Intl.NumberFormat(language, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(number);
+}
+
 export function formatCount(value: number, language: string): string {
   return new Intl.NumberFormat(language).format(value);
 }

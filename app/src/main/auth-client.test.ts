@@ -649,7 +649,7 @@ describe('ficha do ativo (SPEC-010)', () => {
     expect(server.calls.at(-1)).toMatchObject({
       method: 'GET',
       path: assetPath(ASSET_PATHS.history, ASSET.id),
-      search: '?period=5y',
+      search: '?period=5y&adjusted=true',
       authorization: 'Bearer access-1',
     });
     await expect(client.assetDetail(NO_LOGO_ID)).resolves.toEqual({

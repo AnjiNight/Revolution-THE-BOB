@@ -4,7 +4,9 @@ import {
   AUTH_PATHS,
   CALENDAR_PATHS,
   calendarPath,
+  FUNDAMENTALS_PATHS,
   INDEX_PATHS,
+  isDividendPeriod,
   isPriceHistoryPeriod,
   parseCalendarYear,
   PROFILE_PATHS,
@@ -12,6 +14,8 @@ import {
   type AccountDeletionConfirmInput,
   type AccountDeletionRequestInput,
   type AssetDetail,
+  type AssetDividends,
+  type AssetFundamentals,
   type AssetSearchQuery,
   type AssetSearchResult,
   type AssetUpdateInput,
@@ -29,9 +33,12 @@ import {
   type ChangePasswordInput,
   type ConfirmEmailChangeInput,
   type ConsentList,
+  type DividendPeriod,
   type EmailConfirmationInput,
   type EmailConfirmationResendInput,
   type FieldErrors,
+  type FundamentalsErrorCode,
+  type Investidor10Status,
   type LoginInput,
   type NewAssetInput,
   type PasswordResetConfirmInput,
@@ -58,7 +65,9 @@ export interface AuthClientOptions {
   timeoutMs?: number;
 }
 
-const KNOWN_ERRORS: ReadonlyArray<AuthErrorCode | CalendarErrorCode | CatalogErrorCode> = [
+const KNOWN_ERRORS: ReadonlyArray<
+  AuthErrorCode | CalendarErrorCode | CatalogErrorCode | FundamentalsErrorCode
+> = [
   'validation_error',
   'email_in_use',
   'invalid_credentials',
@@ -83,6 +92,7 @@ const KNOWN_ERRORS: ReadonlyArray<AuthErrorCode | CalendarErrorCode | CatalogErr
   'calendar_not_published',
   'ticker_in_use',
   'asset_not_found',
+  'source_disabled',
 ];
 
 class RequestFailed extends Error {
@@ -323,16 +333,51 @@ export class AuthClient {
     );
   }
 
-  /** SPEC-010: fechamentos do período, com o resumo e os saltos. */
-  assetHistory(id: string, period: PriceHistoryPeriod): Promise<ClientResult<PriceHistory>> {
+  /**
+   * SPEC-010: fechamentos do período, com o resumo e os saltos. SPEC-042: ajustados pelos eventos
+   * corporativos, ou como a B3 publicou (`adjusted: false`).
+   */
+  assetHistory(
+    id: string,
+    period: PriceHistoryPeriod,
+    adjusted = true,
+  ): Promise<ClientResult<PriceHistory>> {
     return this.call(() => {
       // O período vem da interface: só um dos cinco entra na query string.
       if (!isPriceHistoryPeriod(period)) throw new RequestFailed('unexpected');
       return this.authorizedRequest<PriceHistory>(
         'GET',
-        `${assetUrl(ASSET_PATHS.history, id)}?period=${period}`,
+        `${assetUrl(ASSET_PATHS.history, id)}?period=${period}&adjusted=${adjusted === false ? 'false' : 'true'}`,
       );
     });
+  }
+
+  /** SPEC-041: indicadores do Investidor10 (com autorização, só neste projeto acadêmico). */
+  assetFundamentals(id: string): Promise<ClientResult<AssetFundamentals>> {
+    return this.call(() =>
+      this.authorizedRequest<AssetFundamentals>(
+        'GET',
+        assetUrl(FUNDAMENTALS_PATHS.fundamentals, id),
+      ),
+    );
+  }
+
+  /** SPEC-042: proventos do período (12 meses, 5 anos ou tudo). */
+  assetDividends(id: string, period: DividendPeriod): Promise<ClientResult<AssetDividends>> {
+    return this.call(() => {
+      if (!isDividendPeriod(period)) throw new RequestFailed('unexpected');
+      return this.authorizedRequest<AssetDividends>(
+        'GET',
+        `${assetUrl(FUNDAMENTALS_PATHS.dividends, id)}?period=${period}`,
+      );
+    });
+  }
+
+  /** Colaborador (SPEC-041): situação da coleta do Investidor10. */
+  investidor10Status(): Promise<ClientResult<Investidor10Status>> {
+    return this.call(() =>
+      this.authorizedRequest<Investidor10Status>('GET', FUNDAMENTALS_PATHS.collection),
+    );
   }
 
   /** Colaborador: todos os ativos que passam nos filtros, inclusive desativados. */

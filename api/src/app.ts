@@ -17,7 +17,9 @@ import { registerPasswordResetRoutes } from './modules/identity/controllers/pass
 import { registerProfileRoutes } from './modules/identity/controllers/profile-routes.js';
 import type { CalendarService } from './modules/market-data/application/calendar-service.js';
 import type { CdiStatusService } from './modules/market-data/application/cdi-status-service.js';
+import type { FundamentalsService } from './modules/market-data/application/fundamentals-service.js';
 import { registerCalendarRoutes } from './modules/market-data/controllers/calendar-routes.js';
+import { registerFundamentalsRoutes } from './modules/market-data/controllers/fundamentals-routes.js';
 import { registerIndexRoutes } from './modules/market-data/controllers/index-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { HttpError } from './shared/http/http-error.js';
@@ -38,6 +40,8 @@ export interface AppDependencies {
   catalog: AssetCatalogService;
   /** SPEC-007: situação da série do CDI. */
   cdi: CdiStatusService;
+  /** SPECs 041 e 042: indicadores e proventos (Investidor10). */
+  fundamentals: FundamentalsService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -81,6 +85,10 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
   registerCalendarRoutes(app, { calendar: deps.calendar, accessTokens: deps.accessTokens });
   registerAssetRoutes(app, { catalog: deps.catalog, accessTokens: deps.accessTokens });
   registerIndexRoutes(app, { cdi: deps.cdi, accessTokens: deps.accessTokens });
+  registerFundamentalsRoutes(app, {
+    fundamentals: deps.fundamentals,
+    accessTokens: deps.accessTokens,
+  });
 
   return app;
 }
