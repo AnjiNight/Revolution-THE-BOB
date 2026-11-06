@@ -83,6 +83,8 @@ model Carteira {
   usuario          Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   /// SPEC-013: aportes e retiradas (livro-razão do caixa).
   lancamentosCaixa LancamentoCaixa[]
+  /// SPEC-014: compras e vendas.
+  transacoes       Transacao[]
 
   @@unique([usuarioId, nomeChave])
   @@index([usuarioId, criadaEm])
@@ -110,6 +112,38 @@ model LancamentoCaixa {
 
   @@index([carteiraId, data, registradoEm])
   @@map("lancamento_caixa")
+}
+
+enum TipoTransacao {
+  compra
+  venda
+
+  @@map("tipo_transacao")
+}
+
+/// Compra ou venda (SPEC-014) no livro-razão da carteira (DA09): o banco recusa alteração (RB08,
+/// gatilho na migração). Quantidade inteira (RB27); o total é quantidade × preço; o dia é o do
+/// registro e o da cotação em Brasília (RB07).
+model Transacao {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carteiraId    String        @map("carteira_id") @db.Uuid
+  ativoId       String        @map("ativo_id") @db.Uuid
+  tipo          TipoTransacao
+  quantidade    Int
+  precoUnitario Decimal       @map("preco_unitario") @db.Decimal(15, 2)
+  valorTotal    Decimal       @map("valor_total") @db.Decimal(15, 2)
+  data          DateTime      @db.Date
+  registradoEm  DateTime      @map("registrado_em") @db.Timestamptz(3)
+  cotacaoEm     DateTime      @map("cotacao_em") @db.Timestamptz(3)
+  nivelCotacao  NivelCotacao  @map("nivel_cotacao")
+  fonteCotacao  FonteCotacao  @map("fonte_cotacao")
+
+  carteira Carteira @relation(fields: [carteiraId], references: [id], onDelete: Cascade)
+  ativo    Ativo    @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@index([carteiraId, data, registradoEm])
+  @@index([ativoId])
+  @@map("transacao")
 }
 
 /// Exclusão de uma carteira (OPEN-15), sem dado pessoal: nem nome, nem dono.
@@ -275,6 +309,8 @@ model Ativo {
   coleta          ColetaInvestidor10?
   proventos       Provento[]
   eventos         EventoCorporativo[]
+  /// SPEC-014: compras e vendas nas carteiras (o ativo não é apagado enquanto houver).
+  transacoes      Transacao[]
 
   @@index([classe, setor])
   @@map("ativo")

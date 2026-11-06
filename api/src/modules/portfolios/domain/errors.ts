@@ -34,6 +34,59 @@ export class InsufficientCashError extends DomainError {
   }
 }
 
+/** RB06: a venda passa da posição; `details.held` diz quanto há. */
+export class InsufficientPositionError extends DomainError {
+  readonly code = 'insufficient_position';
+  override readonly details: Readonly<Record<string, string>>;
+
+  constructor(held: number) {
+    super('posição insuficiente');
+    this.details = { held: String(held) };
+  }
+}
+
+/** Chegou uma cotação mais nova que a vista: nada é gravado (SPEC-014 §4.1, decisão 5). */
+export class QuoteChangedError extends DomainError {
+  readonly code = 'quote_changed';
+  override readonly details: Readonly<Record<string, string>>;
+
+  constructor(price: string, quotedAt: string) {
+    super('a cotação mudou');
+    this.details = { price, quotedAt };
+  }
+}
+
+/** RB11: hoje não tem pregão; `details.nextTradingDay`, se o calendário já disser. */
+export class MarketClosedError extends DomainError {
+  readonly code = 'market_closed';
+  override readonly details: Readonly<Record<string, string>> | undefined;
+
+  constructor(nextTradingDay: string | null) {
+    super('bolsa fechada');
+    this.details = nextTradingDay ? { nextTradingDay } : undefined;
+  }
+}
+
+/** RB07: ainda não chegou cotação do pregão de hoje para o ativo. */
+export class NoQuoteTodayError extends DomainError {
+  readonly code = 'no_quote_today';
+}
+
+/** Ativo desativado não pode ser comprado (SPEC-014 §4.2); a venda continua. */
+export class AssetInactiveError extends DomainError {
+  readonly code = 'asset_inactive';
+}
+
+/** A compra e venda na carteira histórica chega com a SPEC-016. */
+export class HistoricalPortfolioError extends DomainError {
+  readonly code = 'historical_portfolio';
+}
+
+/** O ativo pedido não está no catálogo. */
+export class TradeAssetNotFoundError extends DomainError {
+  readonly code = 'asset_not_found';
+}
+
 /** Entrada que a regra do servidor recusa (data de início no futuro ou fora de pregão). */
 export class PortfolioValidationError extends DomainError {
   readonly code = 'validation_error';

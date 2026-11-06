@@ -13,6 +13,7 @@ import { ForgotPasswordForm } from './components/ForgotPasswordForm';
 import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
 import { PortfolioPage, Portfolios } from './components/Portfolios';
+import type { TradeAsset } from './components/TradeForm';
 import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
 import { TradingCalendar } from './components/TradingCalendar';
@@ -33,10 +34,22 @@ type View =
   | { kind: 'home'; user: PublicUser }
   | { kind: 'profile'; user: PublicUser }
   | { kind: 'calendar'; user: PublicUser; year?: number }
-  /** `assetId`: a ficha do ativo aberta por cima da lista (SPEC-010). */
-  | { kind: 'assets'; user: PublicUser; assetId?: string }
-  /** SPEC-012: `portfolioId` abre a carteira; `creating` abre já com o formulário de nova. */
-  | { kind: 'portfolios'; user: PublicUser; portfolioId?: string; creating?: boolean };
+  /**
+   * `assetId`: a ficha do ativo aberta por cima da lista (SPEC-010). `returnTo`: a ficha foi aberta
+   * por uma carteira (SPEC-014), e o Voltar leva de volta a ela.
+   */
+  | { kind: 'assets'; user: PublicUser; assetId?: string; returnTo?: string }
+  /**
+   * SPEC-012: `portfolioId` abre a carteira; `creating` abre já com o formulário de nova. SPEC-014:
+   * `buyAsset` abre a carteira já comprando o ativo escolhido na ficha.
+   */
+  | {
+      kind: 'portfolios';
+      user: PublicUser;
+      portfolioId?: string;
+      creating?: boolean;
+      buyAsset?: TradeAsset;
+    };
 
 /**
  * Fluxo de telas da SPEC-002 (§5.3), da SPEC-003 (Meu perfil), da SPEC-004 (recuperar senha), da
@@ -123,7 +136,16 @@ export function App() {
             <PortfolioPage
               key={view.portfolioId}
               portfolioId={view.portfolioId}
+              buyAsset={view.buyAsset ?? null}
               onBack={() => setView({ kind: 'portfolios', user })}
+              onOpenAsset={(assetId) =>
+                setView({
+                  kind: 'assets',
+                  user,
+                  assetId,
+                  ...(view.portfolioId ? { returnTo: view.portfolioId } : {}),
+                })
+              }
               onSessionExpired={sessionExpired}
             />
           ) : (
@@ -155,7 +177,20 @@ export function App() {
               <AssetDetailPage
                 key={view.assetId}
                 assetId={view.assetId}
-                onBack={() => setView({ kind: 'assets', user })}
+                onBack={() =>
+                  setView(
+                    view.returnTo
+                      ? { kind: 'portfolios', user, portfolioId: view.returnTo }
+                      : { kind: 'assets', user },
+                  )
+                }
+                // SPEC-014: só a conta de usuário compra; abre a carteira escolhida já comprando.
+                {...(user.role === 'user'
+                  ? {
+                      onBuy: (portfolioId: string, asset: TradeAsset) =>
+                        setView({ kind: 'portfolios', user, portfolioId, buyAsset: asset }),
+                    }
+                  : {})}
                 onSessionExpired={sessionExpired}
               />
             )}

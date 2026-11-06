@@ -6,6 +6,9 @@ import type {
   CalendarSuggestion,
   CashEntryResult,
   CashStatement,
+  PortfolioPositions,
+  TradeQuote,
+  TradeResult,
   CatalogAsset,
   CatalogListResult,
   CdiStatus,
@@ -37,6 +40,7 @@ import type {
   NewAssetInput,
   NewCashEntryInput,
   NewPortfolioInput,
+  NewTradeInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   RegisterInput,
@@ -104,6 +108,12 @@ export interface DesktopApi {
     cash(id: string, offset?: number): Promise<ClientResult<CashStatement>>;
     /** SPEC-013: aporte ou retirada; `insufficient_cash` traz `details.available`. */
     addCash(id: string, input: NewCashEntryInput): Promise<ClientResult<CashEntryResult>>;
+    /** SPEC-014: posições, com o caixa e o total. */
+    positions(id: string): Promise<ClientResult<PortfolioPositions>>;
+    /** SPEC-014: o preço que a negociação usaria agora, ou o motivo de não dar. */
+    tradeQuote(id: string, assetId: string): Promise<ClientResult<TradeQuote>>;
+    /** SPEC-014: compra ou venda; os erros trazem o detalhe em details. */
+    trade(id: string, input: NewTradeInput): Promise<ClientResult<TradeResult>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

@@ -203,7 +203,8 @@
     "above_max": "The maximum per entry is R$10,000,000.00.",
     "not_allowed": "In a live portfolio, the date is always now.",
     "before_start": "Choose a day on or after the portfolio's start.",
-    "before_last_entry": "Choose the day of the last entry or later: a historical portfolio's entries follow date order."
+    "before_last_entry": "Choose the day of the last entry or later: a historical portfolio's entries follow date order.",
+    "invalid_quantity": "Enter a whole quantity, 1 or more."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -238,7 +239,13 @@
     "portfolio_not_found": "This portfolio no longer exists.",
     "portfolio_name_in_use": "You already have a portfolio with this name.",
     "portfolio_limit_reached": "You already have the maximum of 20 portfolios. Delete one to create another.",
-    "insufficient_cash": "Not enough cash."
+    "insufficient_cash": "Not enough cash.",
+    "insufficient_position": "You don't hold that quantity of the asset.",
+    "quote_changed": "The quote changed. Check the new price.",
+    "market_closed": "The exchange is closed today.",
+    "no_quote_today": "This asset doesn't have a quote today yet.",
+    "asset_inactive": "This asset was deactivated and can't be bought.",
+    "historical_portfolio": "Buying and selling in a historical portfolio comes in a later version."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -551,7 +558,12 @@
         "bonificacao": "{{date}}: stock bonus, 1 share became {{multiplier}}"
       },
       "eventsSource": "Source: B3. The date is the record date: the price changes on the next session."
-    }
+    },
+    "buy": "Buy",
+    "buyTitle": "Buy in which portfolio?",
+    "buyLoading": "Loading the portfolios…",
+    "noLivePortfolio": "Create a live portfolio to buy.",
+    "buyCancel": "Cancel"
   },
   "portfolios": {
     "title": "Portfolios",
@@ -632,11 +644,85 @@
       },
       "types": {
         "deposit": "Deposit",
-        "withdrawal": "Withdrawal"
+        "withdrawal": "Withdrawal",
+        "buy": "Purchase",
+        "sell": "Sale"
       },
       "showMore": "Show more",
       "count_one": "{{shown}} of {{count}} entry",
-      "count_other": "{{shown}} of {{count}} entries"
+      "count_other": "{{shown}} of {{count}} entries",
+      "tradeDetail": "{{quantity}} {{ticker}} at {{price}}"
+    },
+    "positions": {
+      "title": "Positions",
+      "loading": "Loading the positions…",
+      "buy": "Buy",
+      "sell": "Sell",
+      "sellLabel": "Sell {{ticker}}",
+      "empty": "No assets in this portfolio yet. Use Buy to start.",
+      "totals": {
+        "cash": "Cash",
+        "positions": "In assets",
+        "total": "Total"
+      },
+      "columns": {
+        "asset": "Asset",
+        "quantity": "Quantity",
+        "averagePrice": "Average price",
+        "lastPrice": "Last price",
+        "marketValue": "Current value",
+        "change": "Change",
+        "actions": "Actions"
+      },
+      "closeOf": "Close of {{date}}",
+      "noPrice": "No price",
+      "changeNote": "Change over the average price, without trading costs or dividends.",
+      "dividendsNote": "Dividends and splits don't enter this portfolio yet.",
+      "historical": "Buying and selling in a historical portfolio comes in a later version.",
+      "bought": "Purchase saved: {{quantity}} {{ticker}}.",
+      "sold": "Sale saved: {{quantity}} {{ticker}}.",
+      "at": "at {{time}}",
+      "priceNote": "Last price: the trading-session quote, delayed up to {{delay}} minutes; without it, the last close."
+    },
+    "trade": {
+      "buyTitle": "Buy",
+      "sellTitle": "Sell {{ticker}}",
+      "asset": "Asset",
+      "assetHint": "Type the ticker or the name, like PETR4 or Petrobras.",
+      "searching": "Searching…",
+      "noResults": "No asset found.",
+      "changeAsset": "Change asset",
+      "loadingQuote": "Getting the quote…",
+      "marketClosed": "The exchange is closed. Buying and selling resume on the next trading day, {{date}}.",
+      "marketClosedNoDate": "The exchange is closed. Buying and selling resume on the next trading day.",
+      "noQuoteToday": "Today's first quote arrives around 10:30 a.m. (Brasília time).",
+      "assetInactive": "This asset was deactivated: you can only sell what you already hold.",
+      "quantity": "Quantity",
+      "quantityHint": "Shares and FII units only in whole numbers, up to 1,000,000.",
+      "quantityMax": "At most 1,000,000 per trade.",
+      "max": "Maximum",
+      "all": "All",
+      "held": "You hold {{quantity}}.",
+      "byValue": "Calculate by amount",
+      "byValueAmount": "How much you want to invest",
+      "fits": "{{quantity}} fit ({{total}}); {{rest}} left over.",
+      "fitsNone": "That amount doesn't buy a single unit.",
+      "useQuantity": "Use {{quantity}}",
+      "total": "Total",
+      "cashAfter": "Cash after",
+      "costs": "Brokerage, B3 fees and custody fees aren't part of the simulation.",
+      "review": "Review",
+      "cancel": "Cancel",
+      "back": "Back",
+      "confirmBuy": "Buy {{quantity}} {{ticker}} at {{price}} (quote from {{time}}) for {{total}}? Cash will be {{cash}}.",
+      "confirmSell": "Sell {{quantity}} {{ticker}} at {{price}} (quote from {{time}}) for {{total}}? Cash will be {{cash}}.",
+      "immutable": "Entries can't be changed or deleted; a mistake is fixed with a reversal.",
+      "confirmBuyButton": "Confirm purchase",
+      "confirmSellButton": "Confirm sale",
+      "saving": "Saving…",
+      "quoteChanged": "The quote changed to {{price}} (from {{time}}). Confirm with the new price?",
+      "insufficientCash": "Not enough cash: there is {{available}} available.",
+      "insufficientPosition": "You only hold {{held}} of this asset."
     }
   },
   "fundamentals": {

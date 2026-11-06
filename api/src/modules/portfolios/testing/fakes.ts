@@ -1,46 +1,53 @@
 import { randomUUID } from 'node:crypto';
 import type {
-  CashEntryRepository,
+  LedgerRepository,
+  MarketAsset,
+  MarketQuote,
   NewStoredCashEntry,
   NewStoredPortfolio,
+  NewStoredTrade,
+  PortfolioLedger,
+  PortfolioMarket,
   PortfolioRepository,
   StoredCashEntry,
   StoredPortfolio,
+  StoredTrade,
 } from '../application/ports.js';
 import { PortfolioNameInUseError } from '../domain/errors.js';
 
 /**
- * Livro-razão do caixa em memória (SPEC-013). A trava é uma fila por carteira: cada `appendLocked`
- * espera o anterior da mesma carteira terminar, como o SELECT … FOR UPDATE do PostgreSQL.
+ * Livro-razão da carteira em memória (SPECs 013 e 014). A trava é uma fila por carteira: cada
+ * inclusão espera a anterior da mesma carteira terminar, como o SELECT … FOR UPDATE do PostgreSQL.
  */
-export class InMemoryCashEntryRepository implements CashEntryRepository {
+export class InMemoryLedgerRepository implements LedgerRepository {
   readonly entries: StoredCashEntry[] = [];
+  readonly trades: StoredTrade[] = [];
   private readonly locks = new Map<string, Promise<unknown>>();
 
-  listByPortfolio(portfolioId: string): Promise<StoredCashEntry[]> {
+  ledger(portfolioId: string): Promise<PortfolioLedger> {
     return Promise.resolve(this.of(portfolioId));
   }
 
-  listByPortfolios(portfolioIds: readonly string[]): Promise<Map<string, StoredCashEntry[]>> {
+  ledgers(portfolioIds: readonly string[]): Promise<Map<string, PortfolioLedger>> {
     return Promise.resolve(new Map(portfolioIds.map((id) => [id, this.of(id)])));
   }
 
-  appendLocked(
+  appendCashLocked(
     portfolioId: string,
-    decide: (current: StoredCashEntry[]) => NewStoredCashEntry,
+    decide: (current: PortfolioLedger) => NewStoredCashEntry,
   ): Promise<StoredCashEntry> {
-    const previous = this.locks.get(portfolioId) ?? Promise.resolve();
-    const next = previous.then(async () => {
-      // Um ciclo de espera entre ler e gravar: sem a fila, dois pedidos leriam o mesmo saldo.
-      const current = this.of(portfolioId);
-      await new Promise((resolve) => setImmediate(resolve));
-      return this.add(portfolioId, decide(current));
+    return this.locked(portfolioId, (current) => this.add(portfolioId, decide(current)));
+  }
+
+  appendTradeLocked(
+    portfolioId: string,
+    decide: (current: PortfolioLedger) => NewStoredTrade,
+  ): Promise<StoredTrade> {
+    return this.locked(portfolioId, (current) => {
+      const stored = { id: randomUUID(), portfolioId, ...decide(current) };
+      this.trades.push(stored);
+      return { ...stored };
     });
-    this.locks.set(
-      portfolioId,
-      next.catch(() => undefined),
-    );
-    return next;
   }
 
   /** A carteira nova grava o aporte inicial por aqui (mesma "transação" do repositório). */
@@ -50,18 +57,66 @@ export class InMemoryCashEntryRepository implements CashEntryRepository {
     return { ...stored };
   }
 
+  /** Apaga os lançamentos da carteira e diz quantos eram (caixa e negociações). */
   removePortfolio(portfolioId: string): number {
-    const before = this.entries.length;
-    for (let i = this.entries.length - 1; i >= 0; i -= 1) {
-      if (this.entries[i]?.portfolioId === portfolioId) this.entries.splice(i, 1);
+    let removed = 0;
+    for (const list of [this.entries, this.trades] as Array<Array<{ portfolioId: string }>>) {
+      for (let i = list.length - 1; i >= 0; i -= 1) {
+        if (list[i]?.portfolioId === portfolioId) {
+          list.splice(i, 1);
+          removed += 1;
+        }
+      }
     }
-    return before - this.entries.length;
+    return removed;
   }
 
-  private of(portfolioId: string): StoredCashEntry[] {
-    return this.entries
-      .filter((entry) => entry.portfolioId === portfolioId)
-      .map((entry) => ({ ...entry }));
+  private locked<T>(portfolioId: string, write: (current: PortfolioLedger) => T): Promise<T> {
+    const previous = this.locks.get(portfolioId) ?? Promise.resolve();
+    const next = previous.then(async () => {
+      // Um ciclo de espera entre ler e gravar: sem a fila, dois pedidos leriam o mesmo saldo.
+      const current = this.of(portfolioId);
+      await new Promise((resolve) => setImmediate(resolve));
+      return write(current);
+    });
+    this.locks.set(
+      portfolioId,
+      next.catch(() => undefined),
+    );
+    return next;
+  }
+
+  private of(portfolioId: string): PortfolioLedger {
+    return {
+      cash: this.entries
+        .filter((entry) => entry.portfolioId === portfolioId)
+        .map((entry) => ({ ...entry })),
+      trades: this.trades
+        .filter((trade) => trade.portfolioId === portfolioId)
+        .map((trade) => ({ ...trade })),
+    };
+  }
+}
+
+/**
+ * Catálogo e cotações em memória para a carteira (SPEC-014): os testes põem os ativos, a última
+ * cotação do pregão e o último fechamento de cada um.
+ */
+export class FakePortfolioMarket implements PortfolioMarket {
+  readonly assets = new Map<string, MarketAsset>();
+  readonly quotes = new Map<string, MarketQuote>();
+  readonly closes = new Map<string, { date: string; close: string }>();
+
+  asset(assetId: string): Promise<MarketAsset | null> {
+    return Promise.resolve(this.assets.get(assetId) ?? null);
+  }
+
+  latestQuote(assetId: string): Promise<MarketQuote | null> {
+    return Promise.resolve(this.quotes.get(assetId) ?? null);
+  }
+
+  lastClose(assetId: string): Promise<{ date: string; close: string } | null> {
+    return Promise.resolve(this.closes.get(assetId) ?? null);
   }
 }
 
@@ -70,8 +125,8 @@ export class InMemoryPortfolioRepository implements PortfolioRepository {
   readonly portfolios = new Map<string, StoredPortfolio & { nameKey: string }>();
   readonly deletions: Array<{ portfolioId: string; type: string; entries: number; at: Date }> = [];
 
-  /** SPEC-013: o caixa das carteiras, para o aporte inicial e a contagem na exclusão. */
-  constructor(readonly cash = new InMemoryCashEntryRepository()) {}
+  /** SPECs 013 e 014: o livro das carteiras, para o aporte inicial e a contagem na exclusão. */
+  constructor(readonly ledger = new InMemoryLedgerRepository()) {}
 
   listByUser(userId: string): Promise<StoredPortfolio[]> {
     return Promise.resolve(
@@ -110,7 +165,7 @@ export class InMemoryPortfolioRepository implements PortfolioRepository {
       updatedAt: portfolio.at,
     };
     this.portfolios.set(stored.id, stored);
-    if (portfolio.initialDeposit) this.cash.add(stored.id, portfolio.initialDeposit);
+    if (portfolio.initialDeposit) this.ledger.add(stored.id, portfolio.initialDeposit);
     const { nameKey: _key, ...result } = stored;
     return Promise.resolve({ ...result });
   }
@@ -131,7 +186,7 @@ export class InMemoryPortfolioRepository implements PortfolioRepository {
     const current = this.portfolios.get(id);
     if (current) {
       this.portfolios.delete(id);
-      const entries = this.cash.removePortfolio(id);
+      const entries = this.ledger.removePortfolio(id);
       this.deletions.push({ portfolioId: id, type: current.type, entries, at });
     }
     return Promise.resolve();

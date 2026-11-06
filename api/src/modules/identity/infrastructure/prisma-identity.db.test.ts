@@ -13,9 +13,11 @@ import { CdiStatusService } from '../../market-data/application/cdi-status-servi
 import { FundamentalsService } from '../../market-data/application/fundamentals-service.js';
 import { PortfolioService } from '../../portfolios/application/portfolio-service.js';
 import {
-  InMemoryCashEntryRepository,
+  FakePortfolioMarket,
+  InMemoryLedgerRepository,
   InMemoryPortfolioRepository,
 } from '../../portfolios/testing/fakes.js';
+import { TradingService } from '../../portfolios/application/trading-service.js';
 import {
   InMemoryCalendarRepository,
   InMemoryFundamentals,
@@ -137,8 +139,15 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       }),
       portfolios: new PortfolioService({
         portfolios: new InMemoryPortfolioRepository(),
-        cash: new InMemoryCashEntryRepository(),
+        ledger: new InMemoryLedgerRepository(),
         calendar: new CalendarService({ calendars: new InMemoryCalendarRepository() }),
+        market: new FakePortfolioMarket(),
+      }),
+      trading: new TradingService({
+        portfolios: new InMemoryPortfolioRepository(),
+        ledger: new InMemoryLedgerRepository(),
+        calendar: new CalendarService({ calendars: new InMemoryCalendarRepository() }),
+        market: new FakePortfolioMarket(),
       }),
     });
     return { app, mailer, background };

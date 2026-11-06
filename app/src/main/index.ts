@@ -17,6 +17,7 @@ import type {
   NewAssetInput,
   NewCashEntryInput,
   NewPortfolioInput,
+  NewTradeInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   PriceHistoryPeriod,
@@ -212,6 +213,14 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(PORTFOLIO_CHANNELS.addCash, (_event, id: string, input: NewCashEntryInput) =>
     auth.addCashEntry(id, input),
+  );
+  // Compra e venda (SPEC-014): o servidor confere bolsa, cotação, caixa e posição.
+  ipcMain.handle(PORTFOLIO_CHANNELS.positions, (_event, id: string) => auth.portfolioPositions(id));
+  ipcMain.handle(PORTFOLIO_CHANNELS.tradeQuote, (_event, id: string, assetId: string) =>
+    auth.tradeQuote(id, assetId),
+  );
+  ipcMain.handle(PORTFOLIO_CHANNELS.trade, (_event, id: string, input: NewTradeInput) =>
+    auth.trade(id, input),
   );
 
   // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.

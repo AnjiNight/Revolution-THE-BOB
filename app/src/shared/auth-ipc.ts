@@ -19,6 +19,7 @@ import type {
   NewAssetInput,
   NewCashEntryInput,
   NewPortfolioInput,
+  NewTradeInput,
   PortfolioErrorCode,
   RenamePortfolioInput,
   PasswordResetConfirmInput,
@@ -102,6 +103,10 @@ export const PORTFOLIO_CHANNELS = {
   // SPEC-013: saldo e extrato; aporte ou retirada.
   cash: 'portfolios:cash',
   addCash: 'portfolios:add-cash',
+  // SPEC-014: posições, cotação para negociar e a compra ou venda.
+  positions: 'portfolios:positions',
+  tradeQuote: 'portfolios:trade-quote',
+  trade: 'portfolios:trade',
 } as const;
 
 /** Erros que a interface sabe traduzir. */
@@ -144,6 +149,7 @@ export type {
   NewAssetInput,
   NewCashEntryInput,
   NewPortfolioInput,
+  NewTradeInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   RegisterInput,

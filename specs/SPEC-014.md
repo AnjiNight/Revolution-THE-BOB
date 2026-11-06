@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Escrita em 05/11/2026. As decisões do §4.1 são **recomendações** e aguardam a resposta do Luís; o resto aguarda a aprovação. Implementar só depois da SPEC-013 pronta e revisada |
+| Status | ✅ Escrita em 05/11/2026; as recomendações do §4.1 foram aceitas pelo Luís, a Spec aprovada por ele em 06/11/2026 e implementada (§9) |
 | Fase | 3 — Núcleo da carteira ([mapa de specs](mapa_specs.md)), depois da SPEC-013 |
 | Prioridade | *Must* (RF12, RF14) |
 | Depende de | [SPEC-009](SPEC-009.md) (cotações do pregão), [SPEC-013](SPEC-013.md) (caixa e extrato), [SPEC-005](SPEC-005.md) (calendário), [SPEC-010](SPEC-010.md) (ficha do ativo) |
@@ -53,7 +53,7 @@ Na **carteira ao vivo**, o usuário passa a **comprar e vender** ações e FIIs 
 
 ## 4. Decisões
 
-### 4.1 Recomendações (aguardam a resposta do Luís)
+### 4.1 Respondidas pelo Luís em 06/11/2026 (as recomendações)
 
 | # | Tema | Recomendação | Motivo |
 |---|---|---|---|
@@ -162,9 +162,43 @@ Português e inglês; tudo pelo teclado, com o foco no primeiro campo ao abrir o
 
 | ID | Situação |
 |---|---|
-| OPEN-08 | ⏳ Recomendação 1 (§4.1): só em dia de pregão, com cotação do próprio dia |
-| OPEN-12 | ⏳ Recomendação 2: quantidade inteira, sem lote (RB27) |
-| OPEN-24 | ⏳ Recomendação 3: quantidade na API, "Calcular por valor" na tela; percentual na SPEC-016 |
-| OPEN-06 | ⏳ Recomendação 4: tratamento na carteira na nova SPEC-043, para os dois tipos |
+| OPEN-08 | ✅ Decisão 1 (§4.1): só em dia de pregão, com cotação do próprio dia |
+| OPEN-12 | ✅ Decisão 2: quantidade inteira, sem lote (RB27) |
+| OPEN-24 | ✅ Decisão 3: quantidade na API, "Calcular por valor" na tela; percentual na SPEC-016 |
+| OPEN-06 | ✅ Decisão 4: o tratamento na carteira vai para a nova SPEC-043, para os dois tipos |
 | OPEN-09 | ✅ RB07 já reescrita na SPEC-012; aqui ganha "do próprio dia" |
 | OPEN-43 | ⏳ O diagrama de casos de uso continua sem a carteira histórica e o aporte |
+
+## 9. Verificação (06/11/2026)
+
+**Ajustes da implementação:**
+
+| Tema | Ajuste |
+|---|---|
+| Ativo desativado na cotação | Em vez de um motivo de bloqueio, a `trade-quote` traz `buyable: false`: a venda continua possível (§4.2), e a tela de compra mostra "Este ativo foi desativado: só dá para vender o que você já tem". A `trade-quote` sempre traz também `cash` e `held`, para a tela calcular **Máximo** e **Tudo** |
+| Detalhes dos erros | No campo `details` criado na SPEC-013: `insufficient_position` traz `held`; `quote_changed`, `price` e `quotedAt`; `market_closed`, `nextTradingDay` (quando o calendário do próximo ano já está publicado) |
+| Nível da cotação | Na API, `free` ou `subscriber`; no banco, o mesmo `nivel_cotacao` da SPEC-009 (`gratuito`, `assinante`) |
+| Horário da cotação | É o horário da coleta (a lista da brapi não traz o de cada preço, SPEC-040). Por isso, no app de verdade, comprar e vender pede o **processador ligado** no pregão: a primeira coleta do dia é por volta das 10h30 |
+| Posições | O fechamento usado quando não há cotação do pregão vem com `lastPriceDate`; `positionsValue` soma só as posições com preço. O ticker abre a ficha do ativo, e o **Voltar** da ficha leva de volta à carteira |
+| Tela | Na tabela, o horário do último preço é curto ("às 14:30") e o atraso vai na nota abaixo dela. Abaixo de 860 px as posições viram cartões (são 7 colunas). Depois de uma venda que zera a posição, o foco vai para **Comprar**. A pedido do Luís (06/11/2026), a busca do ativo e o ativo escolhido mostram o logo da empresa (SPEC-040) à esquerda do ticker |
+| Extrato | Compra e venda aparecem com o detalhe "100 PETR4 a R$ 31,20" embaixo do tipo |
+| Onde fica | A porta `PortfolioMarket` é ligada por `api/src/portfolio-market.ts`, na raiz da composição, como o `main.ts`: os módulos continuam sem se conhecer |
+
+| Critério | Resultado |
+|---|---|
+| CA01 | ✅ `positions.test.ts`: os exemplos do §4.3 (31,20 → 31,50 → venda sem mudar o preço médio), a dízima (10,006667 na conta, 10,01 na tela), a posição zerada que recomeça, a ordem do livro e venda maior que a posição como erro |
+| CA02 | ✅ Caixa com compras e vendas (`positions.test.ts` e rotas); extrato com compra e venda, ticker, quantidade, preço e o saldo depois |
+| CA03 | ✅ `insufficient_cash` com o disponível; ativo desativado: `asset_inactive` na compra e a venda aceita; quantidade 0, −1, 2,5, 1.000.001, "10" e vazia recusadas; carteira histórica: `historical_portfolio` |
+| CA04 | ✅ `insufficient_position` com a quantidade; o preço médio não muda na venda |
+| CA05 | ✅ Sábado e Consciência Negra: `market_closed` com o próximo pregão; sexta às 9h com a cotação de quinta: `no_quote_today`; sexta às 21h (já sábado em UTC): aceita com a cotação das 18h30 e o dia de sexta; 2028 sem calendário: `calendar_not_published` |
+| CA06 | ✅ Preço arredondado a 2 casas; a negociação guarda preço, total, horário e nível da cotação; cotação nova entre ver e confirmar: `quote_changed` com o preço novo e nada gravado |
+| CA07 | ✅ Duas compras de R$ 3.120,00 ao mesmo tempo com R$ 5.000,00: uma passa e a outra é recusada (em memória e no PostgreSQL) |
+| CA08 | ✅ Sem rota de alteração; o gatilho recusa; excluir a carteira apaga as negociações e o registro conta caixa + negociações; excluir a conta também leva; o ativo com negociação não pode ser apagado |
+| CA09 | ✅ Posições com quantidade, preço médio, último preço com horário (ou fechamento com a data, ou sem preço), valor atual e variação; totais; carteira de outro: 404 com o aviso no log; colaborador: 403; sem sessão: 401 |
+| CA10 | ✅ Exportação na versão 4, com `trades` em cada carteira |
+| CA11 | ✅ Conferido na pré-visualização (dados simulados): comprar pela busca e pela ficha do ativo, "Calcular por valor" (R$ 1.000,00 a R$ 50,71: cabem 19, R$ 963,49, sobram R$ 36,51) e **Usar 19**, **Máximo**, vender com **Tudo**, confirmação, cotação mudou (com o foco de volta no Confirmar), bolsa fechada com a data do próximo pregão, aviso de custos e de proventos, carteira histórica sem compra; português e inglês; 480 e 800 px sem rolagem lateral. ⏳ Conferir no Electron com o processador ligado no pregão |
+| CA12 | ✅ Requisitos 1.10 (RB07 e RB27) e TRANSACAO no modelo de domínio; migração `20261106180000_transacoes` sem diferença para o esquema do Prisma, desfeita e refeita no banco de teste; aplicada no banco de desenvolvimento |
+
+Total: **836 testes** passando (com o banco real), lint, tipos e formatação.
+
+**Para as próximas Specs:** a SPEC-015 (estorno) lança o contrário de uma negociação ou de um lançamento de caixa no mesmo livro; a SPEC-016 usa a mesma tabela para a compra e venda na histórica (sem horário de cotação); a SPEC-043 credita proventos e corrige a quantidade.

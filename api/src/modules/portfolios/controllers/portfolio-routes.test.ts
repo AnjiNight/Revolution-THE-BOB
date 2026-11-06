@@ -213,12 +213,14 @@ describe('rotas das carteiras (SPEC-012)', () => {
     ]);
   });
 
-  it('exportação: seção portfolios (CA07); a SPEC-013 subiu a versão para 3', async () => {
+  it('exportação: seção portfolios (CA07); as SPECs 013 e 014 subiram a versão para 4', async () => {
     await create({ name: 'Dividendos', type: 'live' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 3,
-      portfolios: [{ name: 'Dividendos', type: 'live', startDate: '2026-11-05', cashEntries: [] }],
+      version: 4,
+      portfolios: [
+        { name: 'Dividendos', type: 'live', startDate: '2026-11-05', cashEntries: [], trades: [] },
+      ],
     });
   });
 });
@@ -429,7 +431,7 @@ describe('caixa das carteiras (SPEC-013)', () => {
     expect(t.portfolioRepo.deletions).toEqual([
       { portfolioId: id, type: 'live', entries: 2, at: now },
     ]);
-    expect(t.portfolioRepo.cash.entries).toHaveLength(0);
+    expect(t.portfolioRepo.ledger.entries).toHaveLength(0);
   });
 
   it('exportação com os lançamentos de cada carteira, na ordem do livro (CA09)', async () => {
@@ -439,7 +441,7 @@ describe('caixa das carteiras (SPEC-013)', () => {
     await add(id, { type: 'withdrawal', amount: '100', date: '2019-04-01' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 3,
+      version: 4,
       portfolios: [
         {
           id,

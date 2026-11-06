@@ -11,7 +11,7 @@ import type {
   StoredPortfolio,
 } from '../application/ports.js';
 import { PortfolioNameInUseError } from '../domain/errors.js';
-import { cashEntryData, lockPortfolio } from './prisma-cash-entry-repository.js';
+import { cashEntryData, lockPortfolio } from './prisma-ledger-repository.js';
 
 const TYPE_TO_TIPO: Record<PortfolioType, TipoCarteira> = {
   live: 'ao_vivo',
@@ -103,7 +103,12 @@ export class PrismaPortfolioRepository implements PortfolioRepository {
   async delete(id: string, at: Date): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await lockPortfolio(tx, id);
-      const entries = await tx.lancamentoCaixa.count({ where: { carteiraId: id } });
+      // SPEC-014: as compras e vendas também são lançamentos.
+      const [cash, trades] = await Promise.all([
+        tx.lancamentoCaixa.count({ where: { carteiraId: id } }),
+        tx.transacao.count({ where: { carteiraId: id } }),
+      ]);
+      const entries = cash + trades;
       const row = await tx.carteira.delete({ where: { id } });
       await tx.exclusaoCarteira.create({
         data: { carteiraId: row.id, tipo: row.tipo, lancamentos: entries, excluidaEm: at },

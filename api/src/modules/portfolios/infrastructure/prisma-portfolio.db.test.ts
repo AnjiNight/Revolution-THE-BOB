@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
 import { PrismaUserRepository } from '../../identity/infrastructure/prisma-user-repository.js';
 import { PortfolioNameInUseError, PortfolioNotFoundError } from '../domain/errors.js';
-import { PrismaCashEntryRepository } from './prisma-cash-entry-repository.js';
+import { PrismaLedgerRepository } from './prisma-ledger-repository.js';
 import { PrismaPortfolioRepository } from './prisma-portfolio-repository.js';
 
 /**
@@ -16,7 +16,7 @@ const url = process.env.TEST_DATABASE_URL;
 describe.skipIf(!url)('carteiras no PostgreSQL', () => {
   let prisma: PrismaClient;
   let portfolios: PrismaPortfolioRepository;
-  let cash: PrismaCashEntryRepository;
+  let ledger: PrismaLedgerRepository;
   let users: PrismaUserRepository;
   let userId: string;
   const at = new Date('2026-11-05T15:00:00Z');
@@ -24,7 +24,7 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
   beforeAll(() => {
     prisma = createPrismaClient(url as string);
     portfolios = new PrismaPortfolioRepository(prisma);
-    cash = new PrismaCashEntryRepository(prisma);
+    ledger = new PrismaLedgerRepository(prisma);
     users = new PrismaUserRepository(prisma);
   });
 
@@ -126,7 +126,7 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
     const created = await portfolios.create(
       newPortfolio('Dividendos', { initialDeposit: deposit('5000.10', '2019-01-02') }),
     );
-    const added = await cash.appendLocked(created.id, () => deposit('0.01'));
+    const added = await ledger.appendCashLocked(created.id, () => deposit('0.01'));
     expect(added).toEqual({
       id: expect.any(String),
       portfolioId: created.id,
@@ -135,12 +135,12 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
       date: '2019-03-15',
       recordedAt: at,
     });
-    expect((await cash.listByPortfolio(created.id)).map((e) => [e.amount, e.date])).toEqual([
+    expect((await ledger.ledger(created.id)).cash.map((e) => [e.amount, e.date])).toEqual([
       ['5000.10', '2019-01-02'],
       ['0.01', '2019-03-15'],
     ]);
-    const byPortfolio = await cash.listByPortfolios([created.id, randomUUID()]);
-    expect(byPortfolio.get(created.id)).toHaveLength(2);
+    const byPortfolio = await ledger.ledgers([created.id, randomUUID()]);
+    expect(byPortfolio.get(created.id)?.cash).toHaveLength(2);
   });
 
   it('caixa: carteira com nome repetido não deixa o aporte inicial gravado (CA06)', async () => {
@@ -155,20 +155,26 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
 
   it('caixa: o banco recusa alterar o lançamento, valor fora da faixa e dia depois do registro (CA07, CA11)', async () => {
     const created = await portfolios.create(newPortfolio('Dividendos'));
-    const entry = await cash.appendLocked(created.id, () => deposit('100'));
+    const entry = await ledger.appendCashLocked(created.id, () => deposit('100'));
     await expect(
       prisma.lancamentoCaixa.update({ where: { id: entry.id }, data: { valor: '1' } }),
     ).rejects.toThrow(/lancamento_caixa_imutavel|RB08/);
-    await expect(cash.appendLocked(created.id, () => deposit('0'))).rejects.toThrow();
-    await expect(cash.appendLocked(created.id, () => deposit('10000000.01'))).rejects.toThrow();
-    await expect(cash.appendLocked(created.id, () => deposit('1', '2015-12-30'))).rejects.toThrow();
+    await expect(ledger.appendCashLocked(created.id, () => deposit('0'))).rejects.toThrow();
+    await expect(
+      ledger.appendCashLocked(created.id, () => deposit('10000000.01')),
+    ).rejects.toThrow();
+    await expect(
+      ledger.appendCashLocked(created.id, () => deposit('1', '2015-12-30')),
+    ).rejects.toThrow();
     // 05/11/2026 12:00 em Brasília: o dia 06/11 ainda não chegou.
-    await expect(cash.appendLocked(created.id, () => deposit('1', '2026-11-06'))).rejects.toThrow();
+    await expect(
+      ledger.appendCashLocked(created.id, () => deposit('1', '2026-11-06')),
+    ).rejects.toThrow();
     // 05/11/2026 23:30 em Brasília já é 06/11 em UTC, e o dia 05/11 é aceito.
     const late = new Date('2026-11-06T02:30:00Z');
-    expect((await cash.appendLocked(created.id, () => deposit('1', '2026-11-05', late))).date).toBe(
-      '2026-11-05',
-    );
+    expect(
+      (await ledger.appendCashLocked(created.id, () => deposit('1', '2026-11-05', late))).date,
+    ).toBe('2026-11-05');
   });
 
   it('caixa: dois pedidos ao mesmo tempo são conferidos um depois do outro (CA04)', async () => {
@@ -177,8 +183,8 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
     );
     // Retira 600 só se o saldo der: com a trava, o segundo já vê a primeira retirada.
     const withdraw = () =>
-      cash.appendLocked(created.id, (current) => {
-        const balance = current.reduce(
+      ledger.appendCashLocked(created.id, (current) => {
+        const balance = current.cash.reduce(
           (sum, e) => sum + (e.type === 'deposit' ? 1 : -1) * Number(e.amount),
           0,
         );
@@ -194,11 +200,11 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
     const first = await portfolios.create(
       newPortfolio('Dividendos', { initialDeposit: deposit('1000', '2019-01-02') }),
     );
-    await cash.appendLocked(first.id, () => deposit('1'));
+    await ledger.appendCashLocked(first.id, () => deposit('1'));
     await portfolios.delete(first.id, at);
     expect(await prisma.lancamentoCaixa.count()).toBe(0);
     expect(await prisma.exclusaoCarteira.findFirst()).toMatchObject({ lancamentos: 2 });
-    await expect(cash.appendLocked(first.id, () => deposit('1'))).rejects.toThrow(
+    await expect(ledger.appendCashLocked(first.id, () => deposit('1'))).rejects.toThrow(
       PortfolioNotFoundError,
     );
 
@@ -208,5 +214,107 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
     expect(second.id).toBeDefined();
     await users.deleteAccount(userId, at);
     expect(await prisma.lancamentoCaixa.count()).toBe(0);
+  });
+
+  // --- SPEC-014: compras e vendas ---
+
+  const newAsset = async () => {
+    const ticker = `T${randomUUID().replace(/\D/g, '').slice(0, 3)}3`.slice(0, 5);
+    const row = await prisma.ativo.create({
+      data: { ticker, nome: 'Teste', classe: 'acao', setor: 'bens_industriais', atualizadoEm: at },
+    });
+    return row.id;
+  };
+
+  /** 05/11/2026 12:00 em Brasília, com a cotação das 11:30. */
+  const buy = (assetId: string, quantity: number, price = '31.20', total?: string) => ({
+    assetId,
+    type: 'buy' as const,
+    quantity,
+    price,
+    total: total ?? (Math.round(quantity * Number(price) * 100) / 100).toFixed(2),
+    date: '2026-11-05',
+    recordedAt: at,
+    quotedAt: new Date('2026-11-05T14:30:00Z'),
+    level: 'free' as const,
+    source: 'brapi' as const,
+  });
+
+  const livePortfolio = () =>
+    portfolios.create(
+      newPortfolio('Ao vivo', {
+        type: 'live',
+        startDate: '2026-11-05',
+        initialDeposit: deposit('5000', '2026-11-05'),
+      }),
+    );
+
+  it('negociação: grava e lê preço, total, dia e a cotação usada sem desvio de fuso (CA06)', async () => {
+    const assetId = await newAsset();
+    const portfolio = await livePortfolio();
+    const stored = await ledger.appendTradeLocked(portfolio.id, () => buy(assetId, 100));
+    expect(stored).toEqual({
+      id: expect.any(String),
+      portfolioId: portfolio.id,
+      ...buy(assetId, 100),
+      total: '3120.00',
+    });
+    const read = await ledger.ledger(portfolio.id);
+    expect(read.trades).toEqual([stored]);
+    expect(read.cash).toHaveLength(1);
+  });
+
+  it('negociação: o banco recusa alterar, quantidade fora da faixa, total errado e dia trocado (CA08, CA12)', async () => {
+    const assetId = await newAsset();
+    const portfolio = await livePortfolio();
+    const stored = await ledger.appendTradeLocked(portfolio.id, () => buy(assetId, 10));
+    await expect(
+      prisma.transacao.update({ where: { id: stored.id }, data: { quantidade: 11 } }),
+    ).rejects.toThrow(/transacao_imutavel|RB08/);
+    const refused = (trade: ReturnType<typeof buy>) =>
+      expect(ledger.appendTradeLocked(portfolio.id, () => trade)).rejects.toThrow();
+    await refused(buy(assetId, 0, '31.20', '0.00'));
+    await refused(buy(assetId, 1_000_001, '1.00', '1000001.00'));
+    await refused(buy(assetId, 10, '31.20', '312.01'));
+    await refused({ ...buy(assetId, 10), date: '2026-11-04' });
+    // Sábado: o dia bate com o registro e a cotação, mas não é dia de semana (RB11).
+    const saturday = new Date('2026-11-07T15:00:00Z');
+    await refused({
+      ...buy(assetId, 10),
+      date: '2026-11-07',
+      recordedAt: saturday,
+      quotedAt: saturday,
+    });
+    // O ativo com negociação não pode ser apagado.
+    await expect(prisma.ativo.delete({ where: { id: assetId } })).rejects.toThrow();
+    expect(await prisma.transacao.count()).toBe(1);
+  });
+
+  it('negociação: duas compras ao mesmo tempo nunca passam do caixa (CA07)', async () => {
+    const assetId = await newAsset();
+    const portfolio = await livePortfolio();
+    const buyIfCash = () =>
+      ledger.appendTradeLocked(portfolio.id, (current) => {
+        const spent = current.trades.reduce((sum, trade) => sum + Number(trade.total), 0);
+        if (5000 - spent < 3120) throw new Error('saldo insuficiente');
+        return buy(assetId, 100);
+      });
+    const results = await Promise.allSettled([buyIfCash(), buyIfCash()]);
+    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(await prisma.transacao.count()).toBe(1);
+  });
+
+  it('negociação: excluir a carteira conta as negociações; excluir a conta as leva (CA08)', async () => {
+    const assetId = await newAsset();
+    const first = await livePortfolio();
+    await ledger.appendTradeLocked(first.id, () => buy(assetId, 10));
+    await portfolios.delete(first.id, at);
+    expect(await prisma.transacao.count()).toBe(0);
+    expect(await prisma.exclusaoCarteira.findFirst()).toMatchObject({ lancamentos: 2 });
+
+    const second = await livePortfolio();
+    await ledger.appendTradeLocked(second.id, () => buy(assetId, 5));
+    await users.deleteAccount(userId, at);
+    expect(await prisma.transacao.count()).toBe(0);
   });
 });

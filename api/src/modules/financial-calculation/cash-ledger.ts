@@ -1,13 +1,13 @@
 import { centsToAmount, type IsoDate } from '@simulador/shared';
 
 /**
- * Um lançamento do livro-razão do caixa (SPEC-013, DA09). Por enquanto só aporte e retirada; a
- * SPEC-014 acrescenta compra e venda.
+ * Um lançamento do livro-razão do caixa (SPEC-013, DA09): aporte e retirada, e, desde a SPEC-014,
+ * compra (tira o total do caixa) e venda (põe o total).
  */
 export interface LedgerMovement {
   id: string;
-  type: 'deposit' | 'withdrawal';
-  /** Decimal positivo com até 2 casas. */
+  type: 'deposit' | 'withdrawal' | 'buy' | 'sell';
+  /** Decimal positivo com até 2 casas; na compra e na venda, o total da negociação. */
   amount: string;
   date: IsoDate;
   recordedAt: Date;
@@ -32,8 +32,15 @@ export function toCents(value: string): bigint {
   return negative ? -cents : cents;
 }
 
+/** O que a ordem do livro olha em qualquer lançamento (caixa ou negociação). */
+export interface Ordered {
+  id: string;
+  date: IsoDate;
+  recordedAt: Date;
+}
+
 /** Ordem do livro: o dia, depois o momento do registro e, no empate, o id (sempre a mesma). */
-export function compareMovements(a: LedgerMovement, b: LedgerMovement): number {
+export function compareMovements(a: Ordered, b: Ordered): number {
   if (a.date !== b.date) return a.date < b.date ? -1 : 1;
   const time = a.recordedAt.getTime() - b.recordedAt.getTime();
   if (time !== 0) return time;
@@ -45,12 +52,12 @@ function signedCents(movement: LedgerMovement): bigint {
   if (value <= 0n) {
     throw new RangeError(`valor inválido no lançamento ${movement.id}: "${movement.amount}"`);
   }
-  return movement.type === 'deposit' ? value : -value;
+  return movement.type === 'deposit' || movement.type === 'sell' ? value : -value;
 }
 
 /**
- * Saldo em caixa (RB09): aportes menos retiradas, em centavos (RNF12), na ordem do livro. Não
- * confere se o caixa ficou negativo: quem grava confere antes (RB26, `canWithdraw`).
+ * Saldo em caixa (RB09): aportes − retiradas − compras + vendas, em centavos (RNF12), na ordem do
+ * livro. Não confere se o caixa ficou negativo: quem grava confere antes (RB05, RB26, `canSpend`).
  */
 export function cashLedger<T extends LedgerMovement>(movements: readonly T[]): CashLedger<T> {
   let balance = 0n;
@@ -61,7 +68,7 @@ export function cashLedger<T extends LedgerMovement>(movements: readonly T[]): C
   return { lines, balance: centsToAmount(balance) };
 }
 
-/** RB26: a retirada cabe no saldo? */
-export function canWithdraw(balance: string, amount: string): boolean {
+/** A retirada (RB26) ou a compra (RB05) cabe no saldo? */
+export function canSpend(balance: string, amount: string): boolean {
   return toCents(amount) <= toCents(balance);
 }

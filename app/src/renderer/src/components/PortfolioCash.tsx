@@ -26,13 +26,19 @@ type CashState =
 
 /**
  * Caixa da carteira (SPEC-013 §5.2): saldo em destaque, Aportar e Retirar com confirmação e o
- * extrato do mais recente ao mais antigo, com o saldo depois de cada lançamento.
+ * extrato do mais recente ao mais antigo, com o saldo depois de cada lançamento. Desde a SPEC-014,
+ * o extrato também mostra as compras e vendas.
  */
 export function PortfolioCash({
   portfolio,
+  version,
+  onChanged,
   onSessionExpired,
 }: {
   portfolio: Portfolio;
+  /** Muda a cada lançamento novo (aqui ou numa compra ou venda): o extrato é pedido de novo. */
+  version: number;
+  onChanged: () => void;
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -45,9 +51,6 @@ export function PortfolioCash({
   const titleId = useId();
   const statementId = useId();
   const language = i18n.language;
-
-  // Cada lançamento novo pede o extrato de novo, do mais recente.
-  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -97,7 +100,7 @@ export function PortfolioCash({
       }),
     );
     close(type);
-    setVersion((current) => current + 1);
+    onChanged();
   };
 
   // Histórica (RB25): do início da carteira ou do último lançamento, o que vier depois.
@@ -232,16 +235,26 @@ function StatementRow({ entry, live }: { entry: CashEntry; live: boolean }) {
         timeZone: CALENDAR_TIME_ZONE,
       }).format(new Date(entry.recordedAt))
     : null;
-  const sign = entry.type === 'deposit' ? '+' : '−';
+  // Entra no caixa: aporte e venda; sai: retirada e compra.
+  const sign = entry.type === 'deposit' || entry.type === 'sell' ? '+' : '−';
   return (
     <tr>
       <td data-label={t('portfolios.cash.columns.date')}>{time ? `${day}, ${time}` : day}</td>
       <td data-label={t('portfolios.cash.columns.type')}>
         {t(`portfolios.cash.types.${entry.type}`)}
+        {entry.trade && (
+          <span className="cash-trade">
+            {t('portfolios.cash.tradeDetail', {
+              quantity: new Intl.NumberFormat(language).format(entry.trade.quantity),
+              ticker: entry.trade.ticker,
+              price: formatMoney(entry.trade.price, language),
+            })}
+          </span>
+        )}
       </td>
       <td
         data-label={t('portfolios.cash.columns.amount')}
-        className={`cash-number cash-${entry.type}`}
+        className={`cash-number cash-${entry.type === 'sell' ? 'deposit' : entry.type}`}
       >
         {sign}
         {formatMoney(entry.amount, language)}

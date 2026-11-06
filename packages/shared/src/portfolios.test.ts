@@ -6,7 +6,9 @@ import {
   portfolioNameKey,
   validateNewCashEntry,
   validateNewPortfolio,
+  validateNewTrade,
   validateRenamePortfolio,
+  validateTradeQuoteQuery,
 } from './portfolios.js';
 
 describe('carteiras: nome (SPEC-012 §4.2)', () => {
@@ -149,6 +151,51 @@ describe('carteiras: valor inicial (SPEC-013, CA06)', () => {
     expect(validateNewPortfolio({ name: 'D', type: 'live', initialAmount: '0' })).toEqual({
       success: false,
       fields: { initialAmount: 'invalid_amount' },
+    });
+  });
+});
+
+describe('compra e venda: validação (SPEC-014)', () => {
+  const ok = {
+    type: 'buy',
+    assetId: '11111111-1111-4111-8111-111111111111',
+    quantity: 100,
+    quotedAt: '2026-11-05T14:30:00.000Z',
+  };
+
+  it('aceita a negociação e normaliza o horário da cotação', () => {
+    expect(validateNewTrade({ ...ok, quotedAt: '2026-11-05T14:30:00Z' })).toEqual({
+      success: true,
+      data: { ...ok },
+    });
+  });
+
+  it('quantidade inteira de 1 a 1.000.000 (RB27)', () => {
+    const quantityError = (quantity: unknown) =>
+      (validateNewTrade({ ...ok, quantity }) as { fields?: Record<string, string> }).fields
+        ?.quantity;
+    expect(quantityError(0)).toBe('invalid_quantity');
+    expect(quantityError(2.5)).toBe('invalid_quantity');
+    expect(quantityError('10')).toBe('invalid_quantity');
+    expect(quantityError(1_000_001)).toBe('above_max');
+    expect(quantityError(undefined)).toBe('required');
+    expect(validateNewTrade({ ...ok, quantity: 1_000_000 }).success).toBe(true);
+  });
+
+  it('tipo, ativo e horário da cotação', () => {
+    expect(
+      validateNewTrade({ type: 'short', assetId: 'x', quantity: 1, quotedAt: 'ontem' }),
+    ).toEqual({
+      success: false,
+      fields: { type: 'invalid_option', assetId: 'invalid_option', quotedAt: 'invalid_date' },
+    });
+    expect(validateTradeQuoteQuery({})).toEqual({
+      success: false,
+      fields: { assetId: 'required' },
+    });
+    expect(validateTradeQuoteQuery({ assetId: ok.assetId.toUpperCase() })).toEqual({
+      success: true,
+      data: { assetId: ok.assetId },
     });
   });
 });

@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.9
+**Versão:** 1.10
 
 | Versão | Alteração |
 |---|---|
@@ -17,6 +17,7 @@
 | 1.7 | Novo RF43 (confirmação de e-mail por código, no cadastro e na troca de e-mail) e nova RB23 (conta só liberada depois de confirmar o e-mail); ver [SPEC-039](specs/SPEC-039.md) |
 | 1.8 | Carteiras ao vivo e histórica ([DA17](adr/DA17-carteira-ao-vivo-e-historica.md), [SPEC-012](specs/SPEC-012.md)): RF11 inclui a escolha do tipo; RB07 reescrita para os dois tipos (preço por plano na ao vivo, [DA16](adr/DA16-cotacoes-por-plano.md)); novas RB24 (tipo imutável), RB25 (ordem dos lançamentos na histórica) e RB26 (retirada não deixa o caixa negativo) |
 | 1.9 | RB11 passa a valer só para compra e venda: aporte e retirada na carteira ao vivo podem ser feitos em qualquer dia ([SPEC-013](specs/SPEC-013.md)) |
+| 1.10 | RB07: na carteira ao vivo, a cotação usada é sempre a do próprio dia; nova RB27 (compra e venda só em quantidade inteira) ([SPEC-014](specs/SPEC-014.md)) |
 
 ---
 
@@ -180,7 +181,7 @@ Restrições do domínio, independentes de tecnologia.
 |---|---|
 | RB05 | Não é permitida compra sem saldo suficiente em caixa |
 | RB06 | Não é permitida venda de quantidade superior à posição atual |
-| RB07 | Na carteira ao vivo, a transação usa a última cotação disponível para o plano do usuário e guarda o horário e o nível dessa cotação; na carteira histórica, usa o fechamento do pregão da data escolhida |
+| RB07 | Na carteira ao vivo, a transação usa a última cotação disponível para o plano do usuário, que precisa ser do próprio dia, e guarda o horário e o nível dessa cotação; na carteira histórica, usa o fechamento do pregão da data escolhida |
 | RB08 | Transação registrada é imutável; correção ocorre por lançamento de estorno |
 | RB09 | A posição é sempre derivada do histórico de transações, nunca editada diretamente |
 | RB10 | O preço médio é recalculado na compra e não se altera na venda |
@@ -192,6 +193,7 @@ Restrições do domínio, independentes de tecnologia.
 | RB24 | O tipo da carteira (ao vivo ou histórica) é escolhido na criação e não pode ser alterado |
 | RB25 | Na carteira histórica, cada lançamento tem data igual ou posterior à do último lançamento da carteira e nunca anterior à data de início dela |
 | RB26 | Não é permitida retirada maior que o saldo em caixa: o caixa nunca fica negativo |
+| RB27 | Ações e cotas de FII são compradas e vendidas só em quantidade inteira, de 1 a 1.000.000 por operação |
 
 ### 4.3 Renda fixa
 
@@ -225,6 +227,7 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | RB07 | Ao vivo: `Transacao` guarda o preço, o horário e o nível da cotação usada; histórica: `Transacao.data` referencia `Cotacao` (fechamento) pela mesma data |
 | RB24 | `Carteira.tipo` com domínio fechado (ao vivo, histórica), preenchido na criação e sem operação de alteração (gatilho no banco) |
 | RB25, RB26 | Validação na camada de serviço, sobre a data do último lançamento e o caixa calculado |
+| RB27 | `Transacao.quantidade` inteira, de 1 a 1.000.000 (restrição no banco) |
 | RB08 | Ausência de operação de atualização em `Transacao`; tipo de lançamento de estorno |
 | RB09 | Inexistência de tabela `Posicao` persistida; cálculo derivado de `Transacao` |
 | RB11 | Tabela `CalendarioPregao` com dias úteis e feriados da B3 |

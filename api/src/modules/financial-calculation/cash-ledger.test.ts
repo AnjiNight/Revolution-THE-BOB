@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canWithdraw, cashLedger, toCents, type LedgerMovement } from './cash-ledger.js';
+import { canSpend, cashLedger, toCents, type LedgerMovement } from './cash-ledger.js';
 
 const at = (iso: string) => new Date(iso);
 
@@ -71,9 +71,9 @@ describe('conta do caixa (SPEC-013, CA01)', () => {
 
 describe('retirada cabe no saldo? (RB26)', () => {
   it('igual ao saldo cabe; um centavo a mais não', () => {
-    expect(canWithdraw('1000.00', '1000.00')).toBe(true);
-    expect(canWithdraw('1000.00', '1000.01')).toBe(false);
-    expect(canWithdraw('0.00', '0.01')).toBe(false);
+    expect(canSpend('1000.00', '1000.00')).toBe(true);
+    expect(canSpend('1000.00', '1000.01')).toBe(false);
+    expect(canSpend('0.00', '0.01')).toBe(false);
   });
 
   it('lê valores com sinal e sem limite de tamanho', () => {

@@ -45,12 +45,14 @@ import {
   PrismaTaskRunRepository,
 } from './modules/market-data/infrastructure/prisma-quote-repository.js';
 import { PortfolioService } from './modules/portfolios/application/portfolio-service.js';
-import { PrismaCashEntryRepository } from './modules/portfolios/infrastructure/prisma-cash-entry-repository.js';
+import { TradingService } from './modules/portfolios/application/trading-service.js';
+import { PrismaLedgerRepository } from './modules/portfolios/infrastructure/prisma-ledger-repository.js';
 import { PrismaPortfolioRepository } from './modules/portfolios/infrastructure/prisma-portfolio-repository.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 import { readVersion } from './version.js';
 import { startWorker } from './worker.js';
+import { portfolioMarket } from './portfolio-market.js';
 
 type Mode = 'server' | 'worker';
 
@@ -88,9 +90,10 @@ async function main(): Promise<void> {
     trades,
   });
   // SPEC-009 e 040: cotações do pregão pela lista da brapi.
+  const intradayQuotes = new PrismaIntradayQuoteRepository(prisma);
   const intraday = new IntradayCollection({
     source: brapi,
-    quotes: new PrismaIntradayQuoteRepository(prisma),
+    quotes: intradayQuotes,
     runs,
     calendars,
     monthlyQuota: config.brapi.monthlyQuota,
@@ -143,11 +146,26 @@ async function main(): Promise<void> {
     // SPEC-012: carteiras; o calendário confere a data de início da histórica e, na SPEC-013, a
     // data dos aportes e retiradas da histórica.
     const calendar = new CalendarService({ calendars });
+    // SPECs 013 e 014: o livro-razão da carteira; a compra e venda usa o catálogo e as cotações.
+    const assetRepository = new PrismaAssetRepository(prisma);
+    const portfolioRepository = new PrismaPortfolioRepository(prisma);
+    const ledger = new PrismaLedgerRepository(prisma);
+    const market = portfolioMarket({
+      assets: assetRepository,
+      intraday: intradayQuotes,
+      history: quotes,
+    });
     const portfolios = new PortfolioService({
-      portfolios: new PrismaPortfolioRepository(prisma),
-      // SPEC-013: o livro-razão do caixa.
-      cash: new PrismaCashEntryRepository(prisma),
+      portfolios: portfolioRepository,
+      ledger,
       calendar,
+      market,
+    });
+    const trading = new TradingService({
+      portfolios: portfolioRepository,
+      ledger,
+      calendar,
+      market,
     });
     const { auth, profile, passwordReset, accountData } = createIdentityServices({
       portfolios,
@@ -174,8 +192,9 @@ async function main(): Promise<void> {
       accessTokens,
       calendar,
       portfolios,
+      trading,
       catalog: new AssetCatalogService({
-        assets: new PrismaAssetRepository(prisma),
+        assets: assetRepository,
         history: new HistoryStatusService({ quotes, calendars }),
         quotes: intraday,
         activity: quotes,

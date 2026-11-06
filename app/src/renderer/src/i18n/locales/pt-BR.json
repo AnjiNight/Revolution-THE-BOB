@@ -203,7 +203,8 @@
     "above_max": "O máximo por lançamento é R$ 10.000.000,00.",
     "not_allowed": "Na carteira ao vivo, a data é sempre a de agora.",
     "before_start": "Escolha um dia a partir do início da carteira.",
-    "before_last_entry": "Escolha o dia do último lançamento ou depois: na carteira histórica, os lançamentos seguem a ordem das datas."
+    "before_last_entry": "Escolha o dia do último lançamento ou depois: na carteira histórica, os lançamentos seguem a ordem das datas.",
+    "invalid_quantity": "Informe uma quantidade inteira, a partir de 1."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -238,7 +239,13 @@
     "portfolio_not_found": "Esta carteira não existe mais.",
     "portfolio_name_in_use": "Você já tem uma carteira com este nome.",
     "portfolio_limit_reached": "Você já tem o máximo de 20 carteiras. Exclua uma para criar outra.",
-    "insufficient_cash": "Saldo insuficiente em caixa."
+    "insufficient_cash": "Saldo insuficiente em caixa.",
+    "insufficient_position": "Você não tem essa quantidade do ativo.",
+    "quote_changed": "A cotação mudou. Confira o novo preço.",
+    "market_closed": "A bolsa está fechada hoje.",
+    "no_quote_today": "O ativo ainda não tem cotação hoje.",
+    "asset_inactive": "O ativo foi desativado e não pode ser comprado.",
+    "historical_portfolio": "A compra e venda na carteira histórica chega numa próxima versão."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -551,7 +558,12 @@
         "bonificacao": "{{date}}: bonificação, 1 ação virou {{multiplier}}"
       },
       "eventsSource": "Fonte: B3. A data é a data com: o preço muda no pregão seguinte."
-    }
+    },
+    "buy": "Comprar",
+    "buyTitle": "Comprar em qual carteira?",
+    "buyLoading": "Carregando as carteiras…",
+    "noLivePortfolio": "Crie uma carteira ao vivo para comprar.",
+    "buyCancel": "Cancelar"
   },
   "portfolios": {
     "title": "Carteiras",
@@ -632,11 +644,85 @@
       },
       "types": {
         "deposit": "Aporte",
-        "withdrawal": "Retirada"
+        "withdrawal": "Retirada",
+        "buy": "Compra",
+        "sell": "Venda"
       },
       "showMore": "Mostrar mais",
       "count_one": "{{shown}} de {{count}} lançamento",
-      "count_other": "{{shown}} de {{count}} lançamentos"
+      "count_other": "{{shown}} de {{count}} lançamentos",
+      "tradeDetail": "{{quantity}} {{ticker}} a {{price}}"
+    },
+    "positions": {
+      "title": "Posições",
+      "loading": "Carregando as posições…",
+      "buy": "Comprar",
+      "sell": "Vender",
+      "sellLabel": "Vender {{ticker}}",
+      "empty": "Nenhum ativo nesta carteira ainda. Use Comprar para começar.",
+      "totals": {
+        "cash": "Caixa",
+        "positions": "Em ativos",
+        "total": "Total"
+      },
+      "columns": {
+        "asset": "Ativo",
+        "quantity": "Quantidade",
+        "averagePrice": "Preço médio",
+        "lastPrice": "Último preço",
+        "marketValue": "Valor atual",
+        "change": "Variação",
+        "actions": "Ações"
+      },
+      "closeOf": "Fechamento de {{date}}",
+      "noPrice": "Sem preço",
+      "changeNote": "Variação sobre o preço médio, sem custos de operação nem proventos.",
+      "dividendsNote": "Proventos e desdobramentos ainda não entram nesta carteira.",
+      "historical": "A compra e venda na carteira histórica chega numa próxima versão.",
+      "bought": "Compra registrada: {{quantity}} {{ticker}}.",
+      "sold": "Venda registrada: {{quantity}} {{ticker}}.",
+      "at": "às {{time}}",
+      "priceNote": "Último preço: a cotação do pregão, com atraso de até {{delay}} minutos; sem ela, o último fechamento."
+    },
+    "trade": {
+      "buyTitle": "Comprar",
+      "sellTitle": "Vender {{ticker}}",
+      "asset": "Ativo",
+      "assetHint": "Digite o ticker ou o nome, como PETR4 ou Petrobras.",
+      "searching": "Buscando…",
+      "noResults": "Nenhum ativo encontrado.",
+      "changeAsset": "Trocar ativo",
+      "loadingQuote": "Buscando a cotação…",
+      "marketClosed": "A bolsa está fechada. Compras e vendas voltam no próximo pregão, {{date}}.",
+      "marketClosedNoDate": "A bolsa está fechada. Compras e vendas voltam no próximo pregão.",
+      "noQuoteToday": "A primeira cotação de hoje chega por volta das 10h30.",
+      "assetInactive": "Este ativo foi desativado: só dá para vender o que você já tem.",
+      "quantity": "Quantidade",
+      "quantityHint": "Ações e cotas de FII só em número inteiro, até 1.000.000.",
+      "quantityMax": "No máximo 1.000.000 por negociação.",
+      "max": "Máximo",
+      "all": "Tudo",
+      "held": "Você tem {{quantity}}.",
+      "byValue": "Calcular por valor",
+      "byValueAmount": "Quanto você quer investir",
+      "fits": "Cabem {{quantity}} ({{total}}); sobram {{rest}}.",
+      "fitsNone": "Esse valor não compra nenhuma unidade.",
+      "useQuantity": "Usar {{quantity}}",
+      "total": "Total",
+      "cashAfter": "Caixa depois",
+      "costs": "Corretagem, emolumentos da B3 e taxa de custódia não entram na simulação.",
+      "review": "Revisar",
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "confirmBuy": "Comprar {{quantity}} {{ticker}} a {{price}} (cotação das {{time}}) por {{total}}? O caixa fica com {{cash}}.",
+      "confirmSell": "Vender {{quantity}} {{ticker}} a {{price}} (cotação das {{time}}) por {{total}}? O caixa fica com {{cash}}.",
+      "immutable": "Lançamentos não podem ser alterados nem apagados; um erro se corrige com estorno.",
+      "confirmBuyButton": "Confirmar compra",
+      "confirmSellButton": "Confirmar venda",
+      "saving": "Registrando…",
+      "quoteChanged": "A cotação mudou para {{price}} (das {{time}}). Confirmar com o novo preço?",
+      "insufficientCash": "Saldo insuficiente: há {{available}} em caixa.",
+      "insufficientPosition": "Você tem só {{held}} deste ativo."
     }
   },
   "fundamentals": {

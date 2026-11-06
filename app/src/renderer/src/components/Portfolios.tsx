@@ -17,6 +17,8 @@ import '../portfolios.css';
 import { formatCalendarDay } from '../format';
 import { MoneyField } from './MoneyField';
 import { PortfolioCash } from './PortfolioCash';
+import { PortfolioPositions } from './PortfolioPositions';
+import type { TradeAsset } from './TradeForm';
 import { TextField } from './TextField';
 
 type ListState =
@@ -432,18 +434,26 @@ function PortfolioRow({
 
 /**
  * Tela de uma carteira (SPEC-012 §5.2): nome, rótulo do tipo e data de início; o caixa com o
- * extrato (SPEC-013). As compras e vendas chegam com as próximas Specs (014 em diante).
+ * extrato (SPEC-013) e, na ao vivo, as posições com a compra e venda (SPEC-014).
  */
 export function PortfolioPage({
   portfolioId,
+  buyAsset = null,
   onBack,
+  onOpenAsset,
   onSessionExpired,
 }: {
   portfolioId: string;
+  /** SPEC-014: a ficha do ativo pediu para comprar este ativo aqui. */
+  buyAsset?: TradeAsset | null;
   onBack: () => void;
+  onOpenAsset: (assetId: string) => void;
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  // Cada lançamento novo (aporte, retirada, compra ou venda) recarrega o caixa e as posições.
+  const [version, setVersion] = useState(0);
+  const changed = useCallback(() => setVersion((current) => current + 1), []);
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'ready'; portfolio: Portfolio }
@@ -502,11 +512,27 @@ export function PortfolioPage({
               </span>
             </p>
           </header>
-          <PortfolioCash portfolio={state.portfolio} onSessionExpired={onSessionExpired} />
-          <p className="assets-note">
-            <Info weight="fill" aria-hidden="true" />
-            <span>{t('portfolios.comingSoon')}</span>
-          </p>
+          <PortfolioCash
+            portfolio={state.portfolio}
+            version={version}
+            onChanged={changed}
+            onSessionExpired={onSessionExpired}
+          />
+          {state.portfolio.type === 'live' ? (
+            <PortfolioPositions
+              portfolio={state.portfolio}
+              version={version}
+              startBuying={buyAsset}
+              onChanged={changed}
+              onOpenAsset={onOpenAsset}
+              onSessionExpired={onSessionExpired}
+            />
+          ) : (
+            <p className="assets-note">
+              <Info weight="fill" aria-hidden="true" />
+              <span>{t('portfolios.positions.historical')}</span>
+            </p>
+          )}
         </>
       )}
     </div>

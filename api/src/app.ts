@@ -22,6 +22,7 @@ import { registerCalendarRoutes } from './modules/market-data/controllers/calend
 import { registerFundamentalsRoutes } from './modules/market-data/controllers/fundamentals-routes.js';
 import { registerIndexRoutes } from './modules/market-data/controllers/index-routes.js';
 import type { PortfolioService } from './modules/portfolios/application/portfolio-service.js';
+import type { TradingService } from './modules/portfolios/application/trading-service.js';
 import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfolio-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { HttpError } from './shared/http/http-error.js';
@@ -46,6 +47,8 @@ export interface AppDependencies {
   fundamentals: FundamentalsService;
   /** SPEC-012: carteiras de simulação. */
   portfolios: PortfolioService;
+  /** SPEC-014: compra e venda na carteira ao vivo. */
+  trading: TradingService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -93,7 +96,11 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     fundamentals: deps.fundamentals,
     accessTokens: deps.accessTokens,
   });
-  registerPortfolioRoutes(app, { portfolios: deps.portfolios, accessTokens: deps.accessTokens });
+  registerPortfolioRoutes(app, {
+    portfolios: deps.portfolios,
+    trading: deps.trading,
+    accessTokens: deps.accessTokens,
+  });
 
   return app;
 }

@@ -20,7 +20,7 @@ export function toMicros(value: string): bigint {
 }
 
 /** Divide arredondando meio para cima, para longe do zero (RB13). */
-function divideHalfUp(numerator: bigint, denominator: bigint): bigint {
+export function divideHalfUp(numerator: bigint, denominator: bigint): bigint {
   const quotient = numerator / denominator;
   const remainder = numerator % denominator;
   const twice = (remainder < 0n ? -remainder : remainder) * 2n;

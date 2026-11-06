@@ -1,4 +1,11 @@
-import type { CashEntryType, IsoDate, PortfolioType } from '@simulador/shared';
+import type {
+  AssetClass,
+  CashEntryType,
+  IsoDate,
+  PortfolioType,
+  QuoteLevelCode,
+  TradeType,
+} from '@simulador/shared';
 import type { TradingCalendar } from '../../financial-calculation/trading-calendar.js';
 
 /** Aporte ou retirada como fica guardado (SPEC-013 §6). Valor em decimal com 2 casas. */
@@ -18,24 +25,82 @@ export interface NewStoredCashEntry {
   recordedAt: Date;
 }
 
+/** Compra ou venda como fica guardada (SPEC-014 §6). Preço e total com 2 casas. */
+export interface StoredTrade {
+  id: string;
+  portfolioId: string;
+  assetId: string;
+  type: TradeType;
+  quantity: number;
+  price: string;
+  total: string;
+  date: IsoDate;
+  recordedAt: Date;
+  quotedAt: Date;
+  level: QuoteLevelCode;
+  source: 'brapi';
+}
+
+export type NewStoredTrade = Omit<StoredTrade, 'id' | 'portfolioId'>;
+
+/** Tudo o que mexe no caixa de uma carteira: aportes e retiradas, compras e vendas. */
+export interface PortfolioLedger {
+  cash: StoredCashEntry[];
+  trades: StoredTrade[];
+}
+
 /**
- * Livro-razão do caixa (SPEC-013, DA09): só inclui. Não há como alterar nem apagar um lançamento
- * (RB08); eles só saem junto com a carteira ou com a conta.
+ * Livro-razão da carteira (SPECs 013 e 014, DA09): só inclui. Não há como alterar nem apagar um
+ * lançamento (RB08); eles só saem junto com a carteira ou com a conta.
  */
-export interface CashEntryRepository {
+export interface LedgerRepository {
   /** Os lançamentos da carteira, em qualquer ordem (quem chama ordena pelo livro). */
-  listByPortfolio(portfolioId: string): Promise<StoredCashEntry[]>;
+  ledger(portfolioId: string): Promise<PortfolioLedger>;
   /** Os das carteiras pedidas, para a exportação. */
-  listByPortfolios(portfolioIds: readonly string[]): Promise<Map<string, StoredCashEntry[]>>;
+  ledgers(portfolioIds: readonly string[]): Promise<Map<string, PortfolioLedger>>;
   /**
-   * Trava a carteira, lê os lançamentos dela e chama `decide`, que confere as regras com eles e
-   * devolve o lançamento novo (ou lança o erro). Grava antes de soltar a trava: dois pedidos ao
-   * mesmo tempo na mesma carteira são conferidos um depois do outro (SPEC-013 §4.2).
+   * Trava a carteira, lê o livro dela e chama `decide`, que confere as regras com ele e devolve o
+   * lançamento novo (ou lança o erro). Grava antes de soltar a trava: dois pedidos ao mesmo tempo
+   * na mesma carteira são conferidos um depois do outro (SPEC-013 §4.2).
    */
-  appendLocked(
+  appendCashLocked(
     portfolioId: string,
-    decide: (current: StoredCashEntry[]) => NewStoredCashEntry,
+    decide: (current: PortfolioLedger) => NewStoredCashEntry,
   ): Promise<StoredCashEntry>;
+  /** O mesmo, para uma compra ou venda (SPEC-014). */
+  appendTradeLocked(
+    portfolioId: string,
+    decide: (current: PortfolioLedger) => NewStoredTrade,
+  ): Promise<StoredTrade>;
+}
+
+/** Ativo do catálogo, como a carteira precisa dele (SPEC-014). */
+export interface MarketAsset {
+  id: string;
+  ticker: string;
+  name: string;
+  assetClass: AssetClass;
+  active: boolean;
+}
+
+/** Cotação do pregão (SPEC-009): preço com até 6 casas e o horário da coleta. */
+export interface MarketQuote {
+  price: string;
+  at: Date;
+  level: QuoteLevelCode;
+  source: 'brapi';
+}
+
+/**
+ * Catálogo e cotações (SPECs 006, 008 e 009), que os módulos Catálogo e Dados de Mercado fornecem.
+ * O `main.ts` liga as peças; a carteira não conhece esses módulos.
+ */
+export interface PortfolioMarket {
+  asset(assetId: string): Promise<MarketAsset | null>;
+  /** A última cotação do pregão no nível pedido (DA16). */
+  latestQuote(assetId: string, level: QuoteLevelCode): Promise<MarketQuote | null>;
+  /** O último fechamento guardado do histórico (SPEC-008), para avaliar sem cotação do pregão. */
+  lastClose(assetId: string): Promise<{ date: IsoDate; close: string } | null>;
 }
 
 /** Carteira como fica guardada (SPEC-012 §6). */

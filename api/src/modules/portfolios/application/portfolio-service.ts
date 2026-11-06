@@ -15,34 +15,43 @@ import {
   type Portfolio,
   type PortfolioList,
 } from '@simulador/shared';
-import { canWithdraw, cashLedger, toCents } from '../../financial-calculation/cash-ledger.js';
+import {
+  canSpend,
+  cashLedger,
+  compareMovements,
+  toCents,
+  type LedgerLine,
+} from '../../financial-calculation/cash-ledger.js';
 import {
   InsufficientCashError,
   PortfolioLimitReachedError,
-  PortfolioNotFoundError,
   PortfolioValidationError,
 } from '../domain/errors.js';
+import { ledgerItems, ownedPortfolio, type LedgerItem } from './ledger.js';
 import type {
-  CashEntryRepository,
+  LedgerRepository,
   NewStoredCashEntry,
   PortfolioCalendar,
+  PortfolioMarket,
   PortfolioRepository,
-  StoredCashEntry,
   StoredPortfolio,
 } from './ports.js';
 
 export interface PortfolioServiceDeps {
   portfolios: PortfolioRepository;
-  /** SPEC-013: o livro-razão do caixa. */
-  cash: CashEntryRepository;
+  /** SPECs 013 e 014: o livro-razão da carteira. */
+  ledger: LedgerRepository;
   calendar: PortfolioCalendar;
+  /** SPEC-014: o ticker das compras e vendas no extrato e na exportação. */
+  market: Pick<PortfolioMarket, 'asset'>;
   clock?: () => Date;
 }
 
 /**
  * Carteiras de simulação (SPEC-012): cada usuário vê e mexe só nas próprias (RB02, RB03). O tipo
  * e a data de início não mudam depois da criação (RB24). SPEC-013: o caixa de cada carteira é a
- * conta dos aportes e retiradas (RB09), que nunca são alterados nem apagados (RB08).
+ * conta dos lançamentos (RB09), que nunca são alterados nem apagados (RB08); desde a SPEC-014,
+ * as compras e vendas entram na mesma conta.
  */
 export class PortfolioService {
   private readonly clock: () => Date;
@@ -119,15 +128,20 @@ export class PortfolioService {
 
   /**
    * SPEC-013 §4.2: saldo atual e o extrato do mais recente ao mais antigo, com o saldo depois de
-   * cada lançamento, `CASH_PAGE_SIZE` por vez a partir de `offset`.
+   * cada lançamento, `CASH_PAGE_SIZE` por vez a partir de `offset`. Desde a SPEC-014, com as
+   * compras e vendas.
    */
   async statement(userId: string, id: string, offset = 0): Promise<CashStatement> {
     await this.owned(userId, id);
-    const ledger = cashLedger(await this.deps.cash.listByPortfolio(id));
+    const ledger = cashLedger(ledgerItems(await this.deps.ledger.ledger(id)));
     const newestFirst = [...ledger.lines].reverse();
+    const page = newestFirst.slice(offset, offset + CASH_PAGE_SIZE);
+    const tickers = await this.tickers(
+      page.flatMap((line) => (line.kind === 'trade' ? [line.entry.assetId] : [])),
+    );
     return {
       balance: ledger.balance,
-      entries: newestFirst.slice(offset, offset + CASH_PAGE_SIZE).map(toPublicEntry),
+      entries: page.map((line) => toPublicEntry(line, tickers)),
       hasMore: newestFirst.length > offset + CASH_PAGE_SIZE,
       total: newestFirst.length,
     };
@@ -148,13 +162,13 @@ export class PortfolioService {
     const date = await this.entryDate(portfolio, input.date, isoDateInBrasilia(now));
 
     let balance = '0.00';
-    const stored = await this.deps.cash.appendLocked(id, (current): NewStoredCashEntry => {
-      const ledger = cashLedger(current);
+    const stored = await this.deps.ledger.appendCashLocked(id, (current): NewStoredCashEntry => {
+      const ledger = cashLedger(ledgerItems(current));
       const last = ledger.lines.at(-1);
       if (last && date < last.date) {
         throw new PortfolioValidationError({ date: 'before_last_entry' });
       }
-      if (input.type === 'withdrawal' && !canWithdraw(ledger.balance, input.amount)) {
+      if (input.type === 'withdrawal' && !canSpend(ledger.balance, input.amount)) {
         throw new InsufficientCashError(ledger.balance);
       }
       const change = toCents(input.amount) * (input.type === 'deposit' ? 1n : -1n);
@@ -162,25 +176,59 @@ export class PortfolioService {
       return { type: input.type, amount: input.amount, date, recordedAt: now };
     });
     // O novo é sempre o último do livro (data igual ou depois da última, registrado agora).
-    return { entry: toPublicEntry({ ...stored, balanceAfter: balance }), balance };
+    return {
+      entry: {
+        id: stored.id,
+        type: stored.type,
+        amount: stored.amount,
+        date: stored.date,
+        recordedAt: stored.recordedAt.toISOString(),
+        balanceAfter: balance,
+      },
+      balance,
+    };
   }
 
   /**
-   * SPEC-034: a seção `portfolios` do arquivo "Baixar meus dados", com os aportes e retiradas de
-   * cada carteira na ordem do livro-razão (SPEC-013).
+   * SPEC-034: a seção `portfolios` do arquivo "Baixar meus dados", com os aportes e retiradas
+   * (SPEC-013) e as compras e vendas (SPEC-014) de cada carteira, na ordem do livro-razão.
    */
   async exportForUser(userId: string): Promise<PersonalDataExport['portfolios']> {
     const portfolios = await this.deps.portfolios.listByUser(userId);
-    const entries = await this.deps.cash.listByPortfolios(portfolios.map((p) => p.id));
-    return portfolios.map((portfolio) => ({
-      ...toPublic(portfolio),
-      cashEntries: cashLedger(entries.get(portfolio.id) ?? []).lines.map((line) => ({
-        type: line.type,
-        amount: line.amount,
-        date: line.date,
-        recordedAt: line.recordedAt.toISOString(),
-      })),
-    }));
+    const ledgers = await this.deps.ledger.ledgers(portfolios.map((p) => p.id));
+    const tickers = await this.tickers(
+      [...ledgers.values()].flatMap((ledger) => ledger.trades.map((trade) => trade.assetId)),
+    );
+    return portfolios.map((portfolio) => {
+      const ledger = ledgers.get(portfolio.id) ?? { cash: [], trades: [] };
+      return {
+        ...toPublic(portfolio),
+        cashEntries: [...ledger.cash].sort(compareMovements).map((entry) => ({
+          type: entry.type,
+          amount: entry.amount,
+          date: entry.date,
+          recordedAt: entry.recordedAt.toISOString(),
+        })),
+        trades: [...ledger.trades].sort(compareMovements).map((trade) => ({
+          type: trade.type,
+          ticker: tickers.get(trade.assetId) ?? '',
+          quantity: trade.quantity,
+          price: trade.price,
+          total: trade.total,
+          date: trade.date,
+          recordedAt: trade.recordedAt.toISOString(),
+          quotedAt: trade.quotedAt.toISOString(),
+          level: trade.level,
+        })),
+      };
+    });
+  }
+
+  /** O ticker atual de cada ativo (o ticker pode mudar no catálogo, SPEC-006). */
+  private async tickers(assetIds: readonly string[]): Promise<Map<string, string>> {
+    const unique = [...new Set(assetIds)];
+    const assets = await Promise.all(unique.map((id) => this.deps.market.asset(id)));
+    return new Map(unique.map((id, index) => [id, assets[index]?.ticker ?? '']));
   }
 
   /** O dia do lançamento, conferido contra o tipo da carteira e o calendário (antes da trava). */
@@ -211,11 +259,8 @@ export class PortfolioService {
     return calendar.isTradingDay(date);
   }
 
-  private async owned(userId: string, id: string): Promise<StoredPortfolio> {
-    const portfolio = await this.deps.portfolios.findById(id);
-    if (!portfolio) throw new PortfolioNotFoundError();
-    if (portfolio.userId !== userId) throw new PortfolioNotFoundError(true);
-    return portfolio;
+  private owned(userId: string, id: string): Promise<StoredPortfolio> {
+    return ownedPortfolio(this.deps.portfolios, userId, id);
   }
 }
 
@@ -230,13 +275,23 @@ function toPublic(portfolio: StoredPortfolio): Portfolio {
   };
 }
 
-function toPublicEntry(entry: StoredCashEntry & { balanceAfter: string }): CashEntry {
+function toPublicEntry(line: LedgerLine<LedgerItem>, tickers: Map<string, string>): CashEntry {
+  const base = {
+    id: line.id,
+    type: line.type,
+    amount: line.amount,
+    date: line.date,
+    recordedAt: line.recordedAt.toISOString(),
+    balanceAfter: line.balanceAfter,
+  };
+  if (line.kind === 'cash') return base;
   return {
-    id: entry.id,
-    type: entry.type,
-    amount: entry.amount,
-    date: entry.date,
-    recordedAt: entry.recordedAt.toISOString(),
-    balanceAfter: entry.balanceAfter,
+    ...base,
+    trade: {
+      assetId: line.entry.assetId,
+      ticker: tickers.get(line.entry.assetId) ?? '',
+      quantity: line.entry.quantity,
+      price: line.entry.price,
+    },
   };
 }

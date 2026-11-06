@@ -64,14 +64,19 @@ Aporte ou retirada de dinheiro fictício numa carteira ([SPEC-013](specs/SPEC-01
 | registrado_em | datetime | Quando o servidor registrou |
 
 ### TRANSACAO
-Operação de compra ou venda registrada em uma carteira sobre um ativo.
+Operação de compra ou venda registrada em uma carteira sobre um ativo ([SPEC-014](specs/SPEC-014.md)). Nunca é alterada nem apagada (RB08); a posição e o preço médio são calculados a partir delas (RB09, RB10).
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
-| tipo | string | Compra ou venda |
-| quantidade | decimal | Quantidade negociada |
-| preco_unitario | decimal | Preço por unidade |
-| data | date | Data da operação |
+| tipo | enum | `compra` ou `venda` |
+| quantidade | inteiro | De 1 a 1.000.000 (RB27) |
+| preco_unitario | decimal(15,2) | Preço por unidade: a cotação usada, arredondada a 2 casas (RB13) |
+| valor_total | decimal(15,2) | Quantidade × preço unitário |
+| data | date | Ao vivo: o dia do registro e da cotação em Brasília (RB07, RB11) |
+| registrado_em | datetime | Quando o servidor registrou |
+| cotacao_em | datetime | Horário da cotação usada (DA16) |
+| nivel_cotacao | enum | `gratuito` ou `assinante` (DA16) |
+| fonte_cotacao | enum | Fonte da cotação (`brapi`) |
 
 ### SIMULACAO
 Projeção gerada a partir de uma carteira.

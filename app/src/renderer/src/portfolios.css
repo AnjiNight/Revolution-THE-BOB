@@ -265,6 +265,301 @@ button.link.portfolio-open {
   color: var(--ok);
 }
 
+.cash-trade {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------- Posições e compra e venda (SPEC-014) ---------- */
+
+.positions-panel {
+  margin: 1.5rem 0;
+}
+
+.positions-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+.positions-totals div {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.positions-totals dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.positions-totals dd {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.positions-scroll {
+  margin-top: 1.25rem;
+  overflow-x: auto;
+}
+
+/* Em janela média, as posições já viram cartões: são 7 colunas. */
+@media (max-width: 860px) {
+  .positions-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .positions-table,
+  .positions-table tbody,
+  .positions-table tr,
+  .positions-table td {
+    display: block;
+  }
+
+  .positions-table tr {
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .positions-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    border: 0;
+  }
+
+  .positions-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .positions-table td:first-child {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+
+  .positions-table td:first-child::before,
+  .positions-table .position-actions::before {
+    content: none;
+  }
+
+  .positions-table .position-actions {
+    justify-content: flex-end;
+  }
+}
+
+button.link.position-ticker {
+  font-weight: 650;
+}
+
+.position-name,
+.position-when {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.position-price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.position-actions {
+  text-align: right;
+}
+
+.positions-table .quote-change.is-up {
+  color: var(--ok);
+}
+
+.positions-table .quote-change.is-down {
+  color: var(--error);
+}
+
+.trade-form {
+  margin-top: 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-sunken);
+}
+
+.trade-form h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.trade-form input {
+  background: var(--surface);
+}
+
+.trade-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Cada resultado é um botão, mas sem a cara do botão principal do app (styles.css): alinhado à
+ * esquerda, sem margem em cima e sem o fundo verde ao passar o mouse, só a borda.
+ */
+.trade-results button.trade-result {
+  justify-content: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+}
+
+.trade-results button.trade-result:hover:not(:disabled),
+.trade-results button.trade-result:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.trade-results button.trade-result strong {
+  flex: 0 0 4.5rem;
+  font-weight: 650;
+}
+
+.trade-results button.trade-result span:not(.asset-logo) {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.trade-asset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.trade-asset p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  margin: 0;
+}
+
+.trade-asset p > span:not(.asset-logo) {
+  color: var(--muted);
+}
+
+.trade-quote {
+  margin: 0.75rem 0;
+}
+
+.trade-price {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-blocked {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid var(--warn);
+  border-radius: 12px;
+  background: var(--warn-soft);
+}
+
+.trade-quantity {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.trade-quantity input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-by-value {
+  margin: 0.75rem 0;
+}
+
+.trade-fits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+}
+
+.trade-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin: 1rem 0 0.25rem;
+}
+
+.trade-summary dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.trade-summary dd {
+  margin: 0.15rem 0 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-summary .is-negative {
+  color: var(--error);
+}
+
+.trade-costs {
+  margin-bottom: 0.75rem;
+}
+
+.trade-changed {
+  margin: 0 0 0.5rem;
+  color: var(--warn);
+  font-weight: 650;
+}
+
+.asset-buy {
+  margin: 0 0 1.25rem;
+}
+
+.asset-buy-choose ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
 /* ---------- Janela estreita (até 480px) ---------- */
 
 @media (max-width: 640px) {
@@ -321,5 +616,21 @@ button.link.portfolio-open {
 
   .cash-statement .cash-number {
     text-align: right;
+  }
+
+  .positions-totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .position-price {
+    align-items: flex-end;
+  }
+
+  .position-actions {
+    justify-content: flex-end;
+  }
+
+  .position-actions::before {
+    content: none;
   }
 }

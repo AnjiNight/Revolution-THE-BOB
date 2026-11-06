@@ -1,14 +1,19 @@
 import type { FieldErrorCode, FieldErrors, ValidationResult } from './auth.js';
 import { isIsoDate, type IsoDate } from './calendar.js';
 
+import type { AssetClass } from './assets.js';
+
 /**
- * Rotas das carteiras (SPEC-012 §5.1) e do caixa (SPEC-013 §5.1). `:id` vira o id da carteira com
- * `portfolioPath` e `portfolioCashPath`.
+ * Rotas das carteiras (SPEC-012 §5.1), do caixa (SPEC-013 §5.1) e da compra e venda (SPEC-014
+ * §5.1). `:id` vira o id da carteira com `portfolioPath`, `portfolioCashPath` e `portfolioSubPath`.
  */
 export const PORTFOLIO_PATHS = {
   list: '/api/portfolios',
   item: '/api/portfolios/:id',
   cash: '/api/portfolios/:id/cash',
+  positions: '/api/portfolios/:id/positions',
+  tradeQuote: '/api/portfolios/:id/trade-quote',
+  trades: '/api/portfolios/:id/trades',
 } as const;
 
 export function portfolioPath(id: string): string {
@@ -17,6 +22,11 @@ export function portfolioPath(id: string): string {
 
 export function portfolioCashPath(id: string): string {
   return PORTFOLIO_PATHS.cash.replace(':id', encodeURIComponent(id));
+}
+
+/** Uma das rotas de `PORTFOLIO_PATHS` com o id da carteira. */
+export function portfolioSubPath(path: string, id: string): string {
+  return path.replace(':id', encodeURIComponent(id));
 }
 
 /** Ao vivo (opera com o preço de agora) ou histórica (opera no passado), DA17. Não muda (RB24). */
@@ -62,9 +72,19 @@ export interface RenamePortfolioInput {
   name: string;
 }
 
-/** Erros das rotas de carteira e do caixa. */
+/** Erros das rotas de carteira, do caixa e da compra e venda. */
 export type PortfolioErrorCode =
-  'portfolio_not_found' | 'portfolio_name_in_use' | 'portfolio_limit_reached' | 'insufficient_cash';
+  | 'portfolio_not_found'
+  | 'portfolio_name_in_use'
+  | 'portfolio_limit_reached'
+  | 'insufficient_cash'
+  // SPEC-014
+  | 'insufficient_position'
+  | 'quote_changed'
+  | 'market_closed'
+  | 'no_quote_today'
+  | 'asset_inactive'
+  | 'historical_portfolio';
 
 // --- Caixa (SPEC-013) ---
 
@@ -78,11 +98,16 @@ export const CASH_AMOUNT_MAX = '10000000.00';
 /** Lançamentos do extrato por página ("Mostrar mais"). */
 export const CASH_PAGE_SIZE = 100;
 
-/** Um lançamento do extrato, com o saldo logo depois dele. Valores em decimal com 2 casas. */
+/**
+ * Um lançamento do extrato, com o saldo logo depois dele. Valores em decimal com 2 casas. Desde a
+ * SPEC-014, compras e vendas também aparecem, com o ativo, a quantidade e o preço em `trade`.
+ */
 export interface CashEntry {
   id: string;
-  type: CashEntryType;
+  type: CashEntryType | TradeType;
+  /** Na compra e na venda, o total da negociação. */
   amount: string;
+  trade?: { assetId: string; ticker: string; quantity: number; price: string };
   /** AAAA-MM-DD: na ao vivo, o dia do registro em Brasília; na histórica, o dia escolhido. */
   date: IsoDate;
   /** ISO 8601: quando o servidor registrou. */
@@ -279,4 +304,161 @@ export function validateRenamePortfolio(input: unknown): ValidationResult<Rename
   if ('startDate' in raw) fields.startDate = 'immutable';
   if (Object.keys(fields).length > 0) return { success: false, fields };
   return { success: true, data: { name: normalizePortfolioName(raw.name as string) } };
+}
+
+// --- Compra e venda na carteira ao vivo (SPEC-014) ---
+
+export const TRADE_TYPES = ['buy', 'sell'] as const;
+export type TradeType = (typeof TRADE_TYPES)[number];
+
+/** RB27: quantidade inteira, de 1 a 1.000.000 por negociação. */
+export const TRADE_QUANTITY_MAX = 1_000_000;
+
+/** Nível da cotação usada (DA16). Até a SPEC-026, só existe o gratuito. */
+export type QuoteLevelCode = 'free' | 'subscriber';
+
+/** Uma compra ou venda registrada. Preço e total em decimal com 2 casas. */
+export interface Trade {
+  id: string;
+  type: TradeType;
+  assetId: string;
+  ticker: string;
+  quantity: number;
+  price: string;
+  total: string;
+  date: IsoDate;
+  /** ISO 8601: quando o servidor registrou. */
+  recordedAt: string;
+  /** ISO 8601: horário da cotação usada. */
+  quotedAt: string;
+  level: QuoteLevelCode;
+}
+
+/**
+ * A posição de um ativo (RB09, RF14): quantidade e preço médio vêm das negociações; o último preço
+ * conhecido avalia a posição. Sem preço nenhum, os campos da avaliação vêm `null`.
+ */
+export interface Position {
+  assetId: string;
+  ticker: string;
+  name: string;
+  class: AssetClass;
+  quantity: number;
+  /** Com 2 casas, para mostrar; a conta guarda 6 (SPEC-014 §4.2). */
+  averagePrice: string;
+  lastPrice: string | null;
+  /** `intraday`: cotação do pregão, com `lastPriceAt`; `close`: fechamento, com `lastPriceDate`. */
+  lastPriceKind: 'intraday' | 'close' | null;
+  lastPriceAt: string | null;
+  lastPriceDate: IsoDate | null;
+  /** Quantidade × último preço. */
+  marketValue: string | null;
+  /** Valor atual menos o custo (quantidade × preço médio), em reais e em % com 2 casas. */
+  change: string | null;
+  changePercent: string | null;
+}
+
+/** Corpo de `GET /api/portfolios/:id/positions`. */
+export interface PortfolioPositions {
+  cash: string;
+  /** Soma do valor atual das posições com preço. */
+  positionsValue: string;
+  /** Caixa + posições. */
+  total: string;
+  /** Em ordem de ticker. */
+  positions: Position[];
+}
+
+/** Por que não dá para negociar agora (SPEC-014 §4.1). */
+export type TradeBlockReason =
+  'market_closed' | 'no_quote_today' | 'historical_portfolio' | 'calendar_not_published';
+
+/**
+ * Corpo de `GET /api/portfolios/:id/trade-quote?assetId=`: o preço que a negociação usaria agora,
+ * com o caixa e a posição do ativo para a tela calcular o máximo; ou o motivo de não dar.
+ */
+export type TradeQuote = {
+  cash: string;
+  /** Quantidade do ativo na posição (0 sem posição). */
+  held: number;
+  /** Ativo desativado só pode ser vendido (SPEC-014 §4.2). */
+  buyable: boolean;
+} & (
+  | {
+      tradable: true;
+      /** Com 2 casas: o preço que a negociação vai usar. */
+      price: string;
+      quotedAt: string;
+      level: QuoteLevelCode;
+      delayMinutes: number;
+    }
+  | { tradable: false; reason: TradeBlockReason; nextTradingDay: IsoDate | null }
+);
+
+export interface NewTradeInput {
+  type: TradeType;
+  assetId: string;
+  quantity: number;
+  /** O horário da cotação que a pessoa viu (`TradeQuote.quotedAt`). */
+  quotedAt: string;
+}
+
+/** Corpo de `POST /api/portfolios/:id/trades`. `position` vem `null` quando a venda zera. */
+export interface TradeResult {
+  trade: Trade;
+  cash: string;
+  position: Position | null;
+}
+
+/** Detalhes dos erros da negociação. */
+export interface InsufficientPositionDetails {
+  held: string;
+}
+export interface QuoteChangedDetails {
+  price: string;
+  quotedAt: string;
+}
+export interface MarketClosedDetails {
+  nextTradingDay?: string;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+
+/** Query string de `trade-quote`: o id do ativo. */
+export function validateTradeQuoteQuery(input: unknown): ValidationResult<{ assetId: string }> {
+  const raw = asRecord(input).assetId;
+  if (raw === undefined || raw === '') return { success: false, fields: { assetId: 'required' } };
+  if (typeof raw !== 'string' || !UUID_PATTERN.test(raw)) {
+    return { success: false, fields: { assetId: 'invalid_option' } };
+  }
+  return { success: true, data: { assetId: raw.toLowerCase() } };
+}
+
+/** Valida uma compra ou venda (SPEC-014 §5.1); se dá para negociar agora, quem diz é o servidor. */
+export function validateNewTrade(input: unknown): ValidationResult<NewTradeInput> {
+  const raw = asRecord(input);
+  const fields: FieldErrors = {};
+  if (raw.type !== 'buy' && raw.type !== 'sell') fields.type = 'invalid_option';
+  if (typeof raw.assetId !== 'string' || !UUID_PATTERN.test(raw.assetId)) {
+    fields.assetId = raw.assetId === undefined ? 'required' : 'invalid_option';
+  }
+  const quantity = raw.quantity;
+  if (quantity === undefined || quantity === null || quantity === '') fields.quantity = 'required';
+  else if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1) {
+    fields.quantity = 'invalid_quantity';
+  } else if (quantity > TRADE_QUANTITY_MAX) fields.quantity = 'above_max';
+  if (typeof raw.quotedAt !== 'string' || !ISO_INSTANT.test(raw.quotedAt)) {
+    fields.quotedAt = raw.quotedAt === undefined ? 'required' : 'invalid_date';
+  }
+  if (Object.keys(fields).length > 0) return { success: false, fields };
+  return {
+    success: true,
+    data: {
+      type: raw.type as TradeType,
+      assetId: (raw.assetId as string).toLowerCase(),
+      quantity: quantity as number,
+      quotedAt: new Date(raw.quotedAt as string).toISOString(),
+    },
+  };
 }

@@ -12,6 +12,7 @@ import {
   PORTFOLIO_PATHS,
   portfolioCashPath,
   portfolioPath,
+  portfolioSubPath,
   PROFILE_PATHS,
   TERMS_VERSION,
   type AccountDeletionConfirmInput,
@@ -47,6 +48,10 @@ import {
   type CashEntryResult,
   type CashStatement,
   type NewCashEntryInput,
+  type NewTradeInput,
+  type PortfolioPositions,
+  type TradeQuote,
+  type TradeResult,
   type NewPortfolioInput,
   type PasswordResetConfirmInput,
   type PasswordResetRequestInput,
@@ -113,6 +118,12 @@ const KNOWN_ERRORS: ReadonlyArray<
   'portfolio_name_in_use',
   'portfolio_limit_reached',
   'insufficient_cash',
+  'insufficient_position',
+  'quote_changed',
+  'market_closed',
+  'no_quote_today',
+  'asset_inactive',
+  'historical_portfolio',
 ];
 
 class RequestFailed extends Error {
@@ -358,6 +369,39 @@ export class AuthClient {
         type: input.type,
         amount: input.amount,
         ...(input.date ? { date: input.date } : {}),
+      }),
+    );
+  }
+
+  /** SPEC-014: posições da carteira, com o caixa e o total. */
+  portfolioPositions(id: string): Promise<ClientResult<PortfolioPositions>> {
+    return this.call(() =>
+      this.authorizedRequest<PortfolioPositions>(
+        'GET',
+        portfolioRouteUrl(PORTFOLIO_PATHS.positions, id),
+      ),
+    );
+  }
+
+  /** SPEC-014: o preço que a negociação usaria agora, ou o motivo de não dar. */
+  tradeQuote(id: string, assetId: string): Promise<ClientResult<TradeQuote>> {
+    return this.call(() => {
+      if (typeof assetId !== 'string' || !UUID_PATTERN.test(assetId)) {
+        throw new RequestFailed('unexpected');
+      }
+      const path = portfolioRouteUrl(PORTFOLIO_PATHS.tradeQuote, id);
+      return this.authorizedRequest<TradeQuote>('GET', path + '?assetId=' + assetId);
+    });
+  }
+
+  /** SPEC-014: compra ou venda; os erros trazem o detalhe (disponível, posição, preço novo). */
+  trade(id: string, input: NewTradeInput): Promise<ClientResult<TradeResult>> {
+    return this.call(() =>
+      this.authorizedRequest<TradeResult>('POST', portfolioRouteUrl(PORTFOLIO_PATHS.trades, id), {
+        type: input.type,
+        assetId: input.assetId,
+        quantity: input.quantity,
+        quotedAt: input.quotedAt,
       }),
     );
   }
@@ -697,6 +741,12 @@ function withQuery(path: string, query: AssetSearchQuery | CatalogQuery): string
 function portfolioUrl(id: string): string {
   if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
   return portfolioPath(id);
+}
+
+/** O id da carteira vem da interface: só um UUID entra no caminho das rotas da SPEC-014. */
+function portfolioRouteUrl(path: string, id: string): string {
+  if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+  return portfolioSubPath(path, id);
 }
 
 /** O ano vem da interface: só um ano aceito entra no caminho da rota. */

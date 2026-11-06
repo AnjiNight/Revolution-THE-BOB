@@ -98,8 +98,11 @@ export interface ConsentList {
 
 /** Identificação do arquivo de exportação (SPEC-034). Cada Spec que acrescentar dados sobe a versão. */
 export const PERSONAL_DATA_FORMAT = 'simulador-investimentos/dados-pessoais';
-/** 2: SPEC-012, carteiras. 3: SPEC-013, aportes e retiradas de cada carteira. */
-export const PERSONAL_DATA_VERSION = 3;
+/**
+ * 2: SPEC-012, carteiras. 3: SPEC-013, aportes e retiradas de cada carteira. 4: SPEC-014, compras e
+ * vendas de cada carteira.
+ */
+export const PERSONAL_DATA_VERSION = 4;
 
 /**
  * Arquivo "Baixar meus dados" (SPEC-034, LGPD). Tudo o que o app guarda sobre a pessoa, sem
@@ -143,6 +146,18 @@ export interface PersonalDataExport {
       date: string;
       recordedAt: string;
     }>;
+    /** SPEC-014: compras e vendas, na ordem do livro-razão. */
+    trades: Array<{
+      type: 'buy' | 'sell';
+      ticker: string;
+      quantity: number;
+      price: string;
+      total: string;
+      date: string;
+      recordedAt: string;
+      quotedAt: string;
+      level: 'free' | 'subscriber';
+    }>;
   }>;
 }
 
@@ -184,7 +199,9 @@ export type FieldErrorCode =
   | 'above_max'
   | 'not_allowed'
   | 'before_start'
-  | 'before_last_entry';
+  | 'before_last_entry'
+  // SPEC-014: compra e venda.
+  | 'invalid_quantity';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 

@@ -24,7 +24,11 @@ import { CatalogImport } from '../modules/market-data/application/catalog-import
 import { CdiStatusService } from '../modules/market-data/application/cdi-status-service.js';
 import { FundamentalsService } from '../modules/market-data/application/fundamentals-service.js';
 import { PortfolioService } from '../modules/portfolios/application/portfolio-service.js';
-import { InMemoryPortfolioRepository } from '../modules/portfolios/testing/fakes.js';
+import { TradingService } from '../modules/portfolios/application/trading-service.js';
+import {
+  FakePortfolioMarket,
+  InMemoryPortfolioRepository,
+} from '../modules/portfolios/testing/fakes.js';
 import { HistoryStatusService } from '../modules/market-data/application/history-status-service.js';
 import { IntradayCollection } from '../modules/market-data/application/intraday-collection.js';
 import {
@@ -77,12 +81,25 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   const accessTokens = new JwtAccessTokenService(TEST_JWT_SECRET, 15);
   const mailer = new FakeEmailSender();
   const background = new BackgroundTasks();
-  // Carteiras (SPEC-012) e o caixa delas (SPEC-013) em memória; o calendário é o mesmo das rotas (definido mais abaixo).
+  // Carteiras (SPEC-012), o livro delas (SPECs 013 e 014) e o catálogo com cotações que a compra
+  // e venda usa, em memória; o calendário é o mesmo das rotas (definido mais abaixo).
   const portfolioRepo = new InMemoryPortfolioRepository();
+  const market = new FakePortfolioMarket();
+  const portfolioCalendar = {
+    tradingCalendar: (from: number, to: number) => calendar.tradingCalendar(from, to),
+  };
   const portfolios = new PortfolioService({
     portfolios: portfolioRepo,
-    cash: portfolioRepo.cash,
-    calendar: { tradingCalendar: (from, to) => calendar.tradingCalendar(from, to) },
+    ledger: portfolioRepo.ledger,
+    calendar: portfolioCalendar,
+    market,
+    ...(options.clock ? { clock: options.clock } : {}),
+  });
+  const trading = new TradingService({
+    portfolios: portfolioRepo,
+    ledger: portfolioRepo.ledger,
+    calendar: portfolioCalendar,
+    market,
     ...(options.clock ? { clock: options.clock } : {}),
   });
   const services = createIdentityServices({
@@ -209,6 +226,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     cdi,
     fundamentals,
     portfolios,
+    trading,
     logStream: logs,
   });
 
@@ -271,6 +289,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     cdi,
     portfolioRepo,
     portfolios,
+    trading,
+    market,
     fundamentalsRepo,
     syncFundamentalAssets,
     fundamentals,

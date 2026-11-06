@@ -3,7 +3,9 @@ import {
   validateCashStatementQuery,
   validateNewCashEntry,
   validateNewPortfolio,
+  validateNewTrade,
   validateRenamePortfolio,
+  validateTradeQuoteQuery,
 } from '@simulador/shared';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { domainErrorRunner } from '../../../shared/http/domain-errors.js';
@@ -16,10 +18,13 @@ import {
   requireUser,
 } from '../../identity/controllers/authenticate.js';
 import type { PortfolioService } from '../application/portfolio-service.js';
+import type { TradingService } from '../application/trading-service.js';
 import { PortfolioNotFoundError } from '../domain/errors.js';
 
 export interface PortfolioRoutesOptions {
   portfolios: PortfolioService;
+  /** SPEC-014: compra e venda na carteira ao vivo. */
+  trading: TradingService;
   accessTokens: AccessTokenService;
 }
 
@@ -30,6 +35,17 @@ const run = domainErrorRunner({
   portfolio_name_in_use: { status: 409, message: 'Você já tem uma carteira com este nome.' },
   portfolio_limit_reached: { status: 409, message: 'Você já tem o número máximo de carteiras.' },
   insufficient_cash: { status: 409, message: 'Saldo insuficiente em caixa.' },
+  // SPEC-014
+  insufficient_position: { status: 409, message: 'Você não tem essa quantidade do ativo.' },
+  quote_changed: { status: 409, message: 'A cotação mudou. Confira o novo preço.' },
+  market_closed: { status: 409, message: 'A bolsa está fechada hoje.' },
+  no_quote_today: { status: 409, message: 'O ativo ainda não tem cotação hoje.' },
+  asset_inactive: { status: 409, message: 'O ativo foi desativado e não pode ser comprado.' },
+  historical_portfolio: {
+    status: 409,
+    message: 'A compra e venda na carteira histórica ainda não está disponível.',
+  },
+  asset_not_found: { status: 404, message: 'Ativo não encontrado.' },
   calendar_not_published: {
     status: 409,
     message: 'O calendário de pregão desse ano ainda não foi publicado.',
@@ -50,7 +66,7 @@ export function registerPortfolioRoutes(
   app: FastifyInstance,
   options: PortfolioRoutesOptions,
 ): void {
-  const { portfolios } = options;
+  const { portfolios, trading } = options;
   const userOnly = { preHandler: [makeAuthenticate(options.accessTokens), requireUser] };
 
   /** Rota de uma carteira: a de outra pessoa vira o mesmo 404 e só deixa o aviso no log. */
@@ -115,6 +131,34 @@ export function registerPortfolioRoutes(
     const input = ensureValid(validateNewCashEntry(request.body));
     const result = await owned(request, () =>
       portfolios.addCashEntry(requireAuth(request).userId, id, input),
+    );
+    return reply.status(201).send(result);
+  });
+
+  // SPEC-014 §5.1: posições, cotação para negociar e a compra ou venda. Nenhuma rota altera ou
+  // apaga uma negociação.
+  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.positions, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const positions = await owned(request, () =>
+      trading.positions(requireAuth(request).userId, id),
+    );
+    return reply.send(positions);
+  });
+
+  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.tradeQuote, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const { assetId } = ensureValid(validateTradeQuoteQuery(request.query));
+    const quote = await owned(request, () =>
+      trading.tradeQuote(requireAuth(request).userId, id, assetId),
+    );
+    return reply.send(quote);
+  });
+
+  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.trades, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const input = ensureValid(validateNewTrade(request.body));
+    const result = await owned(request, () =>
+      trading.trade(requireAuth(request).userId, id, input),
     );
     return reply.status(201).send(result);
   });

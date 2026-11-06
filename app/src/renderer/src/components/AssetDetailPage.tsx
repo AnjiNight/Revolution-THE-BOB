@@ -6,6 +6,7 @@ import {
   showsIntradayQuote,
   type AssetDetail,
   type AssetSession,
+  type Portfolio,
   type PriceHistory,
   type PriceHistoryPeriod,
 } from '@simulador/shared';
@@ -28,6 +29,7 @@ import { useSectorName } from './AssetFields';
 import { AssetLogo } from './AssetLogo';
 import { DividendsPanel, FundamentalsPanel } from './FundamentalsPanels';
 import { PriceChart } from './PriceChart';
+import type { TradeAsset } from './TradeForm';
 import { changeDirection } from './QuoteText';
 
 type DetailState =
@@ -38,6 +40,8 @@ type DetailState =
 interface AssetDetailPageProps {
   assetId: string;
   onBack: () => void;
+  /** SPEC-014: só para o usuário. Abre a carteira ao vivo escolhida já comprando o ativo. */
+  onBuy?: (portfolioId: string, asset: TradeAsset) => void;
   onSessionExpired: () => void;
 }
 
@@ -46,7 +50,12 @@ interface AssetDetailPageProps {
  * o gráfico dos fechamentos, sempre com o aviso de preços sem ajuste. Com a ficha aberta, a cotação
  * do topo é pedida de novo a cada 5 minutos; se falhar, a ficha continua com o que tinha (QA02).
  */
-export function AssetDetailPage({ assetId, onBack, onSessionExpired }: AssetDetailPageProps) {
+export function AssetDetailPage({
+  assetId,
+  onBack,
+  onBuy,
+  onSessionExpired,
+}: AssetDetailPageProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<DetailState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
@@ -134,6 +143,19 @@ export function AssetDetailPage({ assetId, onBack, onSessionExpired }: AssetDeta
     <div className="asset-detail">
       {back}
       <DetailHeader asset={asset} headingRef={heading} />
+      {onBuy && asset.active && (
+        <BuyFromAsset
+          asset={{
+            id: asset.id,
+            ticker: asset.ticker,
+            name: asset.name,
+            class: asset.class,
+            hasLogo: asset.hasLogo,
+          }}
+          onBuy={onBuy}
+          onSessionExpired={onSessionExpired}
+        />
+      )}
       {state.refreshFailed && (
         <p className="catalog-capacity" role="status">
           <Warning weight="fill" aria-hidden="true" />
@@ -534,5 +556,85 @@ function HistoryContent({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * SPEC-014 §4.1, decisão 6: Comprar pela ficha. Com uma carteira ao vivo, abre direto nela; com mais
+ * de uma, pergunta qual; sem nenhuma, avisa.
+ */
+function BuyFromAsset({
+  asset,
+  onBuy,
+  onSessionExpired,
+}: {
+  asset: TradeAsset;
+  onBuy: (portfolioId: string, asset: TradeAsset) => void;
+  onSessionExpired: () => void;
+}) {
+  const { t } = useTranslation();
+  const titleId = useId();
+  const [choice, setChoice] = useState<
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'choose'; portfolios: Portfolio[] }
+    | { status: 'none' }
+    | { status: 'failed'; error: ClientAuthError }
+  >({ status: 'idle' });
+
+  const start = async () => {
+    setChoice({ status: 'loading' });
+    const result = await window.api.portfolios.list();
+    if (!result.ok) {
+      if (result.error === 'unauthorized') return onSessionExpired();
+      return setChoice({ status: 'failed', error: result.error });
+    }
+    const live = result.data.portfolios.filter((portfolio) => portfolio.type === 'live');
+    const [only] = live;
+    if (live.length === 1 && only) return onBuy(only.id, asset);
+    setChoice(live.length === 0 ? { status: 'none' } : { status: 'choose', portfolios: live });
+  };
+
+  return (
+    <div className="asset-buy">
+      {(choice.status === 'idle' || choice.status === 'loading') && (
+        <button
+          type="button"
+          className="pill pill-primary"
+          disabled={choice.status === 'loading'}
+          onClick={() => void start()}
+        >
+          {choice.status === 'loading' ? t('detail.buyLoading') : t('detail.buy')}
+        </button>
+      )}
+      {choice.status === 'none' && <p className="field-hint">{t('detail.noLivePortfolio')}</p>}
+      {choice.status === 'failed' && (
+        <p className="form-error" role="alert">
+          {t(`authErrors.${choice.error}`)}
+        </p>
+      )}
+      {choice.status === 'choose' && (
+        <div className="asset-buy-choose" role="group" aria-labelledby={titleId}>
+          <p id={titleId}>{t('detail.buyTitle')}</p>
+          <ul>
+            {choice.portfolios.map((portfolio, index) => (
+              <li key={portfolio.id}>
+                <button
+                  type="button"
+                  className="pill pill-ghost pill-small"
+                  autoFocus={index === 0}
+                  onClick={() => onBuy(portfolio.id, asset)}
+                >
+                  {portfolio.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="link" onClick={() => setChoice({ status: 'idle' })}>
+            {t('detail.buyCancel')}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
