@@ -245,7 +245,12 @@
     "market_closed": "A bolsa está fechada hoje.",
     "no_quote_today": "O ativo ainda não tem cotação hoje.",
     "asset_inactive": "O ativo foi desativado e não pode ser comprado.",
-    "historical_portfolio": "A compra e venda na carteira histórica chega numa próxima versão."
+    "historical_portfolio": "A compra e venda na carteira histórica chega numa próxima versão.",
+    "entry_not_found": "Esse lançamento não é desta carteira.",
+    "already_reversed": "Esse lançamento já foi estornado.",
+    "reversal_window_closed": "Na carteira ao vivo, compra e venda só se estornam no dia em que foram feitas. Para desfazer, faça a operação contrária.",
+    "reversal_breaks_cash": "Esse estorno deixaria o caixa negativo.",
+    "reversal_breaks_position": "Esse estorno deixaria uma venda maior que a posição."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -640,7 +645,8 @@
         "date": "Data",
         "type": "Lançamento",
         "amount": "Valor",
-        "balanceAfter": "Saldo depois"
+        "balanceAfter": "Saldo depois",
+        "actions": "Ações"
       },
       "types": {
         "deposit": "Aporte",
@@ -651,7 +657,37 @@
       "showMore": "Mostrar mais",
       "count_one": "{{shown}} de {{count}} lançamento",
       "count_other": "{{shown}} de {{count}} lançamentos",
-      "tradeDetail": "{{quantity}} {{ticker}} a {{price}}"
+      "tradeDetail": "{{quantity}} {{ticker}} a {{price}}",
+      "reversal": {
+        "reverse": "Estornar",
+        "reverseLabel": "Estornar {{description}}",
+        "reversed": "Estornado em {{date}}",
+        "confirm": "Estornar {{description}}? Ele continua no extrato, riscado, e deixa de contar no caixa e nas posições. Não dá para desfazer o estorno.",
+        "confirmButton": "Confirmar estorno",
+        "cancel": "Cancelar",
+        "saving": "Estornando…",
+        "done": "Lançamento estornado.",
+        "description": {
+          "deposit": "o aporte de {{amount}} de {{date}}",
+          "withdrawal": "a retirada de {{amount}} de {{date}}",
+          "buy": "a compra de {{quantity}} {{ticker}} a {{price}} de {{date}}",
+          "sell": "a venda de {{quantity}} {{ticker}} a {{price}} de {{date}}"
+        },
+        "at": {
+          "deposit": "no aporte de {{amount}} de {{date}}",
+          "withdrawal": "na retirada de {{amount}} de {{date}}",
+          "buy": "na compra de {{quantity}} {{ticker}} de {{date}}",
+          "sell": "na venda de {{quantity}} {{ticker}} de {{date}}"
+        },
+        "that": {
+          "deposit": "esse aporte",
+          "withdrawal": "essa retirada",
+          "buy": "essa compra",
+          "sell": "essa venda"
+        },
+        "breaksCash": "Esse estorno deixaria o caixa negativo {{at}}. Estorne {{that}} antes.",
+        "breaksPosition": "Esse estorno deixaria a venda de {{quantity}} {{ticker}} de {{date}} maior que a posição. Estorne essa venda antes."
+      }
     },
     "positions": {
       "title": "Posições",

@@ -40,6 +40,9 @@
 | 1.30 | SPEC-013 aprovada (Luís, 06/11/2026) e implementada: aportes e retiradas nas carteiras ao vivo e histórica, valor inicial na criação, saldo e extrato, lançamentos imutáveis no banco e a exportação na versão 3 |
 | 1.31 | SPEC-014 aprovada (Luís, 06/11/2026) com as recomendações: OPEN-08 (só em dia de pregão, com a cotação do próprio dia), OPEN-12 (quantidade inteira, RB27) e OPEN-24 (quantidade na API e "Calcular por valor" na tela) resolvidas; o tratamento de proventos e eventos na carteira (OPEN-06) vai para a nova SPEC-043; Requisitos v1.10 (RB07 e RB27) |
 | 1.32 | SPEC-014 implementada: compra e venda na carteira ao vivo com a cotação do próprio dia, posições e preço médio, "Calcular por valor", Comprar pela ficha do ativo e a exportação na versão 4 |
+| 1.33 | SPEC-015 detalhada ([SPEC-015.md](SPEC-015.md)), aguardando a aprovação: estorno que anula o lançamento, aceito só se o livro sem ele continuar válido, com prazo de um dia para compra e venda na carteira ao vivo; recomendações para a OPEN-14 esperando a resposta do Luís |
+| 1.34 | SPEC-015 aprovada (Luís, 06/11/2026) com as recomendações; OPEN-14 resolvida; Requisitos v1.11 (RB28) |
+| 1.35 | SPEC-015 implementada: estorno de aporte, retirada, compra e venda, com a conferência do livro, o prazo de um dia para compra e venda na ao vivo e a exportação na versão 5 |
 ---
 
 ## 0. Como ler este documento
@@ -282,7 +285,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-11 | ✅ **Resolvida na [SPEC-012](SPEC-012.md):** sem `saldo_inicial`; o caixa vem só dos aportes ("Valor inicial" na SPEC-013), e retirada maior que o caixa é recusada (RB26). Original: relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
 | OPEN-12 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** quantidade inteira, de 1 a 1.000.000, sem lote padrão (RB27). Original: quantidade fracionária de ações e regras de lote | INC-18 | 014, 016 |
 | OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra e na venda de ações e FIIs (RB20, RB21); o aviso na aplicação no Tesouro Direto volta com a renda fixa (DA22) | INC-19 | 014, 016, 019; 024 na fase de renda fixa |
-| OPEN-14 | Regras do estorno: o que pode ser estornado, efeito em lançamentos posteriores, estorno de estorno, estorno na carteira histórica | RB08 | 015, 016 |
+| OPEN-14 | ✅ **Resolvida na [SPEC-015](SPEC-015.md):** aporte, retirada, compra e venda se estornam uma vez só, sem estorno de estorno; o estorno anula o original (as contas o ignoram); aceito só se o livro sem ele continuar válido; na carteira ao vivo, compra e venda só no mesmo dia (RB28). Original: regras do estorno: o que pode ser estornado, efeito em lançamentos posteriores, estorno de estorno, estorno na carteira histórica | RB08 | 015, 016 |
 | OPEN-15 | ✅ **Resolvida na [SPEC-012](SPEC-012.md):** exclusão definitiva, com confirmação e registro sem dado pessoal. Original: exclusão de carteira: exclusão definitiva ou arquivamento, preservando auditoria | INC-17 | 012, 034 |
 | OPEN-16 | ⏸ **Adiada com a renda fixa (DA22).** Tipos de remuneração da renda fixa (prefixado, % do CDI, IPCA + taxa) e atributos da aplicação (taxa contratada, carência) | Modelo, arquitetura §9 | 017 |
 | OPEN-17 | ⏸ **Adiada com a renda fixa (DA22).** Tratamento fiscal por produto (ex.: LCI/LCA) | INC-13 | 018, 024 |
@@ -732,6 +735,8 @@ Visão geral por fase:
 | Prioridade derivada | Must |
 
 #### SPEC-015 — Estorno de lançamento
+
+📄 Detalhada em [SPEC-015.md](SPEC-015.md) — aprovada (Luís, 06/11/2026) e implementada.
 
 | Campo | Conteúdo |
 |---|---|

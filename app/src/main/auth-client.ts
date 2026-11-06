@@ -50,6 +50,7 @@ import {
   type NewCashEntryInput,
   type NewTradeInput,
   type PortfolioPositions,
+  type ReversalResult,
   type TradeQuote,
   type TradeResult,
   type NewPortfolioInput,
@@ -124,6 +125,11 @@ const KNOWN_ERRORS: ReadonlyArray<
   'no_quote_today',
   'asset_inactive',
   'historical_portfolio',
+  'entry_not_found',
+  'already_reversed',
+  'reversal_window_closed',
+  'reversal_breaks_cash',
+  'reversal_breaks_position',
 ];
 
 class RequestFailed extends Error {
@@ -404,6 +410,20 @@ export class AuthClient {
         quotedAt: input.quotedAt,
       }),
     );
+  }
+
+  /** SPEC-015: estorna um lançamento; a recusa traz em details o lançamento que quebraria. */
+  reverseEntry(id: string, entryId: string): Promise<ClientResult<ReversalResult>> {
+    return this.call(() => {
+      if (typeof entryId !== 'string' || !UUID_PATTERN.test(entryId)) {
+        throw new RequestFailed('unexpected');
+      }
+      return this.authorizedRequest<ReversalResult>(
+        'POST',
+        portfolioRouteUrl(PORTFOLIO_PATHS.reversals, id),
+        { entryId },
+      );
+    });
   }
 
   /** Colaborador (SPEC-007): até que dia a série do CDI está carregada e a última atualização. */

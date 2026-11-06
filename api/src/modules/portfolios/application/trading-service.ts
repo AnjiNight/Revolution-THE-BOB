@@ -33,7 +33,7 @@ import {
   QuoteChangedError,
   TradeAssetNotFoundError,
 } from '../domain/errors.js';
-import { ledgerItems, ownedPortfolio, tradeMovements } from './ledger.js';
+import { activeLedger, ledgerItems, ownedPortfolio, tradeMovements } from './ledger.js';
 import type {
   LedgerRepository,
   MarketAsset,
@@ -83,7 +83,8 @@ export class TradingService {
   /** SPEC-014 §5.1: posições em ordem de ticker, com o caixa, o valor em ativos e o total. */
   async positions(userId: string, id: string): Promise<PortfolioPositions> {
     await ownedPortfolio(this.deps.portfolios, userId, id);
-    const ledger = await this.deps.ledger.ledger(id);
+    // SPEC-015: as negociações e lançamentos estornados não contam.
+    const ledger = activeLedger(await this.deps.ledger.ledger(id));
     const cash = cashLedger(ledgerItems(ledger)).balance;
     const positions = (
       await Promise.all(
@@ -108,7 +109,7 @@ export class TradingService {
   async tradeQuote(userId: string, id: string, assetId: string): Promise<TradeQuote> {
     const portfolio = await ownedPortfolio(this.deps.portfolios, userId, id);
     const asset = await this.asset(assetId);
-    const ledger = await this.deps.ledger.ledger(id);
+    const ledger = activeLedger(await this.deps.ledger.ledger(id));
     const common = {
       cash: cashLedger(ledgerItems(ledger)).balance,
       held: holdings(tradeMovements(ledger.trades)).get(assetId)?.quantity ?? 0,
@@ -152,8 +153,9 @@ export class TradingService {
     const total = tradeTotal(input.quantity, price);
     const now = this.clock();
 
-    let after: PortfolioLedger = { cash: [], trades: [] };
-    const stored = await this.deps.ledger.appendTradeLocked(id, (current): NewStoredTrade => {
+    let after: PortfolioLedger = { cash: [], trades: [], reversals: [] };
+    const stored = await this.deps.ledger.appendTradeLocked(id, (locked): NewStoredTrade => {
+      const current = activeLedger(locked);
       const cash = cashLedger(ledgerItems(current)).balance;
       if (input.type === 'buy' && !canSpend(cash, total)) throw new InsufficientCashError(cash);
       if (input.type === 'sell') {
@@ -175,6 +177,7 @@ export class TradingService {
       after = {
         cash: current.cash,
         trades: [...current.trades, { ...trade, id: 'nova', portfolioId: id }],
+        reversals: [],
       };
       return trade;
     });

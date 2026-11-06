@@ -87,8 +87,8 @@ describe('exportação (SPEC-034 CA01, CA02)', () => {
     expect(data).toEqual({
       format: PERSONAL_DATA_FORMAT,
       // 2: SPEC-012 acrescentou as carteiras; 3: SPEC-013, os aportes e retiradas; 4: SPEC-014,
-      // as compras e vendas.
-      version: 4,
+      // as compras e vendas; 5: SPEC-015, os estornos.
+      version: 5,
       exportedAt: '2026-10-13T16:00:00.000Z',
       account: {
         id: user.id,

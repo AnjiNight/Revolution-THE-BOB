@@ -87,6 +87,36 @@ export class TradeAssetNotFoundError extends DomainError {
   readonly code = 'asset_not_found';
 }
 
+/** SPEC-015: o lançamento não é desta carteira (ou não existe). */
+export class EntryNotFoundError extends DomainError {
+  readonly code = 'entry_not_found';
+}
+
+/** RB28: cada lançamento se estorna uma vez só. */
+export class AlreadyReversedError extends DomainError {
+  readonly code = 'already_reversed';
+}
+
+/** RB28: na carteira ao vivo, compra e venda só se estornam no dia em que foram feitas. */
+export class ReversalWindowClosedError extends DomainError {
+  readonly code = 'reversal_window_closed';
+}
+
+/**
+ * RB28: sem o lançamento estornado, o livro quebraria (caixa negativo ou venda maior que a
+ * posição); `details` diz em qual lançamento, para a tela dizer qual estornar antes.
+ */
+export class ReversalBreaksLedgerError extends DomainError {
+  readonly code: 'reversal_breaks_cash' | 'reversal_breaks_position';
+  override readonly details: Readonly<Record<string, string>>;
+
+  constructor(reason: 'cash' | 'position', details: Readonly<Record<string, string>>) {
+    super('o estorno quebraria o livro');
+    this.code = reason === 'cash' ? 'reversal_breaks_cash' : 'reversal_breaks_position';
+    this.details = details;
+  }
+}
+
 /** Entrada que a regra do servidor recusa (data de início no futuro ou fora de pregão). */
 export class PortfolioValidationError extends DomainError {
   readonly code = 'validation_error';

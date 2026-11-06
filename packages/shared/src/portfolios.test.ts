@@ -6,6 +6,7 @@ import {
   portfolioNameKey,
   validateNewCashEntry,
   validateNewPortfolio,
+  validateNewReversal,
   validateNewTrade,
   validateRenamePortfolio,
   validateTradeQuoteQuery,
@@ -196,6 +197,21 @@ describe('compra e venda: validação (SPEC-014)', () => {
     expect(validateTradeQuoteQuery({ assetId: ok.assetId.toUpperCase() })).toEqual({
       success: true,
       data: { assetId: ok.assetId },
+    });
+  });
+});
+
+describe('estorno: validação (SPEC-015)', () => {
+  it('o id do lançamento, como UUID', () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    expect(validateNewReversal({ entryId: id.toUpperCase() })).toEqual({
+      success: true,
+      data: { entryId: id },
+    });
+    expect(validateNewReversal({})).toEqual({ success: false, fields: { entryId: 'required' } });
+    expect(validateNewReversal({ entryId: 'x' })).toEqual({
+      success: false,
+      fields: { entryId: 'invalid_option' },
     });
   });
 });

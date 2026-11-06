@@ -14,6 +14,7 @@ export const PORTFOLIO_PATHS = {
   positions: '/api/portfolios/:id/positions',
   tradeQuote: '/api/portfolios/:id/trade-quote',
   trades: '/api/portfolios/:id/trades',
+  reversals: '/api/portfolios/:id/reversals',
 } as const;
 
 export function portfolioPath(id: string): string {
@@ -84,7 +85,13 @@ export type PortfolioErrorCode =
   | 'market_closed'
   | 'no_quote_today'
   | 'asset_inactive'
-  | 'historical_portfolio';
+  | 'historical_portfolio'
+  // SPEC-015
+  | 'entry_not_found'
+  | 'already_reversed'
+  | 'reversal_window_closed'
+  | 'reversal_breaks_cash'
+  | 'reversal_breaks_position';
 
 // --- Caixa (SPEC-013) ---
 
@@ -112,7 +119,12 @@ export interface CashEntry {
   date: IsoDate;
   /** ISO 8601: quando o servidor registrou. */
   recordedAt: string;
-  balanceAfter: string;
+  /** `null` no lançamento estornado: ele não conta no saldo (SPEC-015). */
+  balanceAfter: string | null;
+  /** SPEC-015: ISO 8601 do estorno, ou `null`. */
+  reversedAt: string | null;
+  /** SPEC-015: dá para estornar agora (não estornado e, na ao vivo, compra e venda do dia). */
+  reversible: boolean;
 }
 
 /** Corpo de `GET /api/portfolios/:id/cash`: saldo e extrato do mais recente ao mais antigo. */
@@ -461,4 +473,43 @@ export function validateNewTrade(input: unknown): ValidationResult<NewTradeInput
       quotedAt: new Date(raw.quotedAt as string).toISOString(),
     },
   };
+}
+
+// --- Estorno (SPEC-015) ---
+
+export interface NewReversalInput {
+  /** O aporte, a retirada, a compra ou a venda a estornar. */
+  entryId: string;
+}
+
+/** Corpo de `POST /api/portfolios/:id/reversals`. */
+export interface ReversalResult {
+  reversal: { entryId: string; type: CashEntryType | TradeType; reversedAt: string };
+  /** O caixa sem o lançamento estornado. */
+  cash: string;
+}
+
+/**
+ * Detalhe do `reversal_breaks_cash` e do `reversal_breaks_position`: o lançamento que deixaria o
+ * caixa negativo ou a venda maior que a posição, para a tela dizer qual estornar antes.
+ */
+export interface ReversalBreakDetails {
+  entryId: string;
+  type: CashEntryType | TradeType;
+  date: IsoDate;
+  /** Valor do lançamento (na compra e na venda, o total). */
+  amount: string;
+  /** Só na compra e na venda. */
+  ticker?: string;
+  quantity?: string;
+}
+
+/** Valida o pedido de estorno: o id do lançamento. */
+export function validateNewReversal(input: unknown): ValidationResult<NewReversalInput> {
+  const raw = asRecord(input).entryId;
+  if (raw === undefined || raw === '') return { success: false, fields: { entryId: 'required' } };
+  if (typeof raw !== 'string' || !UUID_PATTERN.test(raw)) {
+    return { success: false, fields: { entryId: 'invalid_option' } };
+  }
+  return { success: true, data: { entryId: raw.toLowerCase() } };
 }

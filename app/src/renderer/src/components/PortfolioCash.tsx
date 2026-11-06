@@ -12,7 +12,7 @@ import {
   type Portfolio,
 } from '@simulador/shared';
 import { ArrowDown, ArrowUp } from '@phosphor-icons/react';
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
 import { formatCalendarDay, formatMoney } from '../format';
@@ -45,6 +45,19 @@ export function PortfolioCash({
   const [state, setState] = useState<CashState>({ status: 'loading' });
   const [mode, setMode] = useState<CashEntryType | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // SPEC-015: o lançamento com a confirmação de estorno aberta e o botão que a abriu.
+  const [reversing, setReversing] = useState<{ entry: CashEntry; opener: HTMLElement } | null>(
+    null,
+  );
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+
+  /** Estornado: o aviso recebe o foco (a linha e o botão mudam), e caixa e posições recarregam. */
+  const reversed = () => {
+    setReversing(null);
+    setNotice(t('portfolios.cash.reversal.done'));
+    onChanged();
+    requestAnimationFrame(() => noticeRef.current?.focus());
+  };
   const [loadingMore, setLoadingMore] = useState(false);
   const depositButton = useRef<HTMLButtonElement>(null);
   const withdrawButton = useRef<HTMLButtonElement>(null);
@@ -165,7 +178,7 @@ export function PortfolioCash({
       )}
 
       {notice && (
-        <p className="form-success" role="status">
+        <p ref={noticeRef} className="form-success" role="status" tabIndex={-1}>
           {notice}
         </p>
       )}
@@ -196,11 +209,47 @@ export function PortfolioCash({
                 <th scope="col" className="cash-number">
                   {t('portfolios.cash.columns.balanceAfter')}
                 </th>
+                <th scope="col">
+                  <span className="visually-hidden">{t('portfolios.cash.columns.actions')}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {data.entries.map((entry) => (
-                <StatementRow key={entry.id} entry={entry} live={portfolio.type === 'live'} />
+                <Fragment key={entry.id}>
+                  <StatementRow
+                    entry={entry}
+                    live={portfolio.type === 'live'}
+                    onReverse={
+                      entry.reversible
+                        ? (opener) => {
+                            setNotice(null);
+                            setReversing({ entry, opener });
+                          }
+                        : null
+                    }
+                    // Com uma confirmação aberta, os botões ficam, mas desativados: o foco volta
+                    // ao que a abriu quando ela fecha.
+                    reverseDisabled={reversing !== null}
+                  />
+                  {reversing?.entry.id === entry.id && (
+                    <tr className="reversal-row">
+                      <td colSpan={5}>
+                        <ReversalConfirm
+                          portfolio={portfolio}
+                          entry={entry}
+                          onDone={reversed}
+                          onCancel={() => {
+                            const { opener } = reversing;
+                            setReversing(null);
+                            requestAnimationFrame(() => opener.focus());
+                          }}
+                          onSessionExpired={onSessionExpired}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -223,46 +272,213 @@ export function PortfolioCash({
   );
 }
 
-function StatementRow({ entry, live }: { entry: CashEntry; live: boolean }) {
+/** A data do lançamento como o extrato mostra: na ao vivo, com a hora do registro em Brasília. */
+function entryWhen(entry: CashEntry, live: boolean, language: string): string {
+  const day = formatCalendarDay(entry.date, language);
+  if (!live) return day;
+  const time = new Intl.DateTimeFormat(language, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: CALENDAR_TIME_ZONE,
+  }).format(new Date(entry.recordedAt));
+  return `${day}, ${time}`;
+}
+
+/** "o aporte de R$ 5.000,00 de 6 de nov. de 2026, 14:32" (SPEC-015 §4.2). */
+function useDescribe() {
   const { t, i18n } = useTranslation();
   const language = i18n.language;
-  const day = formatCalendarDay(entry.date, language);
-  // Na ao vivo, a hora do registro em Brasília; na histórica, só o dia escolhido.
-  const time = live
-    ? new Intl.DateTimeFormat(language, {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: CALENDAR_TIME_ZONE,
-      }).format(new Date(entry.recordedAt))
-    : null;
+  return (entry: CashEntry, live: boolean) =>
+    t(`portfolios.cash.reversal.description.${entry.type}`, {
+      amount: formatMoney(entry.amount, language),
+      quantity: entry.trade ? new Intl.NumberFormat(language).format(entry.trade.quantity) : '',
+      ticker: entry.trade?.ticker ?? '',
+      price: entry.trade ? formatMoney(entry.trade.price, language) : '',
+      date: entryWhen(entry, live, language),
+    });
+}
+
+function StatementRow({
+  entry,
+  live,
+  onReverse,
+  reverseDisabled,
+}: {
+  entry: CashEntry;
+  live: boolean;
+  /** `null`: este lançamento não pode ser estornado agora (ou outro está sendo). */
+  onReverse: ((opener: HTMLElement) => void) | null;
+  reverseDisabled: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
+  const describe = useDescribe();
   // Entra no caixa: aporte e venda; sai: retirada e compra.
   const sign = entry.type === 'deposit' || entry.type === 'sell' ? '+' : '−';
+  const reversedAt = entry.reversedAt
+    ? new Intl.DateTimeFormat(language, {
+        dateStyle: 'short',
+        timeStyle: 'short',
+        timeZone: CALENDAR_TIME_ZONE,
+      }).format(new Date(entry.reversedAt))
+    : null;
   return (
-    <tr>
-      <td data-label={t('portfolios.cash.columns.date')}>{time ? `${day}, ${time}` : day}</td>
+    <tr className={reversedAt ? 'is-reversed' : undefined}>
+      <td data-label={t('portfolios.cash.columns.date')}>{entryWhen(entry, live, language)}</td>
       <td data-label={t('portfolios.cash.columns.type')}>
-        {t(`portfolios.cash.types.${entry.type}`)}
-        {entry.trade && (
-          <span className="cash-trade">
-            {t('portfolios.cash.tradeDetail', {
-              quantity: new Intl.NumberFormat(language).format(entry.trade.quantity),
-              ticker: entry.trade.ticker,
-              price: formatMoney(entry.trade.price, language),
-            })}
-          </span>
-        )}
+        {/* Um bloco só: no cartão (480 px), fica inteiro do lado direito do rótulo. */}
+        <span className="cash-type-cell">
+          <span className="cash-type">{t(`portfolios.cash.types.${entry.type}`)}</span>
+          {entry.trade && (
+            <span className="cash-trade">
+              {t('portfolios.cash.tradeDetail', {
+                quantity: new Intl.NumberFormat(language).format(entry.trade.quantity),
+                ticker: entry.trade.ticker,
+                price: formatMoney(entry.trade.price, language),
+              })}
+            </span>
+          )}
+          {/* Riscado e também escrito: nunca só pela aparência (RNF18). */}
+          {reversedAt && (
+            <span className="cash-reversed">
+              {t('portfolios.cash.reversal.reversed', { date: reversedAt })}
+            </span>
+          )}
+        </span>
       </td>
       <td
         data-label={t('portfolios.cash.columns.amount')}
         className={`cash-number cash-${entry.type === 'sell' ? 'deposit' : entry.type}`}
       >
-        {sign}
-        {formatMoney(entry.amount, language)}
+        <span className="cash-amount">
+          {sign}
+          {formatMoney(entry.amount, language)}
+        </span>
       </td>
       <td data-label={t('portfolios.cash.columns.balanceAfter')} className="cash-number">
-        {formatMoney(entry.balanceAfter, language)}
+        {entry.balanceAfter === null ? '—' : formatMoney(entry.balanceAfter, language)}
+      </td>
+      <td data-label="" className="cash-actions-cell">
+        {onReverse && (
+          <button
+            type="button"
+            className="pill pill-ghost pill-small"
+            disabled={reverseDisabled}
+            aria-label={t('portfolios.cash.reversal.reverseLabel', {
+              description: describe(entry, live),
+            })}
+            onClick={(event) => onReverse(event.currentTarget)}
+          >
+            {t('portfolios.cash.reversal.reverse')}
+          </button>
+        )}
       </td>
     </tr>
+  );
+}
+
+/**
+ * Confirmação do estorno (SPEC-015 §4.2), no lugar da linha. A recusa diz qual lançamento
+ * estornar antes.
+ */
+function ReversalConfirm({
+  portfolio,
+  entry,
+  onDone,
+  onCancel,
+  onSessionExpired,
+}: {
+  portfolio: Portfolio;
+  entry: CashEntry;
+  onDone: () => void;
+  onCancel: () => void;
+  onSessionExpired: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
+  const describe = useDescribe();
+  const questionId = useId();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const confirmButton = useRef<HTMLButtonElement>(null);
+
+  const confirm = async () => {
+    setSaving(true);
+    setError(null);
+    const result = await window.api.portfolios.reverse(portfolio.id, entry.id);
+    setSaving(false);
+    if (result.ok) return onDone();
+    if (result.error === 'unauthorized') return onSessionExpired();
+    setError(refusal(result.error, result.details ?? {}));
+    // O botão ficou desativado enquanto esperava: o foco volta para ele (e o Esc continua valendo).
+    requestAnimationFrame(() => confirmButton.current?.focus());
+  };
+
+  /** A mensagem da recusa; nas que quebram o livro, com o lançamento que quebraria. */
+  const refusal = (error: ClientAuthError, details: Readonly<Record<string, string>>) => {
+    const type = details.type;
+    const date = details.date
+      ? new Intl.DateTimeFormat(language, {
+          day: '2-digit',
+          month: '2-digit',
+          timeZone: 'UTC',
+        }).format(new Date(`${details.date}T00:00:00Z`))
+      : '';
+    const values = {
+      amount: details.amount ? formatMoney(details.amount, language) : '',
+      quantity: details.quantity
+        ? new Intl.NumberFormat(language).format(Number(details.quantity))
+        : '',
+      ticker: details.ticker ?? '',
+      date,
+    };
+    if (error === 'reversal_breaks_cash' && type) {
+      return t('portfolios.cash.reversal.breaksCash', {
+        at: t(`portfolios.cash.reversal.at.${type}`, values),
+        that: t(`portfolios.cash.reversal.that.${type}`),
+      });
+    }
+    if (error === 'reversal_breaks_position' && type) {
+      return t('portfolios.cash.reversal.breaksPosition', values);
+    }
+    return t(`authErrors.${error}`);
+  };
+
+  return (
+    <div
+      className="cash-confirm"
+      role="alertdialog"
+      aria-labelledby={questionId}
+      onKeyDown={(event) => event.key === 'Escape' && onCancel()}
+    >
+      <p id={questionId} className="cash-confirm-question">
+        {t('portfolios.cash.reversal.confirm', {
+          description: describe(entry, portfolio.type === 'live'),
+        })}
+      </p>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="form-actions">
+        <button
+          ref={confirmButton}
+          type="button"
+          className="pill pill-primary"
+          autoFocus
+          disabled={saving}
+          onClick={() => void confirm()}
+        >
+          {saving
+            ? t('portfolios.cash.reversal.saving')
+            : t('portfolios.cash.reversal.confirmButton')}
+        </button>
+        <button type="button" className="pill pill-ghost" onClick={onCancel}>
+          {t('portfolios.cash.reversal.cancel')}
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -271,6 +271,33 @@ button.link.portfolio-open {
   font-size: 0.8125rem;
 }
 
+/* ---------- Estorno (SPEC-015) ---------- */
+
+/* Riscado e com o "Estornado em…" escrito embaixo: a aparência nunca é o único sinal (RNF18). */
+.cash-statement .is-reversed .cash-type,
+.cash-statement .is-reversed .cash-trade,
+.cash-statement .is-reversed .cash-amount {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.cash-reversed {
+  display: block;
+  color: var(--warn);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.cash-statement .cash-actions-cell {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cash-statement .reversal-row td {
+  padding: 0.25rem 0 0.75rem;
+}
+
 /* ---------- Posições e compra e venda (SPEC-014) ---------- */
 
 .positions-panel {
@@ -616,6 +643,20 @@ button.link.position-ticker {
 
   .cash-statement .cash-number {
     text-align: right;
+  }
+
+  .cash-statement .cash-actions-cell {
+    justify-content: flex-end;
+    width: auto;
+  }
+
+  .cash-statement .cash-type-cell {
+    text-align: right;
+  }
+
+  .cash-statement .cash-actions-cell::before,
+  .cash-statement .reversal-row td::before {
+    content: none;
   }
 
   .positions-totals {

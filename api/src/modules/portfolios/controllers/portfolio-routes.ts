@@ -3,6 +3,7 @@ import {
   validateCashStatementQuery,
   validateNewCashEntry,
   validateNewPortfolio,
+  validateNewReversal,
   validateNewTrade,
   validateRenamePortfolio,
   validateTradeQuoteQuery,
@@ -46,6 +47,18 @@ const run = domainErrorRunner({
     message: 'A compra e venda na carteira histórica ainda não está disponível.',
   },
   asset_not_found: { status: 404, message: 'Ativo não encontrado.' },
+  // SPEC-015
+  entry_not_found: { status: 404, message: 'Lançamento não encontrado nesta carteira.' },
+  already_reversed: { status: 409, message: 'Esse lançamento já foi estornado.' },
+  reversal_window_closed: {
+    status: 409,
+    message: 'Na carteira ao vivo, compra e venda só se estornam no dia em que foram feitas.',
+  },
+  reversal_breaks_cash: { status: 409, message: 'Esse estorno deixaria o caixa negativo.' },
+  reversal_breaks_position: {
+    status: 409,
+    message: 'Esse estorno deixaria uma venda maior que a posição.',
+  },
   calendar_not_published: {
     status: 409,
     message: 'O calendário de pregão desse ano ainda não foi publicado.',
@@ -159,6 +172,16 @@ export function registerPortfolioRoutes(
     const input = ensureValid(validateNewTrade(request.body));
     const result = await owned(request, () =>
       trading.trade(requireAuth(request).userId, id, input),
+    );
+    return reply.status(201).send(result);
+  });
+
+  // SPEC-015 §5.1: estorno de um lançamento. Nada é alterado nem apagado.
+  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.reversals, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const { entryId } = ensureValid(validateNewReversal(request.body));
+    const result = await owned(request, () =>
+      portfolios.reverse(requireAuth(request).userId, id, entryId),
     );
     return reply.status(201).send(result);
   });

@@ -7,6 +7,7 @@ import type {
   CashEntryResult,
   CashStatement,
   PortfolioPositions,
+  ReversalResult,
   TradeQuote,
   TradeResult,
   CatalogAsset,
@@ -93,6 +94,8 @@ const api: DesktopApi = {
     tradeQuote: (id, assetId) =>
       invoke<ClientResult<TradeQuote>>(PORTFOLIO_CHANNELS.tradeQuote, id, assetId),
     trade: (id, input) => invoke<ClientResult<TradeResult>>(PORTFOLIO_CHANNELS.trade, id, input),
+    reverse: (id, entryId) =>
+      invoke<ClientResult<ReversalResult>>(PORTFOLIO_CHANNELS.reverse, id, entryId),
   },
   fundamentals: {
     get: (id) => invoke<ClientResult<AssetFundamentals>>(FUNDAMENTALS_CHANNELS.fundamentals, id),

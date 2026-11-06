@@ -104,11 +104,14 @@ export class PrismaPortfolioRepository implements PortfolioRepository {
     await this.prisma.$transaction(async (tx) => {
       await lockPortfolio(tx, id);
       // SPEC-014: as compras e vendas também são lançamentos.
-      const [cash, trades] = await Promise.all([
-        tx.lancamentoCaixa.count({ where: { carteiraId: id } }),
-        tx.transacao.count({ where: { carteiraId: id } }),
+      // SPEC-015: os estornos também são lançamentos (DA09).
+      const where = { carteiraId: id };
+      const [cash, trades, reversals] = await Promise.all([
+        tx.lancamentoCaixa.count({ where }),
+        tx.transacao.count({ where }),
+        tx.estorno.count({ where }),
       ]);
-      const entries = cash + trades;
+      const entries = cash + trades + reversals;
       const row = await tx.carteira.delete({ where: { id } });
       await tx.exclusaoCarteira.create({
         data: { carteiraId: row.id, tipo: row.tipo, lancamentos: entries, excluidaEm: at },

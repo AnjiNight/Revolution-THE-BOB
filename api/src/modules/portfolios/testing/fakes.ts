@@ -5,12 +5,14 @@ import type {
   MarketQuote,
   NewStoredCashEntry,
   NewStoredPortfolio,
+  NewStoredReversal,
   NewStoredTrade,
   PortfolioLedger,
   PortfolioMarket,
   PortfolioRepository,
   StoredCashEntry,
   StoredPortfolio,
+  StoredReversal,
   StoredTrade,
 } from '../application/ports.js';
 import { PortfolioNameInUseError } from '../domain/errors.js';
@@ -22,6 +24,7 @@ import { PortfolioNameInUseError } from '../domain/errors.js';
 export class InMemoryLedgerRepository implements LedgerRepository {
   readonly entries: StoredCashEntry[] = [];
   readonly trades: StoredTrade[] = [];
+  readonly reversals: StoredReversal[] = [];
   private readonly locks = new Map<string, Promise<unknown>>();
 
   ledger(portfolioId: string): Promise<PortfolioLedger> {
@@ -50,6 +53,21 @@ export class InMemoryLedgerRepository implements LedgerRepository {
     });
   }
 
+  appendReversalLocked(
+    portfolioId: string,
+    decide: (current: PortfolioLedger) => NewStoredReversal,
+  ): Promise<StoredReversal> {
+    return this.locked(portfolioId, (current) => {
+      const stored = { id: randomUUID(), portfolioId, ...decide(current) };
+      // Como o índice único do banco: um estorno por lançamento.
+      if (this.reversals.some((reversal) => reversal.entryId === stored.entryId)) {
+        throw new Error('lançamento já estornado');
+      }
+      this.reversals.push(stored);
+      return { ...stored };
+    });
+  }
+
   /** A carteira nova grava o aporte inicial por aqui (mesma "transação" do repositório). */
   add(portfolioId: string, entry: NewStoredCashEntry): StoredCashEntry {
     const stored = { id: randomUUID(), portfolioId, ...entry };
@@ -60,7 +78,9 @@ export class InMemoryLedgerRepository implements LedgerRepository {
   /** Apaga os lançamentos da carteira e diz quantos eram (caixa e negociações). */
   removePortfolio(portfolioId: string): number {
     let removed = 0;
-    for (const list of [this.entries, this.trades] as Array<Array<{ portfolioId: string }>>) {
+    for (const list of [this.entries, this.trades, this.reversals] as Array<
+      Array<{ portfolioId: string }>
+    >) {
       for (let i = list.length - 1; i >= 0; i -= 1) {
         if (list[i]?.portfolioId === portfolioId) {
           list.splice(i, 1);
@@ -94,6 +114,9 @@ export class InMemoryLedgerRepository implements LedgerRepository {
       trades: this.trades
         .filter((trade) => trade.portfolioId === portfolioId)
         .map((trade) => ({ ...trade })),
+      reversals: this.reversals
+        .filter((reversal) => reversal.portfolioId === portfolioId)
+        .map((reversal) => ({ ...reversal })),
     };
   }
 }

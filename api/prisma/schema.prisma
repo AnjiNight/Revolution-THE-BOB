@@ -85,6 +85,8 @@ model Carteira {
   lancamentosCaixa LancamentoCaixa[]
   /// SPEC-014: compras e vendas.
   transacoes       Transacao[]
+  /// SPEC-015: estornos.
+  estornos         Estorno[]
 
   @@unique([usuarioId, nomeChave])
   @@index([usuarioId, criadaEm])
@@ -109,6 +111,8 @@ model LancamentoCaixa {
   registradoEm DateTime            @map("registrado_em") @db.Timestamptz(3)
 
   carteira Carteira @relation(fields: [carteiraId], references: [id], onDelete: Cascade)
+  /// SPEC-015: o estorno deste lançamento, se houver (um só).
+  estorno  Estorno?
 
   @@index([carteiraId, data, registradoEm])
   @@map("lancamento_caixa")
@@ -141,9 +145,30 @@ model Transacao {
   carteira Carteira @relation(fields: [carteiraId], references: [id], onDelete: Cascade)
   ativo    Ativo    @relation(fields: [ativoId], references: [id], onDelete: Restrict)
 
+  /// SPEC-015: o estorno desta negociação, se houver (um só).
+  estorno Estorno?
+
   @@index([carteiraId, data, registradoEm])
   @@index([ativoId])
   @@map("transacao")
+}
+
+/// Estorno (SPEC-015, RB28): anula um aporte, retirada, compra ou venda, que continua guardado.
+/// Exatamente um dos dois lançamentos, da mesma carteira (gatilho na migração); um estorno por
+/// lançamento; o banco recusa alteração (RB08).
+model Estorno {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carteiraId        String   @map("carteira_id") @db.Uuid
+  lancamentoCaixaId String?  @unique @map("lancamento_caixa_id") @db.Uuid
+  transacaoId       String?  @unique @map("transacao_id") @db.Uuid
+  registradoEm      DateTime @map("registrado_em") @db.Timestamptz(3)
+
+  carteira        Carteira         @relation(fields: [carteiraId], references: [id], onDelete: Cascade)
+  lancamentoCaixa LancamentoCaixa? @relation(fields: [lancamentoCaixaId], references: [id], onDelete: Cascade)
+  transacao       Transacao?       @relation(fields: [transacaoId], references: [id], onDelete: Cascade)
+
+  @@index([carteiraId])
+  @@map("estorno")
 }
 
 /// Exclusão de uma carteira (OPEN-15), sem dado pessoal: nem nome, nem dono.

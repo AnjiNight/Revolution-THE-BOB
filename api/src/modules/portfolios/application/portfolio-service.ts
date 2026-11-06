@@ -14,20 +14,31 @@ import {
   type PersonalDataExport,
   type Portfolio,
   type PortfolioList,
+  type ReversalResult,
 } from '@simulador/shared';
 import {
   canSpend,
   cashLedger,
   compareMovements,
   toCents,
-  type LedgerLine,
 } from '../../financial-calculation/cash-ledger.js';
+import { firstBreak, type CheckedMovement } from '../../financial-calculation/positions.js';
 import {
+  AlreadyReversedError,
+  EntryNotFoundError,
   InsufficientCashError,
   PortfolioLimitReachedError,
   PortfolioValidationError,
+  ReversalBreaksLedgerError,
+  ReversalWindowClosedError,
 } from '../domain/errors.js';
-import { ledgerItems, ownedPortfolio, type LedgerItem } from './ledger.js';
+import {
+  activeLedger,
+  ledgerItems,
+  ownedPortfolio,
+  reversalTimes,
+  type LedgerItem,
+} from './ledger.js';
 import type {
   LedgerRepository,
   NewStoredCashEntry,
@@ -132,18 +143,71 @@ export class PortfolioService {
    * compras e vendas.
    */
   async statement(userId: string, id: string, offset = 0): Promise<CashStatement> {
-    await this.owned(userId, id);
-    const ledger = cashLedger(ledgerItems(await this.deps.ledger.ledger(id)));
-    const newestFirst = [...ledger.lines].reverse();
+    const portfolio = await this.owned(userId, id);
+    const full = await this.deps.ledger.ledger(id);
+    // SPEC-015: o saldo (e o de cada linha) é o do livro sem os estornados; eles aparecem riscados.
+    const reversed = reversalTimes(full);
+    const active = cashLedger(ledgerItems(activeLedger(full)));
+    const balanceAfter = new Map(active.lines.map((line) => [line.id, line.balanceAfter]));
+    const newestFirst = ledgerItems(full).sort(compareMovements).reverse();
     const page = newestFirst.slice(offset, offset + CASH_PAGE_SIZE);
+    const today = isoDateInBrasilia(this.clock());
     const tickers = await this.tickers(
-      page.flatMap((line) => (line.kind === 'trade' ? [line.entry.assetId] : [])),
+      page.flatMap((item) => (item.kind === 'trade' ? [item.entry.assetId] : [])),
     );
     return {
-      balance: ledger.balance,
-      entries: page.map((line) => toPublicEntry(line, tickers)),
+      balance: active.balance,
+      entries: page.map((item) =>
+        toPublicEntry(item, tickers, {
+          balanceAfter: balanceAfter.get(item.id) ?? null,
+          reversedAt: reversed.get(item.id) ?? null,
+          reversible: !reversed.has(item.id) && withinWindow(portfolio, item, today),
+        }),
+      ),
       hasMore: newestFirst.length > offset + CASH_PAGE_SIZE,
       total: newestFirst.length,
+    };
+  }
+
+  /**
+   * SPEC-015: estorna um aporte, retirada, compra ou venda. O estorno anula o original (RB28): só é
+   * aceito se o livro sem ele continuar válido em todos os momentos; na carteira ao vivo, compra e
+   * venda só no dia em que foram feitas. Tudo conferido com a carteira travada.
+   */
+  async reverse(userId: string, id: string, entryId: string): Promise<ReversalResult> {
+    const portfolio = await this.owned(userId, id);
+    const now = this.clock();
+    const today = isoDateInBrasilia(now);
+    // Os tickers, para dizer em qual negociação o livro quebraria (lidos antes da trava).
+    const tickers = await this.tickers(
+      (await this.deps.ledger.ledger(id)).trades.map((trade) => trade.assetId),
+    );
+
+    let reversedType: LedgerItem['type'] | null = null;
+    const stored = await this.deps.ledger.appendReversalLocked(id, (current) => {
+      const item = ledgerItems(current).find((candidate) => candidate.id === entryId);
+      if (!item) throw new EntryNotFoundError();
+      if (current.reversals.some((reversal) => reversal.entryId === entryId)) {
+        throw new AlreadyReversedError();
+      }
+      if (!withinWindow(portfolio, item, today)) throw new ReversalWindowClosedError();
+      const remaining = ledgerItems(activeLedger(current)).filter((other) => other.id !== entryId);
+      const broken = firstBreak(remaining.map(toChecked));
+      const at = broken && remaining.find((other) => other.id === broken.id);
+      if (broken && at)
+        throw new ReversalBreaksLedgerError(broken.reason, breakDetails(at, tickers));
+      reversedType = item.type;
+      return { entryId, entryKind: item.kind, recordedAt: now };
+    });
+
+    const after = activeLedger(await this.deps.ledger.ledger(id));
+    return {
+      reversal: {
+        entryId,
+        type: reversedType ?? 'deposit',
+        reversedAt: stored.recordedAt.toISOString(),
+      },
+      cash: cashLedger(ledgerItems(after)).balance,
     };
   }
 
@@ -163,7 +227,8 @@ export class PortfolioService {
 
     let balance = '0.00';
     const stored = await this.deps.ledger.appendCashLocked(id, (current): NewStoredCashEntry => {
-      const ledger = cashLedger(ledgerItems(current));
+      // SPEC-015: estornados não contam, nem no saldo nem no "último lançamento" (RB25).
+      const ledger = cashLedger(ledgerItems(activeLedger(current)));
       const last = ledger.lines.at(-1);
       if (last && date < last.date) {
         throw new PortfolioValidationError({ date: 'before_last_entry' });
@@ -184,6 +249,9 @@ export class PortfolioService {
         date: stored.date,
         recordedAt: stored.recordedAt.toISOString(),
         balanceAfter: balance,
+        reversedAt: null,
+        // Aporte e retirada se estornam a qualquer momento (RB28).
+        reversible: true,
       },
       balance,
     };
@@ -200,7 +268,9 @@ export class PortfolioService {
       [...ledgers.values()].flatMap((ledger) => ledger.trades.map((trade) => trade.assetId)),
     );
     return portfolios.map((portfolio) => {
-      const ledger = ledgers.get(portfolio.id) ?? { cash: [], trades: [] };
+      const ledger = ledgers.get(portfolio.id) ?? { cash: [], trades: [], reversals: [] };
+      const reversed = reversalTimes(ledger);
+      const reversedAt = (entryId: string) => reversed.get(entryId)?.toISOString() ?? null;
       return {
         ...toPublic(portfolio),
         cashEntries: [...ledger.cash].sort(compareMovements).map((entry) => ({
@@ -208,6 +278,7 @@ export class PortfolioService {
           amount: entry.amount,
           date: entry.date,
           recordedAt: entry.recordedAt.toISOString(),
+          reversedAt: reversedAt(entry.id),
         })),
         trades: [...ledger.trades].sort(compareMovements).map((trade) => ({
           type: trade.type,
@@ -219,6 +290,7 @@ export class PortfolioService {
           recordedAt: trade.recordedAt.toISOString(),
           quotedAt: trade.quotedAt.toISOString(),
           level: trade.level,
+          reversedAt: reversedAt(trade.id),
         })),
       };
     });
@@ -275,23 +347,67 @@ function toPublic(portfolio: StoredPortfolio): Portfolio {
   };
 }
 
-function toPublicEntry(line: LedgerLine<LedgerItem>, tickers: Map<string, string>): CashEntry {
+function toPublicEntry(
+  item: LedgerItem,
+  tickers: Map<string, string>,
+  state: { balanceAfter: string | null; reversedAt: Date | null; reversible: boolean },
+): CashEntry {
   const base = {
-    id: line.id,
-    type: line.type,
-    amount: line.amount,
-    date: line.date,
-    recordedAt: line.recordedAt.toISOString(),
-    balanceAfter: line.balanceAfter,
+    id: item.id,
+    type: item.type,
+    amount: item.amount,
+    date: item.date,
+    recordedAt: item.recordedAt.toISOString(),
+    balanceAfter: state.balanceAfter,
+    reversedAt: state.reversedAt?.toISOString() ?? null,
+    reversible: state.reversible,
   };
-  if (line.kind === 'cash') return base;
+  if (item.kind === 'cash') return base;
   return {
     ...base,
     trade: {
-      assetId: line.entry.assetId,
-      ticker: tickers.get(line.entry.assetId) ?? '',
-      quantity: line.entry.quantity,
-      price: line.entry.price,
+      assetId: item.entry.assetId,
+      ticker: tickers.get(item.entry.assetId) ?? '',
+      quantity: item.entry.quantity,
+      price: item.entry.price,
     },
+  };
+}
+
+/**
+ * RB28: na carteira ao vivo, compra e venda só se estornam no dia em que foram feitas (o dia do
+ * registro em Brasília); aporte e retirada, sempre; na histórica, sem prazo.
+ */
+function withinWindow(portfolio: StoredPortfolio, item: LedgerItem, today: IsoDate): boolean {
+  return portfolio.type === 'historical' || item.kind === 'cash' || item.date === today;
+}
+
+/** O lançamento para a conferência do livro (com o ativo e a quantidade, se for negociação). */
+function toChecked(item: LedgerItem): CheckedMovement {
+  const base = {
+    id: item.id,
+    type: item.type,
+    amount: item.amount,
+    date: item.date,
+    recordedAt: item.recordedAt,
+  };
+  return item.kind === 'trade'
+    ? { ...base, assetId: item.entry.assetId, quantity: item.entry.quantity }
+    : base;
+}
+
+/** O lançamento em que o livro quebraria, para a tela dizer qual estornar antes. */
+function breakDetails(item: LedgerItem, tickers: Map<string, string>): Record<string, string> {
+  return {
+    entryId: item.id,
+    type: item.type,
+    date: item.date,
+    amount: item.amount,
+    ...(item.kind === 'trade'
+      ? {
+          ticker: tickers.get(item.entry.assetId) ?? '',
+          quantity: String(item.entry.quantity),
+        }
+      : {}),
   };
 }

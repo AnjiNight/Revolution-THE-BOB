@@ -245,7 +245,12 @@
     "market_closed": "The exchange is closed today.",
     "no_quote_today": "This asset doesn't have a quote today yet.",
     "asset_inactive": "This asset was deactivated and can't be bought.",
-    "historical_portfolio": "Buying and selling in a historical portfolio comes in a later version."
+    "historical_portfolio": "Buying and selling in a historical portfolio comes in a later version.",
+    "entry_not_found": "That entry isn't from this portfolio.",
+    "already_reversed": "That entry was already reversed.",
+    "reversal_window_closed": "In a live portfolio, purchases and sales can only be reversed on the day they were made. To undo one, make the opposite trade.",
+    "reversal_breaks_cash": "This reversal would make cash negative.",
+    "reversal_breaks_position": "This reversal would make a sale larger than the position."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -640,7 +645,8 @@
         "date": "Date",
         "type": "Entry",
         "amount": "Amount",
-        "balanceAfter": "Balance after"
+        "balanceAfter": "Balance after",
+        "actions": "Actions"
       },
       "types": {
         "deposit": "Deposit",
@@ -651,7 +657,37 @@
       "showMore": "Show more",
       "count_one": "{{shown}} of {{count}} entry",
       "count_other": "{{shown}} of {{count}} entries",
-      "tradeDetail": "{{quantity}} {{ticker}} at {{price}}"
+      "tradeDetail": "{{quantity}} {{ticker}} at {{price}}",
+      "reversal": {
+        "reverse": "Reverse",
+        "reverseLabel": "Reverse {{description}}",
+        "reversed": "Reversed on {{date}}",
+        "confirm": "Reverse {{description}}? It stays in the statement, struck through, and stops counting in cash and positions. A reversal can't be undone.",
+        "confirmButton": "Confirm reversal",
+        "cancel": "Cancel",
+        "saving": "Reversing…",
+        "done": "Entry reversed.",
+        "description": {
+          "deposit": "the deposit of {{amount}} on {{date}}",
+          "withdrawal": "the withdrawal of {{amount}} on {{date}}",
+          "buy": "the purchase of {{quantity}} {{ticker}} at {{price}} on {{date}}",
+          "sell": "the sale of {{quantity}} {{ticker}} at {{price}} on {{date}}"
+        },
+        "at": {
+          "deposit": "at the deposit of {{amount}} on {{date}}",
+          "withdrawal": "at the withdrawal of {{amount}} on {{date}}",
+          "buy": "at the purchase of {{quantity}} {{ticker}} on {{date}}",
+          "sell": "at the sale of {{quantity}} {{ticker}} on {{date}}"
+        },
+        "that": {
+          "deposit": "that deposit",
+          "withdrawal": "that withdrawal",
+          "buy": "that purchase",
+          "sell": "that sale"
+        },
+        "breaksCash": "This reversal would make cash negative {{at}}. Reverse {{that}} first.",
+        "breaksPosition": "This reversal would make the sale of {{quantity}} {{ticker}} on {{date}} larger than the position. Reverse that sale first."
+      }
     },
     "positions": {
       "title": "Positions",

@@ -7,6 +7,7 @@ import type {
   CashEntryResult,
   CashStatement,
   PortfolioPositions,
+  ReversalResult,
   TradeQuote,
   TradeResult,
   CatalogAsset,
@@ -114,6 +115,8 @@ export interface DesktopApi {
     tradeQuote(id: string, assetId: string): Promise<ClientResult<TradeQuote>>;
     /** SPEC-014: compra ou venda; os erros trazem o detalhe em details. */
     trade(id: string, input: NewTradeInput): Promise<ClientResult<TradeResult>>;
+    /** SPEC-015: estorna um lançamento; a recusa traz em details o lançamento que quebraria. */
+    reverse(id: string, entryId: string): Promise<ClientResult<ReversalResult>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

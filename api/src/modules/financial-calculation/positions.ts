@@ -1,5 +1,5 @@
 import { centsToAmount, type IsoDate } from '@simulador/shared';
-import { compareMovements, toCents } from './cash-ledger.js';
+import { compareMovements, toCents, type LedgerMovement } from './cash-ledger.js';
 import { divideHalfUp, isDecimalText } from './decimal.js';
 
 /** Uma compra ou venda do livro-razão (SPEC-014), para a conta das posições. */
@@ -75,6 +75,42 @@ export function holdings(trades: readonly TradeMovement[]): Map<string, Holding>
       },
     ]),
   );
+}
+
+/** Um lançamento para a conferência do livro: os do caixa e as negociações (com ativo e quantidade). */
+export type CheckedMovement = LedgerMovement & { assetId?: string; quantity?: number };
+
+export interface LedgerBreak {
+  /** O lançamento em que o livro quebra. */
+  id: string;
+  /** `cash`: o caixa fica negativo (RB05, RB26); `position`: a venda passa da posição (RB06). */
+  reason: 'cash' | 'position';
+}
+
+/**
+ * SPEC-015: percorre os lançamentos na ordem do livro e devolve o primeiro que deixa o caixa
+ * negativo ou vende mais que a posição; `null` se o livro é válido em todos os momentos. O estorno
+ * confere o livro sem o lançamento estornado.
+ */
+export function firstBreak(movements: readonly CheckedMovement[]): LedgerBreak | null {
+  let cash = 0n;
+  const held = new Map<string, number>();
+  for (const movement of [...movements].sort(compareMovements)) {
+    const value = toCents(movement.amount);
+    if (movement.type === 'deposit' || movement.type === 'sell') cash += value;
+    else cash -= value;
+    if (movement.type === 'buy' || movement.type === 'sell') {
+      const assetId = movement.assetId ?? '';
+      const quantity = movement.quantity ?? 0;
+      const current = held.get(assetId) ?? 0;
+      if (movement.type === 'sell' && quantity > current) {
+        return { id: movement.id, reason: 'position' };
+      }
+      held.set(assetId, movement.type === 'buy' ? current + quantity : current - quantity);
+    }
+    if (cash < 0n) return { id: movement.id, reason: 'cash' };
+  }
+  return null;
 }
 
 /** Preço da cotação (até 6 casas) → o preço da negociação, com 2 casas, meio para cima (RB13). */

@@ -387,7 +387,7 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
     expect(without.positionsValue).toBe('0.00');
   });
 
-  it('extrato com compras e vendas; exportação na versão 4; exclusão conta as negociações (CA02, CA08, CA10)', async () => {
+  it('extrato com compras e vendas; exportação na versão 5; exclusão conta as negociações (CA02, CA08, CA10)', async () => {
     await tradeNow('buy', 10);
     const boughtAt = now.toISOString();
     quote(PETR4, '32.00', '2026-11-05T15:00:00Z');
@@ -414,7 +414,7 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
       version: number;
       portfolios: Array<{ trades: unknown[] }>;
     }>();
-    expect(exported.version).toBe(4);
+    expect(exported.version).toBe(5);
     expect(exported.portfolios[0]?.trades).toEqual([
       {
         type: 'buy',
@@ -426,6 +426,7 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
         recordedAt: boughtAt,
         quotedAt: '2026-11-05T14:30:00.000Z',
         level: 'free',
+        reversedAt: null,
       },
       expect.objectContaining({ type: 'sell', quantity: 4, total: '128.00' }),
     ]);

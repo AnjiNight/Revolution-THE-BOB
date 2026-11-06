@@ -222,6 +222,10 @@ app.whenReady().then(() => {
   ipcMain.handle(PORTFOLIO_CHANNELS.trade, (_event, id: string, input: NewTradeInput) =>
     auth.trade(id, input),
   );
+  // Estorno (SPEC-015): o servidor confere o prazo e se o livro continua válido.
+  ipcMain.handle(PORTFOLIO_CHANNELS.reverse, (_event, id: string, entryId: string) =>
+    auth.reverseEntry(id, entryId),
+  );
 
   // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.
   ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());

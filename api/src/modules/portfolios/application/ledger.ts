@@ -9,6 +9,24 @@ import type {
   StoredTrade,
 } from './ports.js';
 
+/** SPEC-015: quando cada lançamento estornado foi estornado, pelo id do lançamento. */
+export function reversalTimes(ledger: PortfolioLedger): Map<string, Date> {
+  return new Map(ledger.reversals.map((reversal) => [reversal.entryId, reversal.recordedAt]));
+}
+
+/**
+ * O livro que vale para as contas (RB28): sem os lançamentos estornados. Os estornos em si não
+ * mexem em nada; só tiram o original.
+ */
+export function activeLedger(ledger: PortfolioLedger): PortfolioLedger {
+  const reversed = reversalTimes(ledger);
+  return {
+    cash: ledger.cash.filter((entry) => !reversed.has(entry.id)),
+    trades: ledger.trades.filter((trade) => !reversed.has(trade.id)),
+    reversals: [],
+  };
+}
+
 /** Movimento do caixa com o lançamento guardado junto, para o extrato. */
 export type LedgerItem = LedgerMovement &
   ({ kind: 'cash'; entry: StoredCashEntry } | { kind: 'trade'; entry: StoredTrade });

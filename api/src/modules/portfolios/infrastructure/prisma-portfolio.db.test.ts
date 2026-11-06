@@ -317,4 +317,87 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
     await users.deleteAccount(userId, at);
     expect(await prisma.transacao.count()).toBe(0);
   });
+
+  // --- SPEC-015: estornos ---
+
+  it('estorno: grava e lê de volta o lançamento estornado, do caixa ou da negociação (CA02)', async () => {
+    const assetId = await newAsset();
+    const portfolio = await livePortfolio();
+    const [deposit] = (await ledger.ledger(portfolio.id)).cash;
+    const trade = await ledger.appendTradeLocked(portfolio.id, () => buy(assetId, 10));
+    const first = await ledger.appendReversalLocked(portfolio.id, () => ({
+      entryId: trade.id,
+      entryKind: 'trade',
+      recordedAt: at,
+    }));
+    expect(first).toEqual({
+      id: expect.any(String),
+      portfolioId: portfolio.id,
+      entryId: trade.id,
+      entryKind: 'trade',
+      recordedAt: at,
+    });
+    await ledger.appendReversalLocked(portfolio.id, () => ({
+      entryId: deposit?.id ?? '',
+      entryKind: 'cash',
+      recordedAt: at,
+    }));
+    const read = await ledger.ledger(portfolio.id);
+    expect(read.reversals.map((reversal) => reversal.entryKind).sort()).toEqual(['cash', 'trade']);
+    expect((await ledger.ledgers([portfolio.id])).get(portfolio.id)?.reversals).toHaveLength(2);
+  });
+
+  it('estorno: o banco recusa alterar, estornar duas vezes e lançamento de outra carteira (CA07, CA11)', async () => {
+    const portfolio = await livePortfolio();
+    const other = await portfolios.create(
+      newPortfolio('Outra', {
+        type: 'live',
+        startDate: '2026-11-05',
+        initialDeposit: deposit('10', '2026-11-05'),
+      }),
+    );
+    const [entry] = (await ledger.ledger(portfolio.id)).cash;
+    const [foreign] = (await ledger.ledger(other.id)).cash;
+    const reverseCash = (entryId: string) =>
+      ledger.appendReversalLocked(portfolio.id, () => ({
+        entryId,
+        entryKind: 'cash',
+        recordedAt: at,
+      }));
+
+    const stored = await reverseCash(entry?.id ?? '');
+    await expect(
+      prisma.estorno.update({ where: { id: stored.id }, data: { registradoEm: new Date() } }),
+    ).rejects.toThrow(/estorno_imutavel|RB08/);
+    await expect(reverseCash(entry?.id ?? '')).rejects.toThrow();
+    await expect(reverseCash(foreign?.id ?? '')).rejects.toThrow(/estorno_mesma_carteira|RB28/);
+    // Nenhum lançamento, ou os dois: o banco recusa.
+    await expect(
+      prisma.estorno.create({ data: { carteiraId: portfolio.id, registradoEm: at } }),
+    ).rejects.toThrow();
+    expect(await prisma.estorno.count()).toBe(1);
+  });
+
+  it('estorno: excluir a carteira conta os estornos; excluir a conta os leva (CA07)', async () => {
+    const first = await livePortfolio();
+    const [entry] = (await ledger.ledger(first.id)).cash;
+    await ledger.appendReversalLocked(first.id, () => ({
+      entryId: entry?.id ?? '',
+      entryKind: 'cash',
+      recordedAt: at,
+    }));
+    await portfolios.delete(first.id, at);
+    expect(await prisma.estorno.count()).toBe(0);
+    expect(await prisma.exclusaoCarteira.findFirst()).toMatchObject({ lancamentos: 2 });
+
+    const second = await livePortfolio();
+    const [again] = (await ledger.ledger(second.id)).cash;
+    await ledger.appendReversalLocked(second.id, () => ({
+      entryId: again?.id ?? '',
+      entryKind: 'cash',
+      recordedAt: at,
+    }));
+    await users.deleteAccount(userId, at);
+    expect(await prisma.estorno.count()).toBe(0);
+  });
 });

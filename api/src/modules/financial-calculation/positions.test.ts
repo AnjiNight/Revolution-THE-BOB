@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { cashLedger, type LedgerMovement } from './cash-ledger.js';
 import {
   displayPrice,
+  firstBreak,
   holdings,
   roundToCents,
   tradeTotal,
   valuate,
+  type CheckedMovement,
   type TradeMovement,
 } from './positions.js';
 
@@ -130,5 +132,64 @@ describe('caixa com compras e vendas (SPEC-014, CA02)', () => {
       '2255.00',
       '2200.00',
     ]);
+  });
+});
+
+describe('conferência do livro para o estorno (SPEC-015, CA01)', () => {
+  const at = (s: number) => new Date(Date.UTC(2026, 10, 6, 15, 0, s));
+  const deposit = (id: string, amount: string, s: number): CheckedMovement => ({
+    id,
+    type: 'deposit',
+    amount,
+    date: '2026-11-06',
+    recordedAt: at(s),
+  });
+  const deal = (
+    id: string,
+    type: 'buy' | 'sell',
+    quantity: number,
+    price: string,
+    s: number,
+  ): CheckedMovement => ({
+    id,
+    type,
+    amount: tradeTotal(quantity, price),
+    assetId: 'PETR4',
+    quantity,
+    date: '2026-11-06',
+    recordedAt: at(s),
+  });
+
+  it('livro válido: nada quebra', () => {
+    expect(
+      firstBreak([
+        deposit('a', '5000', 1),
+        deal('b', 'buy', 100, '31.20', 2),
+        deal('c', 'sell', 60, '33', 3),
+      ]),
+    ).toBeNull();
+  });
+
+  it('sem o aporte, a compra deixaria o caixa negativo', () => {
+    // O livro com o aporte (a) estornado: só a compra sobra.
+    expect(firstBreak([deal('b', 'buy', 100, '31.20', 2)])).toEqual({ id: 'b', reason: 'cash' });
+  });
+
+  it('sem a compra, a venda passaria da posição', () => {
+    expect(firstBreak([deposit('a', '5000', 1), deal('c', 'sell', 60, '33', 3)])).toEqual({
+      id: 'c',
+      reason: 'position',
+    });
+  });
+
+  it('o caixa pode chegar a zero, mas não abaixo', () => {
+    expect(firstBreak([deposit('a', '3120', 1), deal('b', 'buy', 100, '31.20', 2)])).toBeNull();
+    expect(
+      firstBreak([
+        deposit('a', '3120', 1),
+        { id: 'w', type: 'withdrawal', amount: '0.01', date: '2026-11-06', recordedAt: at(3) },
+        deal('b', 'buy', 100, '31.20', 2),
+      ]),
+    ).toEqual({ id: 'w', reason: 'cash' });
   });
 });

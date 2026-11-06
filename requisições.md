@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.10
+**Versão:** 1.11
 
 | Versão | Alteração |
 |---|---|
@@ -18,6 +18,7 @@
 | 1.8 | Carteiras ao vivo e histórica ([DA17](adr/DA17-carteira-ao-vivo-e-historica.md), [SPEC-012](specs/SPEC-012.md)): RF11 inclui a escolha do tipo; RB07 reescrita para os dois tipos (preço por plano na ao vivo, [DA16](adr/DA16-cotacoes-por-plano.md)); novas RB24 (tipo imutável), RB25 (ordem dos lançamentos na histórica) e RB26 (retirada não deixa o caixa negativo) |
 | 1.9 | RB11 passa a valer só para compra e venda: aporte e retirada na carteira ao vivo podem ser feitos em qualquer dia ([SPEC-013](specs/SPEC-013.md)) |
 | 1.10 | RB07: na carteira ao vivo, a cotação usada é sempre a do próprio dia; nova RB27 (compra e venda só em quantidade inteira) ([SPEC-014](specs/SPEC-014.md)) |
+| 1.11 | Nova RB28: o estorno anula um lançamento, só é aceito se o livro continuar válido sem ele e, na carteira ao vivo, compra e venda só se estornam no mesmo dia ([SPEC-015](specs/SPEC-015.md)) |
 
 ---
 
@@ -194,6 +195,7 @@ Restrições do domínio, independentes de tecnologia.
 | RB25 | Na carteira histórica, cada lançamento tem data igual ou posterior à do último lançamento da carteira e nunca anterior à data de início dela |
 | RB26 | Não é permitida retirada maior que o saldo em caixa: o caixa nunca fica negativo |
 | RB27 | Ações e cotas de FII são compradas e vendidas só em quantidade inteira, de 1 a 1.000.000 por operação |
+| RB28 | O estorno anula um lançamento: as contas passam a ignorá-lo, e o original fica registrado como estornado. Só é aceito se, sem o original, o caixa nunca ficar negativo e nenhuma venda passar da posição. Na carteira ao vivo, compra e venda só podem ser estornadas no dia em que foram feitas. Cada lançamento se estorna uma vez só, e estorno não se estorna |
 
 ### 4.3 Renda fixa
 
@@ -228,6 +230,7 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | RB24 | `Carteira.tipo` com domínio fechado (ao vivo, histórica), preenchido na criação e sem operação de alteração (gatilho no banco) |
 | RB25, RB26 | Validação na camada de serviço, sobre a data do último lançamento e o caixa calculado |
 | RB27 | `Transacao.quantidade` inteira, de 1 a 1.000.000 (restrição no banco) |
+| RB28 | Tabela `Estorno` ligada a um só lançamento, único (um estorno por lançamento) e sem operação de alteração; a conferência do livro sem o original fica na camada de serviço |
 | RB08 | Ausência de operação de atualização em `Transacao`; tipo de lançamento de estorno |
 | RB09 | Inexistência de tabela `Posicao` persistida; cálculo derivado de `Transacao` |
 | RB11 | Tabela `CalendarioPregao` com dias úteis e feriados da B3 |

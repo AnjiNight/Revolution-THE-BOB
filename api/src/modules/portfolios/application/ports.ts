@@ -43,10 +43,25 @@ export interface StoredTrade {
 
 export type NewStoredTrade = Omit<StoredTrade, 'id' | 'portfolioId'>;
 
-/** Tudo o que mexe no caixa de uma carteira: aportes e retiradas, compras e vendas. */
+/** Estorno de um lançamento (SPEC-015 §6): anula o original, que continua guardado. */
+export interface StoredReversal {
+  id: string;
+  portfolioId: string;
+  entryId: string;
+  entryKind: 'cash' | 'trade';
+  recordedAt: Date;
+}
+
+export type NewStoredReversal = Omit<StoredReversal, 'id' | 'portfolioId'>;
+
+/**
+ * Tudo o que mexe no caixa de uma carteira: aportes e retiradas, compras e vendas, e os estornos
+ * (SPEC-015), que tiram um desses das contas.
+ */
 export interface PortfolioLedger {
   cash: StoredCashEntry[];
   trades: StoredTrade[];
+  reversals: StoredReversal[];
 }
 
 /**
@@ -72,6 +87,11 @@ export interface LedgerRepository {
     portfolioId: string,
     decide: (current: PortfolioLedger) => NewStoredTrade,
   ): Promise<StoredTrade>;
+  /** O mesmo, para um estorno (SPEC-015). */
+  appendReversalLocked(
+    portfolioId: string,
+    decide: (current: PortfolioLedger) => NewStoredReversal,
+  ): Promise<StoredReversal>;
 }
 
 /** Ativo do catálogo, como a carteira precisa dele (SPEC-014). */

@@ -213,11 +213,11 @@ describe('rotas das carteiras (SPEC-012)', () => {
     ]);
   });
 
-  it('exportação: seção portfolios (CA07); as SPECs 013 e 014 subiram a versão para 4', async () => {
+  it('exportação: seção portfolios (CA07); as SPECs 013 a 015 subiram a versão para 5', async () => {
     await create({ name: 'Dividendos', type: 'live' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 4,
+      version: 5,
       portfolios: [
         { name: 'Dividendos', type: 'live', startDate: '2026-11-05', cashEntries: [], trades: [] },
       ],
@@ -284,6 +284,9 @@ describe('caixa das carteiras (SPEC-013)', () => {
         date: '2026-11-07',
         recordedAt: '2026-11-07T18:30:00.000Z',
         balanceAfter: '1000.00',
+        // SPEC-015: aporte e retirada se estornam a qualquer momento.
+        reversedAt: null,
+        reversible: true,
       },
       balance: '1000.00',
     });
@@ -441,7 +444,7 @@ describe('caixa das carteiras (SPEC-013)', () => {
     await add(id, { type: 'withdrawal', amount: '100', date: '2019-04-01' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 4,
+      version: 5,
       portfolios: [
         {
           id,
