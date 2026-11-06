@@ -20,6 +20,16 @@ enum PerfilAcesso {
   @@map("perfil_acesso")
 }
 
+/// Para que serve um código enviado por e-mail (SPEC-004 e SPEC-039).
+enum FinalidadeCodigo {
+  redefinir_senha
+  confirmar_cadastro
+  trocar_email
+  excluir_conta
+
+  @@map("finalidade_codigo")
+}
+
 enum TipoConsentimento {
   termos_uso_privacidade
 
@@ -28,20 +38,149 @@ enum TipoConsentimento {
 
 /// Pessoa cadastrada (SPEC-002). E-mail único e sempre em minúsculas (RB01).
 /// Conta só com Google não tem senha; toda conta tem senha ou Google (CHECK na migração).
+/// SPEC-039: sem "email_confirmado_em", a conta está pendente e não entra; "email_pendente" é o e-mail
+/// novo de uma troca ainda não confirmada.
 model Usuario {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nome         String       @db.VarChar(100)
-  email        String       @unique @db.VarChar(254)
-  senhaHash    String?      @map("senha_hash")
-  googleSub    String?      @unique @map("google_sub") @db.VarChar(255)
-  perfil       PerfilAcesso @default(usuario)
-  criadoEm     DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome              String       @db.VarChar(100)
+  email             String       @unique @db.VarChar(254)
+  senhaHash         String?      @map("senha_hash")
+  googleSub         String?      @unique @map("google_sub") @db.VarChar(255)
+  perfil            PerfilAcesso @default(usuario)
+  criadoEm          DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm      DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  emailConfirmadoEm DateTime?    @map("email_confirmado_em") @db.Timestamptz(3)
+  emailPendente     String?      @map("email_pendente") @db.VarChar(254)
 
   consentimentos  Consentimento[]
   tokensRenovacao TokenRenovacao[]
+  codigosEmail    CodigoEmail[]
+  carteiras       Carteira[]
 
   @@map("usuario")
+}
+
+/// Tipo da carteira (DA17): escolhido na criação e imutável (RB24, gatilho na migração).
+enum TipoCarteira {
+  ao_vivo
+  historica
+
+  @@map("tipo_carteira")
+}
+
+/// Carteira de simulação (SPEC-012). "nome_chave": o nome sem maiúsculas nem acentos, único para
+/// cada usuário. Não há saldo guardado: o caixa vem só dos lançamentos (OPEN-11, DA09).
+model Carteira {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId    String       @map("usuario_id") @db.Uuid
+  nome         String       @db.VarChar(60)
+  nomeChave    String       @map("nome_chave") @db.VarChar(60)
+  tipo         TipoCarteira
+  inicioEm     DateTime     @map("inicio_em") @db.Date
+  criadaEm     DateTime     @default(now()) @map("criada_em") @db.Timestamptz(3)
+  atualizadaEm DateTime     @map("atualizada_em") @db.Timestamptz(3)
+
+  usuario          Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  /// SPEC-013: aportes e retiradas (livro-razão do caixa).
+  lancamentosCaixa LancamentoCaixa[]
+  /// SPEC-014: compras e vendas.
+  transacoes       Transacao[]
+  /// SPEC-015: estornos.
+  estornos         Estorno[]
+
+  @@unique([usuarioId, nomeChave])
+  @@index([usuarioId, criadaEm])
+  @@map("carteira")
+}
+
+enum TipoLancamentoCaixa {
+  aporte
+  retirada
+
+  @@map("tipo_lancamento_caixa")
+}
+
+/// Aporte ou retirada (SPEC-013), no livro-razão do caixa (DA09): o banco recusa alteração (RB08,
+/// gatilho na migração). Na ao vivo, `data` é o dia de `registrado_em` em Brasília.
+model LancamentoCaixa {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carteiraId   String              @map("carteira_id") @db.Uuid
+  tipo         TipoLancamentoCaixa
+  valor        Decimal             @db.Decimal(15, 2)
+  data         DateTime            @db.Date
+  registradoEm DateTime            @map("registrado_em") @db.Timestamptz(3)
+
+  carteira Carteira @relation(fields: [carteiraId], references: [id], onDelete: Cascade)
+  /// SPEC-015: o estorno deste lançamento, se houver (um só).
+  estorno  Estorno?
+
+  @@index([carteiraId, data, registradoEm])
+  @@map("lancamento_caixa")
+}
+
+enum TipoTransacao {
+  compra
+  venda
+
+  @@map("tipo_transacao")
+}
+
+/// Compra ou venda (SPEC-014) no livro-razão da carteira (DA09): o banco recusa alteração (RB08,
+/// gatilho na migração). Quantidade inteira (RB27); o total é quantidade × preço; o dia é o do
+/// registro e o da cotação em Brasília (RB07).
+model Transacao {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carteiraId    String        @map("carteira_id") @db.Uuid
+  ativoId       String        @map("ativo_id") @db.Uuid
+  tipo          TipoTransacao
+  quantidade    Int
+  precoUnitario Decimal       @map("preco_unitario") @db.Decimal(15, 2)
+  valorTotal    Decimal       @map("valor_total") @db.Decimal(15, 2)
+  data          DateTime      @db.Date
+  registradoEm  DateTime      @map("registrado_em") @db.Timestamptz(3)
+  /// SPEC-016: vazio na carteira histórica, que usa o fechamento da B3 do dia.
+  cotacaoEm     DateTime?     @map("cotacao_em") @db.Timestamptz(3)
+  nivelCotacao  NivelCotacao? @map("nivel_cotacao")
+  fonteCotacao  FonteCotacao  @map("fonte_cotacao")
+
+  carteira Carteira @relation(fields: [carteiraId], references: [id], onDelete: Cascade)
+  ativo    Ativo    @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  /// SPEC-015: o estorno desta negociação, se houver (um só).
+  estorno Estorno?
+
+  @@index([carteiraId, data, registradoEm])
+  @@index([ativoId])
+  @@map("transacao")
+}
+
+/// Estorno (SPEC-015, RB28): anula um aporte, retirada, compra ou venda, que continua guardado.
+/// Exatamente um dos dois lançamentos, da mesma carteira (gatilho na migração); um estorno por
+/// lançamento; o banco recusa alteração (RB08).
+model Estorno {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carteiraId        String   @map("carteira_id") @db.Uuid
+  lancamentoCaixaId String?  @unique @map("lancamento_caixa_id") @db.Uuid
+  transacaoId       String?  @unique @map("transacao_id") @db.Uuid
+  registradoEm      DateTime @map("registrado_em") @db.Timestamptz(3)
+
+  carteira        Carteira         @relation(fields: [carteiraId], references: [id], onDelete: Cascade)
+  lancamentoCaixa LancamentoCaixa? @relation(fields: [lancamentoCaixaId], references: [id], onDelete: Cascade)
+  transacao       Transacao?       @relation(fields: [transacaoId], references: [id], onDelete: Cascade)
+
+  @@index([carteiraId])
+  @@map("estorno")
+}
+
+/// Exclusão de uma carteira (OPEN-15), sem dado pessoal: nem nome, nem dono.
+model ExclusaoCarteira {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carteiraId  String       @map("carteira_id") @db.Uuid
+  tipo        TipoCarteira
+  lancamentos Int
+  excluidaEm  DateTime     @map("excluida_em") @db.Timestamptz(3)
+
+  @@map("exclusao_carteira")
 }
 
 /// Aceite dos termos de uso e da política de privacidade (RNF11).
@@ -73,4 +212,514 @@ model TokenRenovacao {
   @@index([usuarioId])
   @@index([familia])
   @@map("token_renovacao")
+}
+
+/// Código enviado por e-mail (SPEC-004, SPEC-039). Só o HMAC do código é guardado.
+/// "encerrado_em" marca o código que já não vale: usado, substituído ou sem tentativas.
+model CodigoEmail {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId   String           @map("usuario_id") @db.Uuid
+  finalidade  FinalidadeCodigo
+  codigoHash  String           @map("codigo_hash") @db.Char(64)
+  tentativas  Int              @default(0) @db.SmallInt
+  criadoEm    DateTime         @default(now()) @map("criado_em") @db.Timestamptz(3)
+  expiraEm    DateTime         @map("expira_em") @db.Timestamptz(3)
+  encerradoEm DateTime?        @map("encerrado_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, criadoEm])
+  @@map("codigo_email")
+}
+
+/// Registro de que uma conta foi excluída (SPEC-034, QA07). Sem nenhum dado pessoal: o id antigo
+/// da conta não tem chave estrangeira, porque a conta já não existe.
+model ExclusaoConta {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId  String   @map("usuario_id") @db.Uuid
+  excluidaEm DateTime @default(now()) @map("excluida_em") @db.Timestamptz(3)
+
+  @@map("exclusao_conta")
+}
+
+/// Quem publicou um ano do calendário (SPEC-005 §10).
+enum OrigemCalendario {
+  colaborador
+  arquivo_b3
+
+  @@map("origem_calendario")
+}
+
+/// Ano do calendário de pregão publicado por um colaborador ou, nos anos fechados, pelo processador
+/// a partir do arquivo anual da B3 (SPEC-005 §10). Ano sem linha aqui não foi publicado, e as
+/// regras de pregão recusam datas dele. "publicado_por" é só o id do colaborador, sem chave
+/// estrangeira: o módulo Dados de Mercado não depende das tabelas da identidade (DA13). Vazio só
+/// com origem "arquivo_b3" (CHECK na migração).
+model AnoCalendario {
+  ano          Int              @id @db.SmallInt
+  publicadoEm  DateTime         @map("publicado_em") @db.Timestamptz(3)
+  publicadoPor String?          @map("publicado_por") @db.Uuid
+  origem       OrigemCalendario @default(colaborador)
+
+  diasSemPregao DiaSemPregao[]
+
+  @@map("ano_calendario")
+}
+
+/// Dia útil sem pregão na B3 (SPEC-005, RB11). Fins de semana nunca entram (CHECK na migração).
+model DiaSemPregao {
+  data   DateTime @id @db.Date
+  ano    Int      @db.SmallInt
+  motivo String   @db.VarChar(100)
+
+  anoCalendario AnoCalendario @relation(fields: [ano], references: [ano], onDelete: Cascade)
+
+  @@index([ano])
+  @@map("dia_sem_pregao")
+}
+
+/// Classe do ativo (DA23, RB22): lista fechada, escolhida no cadastro e nunca alterada (gatilho na
+/// migração). "acao" inclui as units.
+enum ClasseAtivo {
+  acao
+  fii
+
+  @@map("classe_ativo")
+}
+
+/// Setor (ações) ou segmento (FIIs) da lista fixa da SPEC-006 §4. Preenchida pela migração; o app
+/// só lê. O mesmo código pode existir nas duas classes ("outros").
+model Setor {
+  classe ClasseAtivo
+  codigo String      @db.VarChar(40)
+
+  ativos Ativo[]
+
+  @@id([classe, codigo])
+  @@map("setor")
+}
+
+/// Quem pôs o ativo no catálogo (SPEC-040): a equipe, pela tela, ou a importação diária da B3.
+enum OrigemAtivo {
+  equipe
+  importacao
+
+  @@map("origem_ativo")
+}
+
+/// Ativo do catálogo (SPEC-006). Nunca é apagado: sem "desativado_em" ele está ativo. O par
+/// (classe, setor) aponta para "setor", o que garante setor da mesma classe do ativo. SPEC-040: o
+/// importado nasce com a classificação "a revisar" (sem "classificacao_conferida_em").
+model Ativo {
+  id                        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticker                    String      @unique @db.VarChar(6)
+  nome                      String      @db.VarChar(100)
+  classe                    ClasseAtivo
+  setor                     String      @db.VarChar(40)
+  criadoEm                  DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm              DateTime    @map("atualizado_em") @db.Timestamptz(3)
+  desativadoEm              DateTime?   @map("desativado_em") @db.Timestamptz(3)
+  origem                    OrigemAtivo @default(equipe)
+  classificacaoConferidaEm  DateTime?   @default(now()) @map("classificacao_conferida_em") @db.Timestamptz(3)
+  /// O processador desativou (sem negócio na B3 há 3 meses): só ele reativa sozinho.
+  desativadoAutomaticamente Boolean     @default(false) @map("desativado_automaticamente")
+
+  setorAtivo Setor @relation(fields: [classe, setor], references: [classe, codigo], onDelete: Restrict, onUpdate: Restrict)
+
+  cotacoes        CotacaoDiaria[]
+  cargasHistorico CargaHistorico[]
+  cotacoesPregao  CotacaoPregao[]
+  logo            LogoAtivo?
+  indicadores     IndicadorAtivo[]
+  informacaoFii   InformacaoFii?
+  coleta          ColetaInvestidor10?
+  proventos       Provento[]
+  eventos         EventoCorporativo[]
+  /// SPEC-014: compras e vendas nas carteiras (o ativo não é apagado enquanto houver).
+  transacoes      Transacao[]
+
+  @@index([classe, setor])
+  @@map("ativo")
+}
+
+/// De onde veio a cotação (SPEC-008). Quando as duas fontes têm o mesmo dia, vale a B3 (DA18).
+enum FonteCotacao {
+  b3_cotahist
+  brapi
+
+  @@map("fonte_cotacao")
+}
+
+/// Fechamento de um pregão (SPEC-008). Preços como a fonte publica, sem ajuste por proventos
+/// (OPEN-06), já divididos pelo fator de cotação. Fim de semana e preços fora da faixa do dia são
+/// recusados (CHECK na migração). Preço médio, negócios e volume só ficam vazios no fechamento
+/// provisório da brapi (SPEC-009), que a B3 substitui no dia seguinte.
+model CotacaoDiaria {
+  ativoId    String       @map("ativo_id") @db.Uuid
+  data       DateTime     @db.Date
+  abertura   Decimal      @db.Decimal(18, 6)
+  maxima     Decimal      @db.Decimal(18, 6)
+  minima     Decimal      @db.Decimal(18, 6)
+  fechamento Decimal      @db.Decimal(18, 6)
+  precoMedio Decimal?     @map("preco_medio") @db.Decimal(18, 6)
+  negocios   Int?
+  volume     Decimal?     @db.Decimal(20, 2)
+  fonte      FonteCotacao
+  gravadoEm  DateTime     @default(now()) @map("gravado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, data])
+  @@map("cotacao_diaria")
+}
+
+/// Ano do arquivo anual da B3 já lido para um ativo, mesmo sem nenhuma cotação dele (SPEC-008):
+/// a carga retroativa não lê esse ano de novo para esse ativo.
+model CargaHistorico {
+  ativoId     String   @map("ativo_id") @db.Uuid
+  ano         Int      @db.SmallInt
+  carregadaEm DateTime @map("carregada_em") @db.Timestamptz(3)
+  registros   Int
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, ano])
+  @@map("carga_historico")
+}
+
+/// Tarefas de ingestão do processador (DA07, DA14). As SPECs 007 e 027 acrescentam as suas.
+enum TarefaIngestao {
+  historico_retroativo
+  fechamento_diario
+  cotacao_pregao
+  importacao_catalogo
+  calendario_b3
+  cdi_diario
+  investidor10
+  eventos_b3
+
+  @@map("tarefa_ingestao")
+}
+
+enum UnidadeIndexador {
+  percentual_ao_dia
+
+  @@map("unidade_indexador")
+}
+
+enum FonteTaxa {
+  bcb_sgs
+
+  @@map("fonte_taxa")
+}
+
+/// Índice de referência (SPEC-007). No escopo atual, só o CDI, cadastrado pela migração.
+model Indexador {
+  id       String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sigla    String           @unique @db.VarChar(10)
+  nome     String           @db.VarChar(100)
+  serieSgs Int              @map("serie_sgs")
+  unidade  UnidadeIndexador
+
+  taxas  TaxaDiaria[]
+  cargas CargaIndexador[]
+
+  @@map("indexador")
+}
+
+/// Taxa do dia como o Banco Central publica (SPEC-007): % ao dia, 6 casas, entre 0 e 1. Os dias
+/// são os úteis bancários, não os do calendário de pregão; fim de semana é recusado (CHECK).
+model TaxaDiaria {
+  indexadorId String    @map("indexador_id") @db.Uuid
+  data        DateTime  @db.Date
+  valor       Decimal   @db.Decimal(10, 6)
+  fonte       FonteTaxa
+  gravadoEm   DateTime  @map("gravado_em") @db.Timestamptz(3)
+
+  indexador Indexador @relation(fields: [indexadorId], references: [id], onDelete: Restrict)
+
+  @@id([indexadorId, data])
+  @@map("taxa_diaria")
+}
+
+/// Ano fechado da série já carregado (SPEC-007): não é consultado de novo.
+model CargaIndexador {
+  indexadorId String   @map("indexador_id") @db.Uuid
+  ano         Int      @db.SmallInt
+  carregadaEm DateTime @map("carregada_em") @db.Timestamptz(3)
+  registros   Int
+
+  indexador Indexador @relation(fields: [indexadorId], references: [id], onDelete: Restrict)
+
+  @@id([indexadorId, ano])
+  @@map("carga_indexador")
+}
+
+enum SituacaoExecucao {
+  sucesso
+  parcial
+  falha
+  aguardando_publicacao
+  cota_esgotada
+
+  @@map("situacao_execucao")
+}
+
+/// Uma execução de tarefa de ingestão (SPEC-008, DA14). Sem "terminada_em", está em andamento.
+model ExecucaoTarefa {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tarefa         TarefaIngestao
+  iniciadaEm     DateTime          @map("iniciada_em") @db.Timestamptz(3)
+  terminadaEm    DateTime?         @map("terminada_em") @db.Timestamptz(3)
+  situacao       SituacaoExecucao?
+  registros      Int               @default(0)
+  ativosAfetados Int               @default(0) @map("ativos_afetados")
+  periodoInicio  DateTime?         @map("periodo_inicio") @db.Date
+  periodoFim     DateTime?         @map("periodo_fim") @db.Date
+  /// SPEC-009: consultas feitas à fonte e a cota que ela informou por último (ciclo da brapi).
+  consultas      Int               @default(0)
+  cotaRestante   Int?              @map("cota_restante")
+  cotaLimite     Int?              @map("cota_limite")
+  cotaRenovaEm   DateTime?         @map("cota_renova_em") @db.Timestamptz(3)
+  /// SPEC-040: totais que não cabem em "registros" (importação: criados, desativados, logos...).
+  totais         Json?             @db.JsonB
+
+  erros ErroExecucao[]
+
+  @@index([tarefa, iniciadaEm])
+  @@map("execucao_tarefa")
+}
+
+/// Problema encontrado numa execução: linha inválida, dia sem pregão, arquivo que não baixou.
+model ErroExecucao {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  execucaoId String    @map("execucao_id") @db.Uuid
+  ativoId    String?   @map("ativo_id") @db.Uuid
+  data       DateTime? @db.Date
+  mensagem   String    @db.VarChar(500)
+
+  execucao ExecucaoTarefa @relation(fields: [execucaoId], references: [id], onDelete: Cascade)
+
+  @@index([execucaoId])
+  @@map("erro_execucao")
+}
+
+/// Nível da cotação (DA16): o gratuito tem atraso de ~30 minutos; o assinante vem na SPEC-026.
+enum NivelCotacao {
+  gratuito
+  assinante
+
+  @@map("nivel_cotacao")
+}
+
+/// Cotação do pregão (SPEC-009): o preço do ativo no horário que a fonte informa. Guardada por 30
+/// dias (OPEN-40); o fechamento de cada dia fica em cotacao_diaria. Fim de semana e preço fora da
+/// faixa do dia são recusados (CHECK na migração).
+model CotacaoPregao {
+  ativoId            String       @map("ativo_id") @db.Uuid
+  momento            DateTime     @db.Timestamptz(3)
+  nivel              NivelCotacao
+  preco              Decimal      @db.Decimal(18, 6)
+  aberturaDia        Decimal?     @map("abertura_dia") @db.Decimal(18, 6)
+  maximaDia          Decimal?     @map("maxima_dia") @db.Decimal(18, 6)
+  minimaDia          Decimal?     @map("minima_dia") @db.Decimal(18, 6)
+  fechamentoAnterior Decimal?     @map("fechamento_anterior") @db.Decimal(18, 6)
+  fonte              FonteCotacao
+  coletadaEm         DateTime     @default(now()) @map("coletada_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, momento, nivel])
+  @@index([momento])
+  @@map("cotacao_pregao")
+}
+
+/// O que a equipe fez (SPEC-006, RNF15).
+enum AcaoAuditoria {
+  ativo_cadastrado
+  ativo_editado
+  ativo_desativado
+  ativo_reativado
+  calendario_publicado
+  /// SPEC-040: feitas pelo processador, sem colaborador.
+  ativo_importado
+  ativo_desativado_automaticamente
+  ativo_reativado_automaticamente
+  classificacao_conferida
+  /// SPEC-005 §10: ano fechado do calendário publicado pelo processador, sem colaborador.
+  calendario_importado
+
+  @@map("acao_auditoria")
+}
+
+enum EntidadeAuditoria {
+  ativo
+  ano_calendario
+
+  @@map("entidade_auditoria")
+}
+
+/// Registro de auditoria das ações administrativas (SPEC-006, RNF15). Só aceita inclusões (gatilho
+/// na migração). "colaborador_id" é só o id, sem chave estrangeira, e "detalhes" (antes e depois)
+/// nunca tem dado pessoal (DA13).
+model RegistroAuditoria {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ocorridoEm    DateTime          @map("ocorrido_em") @db.Timestamptz(3)
+  /// Vazio só nas ações do processador (SPEC-040).
+  colaboradorId String?           @map("colaborador_id") @db.Uuid
+  acao          AcaoAuditoria
+  entidade      EntidadeAuditoria
+  entidadeId    String            @map("entidade_id") @db.VarChar(64)
+  detalhes      Json              @db.JsonB
+
+  @@index([entidade, entidadeId, ocorridoEm])
+  @@map("registro_auditoria")
+}
+
+/// Último pregão com negócio de cada ação, unit e FII nos arquivos da B3 (SPEC-040), inclusive
+/// dos que não estão no catálogo: a importação usa para saber quem negociou nos últimos 3 meses.
+model NegociacaoB3 {
+  ticker       String      @id @db.VarChar(6)
+  classe       ClasseAtivo
+  ultimoPregao DateTime    @map("ultimo_pregao") @db.Date
+  atualizadoEm DateTime    @map("atualizado_em") @db.Timestamptz(3)
+  /// SPEC-042: ISIN do ticker no arquivo da B3 (CODISI), para ligar o evento à classe certa.
+  isin         String?     @db.VarChar(12)
+
+  @@map("negociacao_b3")
+}
+
+enum SituacaoColeta {
+  ok
+  sem_pagina
+  erro
+
+  @@map("situacao_coleta")
+}
+
+enum TipoProvento {
+  dividendo
+  jcp
+  rendimento
+  amortizacao
+
+  @@map("tipo_provento")
+}
+
+enum FonteProvento {
+  investidor10
+
+  @@map("fonte_provento")
+}
+
+enum TipoEvento {
+  desdobramento
+  grupamento
+  bonificacao
+
+  @@map("tipo_evento")
+}
+
+enum FonteEvento {
+  b3
+
+  @@map("fonte_evento")
+}
+
+/// Indicador do Investidor10 (SPEC-041), com autorização só neste projeto acadêmico. "periodo":
+/// "atual" ou o ano do histórico; o código vem do cadastro fixo do servidor.
+model IndicadorAtivo {
+  ativoId    String   @map("ativo_id") @db.Uuid
+  indicador  String   @db.VarChar(40)
+  periodo    String   @db.VarChar(5)
+  valor      Decimal? @db.Decimal(24, 6)
+  coletadoEm DateTime @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, indicador, periodo])
+  @@map("indicador_ativo")
+}
+
+/// Informações em texto de um FII, como o Investidor10 mostra (SPEC-041).
+model InformacaoFii {
+  ativoId           String   @id @map("ativo_id") @db.Uuid
+  tipoFundo         String?  @map("tipo_fundo") @db.VarChar(100)
+  segmento          String?  @db.VarChar(100)
+  mandato           String?  @db.VarChar(100)
+  publicoAlvo       String?  @map("publico_alvo") @db.VarChar(100)
+  prazo             String?  @db.VarChar(100)
+  gestao            String?  @db.VarChar(100)
+  taxaAdministracao String?  @map("taxa_administracao") @db.VarChar(200)
+  coletadoEm        DateTime @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@map("informacao_fii")
+}
+
+/// Última visita do processador à página do ativo no Investidor10 (SPEC-041).
+model ColetaInvestidor10 {
+  ativoId    String         @id @map("ativo_id") @db.Uuid
+  situacao   SituacaoColeta
+  coletadoEm DateTime       @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@map("coleta_investidor10")
+}
+
+/// Provento por ação ou cota (SPEC-042), valor bruto como a fonte publica.
+model Provento {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativoId       String        @map("ativo_id") @db.Uuid
+  tipo          TipoProvento
+  dataCom       DateTime      @map("data_com") @db.Date
+  dataPagamento DateTime?     @map("data_pagamento") @db.Date
+  valor         Decimal       @db.Decimal(20, 10)
+  fonte         FonteProvento
+  coletadoEm    DateTime      @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@index([ativoId, dataCom])
+  @@map("provento")
+}
+
+/// Desdobramento, grupamento ou bonificação de uma ação, pela B3 (SPEC-042).
+model EventoCorporativo {
+  ativoId    String      @map("ativo_id") @db.Uuid
+  tipo       TipoEvento
+  dataCom    DateTime    @map("data_com") @db.Date
+  fator      Decimal     @db.Decimal(24, 10)
+  aprovadoEm DateTime?   @map("aprovado_em") @db.Date
+  fonte      FonteEvento
+  coletadoEm DateTime    @map("coletado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([ativoId, tipo, dataCom])
+  @@map("evento_corporativo")
+}
+
+enum SituacaoLogo {
+  ok
+  sem_logo
+
+  @@map("situacao_logo")
+}
+
+/// Logo do ativo (SPEC-040), baixado do servidor de ícones da brapi e entregue pelo nosso servidor.
+model LogoAtivo {
+  ativoId   String       @id @map("ativo_id") @db.Uuid
+  situacao  SituacaoLogo
+  tipo      String?      @db.VarChar(20)
+  conteudo  Bytes?
+  /// SHA-256 do conteúdo: o mesmo arquivo em muitos tickers é o logo genérico.
+  resumo    String?      @db.VarChar(64)
+  baixadoEm DateTime     @map("baixado_em") @db.Timestamptz(3)
+
+  ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@map("logo_ativo")
 }

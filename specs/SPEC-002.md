@@ -11,6 +11,8 @@
 | Drivers | FAS07, QA05, QA06, QA13, RES05 |
 | ADRs | [DA05](../adr/DA05-autenticacao-propria.md), [DA12](../adr/DA12-autorizacao-planos-no-servidor.md), [DA13](../adr/DA13-dados-pessoais-concentrados.md), [DA24](../adr/DA24-login-com-google.md) |
 
+> **Mudança da [SPEC-039](SPEC-039.md):** o cadastro com e-mail e senha deixa de abrir sessão. A conta nasce pendente e só entra depois de confirmar o e-mail com um código (o CA01 abaixo vale com essa diferença). O login de conta pendente responde 403 `email_not_confirmed`, e o Google com o e-mail de uma conta pendente descarta a pendente.
+
 ---
 
 ## 1. Objetivo

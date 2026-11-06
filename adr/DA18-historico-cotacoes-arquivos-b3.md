@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Proposta — **fontes do Tesouro Direto e de Selic/IPCA adiadas por [DA22](DA22-escopo-acoes-fiis-renda-fixa-adiada.md)** (02/10/2026) |
+| Status | Aceita (Nicoly, 29/10/2026, na [SPEC-008](../specs/SPEC-008.md)) — **fontes do Tesouro Direto e de Selic/IPCA adiadas por [DA22](DA22-escopo-acoes-fiis-renda-fixa-adiada.md)** (02/10/2026) |
 | Data | 01/10/2026 |
 | Drivers | QA04, QA08, RES03, RES07, PRE03 |
 | Relacionadas | [DA06](DA06-adaptadores-fontes-externas.md), [DA07](DA07-ingestao-assincrona.md), [DA17](DA17-carteira-ao-vivo-e-historica.md), [DA20](DA20-modelo-ia-noticias.md) |
@@ -40,5 +40,5 @@ Quando as duas fontes têm o fechamento do mesmo dia, **prevalece o arquivo ofic
 ## Pontos em aberto
 
 1. Fonte de proventos (dividendos, JCP) e de eventos (desdobramentos, grupamentos, bonificações).
-2. Tamanho da janela histórica carregada; alinhar com a janela de treino da IA (DA20).
+2. ✅ Tamanho da janela histórica carregada: desde o primeiro pregão de 2016 ([SPEC-008](../specs/SPEC-008.md)); a janela de treino da IA (DA20) cabe nela.
 3. Fonte da série histórica do Ibovespa para o benchmark (RF16).

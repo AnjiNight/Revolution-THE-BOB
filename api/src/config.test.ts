@@ -20,8 +20,50 @@ describe('loadConfig (CA08)', () => {
       refreshTokenTtlDays: 30,
       authRateLimitPerMinute: 10,
       googleClientId: null,
+      smtp: null,
       workerHeartbeatSeconds: 60,
+      b3CacheDir: '.cache/b3',
+      brapi: { token: null, monthlyQuota: 15_000, baseUrl: 'https://brapi.dev' },
+      bcbSgsBaseUrl: 'https://api.bcb.gov.br',
+      investidor10: { enabled: false, baseUrl: 'https://investidor10.com.br' },
+      b3ListedBaseUrl: 'https://sistemaswebb3-listados.b3.com.br',
     });
+  });
+
+  it('Investidor10 só ligado de propósito (SPEC-041)', () => {
+    expect(loadConfig({ ...base, INVESTIDOR10_ENABLED: 'true' }).investidor10.enabled).toBe(true);
+    expect(() => loadConfig({ ...base, INVESTIDOR10_ENABLED: 'sim' })).toThrow(
+      /INVESTIDOR10_ENABLED/,
+    );
+  });
+
+  it('endereço da API SGS do Banco Central (SPEC-007)', () => {
+    expect(loadConfig({ ...base, BCB_SGS_BASE_URL: 'http://127.0.0.1:9998' }).bcbSgsBaseUrl).toBe(
+      'http://127.0.0.1:9998',
+    );
+    expect(() => loadConfig({ ...base, BCB_SGS_BASE_URL: 'api.bcb.gov.br' })).toThrow(
+      /BCB_SGS_BASE_URL/,
+    );
+  });
+
+  it('token, cota e endereço da brapi (SPEC-009)', () => {
+    const config = loadConfig({
+      ...base,
+      BRAPI_TOKEN: ' meu-token ',
+      BRAPI_MONTHLY_QUOTA: '150000',
+      BRAPI_BASE_URL: 'http://127.0.0.1:9999',
+    });
+    expect(config.brapi).toEqual({
+      token: 'meu-token',
+      monthlyQuota: 150_000,
+      baseUrl: 'http://127.0.0.1:9999',
+    });
+    expect(() => loadConfig({ ...base, BRAPI_MONTHLY_QUOTA: '0' })).toThrow(/BRAPI_MONTHLY_QUOTA/);
+    expect(() => loadConfig({ ...base, BRAPI_BASE_URL: 'brapi.dev' })).toThrow(/BRAPI_BASE_URL/);
+  });
+
+  it('pasta dos arquivos da B3 pode ser trocada (SPEC-008)', () => {
+    expect(loadConfig({ ...base, B3_CACHE_DIR: 'D:/b3' }).b3CacheDir).toBe('D:/b3');
   });
 
   it('converte números vindos de texto', () => {
@@ -67,5 +109,36 @@ describe('loadConfig (CA08)', () => {
     expect(() => loadConfig({ ...base, JWT_SECRET: exemplo, NODE_ENV: 'production' })).toThrow(
       /produção/,
     );
+  });
+
+  it('liga o envio de e-mail só com SMTP_HOST, com porta 587 por padrão (SPEC-004)', () => {
+    expect(loadConfig({ ...base, SMTP_HOST: '' }).smtp).toBeNull();
+    expect(
+      loadConfig({
+        ...base,
+        SMTP_HOST: 'localhost',
+        SMTP_PORT: '1025',
+        EMAIL_FROM: 'App <a@x.com>',
+      }).smtp,
+    ).toEqual({ host: 'localhost', port: 1025, user: null, password: null, from: 'App <a@x.com>' });
+    expect(
+      loadConfig({
+        ...base,
+        SMTP_HOST: 'smtp.exemplo.com',
+        SMTP_USER: 'conta',
+        SMTP_PASSWORD: 'senha',
+        EMAIL_FROM: 'a@x.com',
+      }).smtp,
+    ).toEqual({
+      host: 'smtp.exemplo.com',
+      port: 587,
+      user: 'conta',
+      password: 'senha',
+      from: 'a@x.com',
+    });
+  });
+
+  it('SMTP_HOST sem EMAIL_FROM impede o servidor de iniciar (CA12)', () => {
+    expect(() => loadConfig({ ...base, SMTP_HOST: 'localhost' })).toThrow(/EMAIL_FROM/);
   });
 });

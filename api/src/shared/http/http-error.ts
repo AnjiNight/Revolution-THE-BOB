@@ -8,14 +8,18 @@ export class HttpError extends Error {
     readonly code: string,
     message: string,
     readonly fields?: FieldErrors,
+    readonly details?: Readonly<Record<string, string>>,
   ) {
     super(message);
     this.name = 'HttpError';
   }
 
   toBody(): ErrorBody {
-    return this.fields
-      ? { error: this.code, message: this.message, fields: this.fields }
-      : { error: this.code, message: this.message };
+    return {
+      error: this.code,
+      message: this.message,
+      ...(this.fields ? { fields: this.fields } : {}),
+      ...(this.details ? { details: this.details } : {}),
+    };
   }
 }

@@ -38,6 +38,8 @@ export async function createCollaborator(
     passwordHash: await hasher.hash(password),
     googleSub: null,
     termsVersion: null,
+    // SPEC-039: a equipe cria a conta e entrega o acesso; o colaborador nasce confirmado.
+    emailConfirmedAt: new Date(),
   });
   return { ok: true, user: toPublicUser(user), password };
 }

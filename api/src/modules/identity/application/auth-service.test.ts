@@ -1,23 +1,31 @@
 import { TERMS_VERSION } from '@simulador/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  EmailConfirmationUnavailableError,
   EmailInUseError,
+  EmailNotConfirmedError,
   GoogleEmailNotVerifiedError,
   GoogleTokenInvalidError,
+  InvalidConfirmationCodeError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
   TermsRequiredError,
   WrongAccountTypeError,
 } from '../domain/errors.js';
+import { createIdentityServices } from '../identity-services.js';
 import { JwtAccessTokenService } from '../infrastructure/jwt-access-token-service.js';
 import {
+  BackgroundTasks,
+  FakeEmailSender,
   FakeGoogleVerifier,
   FakePasswordHasher,
+  InMemoryEmailCodeRepository,
   InMemoryRefreshTokenRepository,
   InMemoryUserRepository,
 } from '../testing/fakes.js';
-import { AuthService } from './auth-service.js';
+import type { AuthService } from './auth-service.js';
 import { createCollaborator } from './create-collaborator.js';
+import { EmailCodeHasher } from './email-code.js';
 import { hashRefreshToken } from './refresh-token.js';
 
 const input = {
@@ -32,28 +40,54 @@ let users: InMemoryUserRepository;
 let tokens: InMemoryRefreshTokenRepository;
 let hasher: FakePasswordHasher;
 let accessTokens: JwtAccessTokenService;
+let mailer: FakeEmailSender;
+let background: BackgroundTasks;
 let auth: AuthService;
 
 beforeEach(() => {
   now = new Date('2026-10-08T12:00:00Z');
-  users = new InMemoryUserRepository();
+  users = new InMemoryUserRepository(() => now);
   tokens = new InMemoryRefreshTokenRepository();
   hasher = new FakePasswordHasher();
   accessTokens = new JwtAccessTokenService('segredo-de-teste-com-mais-de-32-caracteres', 15);
-  auth = new AuthService({
+  mailer = new FakeEmailSender();
+  background = new BackgroundTasks();
+  ({ auth } = createIdentityServices({
     users,
     refreshTokens: tokens,
+    emailCodes: new InMemoryEmailCodeRepository(),
     hasher,
+    codeHasher: new EmailCodeHasher('segredo-de-teste-com-mais-de-32-caracteres'),
     accessTokens,
     refreshTokenTtlDays: 30,
+    mailer,
     google: new FakeGoogleVerifier(),
     clock: () => now,
-  });
+    runInBackground: background.run,
+  }));
 });
 
-describe('cadastro (CA01, CA02)', () => {
-  it('cria usuário com perfil user, registra o consentimento e devolve a sessão', async () => {
-    const session = await auth.register(input);
+/** Cadastro + confirmação do e-mail (SPEC-039): devolve a sessão aberta pela confirmação. */
+async function register(fields: Partial<typeof input> = {}) {
+  const data = { ...input, ...fields };
+  await auth.register(data);
+  await background.settle();
+  return auth.confirmEmail({ email: data.email, code: mailer.lastCode(data.email) });
+}
+
+describe('cadastro (CA01, CA02 e SPEC-039)', () => {
+  it('cria usuário pendente, registra o consentimento e manda o código, sem abrir sessão', async () => {
+    await expect(auth.register(input)).resolves.toBeUndefined();
+    await background.settle();
+
+    expect(users.users[0]).toMatchObject({ role: 'user', emailConfirmedAt: null });
+    expect(users.consents).toEqual([{ userId: users.users[0]!.id, version: TERMS_VERSION }]);
+    expect(tokens.tokens).toHaveLength(0);
+    expect(mailer.sent[0]).toMatchObject({ to: input.email, subject: 'Confirme seu e-mail' });
+  });
+
+  it('a confirmação libera a conta e devolve a sessão', async () => {
+    const session = await register();
 
     expect(session.user).toEqual({
       id: expect.any(String),
@@ -61,7 +95,7 @@ describe('cadastro (CA01, CA02)', () => {
       email: 'ana@exemplo.com',
       role: 'user',
     });
-    expect(users.consents).toEqual([{ userId: session.user.id, version: TERMS_VERSION }]);
+    expect(users.users[0]?.emailConfirmedAt).toEqual(now);
     expect(accessTokens.verify(session.accessToken)).toEqual({
       userId: session.user.id,
       role: 'user',
@@ -71,20 +105,20 @@ describe('cadastro (CA01, CA02)', () => {
   });
 
   it('guarda a senha só como hash e nunca a devolve', async () => {
-    const session = await auth.register(input);
+    const session = await register();
     expect(users.users[0]?.passwordHash).toBe('hash:senha-bem-longa');
     expect(JSON.stringify(session)).not.toContain('senha-bem-longa');
     expect(JSON.stringify(session)).not.toContain('hash:');
   });
 
   it('guarda só o hash do token de renovação', async () => {
-    const session = await auth.register(input);
+    const session = await register();
     expect(tokens.tokens[0]?.tokenHash).toBe(hashRefreshToken(session.refreshToken));
     expect(JSON.stringify(tokens.tokens)).not.toContain(session.refreshToken);
   });
 
-  it('recusa e-mail já cadastrado', async () => {
-    await auth.register(input);
+  it('recusa e-mail de conta confirmada', async () => {
+    await register();
     await expect(auth.register({ ...input, name: 'Outra' })).rejects.toBeInstanceOf(
       EmailInUseError,
     );
@@ -93,7 +127,7 @@ describe('cadastro (CA01, CA02)', () => {
 
 describe('login (CA05)', () => {
   beforeEach(async () => {
-    await auth.register(input);
+    await register();
   });
 
   it('entra com e-mail e senha corretos', async () => {
@@ -120,7 +154,7 @@ describe('login (CA05)', () => {
 
 describe('renovação da sessão (CA07, CA08)', () => {
   it('troca o token de renovação por um novo par e invalida o usado', async () => {
-    const session = await auth.register(input);
+    const session = await register();
     const renewed = await auth.refresh(session.refreshToken);
 
     expect(renewed.refreshToken).not.toBe(session.refreshToken);
@@ -129,7 +163,7 @@ describe('renovação da sessão (CA07, CA08)', () => {
   });
 
   it('reuso de token já trocado derruba toda a sessão daquele login', async () => {
-    const session = await auth.register(input);
+    const session = await register();
     const renewed = await auth.refresh(session.refreshToken);
 
     await expect(auth.refresh(session.refreshToken)).rejects.toBeInstanceOf(
@@ -142,7 +176,7 @@ describe('renovação da sessão (CA07, CA08)', () => {
   });
 
   it('reuso não afeta outra sessão do mesmo usuário', async () => {
-    const first = await auth.register(input);
+    const first = await register();
     const second = await auth.login({ email: input.email, password: input.password }, 'user');
     await auth.refresh(first.refreshToken);
     await expect(auth.refresh(first.refreshToken)).rejects.toThrow();
@@ -150,7 +184,7 @@ describe('renovação da sessão (CA07, CA08)', () => {
   });
 
   it('recusa token expirado e token desconhecido', async () => {
-    const session = await auth.register(input);
+    const session = await register();
     now = new Date('2026-11-08T12:00:00Z'); // 31 dias depois
     await expect(auth.refresh(session.refreshToken)).rejects.toBeInstanceOf(
       InvalidRefreshTokenError,
@@ -163,7 +197,7 @@ describe('renovação da sessão (CA07, CA08)', () => {
 
 describe('logout (CA09)', () => {
   it('invalida o token de renovação da sessão', async () => {
-    const session = await auth.register(input);
+    const session = await register();
     await auth.logout(session.refreshToken);
     await expect(auth.refresh(session.refreshToken)).rejects.toBeInstanceOf(
       InvalidRefreshTokenError,
@@ -211,7 +245,7 @@ describe('colaborador (CA11)', () => {
       name: 'Nicoly',
       email: 'nicoly@exemplo.com',
     });
-    await auth.register(input);
+    await register();
     if (!collaborator.ok) throw new Error('falhou');
 
     const asCollaborator = await auth.login(
@@ -261,7 +295,7 @@ describe('login com Google (CA17–CA20)', () => {
   });
 
   it('liga o Google a uma conta existente com o mesmo e-mail', async () => {
-    const registered = await auth.register(input);
+    const registered = await register();
     const session = await auth.loginWithGoogle({ idToken: `google:sub-9:${input.email}` });
     expect(session.user.id).toBe(registered.user.id);
     expect(users.users[0]?.googleSub).toBe('sub-9');
@@ -294,5 +328,118 @@ describe('login com Google (CA17–CA20)', () => {
     await expect(
       auth.loginWithGoogle({ idToken: 'google:sub-3:x@y.com:nao-verificado', acceptedTerms: true }),
     ).rejects.toBeInstanceOf(GoogleEmailNotVerifiedError);
+  });
+});
+
+describe('conta pendente (SPEC-039)', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it('login com a senha certa: email_not_confirmed e um código novo; senha errada: credenciais (CA03)', async () => {
+    await auth.register(input);
+    await background.settle();
+    const first = mailer.lastCode(input.email);
+
+    await expect(
+      auth.login({ email: input.email, password: 'errada' }, 'user'),
+    ).rejects.toBeInstanceOf(InvalidCredentialsError);
+    await expect(
+      auth.login({ email: input.email, password: input.password }, 'user'),
+    ).rejects.toBeInstanceOf(EmailNotConfirmedError);
+    await background.settle();
+
+    expect(mailer.sent).toHaveLength(2);
+    const second = mailer.lastCode(input.email);
+    await expect(auth.confirmEmail({ email: input.email, code: first })).rejects.toBeInstanceOf(
+      InvalidConfirmationCodeError,
+    );
+    await expect(auth.confirmEmail({ email: input.email, code: second })).resolves.toBeDefined();
+  });
+
+  it('nenhum caminho abre sessão para conta pendente (CA04)', async () => {
+    await auth.register(input);
+    await expect(
+      auth.login({ email: input.email, password: input.password }, 'collaborator'),
+    ).rejects.toBeInstanceOf(WrongAccountTypeError);
+    await expect(
+      auth.login({ email: input.email, password: input.password }, 'user'),
+    ).rejects.toBeInstanceOf(EmailNotConfirmedError);
+    expect(tokens.tokens).toHaveLength(0);
+  });
+
+  it('novo cadastro com o e-mail de conta pendente substitui nome e senha (CA05)', async () => {
+    await auth.register(input);
+    await auth.register({ ...input, name: 'Outra Pessoa', password: 'outra-senha-1' });
+    await background.settle();
+
+    expect(users.users).toHaveLength(1);
+    expect(users.users[0]).toMatchObject({
+      name: 'Outra Pessoa',
+      passwordHash: 'hash:outra-senha-1',
+    });
+    const session = await auth.confirmEmail({
+      email: input.email,
+      code: mailer.lastCode(input.email),
+    });
+    expect(session.user.name).toBe('Outra Pessoa');
+  });
+
+  it('pendente há mais de 7 dias é tratada como inexistente (CA07)', async () => {
+    await auth.register(input);
+    await background.settle();
+    now = new Date(now.getTime() + 8 * DAY);
+    await expect(
+      auth.login({ email: input.email, password: input.password }, 'user'),
+    ).rejects.toBeInstanceOf(InvalidCredentialsError);
+    // Dá para se cadastrar de novo com o mesmo e-mail.
+    await expect(auth.register(input)).resolves.toBeUndefined();
+  });
+
+  it('Google com o e-mail de conta pendente descarta a pendente e a senha dela (CA09)', async () => {
+    // Alguém cadastra o e-mail de outra pessoa com uma senha própria e não confirma.
+    await auth.register({ ...input, password: 'senha-do-intruso' });
+    await expect(
+      auth.loginWithGoogle({ idToken: `google:sub-dono:${input.email}` }),
+    ).rejects.toBeInstanceOf(TermsRequiredError);
+
+    const session = await auth.loginWithGoogle({
+      idToken: `google:sub-dono:${input.email}`,
+      acceptedTerms: true,
+    });
+    expect(users.users).toHaveLength(1);
+    expect(users.users[0]).toMatchObject({
+      id: session.user.id,
+      googleSub: 'sub-dono',
+      passwordHash: null,
+      emailConfirmedAt: now,
+    });
+    await expect(
+      auth.login({ email: input.email, password: 'senha-do-intruso' }, 'user'),
+    ).rejects.toBeInstanceOf(InvalidCredentialsError);
+  });
+
+  it('conta criada pelo Google e colaborador nascem confirmados (CA09, CA11)', async () => {
+    await auth.loginWithGoogle({ idToken: 'google:sub-1:g@gmail.com', acceptedTerms: true });
+    await createCollaborator(users, hasher, { name: 'Nicoly', email: 'nicoly@exemplo.com' });
+    expect(users.users.every((user) => user.emailConfirmedAt !== null)).toBe(true);
+  });
+});
+
+describe('sem SMTP (SPEC-039)', () => {
+  it('o cadastro com senha fica desligado; o Google continua', async () => {
+    const { auth: offline } = createIdentityServices({
+      users,
+      refreshTokens: tokens,
+      emailCodes: new InMemoryEmailCodeRepository(),
+      hasher,
+      codeHasher: new EmailCodeHasher('segredo-de-teste-com-mais-de-32-caracteres'),
+      accessTokens,
+      refreshTokenTtlDays: 30,
+      google: new FakeGoogleVerifier(),
+      clock: () => now,
+    });
+    await expect(offline.register(input)).rejects.toBeInstanceOf(EmailConfirmationUnavailableError);
+    await expect(
+      offline.loginWithGoogle({ idToken: 'google:sub-1:g@gmail.com', acceptedTerms: true }),
+    ).resolves.toBeDefined();
   });
 });

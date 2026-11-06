@@ -1,4 +1,9 @@
-import type { AuthErrorCode, FieldErrorCode } from '@simulador/shared';
+import {
+  ASSET_CLASSES,
+  SECTORS_BY_CLASS,
+  type AuthErrorCode,
+  type FieldErrorCode,
+} from '@simulador/shared';
 import { describe, expect, it } from 'vitest';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
 import en from './locales/en.json';
@@ -54,6 +59,19 @@ describe('arquivos de idioma (CA13)', () => {
       'server_unavailable',
       'invalid_url',
       'unexpected',
+      'invalid_password',
+      'email_change_not_allowed',
+      'password_change_not_allowed',
+      'invalid_reset_code',
+      'password_reset_unavailable',
+      'email_not_confirmed',
+      'invalid_confirmation_code',
+      'email_confirmation_unavailable',
+      'deletion_not_allowed',
+      'forbidden',
+      'calendar_not_published',
+      'ticker_in_use',
+      'asset_not_found',
     ];
     const fieldErrors: FieldErrorCode[] = [
       'required',
@@ -61,10 +79,34 @@ describe('arquivos de idioma (CA13)', () => {
       'too_long',
       'invalid_email',
       'terms_not_accepted',
+      'same_password',
+      'invalid_version',
+      'invalid_code',
+      'invalid_date',
+      'wrong_year',
+      'weekend',
+      'duplicate',
+      'invalid_ticker',
+      'invalid_option',
+      'wrong_class',
+      'immutable',
     ];
     for (const locale of [ptBR, en]) {
       for (const code of authErrors) expect(locale.authErrors[code]).toBeTruthy();
       for (const code of fieldErrors) expect(locale.fieldErrors[code]).toBeTruthy();
+    }
+  });
+
+  it('traduzem todas as classes e todos os setores e segmentos da lista fixa (SPEC-006)', () => {
+    for (const locale of [ptBR, en]) {
+      for (const assetClass of ASSET_CLASSES) {
+        expect(locale.assets.class[assetClass]).toBeTruthy();
+        expect(locale.assets.classPlural[assetClass]).toBeTruthy();
+        const names = locale.assets.sectors[assetClass] as Record<string, string>;
+        for (const code of SECTORS_BY_CLASS[assetClass]) expect(names[code], code).toBeTruthy();
+        // Nenhum nome sobrando, de setor que saiu da lista.
+        expect(Object.keys(names).sort()).toEqual([...SECTORS_BY_CLASS[assetClass]].sort());
+      }
     }
   });
 });

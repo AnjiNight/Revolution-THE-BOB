@@ -7,6 +7,8 @@ export interface ErrorBody {
   error: string;
   message: string;
   fields?: FieldErrors;
+  /** Dado para corrigir o pedido, como o saldo disponível (SPEC-013). */
+  details?: Readonly<Record<string, string>>;
 }
 
 /**

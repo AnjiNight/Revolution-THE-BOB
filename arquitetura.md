@@ -95,7 +95,7 @@ Cada decisão está registrada como ADR, com contexto, alternativas, decisão, c
 | [DA15](adr/DA15-carater-educacional.md) | Conformidade | Indicador educacional obrigatório nas respostas | Aviso fixo em cada tela | Aceita |
 | [DA16](adr/DA16-cotacoes-por-plano.md) | Cotações | Durante o pregão: ~30 min no gratuito, provedor pago no assinante | Só fechamento; tempo real licenciado | Aceita, com pontos em aberto |
 | [DA17](adr/DA17-carteira-ao-vivo-e-historica.md) | Tipos de carteira | Carteira ao vivo e carteira histórica, tipo imutável | Datas passadas em qualquer carteira | Aceita, com pontos em aberto |
-| [DA18](adr/DA18-historico-cotacoes-arquivos-b3.md) | Histórico de cotações | Arquivos públicos da B3 + brapi para o dia | Plano pago; fontes não oficiais | Proposta |
+| [DA18](adr/DA18-historico-cotacoes-arquivos-b3.md) | Histórico de cotações | Arquivos públicos da B3 + brapi para o dia | Plano pago; fontes não oficiais | Aceita |
 | [DA19](adr/DA19-fontes-de-noticias.md) | Fontes de notícias | Fonte pai fixa + curadas + do usuário, com prioridade | Só fontes da equipe; livre escolha | Aceita, com ponto crítico |
 | [DA20](adr/DA20-modelo-ia-noticias.md) | Modelo de IA | Modelo versionado, treinado fora do servidor com janela histórica | Regras de palavras; só API externa | Aceita, com pontos em aberto |
 | [DA21](adr/DA21-cenarios-por-sentimento.md) | Cenários | Probabilidade condicional ao sentimento, com taxa-base e n | Peso fixo; modelo preditivo caixa-preta | Proposta |

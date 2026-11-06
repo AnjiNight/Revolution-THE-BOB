@@ -39,7 +39,7 @@ Os identificadores **DAxx** são os mesmos usados nos [Drivers Arquiteturais](..
 | [DA15](DA15-carater-educacional.md) | Caráter educacional garantido pela arquitetura | Aceita | 24/09/2026 |
 | [DA16](DA16-cotacoes-por-plano.md) | Atualização de cotações conforme o plano | Aceita, com pontos em aberto (alterada por DA22) | 01/10/2026 |
 | [DA17](DA17-carteira-ao-vivo-e-historica.md) | Carteira ao vivo e carteira histórica | Aceita, com pontos em aberto (alterada por DA22) | 01/10/2026 |
-| [DA18](DA18-historico-cotacoes-arquivos-b3.md) | Histórico de cotações a partir dos arquivos da B3 | Proposta (alterada por DA22) | 01/10/2026 |
+| [DA18](DA18-historico-cotacoes-arquivos-b3.md) | Histórico de cotações a partir dos arquivos da B3 | Aceita (alterada por DA22) | 01/10/2026 |
 | [DA19](DA19-fontes-de-noticias.md) | Fontes de notícias: fonte pai, curadas e do usuário | Aceita, com ponto em aberto crítico | 01/10/2026 |
 | [DA20](DA20-modelo-ia-noticias.md) | Modelo de IA para notícias, aperfeiçoado com janela histórica | Aceita, com pontos em aberto | 01/10/2026 |
 | [DA21](DA21-cenarios-por-sentimento.md) | Cenários por probabilidade condicional ao sentimento | Proposta | 01/10/2026 |

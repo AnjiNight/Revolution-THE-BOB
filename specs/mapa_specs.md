@@ -17,7 +17,35 @@
 | 1.7 | SPEC-001 detalhada ([SPEC-001.md](SPEC-001.md)); OPEN-39 resolvida pela convenção de `down.sql` |
 | 1.8 | SPEC-002 detalhada ([SPEC-002.md](SPEC-002.md)); OPEN-03 resolvida: promoção a administrador por comando no servidor |
 | 1.9 | Perfil "administrador" renomeado para **colaborador**, com conta criada só pela equipe e Área do colaborador; login com Google para usuários ([DA24](../adr/DA24-login-com-google.md)) |
-
+| 1.10 | SPEC-001, SPEC-002 e SPEC-003 marcadas como implementadas; SPEC-004 detalhada ([SPEC-004.md](SPEC-004.md)), aprovada e implementada; parte de e-mail da OPEN-02 resolvida (envio por SMTP; o provedor sai junto com a hospedagem) |
+| 1.11 | Nova SPEC-039 (confirmação de e-mail, RF43 e RB23 da versão 1.7 dos requisitos), na Fase 1, logo depois da SPEC-004; aprovada e implementada |
+| 1.12 | SPEC-034 detalhada ([SPEC-034.md](SPEC-034.md)), aprovada e implementada: OPEN-04 resolvida (JSON versionado, baixado pelo app) e regra da OPEN-40 decidida (backups e logs por no máximo 30 dias) |
+| 1.13 | SPEC-005 detalhada ([SPEC-005.md](SPEC-005.md)), aprovada e implementada; OPEN-01 resolvida (calendário oficial da B3, conferido e publicado pelo colaborador, com sugestão automática) |
+| 1.14 | SPEC-006 detalhada ([SPEC-006.md](SPEC-006.md)), aprovada e implementada, com o registro de auditoria (RNF15) que passa a valer também para o calendário da SPEC-005; OPEN-41 resolvida (busca só no catálogo da equipe) |
+| 1.15 | SPEC-008 detalhada ([SPEC-008.md](SPEC-008.md)), aprovada e implementada; DA18 aceita; OPEN-05 resolvida (histórico desde 2016); proventos (OPEN-06) fora da SPEC-008; ativo desativado continua sendo coletado |
+| 1.16 | SPEC-009 detalhada ([SPEC-009.md](SPEC-009.md)), aprovada e implementada; OPEN-07 resolvida (brapi usada para mostrar as cotações no próprio app, com fonte e horário, sem repassar os dados); cotações do pregão guardadas por 30 dias (OPEN-40); cotação de FII pela brapi conferida no plano gratuito (OPEN-48) |
+| 1.17 | Nova SPEC-040 (catálogo completo da B3, com logos), na Fase 2, logo depois da SPEC-009: pedida pelo Luís em 02/11/2026 ([SPEC-040.md](SPEC-040.md)), escrita e aguardando o teste da rota de lista da brapi e a aprovação; muda as SPECs 006 e 009 e a premissa de catálogo curado da DA16 |
+| 1.18 | SPEC-040 aprovada (03/11/2026, depois do teste da rota de lista da brapi) e implementada; DA16 atualizada (catálogo sem curadoria, coleta pela lista, atraso de até 45 min) |
+| 1.19 | SPEC-010 detalhada ([SPEC-010.md](SPEC-010.md)), aguardando a aprovação; os saltos de preço encontrados no histórico (239 ativos) reforçam a OPEN-06 antes das SPECs 016 e 019 |
+| 1.20 | SPEC-010 aprovada (03/11/2026: saltos marcados no gráfico, período de 1 ano) e implementada; SPEC-006 mudada: "Mostrar mais" no fim da busca, em vez de parar nos 50 primeiros |
+| 1.21 | SPEC-007 detalhada ([SPEC-007.md](SPEC-007.md)), aguardando a aprovação; o CDI segue os dias úteis bancários (tem valor em 24/12 e 31/12, sem pregão), então a SPEC-005 deixa de ser dependência da série e serve só para conferência |
+| 1.22 | SPEC-005 mudada (aprovada pela Nicoly em 04/11/2026): anos fechados publicados pelo processador a partir do arquivo anual da B3 ([SPEC-005 §10](SPEC-005.md)) |
+| 1.23 | SPEC-007 aprovada (Nicoly, 04/11/2026, como escrita) e implementada: série do CDI desde 2016 pelo SGS do Banco Central; OPEN-40 decidida para o CDI (guardado para sempre) |
+| 1.24 | Novas SPEC-041 (indicadores fundamentalistas, [SPEC-041.md](SPEC-041.md)) e SPEC-042 (proventos e eventos corporativos, [SPEC-042.md](SPEC-042.md)), na Fase 2, depois da SPEC-010, pedidas pela Nicoly em 04/11/2026 e aguardando a aprovação. Investidor10 autorizado por escrito (04/11/2026) para dados e indicadores, só neste projeto acadêmico: OPEN-28 resolvida na parte de dados; OPEN-06 com fonte proposta na SPEC-042 |
+| 1.25 | SPECs 041 e 042 aprovadas (Nicoly, 04/11/2026, como escritas) e implementadas: indicadores e proventos do Investidor10 (interruptor `INVESTIDOR10_ENABLED`), eventos corporativos da B3 e o gráfico da ficha ajustado; fonte da OPEN-06 resolvida |
+| 1.26 | SPEC-012 detalhada ([SPEC-012.md](SPEC-012.md)), aguardando a aprovação; OPEN-09 (parte da carteira), OPEN-11 e OPEN-15 decididas pelo Luís em 05/11/2026; Requisitos v1.8 (RB07 reescrita, RF11, RB24 a RB26) |
+| 1.27 | SPEC-012 aprovada (Nicoly, 05/11/2026) e implementada: carteiras ao vivo e históricas, com nome único por usuário, até 20, exclusão definitiva com registro sem dado pessoal e a seção `portfolios` na exportação (versão 2) |
+| 1.28 | SPEC-013 detalhada ([SPEC-013.md](SPEC-013.md)), aguardando a aprovação: aportes e retiradas nas carteiras ao vivo e histórica, com "Valor inicial" na criação; a SPEC-016 passa a cuidar só de compra e venda na histórica; Requisitos v1.9 (RB11 só para compra e venda) |
+| 1.29 | SPEC-014 detalhada ([SPEC-014.md](SPEC-014.md)), aguardando a aprovação: compra e venda na carteira ao vivo com a cotação do próprio dia, posições e preço médio; recomendações para OPEN-06 (nova SPEC-043, proventos e eventos na carteira), OPEN-08, OPEN-12 e OPEN-24 esperando a resposta do Luís |
+| 1.30 | SPEC-013 aprovada (Luís, 06/11/2026) e implementada: aportes e retiradas nas carteiras ao vivo e histórica, valor inicial na criação, saldo e extrato, lançamentos imutáveis no banco e a exportação na versão 3 |
+| 1.31 | SPEC-014 aprovada (Luís, 06/11/2026) com as recomendações: OPEN-08 (só em dia de pregão, com a cotação do próprio dia), OPEN-12 (quantidade inteira, RB27) e OPEN-24 (quantidade na API e "Calcular por valor" na tela) resolvidas; o tratamento de proventos e eventos na carteira (OPEN-06) vai para a nova SPEC-043; Requisitos v1.10 (RB07 e RB27) |
+| 1.32 | SPEC-014 implementada: compra e venda na carteira ao vivo com a cotação do próprio dia, posições e preço médio, "Calcular por valor", Comprar pela ficha do ativo e a exportação na versão 4 |
+| 1.33 | SPEC-015 detalhada ([SPEC-015.md](SPEC-015.md)), aguardando a aprovação: estorno que anula o lançamento, aceito só se o livro sem ele continuar válido, com prazo de um dia para compra e venda na carteira ao vivo; recomendações para a OPEN-14 esperando a resposta do Luís |
+| 1.34 | SPEC-015 aprovada (Luís, 06/11/2026) com as recomendações; OPEN-14 resolvida; Requisitos v1.11 (RB28) |
+| 1.35 | SPEC-015 implementada: estorno de aporte, retirada, compra e venda, com a conferência do livro, o prazo de um dia para compra e venda na ao vivo e a exportação na versão 5 |
+| 1.36 | SPEC-016 detalhada ([SPEC-016.md](SPEC-016.md)) para a Nicoly implementar, aguardando a aprovação: compra e venda na carteira histórica com o fechamento da B3 do dia; recomendações para a OPEN-24 ("% do caixa" no "Calcular por valor") e para a OPEN-06 (aviso no lugar do valor quando houve evento depois da compra, até a SPEC-043) esperando a resposta do Luís |
+| 1.37 | SPEC-016 aprovada (Luís, 06/11/2026) com as recomendações; OPEN-24 resolvida ("% do caixa" no "Calcular por valor") |
+| 1.38 | SPEC-016 implementada: compra e venda na carteira histórica com o fechamento da B3 do dia, "% do caixa", aviso de evento corporativo até a SPEC-043 e a exportação na versão 6. Fase 3 completa, faltando só a SPEC-043 |
 ---
 
 ## 0. Como ler este documento
@@ -127,7 +155,7 @@ Pontos de dependência que definem a ordem:
 | RB04 | Pedido de exclusão concluído em até 30 dias | 034 |
 | RB05 | Caixa após uma compra nunca fica negativo | 014, 016 |
 | RB06 | Posição de um ativo nunca fica negativa | 014, 015, 016 |
-| RB07 | Preço do lançamento vem da cotação de referência (**regra em conflito com DA16/DA17**, ver OPEN-09) | 014, 016 |
+| RB07 | Preço do lançamento: na ao vivo, a última cotação do plano do usuário; na histórica, o fechamento do dia (reescrita na v1.8 dos requisitos, SPEC-012) | 014, 016 |
 | RB08 | Lançamentos nunca são alterados nem apagados; correção só por estorno | 013, 014, 015 |
 | RB09 | Posição sempre derivada do histórico; não existe posição persistida como fonte da verdade | 013, 014, 019 |
 | RB10 | Preço médio muda só em compras | 014 |
@@ -251,17 +279,17 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-02 | Hospedagem (servidor, processador, banco com backup diário, cache) e serviço de e-mail | PE13 | 001, 004 |
 | OPEN-03 | ✅ **Resolvida na [SPEC-002](SPEC-002.md):** o perfil passa a se chamar **colaborador**; colaborador nunca se cadastra pelo app, a equipe cria a conta com `npm run colaborador:criar` (senha forte gerada) e ele entra pela Área do colaborador | Lacuna | 002, 006, 011 |
 | OPEN-04 | Formato, conteúdo e forma de entrega da exportação de dados pessoais | RF06 | 034 |
-| OPEN-05 | Aprovação de DA18 (histórico pelos arquivos da B3, hoje **Proposta**) e tamanho da janela histórica carregada | DA18, PE04 | 008, 016 |
-| OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo) | PE05, DA22 | 008, 014, 016, 019 |
-| OPEN-07 | Termos da brapi para redistribuir cotações | PE02 | 009, 026 |
-| OPEN-08 | Compra/venda na carteira ao vivo com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
-| OPEN-09 | Reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
+| OPEN-05 | ✅ **Resolvida na [SPEC-008](SPEC-008.md):** DA18 aceita (histórico pelos arquivos COTAHIST da B3), carregado desde o primeiro pregão de 2016 | DA18, PE04 | 008, 016 |
+| OPEN-06 | **[Prioritário]** Fonte e tratamento de proventos e eventos corporativos, incluindo os **rendimentos mensais dos FIIs** (vale para carteira histórica e ao vivo). Fonte proposta na [SPEC-042](SPEC-042.md) (proventos do Investidor10, eventos da B3); o tratamento na carteira continua com as SPECs 016 e 019. Decidido na [SPEC-014](SPEC-014.md): o tratamento na carteira (caixa e quantidade, nos dois tipos) fica com a nova [SPEC-043](#spec-043--proventos-e-eventos-corporativos-na-carteira) | PE05, DA22 | 008, 014, 016, 019, 042 |
+| OPEN-07 | ✅ **Resolvida na [SPEC-009](SPEC-009.md):** a brapi é usada só para mostrar as cotações no próprio app, com fonte e horário, nunca "tempo real" e sem repassar os dados a terceiros | PE02 | 009, 026 |
+| OPEN-08 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** compra e venda na carteira ao vivo só em dia de pregão (RB11) e com a cotação do próprio dia (RB07); depois do fechamento vale a última cotação do dia; sem ordem para a abertura. Original: compra/venda com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
+| OPEN-09 | ✅ **Parte da carteira resolvida na [SPEC-012](SPEC-012.md)** (RB07, RF11, RB24 e RB25 nos requisitos v1.8); RF09 e RF33 ficam com a SPEC-026. Original: reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
 | OPEN-10 | RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
-| OPEN-11 | Relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
-| OPEN-12 | Quantidade fracionária de ações e regras de lote | INC-18 | 014, 016 |
+| OPEN-11 | ✅ **Resolvida na [SPEC-012](SPEC-012.md):** sem `saldo_inicial`; o caixa vem só dos aportes ("Valor inicial" na SPEC-013), e retirada maior que o caixa é recusada (RB26). Original: relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
+| OPEN-12 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** quantidade inteira, de 1 a 1.000.000, sem lote padrão (RB27). Original: quantidade fracionária de ações e regras de lote | INC-18 | 014, 016 |
 | OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra e na venda de ações e FIIs (RB20, RB21); o aviso na aplicação no Tesouro Direto volta com a renda fixa (DA22) | INC-19 | 014, 016, 019; 024 na fase de renda fixa |
-| OPEN-14 | Regras do estorno: o que pode ser estornado, efeito em lançamentos posteriores, estorno de estorno, estorno na carteira histórica | RB08 | 015, 016 |
-| OPEN-15 | Exclusão de carteira: exclusão definitiva ou arquivamento, preservando auditoria | INC-17 | 012, 034 |
+| OPEN-14 | ✅ **Resolvida na [SPEC-015](SPEC-015.md):** aporte, retirada, compra e venda se estornam uma vez só, sem estorno de estorno; o estorno anula o original (as contas o ignoram); aceito só se o livro sem ele continuar válido; na carteira ao vivo, compra e venda só no mesmo dia (RB28). Original: regras do estorno: o que pode ser estornado, efeito em lançamentos posteriores, estorno de estorno, estorno na carteira histórica | RB08 | 015, 016 |
+| OPEN-15 | ✅ **Resolvida na [SPEC-012](SPEC-012.md):** exclusão definitiva, com confirmação e registro sem dado pessoal. Original: exclusão de carteira: exclusão definitiva ou arquivamento, preservando auditoria | INC-17 | 012, 034 |
 | OPEN-16 | ⏸ **Adiada com a renda fixa (DA22).** Tipos de remuneração da renda fixa (prefixado, % do CDI, IPCA + taxa) e atributos da aplicação (taxa contratada, carência) | Modelo, arquitetura §9 | 017 |
 | OPEN-17 | ⏸ **Adiada com a renda fixa (DA22).** Tratamento fiscal por produto (ex.: LCI/LCA) | INC-13 | 018, 024 |
 | OPEN-18 | ⏸ **Adiada com a renda fixa (DA22).** Valorização e resgate do Tesouro Direto (preço publicado × curva); confirmar a fonte (hoje "Sugerida") | Decisões técnicas §3 | 024 |
@@ -270,11 +298,11 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-21 | Fonte do histórico do Ibovespa | PE06 | 020 |
 | OPEN-22 | Significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
 | OPEN-23 | Comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
-| OPEN-24 | Montagem da carteira por percentual (cenário P01) × registro por quantidade | INC-15 | 014, 016 |
+| OPEN-24 | ✅ **Resolvida nas SPECs [014](SPEC-014.md) e [016](SPEC-016.md):** a API registra por quantidade (RF12); a tela tem "Calcular por valor", em reais ou em "% do caixa" (o "50% em PETR4" da P01); montar vários ativos de uma vez fica fora. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
 | OPEN-26 | Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
-| OPEN-28 | **[Crítico]** Autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta | PE07 | 027 |
+| OPEN-28 | **[Crítico]** Autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta. **Parte de dados resolvida (04/11/2026):** autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)); a parte de **notícias** ainda precisa ser confirmada com eles | PE07 | 027, 041, 042 |
 | OPEN-29 | Lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
 | OPEN-30 | Implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 028 |
 | OPEN-31 | Fonte do histórico de notícias e janela de treino | PE09, PE11 | 028, 031 |
@@ -286,15 +314,15 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
 | OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
 | OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
-| OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
-| OPEN-41 | Busca de ativos: só no catálogo curado ou em qualquer ticker da B3 | INC-09 | 006 |
+| OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias. Decidido: backups e logs por no máximo 30 dias ([SPEC-034](SPEC-034.md)); cotações do pregão por 30 dias ([SPEC-009](SPEC-009.md)) | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
+| OPEN-41 | ✅ **Resolvida na [SPEC-006](SPEC-006.md):** a busca procura só nos ativos ativos do catálogo da equipe | INC-09 | 006 |
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
 | OPEN-44 | Aprovar no modelo conceitual as entidades previstas na arquitetura §9 | INC-05 | Várias (marcadas com `†`) |
 | OPEN-45 | Com interface em inglês, notícias (em português, PRE04) e textos gerados continuam em português? | RF38 × PRE04 | 035 |
 | OPEN-46 | ✅ **Resolvida (DA23):** FIIs comparados com CDI e Ibovespa no escopo atual; IFIX como evolução | DA22, DA23 | 020 |
 | OPEN-47 | ✅ **Resolvida (DA23):** ações classificadas por setor e FIIs por segmento | DA22, DA23 | 006, 021 |
-| OPEN-48 | Confirmar que as fontes de cotação (atual e histórica) cobrem os FIIs do catálogo | DA22 | 008, 009 |
+| OPEN-48 | Confirmar que as fontes de cotação (atual e histórica) cobrem os FIIs do catálogo. Atual: ✅ a brapi devolve FII no plano gratuito ([SPEC-009](SPEC-009.md)) | DA22 | 008, 009 |
 
 ---
 
@@ -306,8 +334,8 @@ Visão geral por fase:
 |---|---|---|
 | 0 — Fundação | 001 | Estrutura executável |
 | 1 — Conta e acesso | 002–004, 034 | Usuário identificado e seguro; exportação e exclusão de dados desde o início |
-| 2 — Dados de mercado | 005–011 | Calendário, catálogo, indexadores, cotações, ficha do ativo, monitoramento |
-| 3 — Núcleo da carteira | 012–016 | Carteiras e lançamentos (ao vivo e histórica) |
+| 2 — Dados de mercado | 005–011, 040–042 | Calendário, catálogo, indexadores, cotações, ficha do ativo, indicadores, proventos, monitoramento |
+| 3 — Núcleo da carteira | 012–016, 043 | Carteiras e lançamentos (ao vivo e histórica), proventos e eventos na carteira |
 | 4 — Renda fixa | ⏸ Adiada (DA22) | Ver "Fase futura — Renda fixa" ao fim desta seção |
 | 5 — Acompanhamento | 019–023 | Rentabilidade, benchmarks, distribuição, comparação, simulações |
 | 6 — Assinatura | 025–026 | Planos e cotações do assinante |
@@ -321,7 +349,7 @@ Visão geral por fase:
 
 #### SPEC-001 — Esqueleto executável cliente–servidor–processador
 
-📄 Detalhada em [SPEC-001.md](SPEC-001.md) — em implementação.
+📄 Detalhada em [SPEC-001.md](SPEC-001.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -345,7 +373,7 @@ Visão geral por fase:
 
 #### SPEC-002 — Cadastro, autenticação e sessão
 
-📄 Detalhada em [SPEC-002.md](SPEC-002.md) — em implementação.
+📄 Detalhada em [SPEC-002.md](SPEC-002.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -365,6 +393,8 @@ Visão geral por fase:
 
 #### SPEC-003 — Perfil do usuário e consentimento
 
+📄 Detalhada em [SPEC-003.md](SPEC-003.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário consulta e edita seus dados de perfil e consulta/altera seus consentimentos |
@@ -383,6 +413,8 @@ Visão geral por fase:
 
 #### SPEC-004 — Recuperação de senha por e-mail
 
+📄 Detalhada em [SPEC-004.md](SPEC-004.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário que esqueceu a senha recebe por e-mail um meio de redefini-la |
@@ -396,10 +428,32 @@ Visão geral por fase:
 | ADRs | DA05 (dependência de serviço de e-mail) |
 | Depende de | SPEC-002 |
 | Posição | Separada da 002 porque depende de integração externa ainda não escolhida (OPEN-02) e tem validação própria; não bloqueia nenhuma Spec seguinte |
-| Em aberto | OPEN-02 |
+| Em aberto | OPEN-02 (parte do e-mail resolvida na SPEC-004: SMTP; o provedor sai junto com a hospedagem) |
+| Prioridade derivada | Should |
+
+#### SPEC-039 — Confirmação de e-mail
+
+📄 Detalhada em [SPEC-039.md](SPEC-039.md) — implementada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Conta com e-mail e senha só é liberada depois de a pessoa confirmar o e-mail com um código; a troca de e-mail no perfil também exige o código no endereço novo; contas não confirmadas são apagadas em 7 dias |
+| Valor | **Usuário:** não perde a conta por erro de digitação; ninguém cria conta com o e-mail dele. **Sistema:** não guarda dado de terceiros (LGPD) e fecha o sequestro de conta pelo login com Google |
+| RF | RF43 (novo, Requisitos v1.7); muda RF01 e RF05 |
+| RB | RB01, RB04, RB23 (nova) |
+| RNF | RNF07, RNF10, RNF11, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Cadastrar conta; UC: Gerenciar perfil e consentimento (confirmação fora do diagrama, ver OPEN-43) |
+| Entidades | USUARIO (`email_confirmado_em`, `email_pendente`); CODIGO_EMAIL (generaliza a tabela da SPEC-004) |
+| Drivers | FAS07, QA06, QA07, RES05 |
+| ADRs | DA05, DA13, DA24 |
+| Depende de | SPEC-002, SPEC-003, SPEC-004 (reaproveita o envio de e-mail e o código) |
+| Posição | Logo depois da SPEC-004, que criou o envio de e-mail e o mecanismo de código; muda comportamentos entregues pelas SPECs 002 e 003 |
+| Em aberto | Textos dos e-mails (revisar no Pull Request) |
 | Prioridade derivada | Should |
 
 #### SPEC-034 — Exportação e exclusão de dados pessoais
+
+📄 Detalhada em [SPEC-034.md](SPEC-034.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -414,7 +468,7 @@ Visão geral por fase:
 | ADRs | DA08, DA13, DA19 |
 | Depende de | SPEC-002 |
 | Posição | **Antecipada** (versão 1.3 do mapa): fica logo depois da identidade, e o mecanismo de exportação e exclusão passa a existir antes de qualquer outro dado pessoal. Regra para as Specs seguintes: **toda Spec que crie dado do usuário inclui, nos seus critérios de aceitação, a exportação e a exclusão desse dado** — hoje 012, 013, 014, 015, 016, 023, 025, 030 e 032. Assim a 034 não precisa esperar Specs que não são *Must* |
-| Em aberto | OPEN-04, OPEN-15, OPEN-40 |
+| Em aberto | OPEN-04 resolvida; OPEN-40 com regra decidida (30 dias), configurar na hospedagem; OPEN-15 fica com a SPEC-012 |
 | Prioridade derivada | Must |
 
 ---
@@ -422,6 +476,8 @@ Visão geral por fase:
 ### Fase 2 — Dados de mercado
 
 #### SPEC-005 — Calendário de pregão
+
+📄 Detalhada em [SPEC-005.md](SPEC-005.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -436,10 +492,12 @@ Visão geral por fase:
 | ADRs | DA07 (tarefa anual com revisão manual), DA10 |
 | Depende de | SPEC-002 (perfil colaborador) |
 | Posição | Usada por 007, 008, 009, pelas Specs de lançamento e pelos cenários (031) |
-| Em aberto | OPEN-01 |
+| Em aberto | OPEN-01 resolvida na SPEC-005 |
 | Prioridade derivada | Técnica de regra (habilita os Must) |
 
 #### SPEC-006 — Catálogo de ativos: manutenção e busca
+
+📄 Detalhada em [SPEC-006.md](SPEC-006.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -454,10 +512,12 @@ Visão geral por fase:
 | ADRs | DA12, DA16 (catálogo curado de ~40–50 ativos, divididos entre ações e FIIs), DA22, DA23 |
 | Depende de | SPEC-002 |
 | Posição | O ativo é referenciado por cotações, lançamentos e notícias; precisa existir antes da ingestão |
-| Em aberto | OPEN-03, OPEN-41 |
+| Em aberto | OPEN-03 e OPEN-41 resolvidas (SPEC-002 e SPEC-006) |
 | Prioridade derivada | Must (RF07); Should (RF39) |
 
 #### SPEC-008 — Carga do histórico diário de cotações
+
+📄 Detalhada em [SPEC-008.md](SPEC-008.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -469,13 +529,15 @@ Visão geral por fase:
 | Caso de uso / fluxo | UC: Consultar cotação (lado do sistema) |
 | Entidades | COTACAO, ATIVO, EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
 | Drivers | FAS03, QA02, QA08, QA12, PA03, RES03, RES07, PRE03 |
-| ADRs | DA06, DA07, DA14, DA18 (Proposta) |
+| ADRs | DA06, DA07, DA14, DA18 |
 | Depende de | SPEC-001, SPEC-005, SPEC-006 |
 | Posição | Primeira ingestão: define o padrão usado pelas outras. Precede tudo que olha para o passado (010, 016, 019, 031) |
-| Em aberto | **OPEN-05 (bloqueante: DA18 não aprovado)**, OPEN-06, OPEN-40, OPEN-48 |
+| Em aberto | OPEN-06 (fora da Spec: preços sem ajuste), OPEN-40, OPEN-48 (OPEN-05 resolvida) |
 | Prioridade derivada | Must |
 
 #### SPEC-009 — Cotações do pregão (nível gratuito) e fechamento diário
+
+📄 Detalhada em [SPEC-009.md](SPEC-009.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -490,10 +552,32 @@ Visão geral por fase:
 | ADRs | DA06, DA07, DA08, DA14, DA16 |
 | Depende de | SPEC-005, SPEC-006, SPEC-008 (padrão de ingestão) |
 | Posição | Pré-condição da compra e venda ao vivo (014) |
-| Em aberto | OPEN-07, OPEN-40, OPEN-48 |
+| Em aberto | OPEN-48 (falta a fonte histórica) (OPEN-07 resolvida; parte da OPEN-40 decidida: 30 dias) |
 | Prioridade derivada | Must |
 
+#### SPEC-040 — Catálogo completo da B3, com logos
+
+📄 Detalhada em [SPEC-040.md](SPEC-040.md) — implementada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Importar todo dia as ações, units e FIIs negociados na B3 nos últimos 3 meses, com classificação sugerida (a revisar pelo colaborador) e logo; desativar e reativar automaticamente; coletar o preço do pregão de todos dentro da cota gratuita |
+| Valor | **Usuário:** encontra qualquer ativo da bolsa e o reconhece pelo logo. **Equipe:** não cadastra mais de mil ativos à mão |
+| RF | RF07, RF09, RF39 |
+| RB | RB22 |
+| RNF | RNF04, RNF12, RNF13, RNF15, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Buscar ativo; UC: Consultar cotação; P03 |
+| Entidades | ATIVO (origem, classificação conferida, desativação automática), NEGOCIACAO_B3†, LOGO_ATIVO†, REGISTRO_AUDITORIA |
+| Drivers | OBJ02, FAS03, FAS10, QA02, QA04, PA03, RES03, RES07 |
+| ADRs | DA06, DA07, DA13, DA14, DA16 (muda a premissa de catálogo curado), DA18, DA22, DA23 |
+| Depende de | SPEC-006, SPEC-008, SPEC-009 |
+| Posição | Logo depois da SPEC-009, antes da ficha do ativo (010), que mostra o logo |
+| Em aberto | Termos da brapi para os logos (teste da rota de lista feito em 03/11/2026: a lista não desconta da cota) |
+| Prioridade derivada | Should |
+
 #### SPEC-007 — Ingestão da série do CDI
+
+📄 Detalhada em [SPEC-007.md](SPEC-007.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -506,12 +590,14 @@ Visão geral por fase:
 | Entidades | INDEXADOR (CDI), TAXA_DIARIA, EXECUCAO_TAREFA† |
 | Drivers | FAS03, QA02, QA08, QA12 |
 | ADRs | DA06, DA07, DA14, DA22 |
-| Depende de | SPEC-005, SPEC-008 |
+| Depende de | SPEC-008 (padrão de ingestão); SPEC-005 só para conferir pregões sem CDI |
 | Posição | Depois das cotações (008, 009), porque só atende o benchmark (020). Reaproveita o padrão de adaptador + execução registrada da SPEC-008 |
-| Em aberto | OPEN-40 |
+| Em aberto | OPEN-40 (proposta: série guardada para sempre) |
 | Prioridade derivada | Should (RF10, Requisitos v1.3) |
 
 #### SPEC-010 — Ficha do ativo com histórico de cotações
+
+📄 Detalhada em [SPEC-010.md](SPEC-010.md) — implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -528,6 +614,46 @@ Visão geral por fase:
 | Posição | Primeira capacidade de consulta visível ao usuário; base da ficha que recebe notícias em 029 |
 | Em aberto | — |
 | Prioridade derivada | Must |
+
+#### SPEC-041 — Indicadores fundamentalistas de ações e FIIs
+
+📄 Detalhada em [SPEC-041.md](SPEC-041.md) — implementada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | A ficha do ativo mostra os indicadores fundamentalistas (ações: valuation, margens, rentabilidade, dividendos, endividamento, crescimento, com 5 anos de histórico; FIIs: DY, P/VP, valor patrimonial, cotistas, vacância, taxa de administração), coletados toda semana do Investidor10 com autorização, sempre com a fonte |
+| Valor | **Usuário:** entende se o ativo está caro ou barato antes de simular (P01) |
+| RF | RF08 |
+| RB | — |
+| RNF | RNF04, RNF12, RNF13, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Buscar ativo → UC: Consultar cotação |
+| Entidades | ATIVO, INDICADOR_ATIVO†, INFORMACAO_FII† |
+| Drivers | OBJ02, FAS03, QA02, QA13, RES03, RES07 |
+| ADRs | DA06, DA07, DA14, DA15, DA23 |
+| Depende de | SPEC-006, SPEC-008, SPEC-010, SPEC-040 |
+| Posição | Logo depois da ficha (010), que ganha a seção; antes das carteiras |
+| Em aberto | OPEN-28 (notícias); fonte permanente depois da autorização (CVM ou brapi paga) |
+| Prioridade derivada | Should |
+
+#### SPEC-042 — Proventos e eventos corporativos
+
+📄 Detalhada em [SPEC-042.md](SPEC-042.md) — implementada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Guardar os proventos (dividendos, JCP, rendimentos, amortizações) de ações e FIIs pelo Investidor10 e os eventos corporativos (desdobramento, grupamento, bonificação) pela B3; mostrar os proventos na ficha e o gráfico ajustado pelos eventos |
+| Valor | **Usuário:** vê quanto o ativo pagou e um gráfico sem saltos falsos. **Sistema:** fonte da OPEN-06 para as SPECs 016 e 019 |
+| RF | RF08 |
+| RB | — |
+| RNF | RNF04, RNF12, RNF13, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | UC: Buscar ativo → UC: Consultar cotação |
+| Entidades | PROVENTO, EVENTO_CORPORATIVO |
+| Drivers | OBJ01, OBJ02, FAS03, QA02, RES03 |
+| ADRs | DA06, DA07, DA10, DA14, DA17, DA18 |
+| Depende de | SPEC-008, SPEC-010, SPEC-041 |
+| Posição | Junto com a 041 (mesma visita ao Investidor10); antes das SPECs 016 e 019, que somam os proventos na carteira |
+| Em aberto | OPEN-06 (tratamento na carteira) |
+| Prioridade derivada | Should |
 
 #### SPEC-011 — Monitoramento e reexecução das tarefas de ingestão
 
@@ -553,6 +679,8 @@ Visão geral por fase:
 
 #### SPEC-012 — Criação e gestão de carteiras (ao vivo e histórica)
 
+📄 Detalhada em [SPEC-012.md](SPEC-012.md) — implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário cria carteira escolhendo o tipo (ao vivo ou histórica, imutável depois), renomeia e exclui; vê apenas as próprias carteiras |
@@ -570,6 +698,8 @@ Visão geral por fase:
 | Prioridade derivada | Must |
 
 #### SPEC-013 — Aportes e retiradas de caixa
+
+📄 Detalhada em [SPEC-013.md](SPEC-013.md) — aprovada (Luís, 06/11/2026) e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -589,6 +719,8 @@ Visão geral por fase:
 
 #### SPEC-014 — Compra e venda na carteira ao vivo, com posição e preço médio
 
+📄 Detalhada em [SPEC-014.md](SPEC-014.md) — aprovada (Luís, 06/11/2026) e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Registrar compra e venda na carteira ao vivo usando a última cotação disponível para o plano do usuário, validando caixa e posição, e calcular posição consolidada e preço médio |
@@ -606,6 +738,8 @@ Visão geral por fase:
 | Prioridade derivada | Must |
 
 #### SPEC-015 — Estorno de lançamento
+
+📄 Detalhada em [SPEC-015.md](SPEC-015.md) — aprovada (Luís, 06/11/2026) e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -625,9 +759,11 @@ Visão geral por fase:
 
 #### SPEC-016 — Lançamentos na carteira histórica
 
+📄 Detalhada em [SPEC-016.md](SPEC-016.md) — aprovada (Luís, 06/11/2026) e implementada.
+
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Na carteira histórica, o usuário registra aportes, compras e vendas com data passada escolhida; o preço é o fechamento do pregão da data; os lançamentos seguem ordem cronológica; a interface rotula o resultado como calculado com dados já conhecidos |
+| Objetivo | Na carteira histórica, o usuário registra compras e vendas com data passada escolhida (os aportes e retiradas da histórica ficaram com a [SPEC-013](SPEC-013.md), v1.27); o preço é o fechamento do pregão da data; os lançamentos seguem ordem cronológica; a interface rotula o resultado como calculado com dados já conhecidos |
 | Valor | **Usuário:** responde "e se eu tivesse investido?" (P01, Visão §12) |
 | RF | RF12, RF13 (no contexto da carteira histórica) |
 | RB | RB05, RB06, RB07, RB11, RB12, RB13, RB20, RB21 |
@@ -636,12 +772,30 @@ Visão geral por fase:
 | Entidades | CARTEIRA (tipo†), TRANSACAO, LANCAMENTO_CAIXA†, COTACAO |
 | Drivers | OBJ01, FAS01, QA01 |
 | ADRs | DA09, DA17, DA18 (Proposta) |
-| Depende de | SPEC-008, SPEC-013, SPEC-014 |
+| Depende de | SPEC-008, SPEC-013, SPEC-014, SPEC-015, SPEC-042 |
 | Posição | Reaproveita as regras de 013/014 e exige o histórico de 008. Se for entregue depois da SPEC-019, inclui a carteira histórica na rentabilidade e na evolução patrimonial (valorização até hoje, DA17) |
 | Em aberto | OPEN-05, OPEN-06, OPEN-09, OPEN-14, OPEN-24 |
 | Prioridade derivada | Sem MoSCoW nos requisitos (decisão DA17) |
 
 ---
+
+#### SPEC-043 — Proventos e eventos corporativos na carteira
+
+Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalhada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Creditar no caixa os dividendos, JCP e rendimentos de FII de quem tinha o ativo na data com, e corrigir a quantidade e o preço médio nos desdobramentos, grupamentos e bonificações, nas carteiras ao vivo e histórica, com os dados da [SPEC-042](SPEC-042.md) |
+| Valor | **Usuário:** o resultado da carteira conta o que o ativo pagou (essencial nos FIIs). **Sistema:** caixa (RB05) e posição (RB06) certos depois de um provento ou desdobramento |
+| RF | RF13, RF14 (efeito dos proventos no caixa e na posição) |
+| RB | RB05, RB06, RB08, RB09, RB10, RB13 |
+| RNF | RNF12, RNF16 |
+| Entidades | PROVENTO, EVENTO_CORPORATIVO, TRANSACAO, LANCAMENTO_CAIXA |
+| ADRs | DA09, DA10, DA17 |
+| Depende de | SPEC-014, SPEC-042 |
+| Posição | Mexe no caixa e na posição, então entra na mesma conta das SPECs 013 e 014, e não só na rentabilidade (SPEC-019). Vale para a carteira histórica quando a SPEC-016 for entregue |
+| Em aberto | OPEN-06 (regras: data com, data de pagamento, IR do JCP, amortização de FII) |
+| Prioridade derivada | Should |
 
 ### Fase 4 — Renda fixa
 
@@ -1061,12 +1215,12 @@ Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora.
 | RF04 | 036 | RF14 | 014, 019 | RF24 | ⏸ adiado | RF34 | ⏸ adiado |
 | RF05 | 003 | RF15 | 019 | RF25 | ⏸ adiado | RF35 | 033 |
 | RF06 | 034 | RF16 | 020 | RF26 | 027 | RF36 | 032 |
-| RF07 | 006 | RF17 | 019 | RF27 | 028 | RF37 | 032 |
+| RF07 | 006, 040 | RF17 | 019 | RF27 | 028 | RF37 | 032 |
 | RF08 | 010 | RF18 | 021 | RF28 | 028 | RF38 | 035 |
-| RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006 |
+| RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006, 040 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
 
-Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
+Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002; RF43, da versão 1.7, pela SPEC-039). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
 
 ### 3.2 Caminho mínimo (requisitos Must)
 
@@ -1080,7 +1234,7 @@ Observações:
 - **034** vem logo após a identidade; as Specs seguintes do caminho que criam dados do usuário (012–015) entregam a sua parte da exportação e da exclusão.
 - **008** estabelece o padrão de ingestão; **007** (CDI, *Should*) fica fora do caminho e é feita junto com o benchmark (020).
 - **019** cobre a carteira ao vivo; a carteira histórica (016) fica fora do caminho mínimo.
-- Dentro desse caminho, **008** (OPEN-05) depende de decisão em aberto.
+- Dentro desse caminho, nenhuma Spec depende mais de decisão em aberto (OPEN-05 resolvida na SPEC-008).
 
 ### 3.3 Specs bloqueadas por decisão
 
@@ -1088,7 +1242,6 @@ Estas Specs **não devem ser detalhadas** antes de a equipe decidir os itens ind
 
 | Spec | Decisão bloqueante |
 |---|---|
-| SPEC-008 | OPEN-05 — aprovar DA18 (fonte do histórico) |
 | SPEC-023 | OPEN-22 — significado de "simulação" |
 | SPEC-027 | OPEN-28 — autorização da fonte pai |
 | SPEC-030 | OPEN-32 — RFs das fontes do usuário |

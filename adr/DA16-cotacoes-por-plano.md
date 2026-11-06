@@ -57,6 +57,8 @@ Regras:
 
 **Capacidade do plano gratuito (estimativa):** 15.000 requisições ÷ ~21 pregões ≈ 700 por dia; com 1 ticker por chamada e ~14 atualizações por pregão, comporta **cerca de 40 a 50 ativos**, sem margem para outras chamadas. O catálogo de ativos (RF39) precisa ser curado.
 
+> **Atualização ([SPEC-040](../specs/SPEC-040.md), 03/11/2026):** a coleta do nível gratuito passou a usar a **lista** da brapi (`/api/quote/list`), que traz todas as ações e FIIs numa consulta por classe e, no teste de 03/11/2026, **não descontou da cota**. O catálogo **deixa de precisar ser curado**: tem as ações e os FIIs negociados na B3 nos últimos 3 meses (uns 700). A lista não traz o horário de cada preço: vale o horário da coleta, e o atraso informado passa a **até 45 minutos** (30 do plano gratuito e até 15 em que a lista fica guardada no servidor da brapi). A regra do intervalo da SPEC-009 continua como proteção, caso a brapi passe a descontar a lista.
+
 ## Consequências
 
 - (+) Atende à decisão sem custo para o plano gratuito.

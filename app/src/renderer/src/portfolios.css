@@ -1,0 +1,731 @@
+/* Carteiras (SPEC-012). */
+
+.portfolio-new {
+  margin-bottom: 1.5rem;
+}
+
+.portfolio-types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.portfolio-types legend {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.type-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.35));
+  border-radius: 14px;
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.type-card.is-selected {
+  border-color: var(--accent, currentColor);
+  box-shadow: 0 0 0 1px var(--accent, currentColor);
+}
+
+.type-card:focus-within {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: 2px;
+}
+
+/* O rádio fica acessível pelo teclado, mas o cartão inteiro é o alvo do clique. */
+.type-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.type-card-title {
+  font-weight: 650;
+}
+
+.type-card-text {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.portfolio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portfolio-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.25));
+  border-radius: 16px;
+}
+
+.portfolio-row .danger-zone {
+  flex-basis: 100%;
+}
+
+button.link.portfolio-open {
+  font-size: 1.05rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.portfolio-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.portfolio-type {
+  font-weight: 600;
+}
+
+.portfolio-type-historical {
+  color: var(--warn);
+}
+
+.portfolio-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.portfolio-rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 20rem;
+}
+
+.portfolio-rename input {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.portfolio-rename .field-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.portfolio-page .portfolio-meta {
+  font-size: 0.95rem;
+}
+
+/* ---------- Caixa (SPEC-013) ---------- */
+
+/* Campo de dinheiro: "R$" fixo dentro do campo, valor alinhado com números de mesma largura. */
+.money-input {
+  position: relative;
+}
+
+.money-prefix {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.money-input input {
+  padding-left: 2.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-panel {
+  margin: 1.5rem 0;
+}
+
+.cash-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cash-head h2 {
+  margin: 0;
+}
+
+.cash-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.5rem 0 0;
+}
+
+.cash-balance span {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.cash-balance strong {
+  font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.cash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cash-form {
+  margin-top: 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-sunken);
+}
+
+.cash-form h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.cash-form input {
+  background: var(--surface);
+}
+
+.cash-confirm {
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.cash-confirm-question {
+  margin: 0 0 0.35rem;
+  font-weight: 650;
+}
+
+.cash-panel .form-success {
+  margin-top: 1rem;
+}
+
+.cash-statement-block {
+  margin-top: 1.5rem;
+}
+
+.cash-statement-block h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.cash-statement {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.925rem;
+}
+
+.cash-statement th {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.cash-statement td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.cash-statement .cash-number {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cash-statement .cash-deposit {
+  color: var(--ok);
+}
+
+.cash-trade {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------- Estorno (SPEC-015) ---------- */
+
+/* Riscado e com o "Estornado em…" escrito embaixo: a aparência nunca é o único sinal (RNF18). */
+.cash-statement .is-reversed .cash-type,
+.cash-statement .is-reversed .cash-trade,
+.cash-statement .is-reversed .cash-amount {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.cash-reversed {
+  display: block;
+  color: var(--warn);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.cash-statement .cash-actions-cell {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cash-statement .reversal-row td {
+  padding: 0.25rem 0 0.75rem;
+}
+
+/* ---------- Posições e compra e venda (SPEC-014) ---------- */
+
+.positions-panel {
+  margin: 1.5rem 0;
+}
+
+.positions-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+.positions-totals div {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.positions-totals dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.positions-totals dd {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.positions-scroll {
+  margin-top: 1.25rem;
+  overflow-x: auto;
+}
+
+/* Em janela média, as posições já viram cartões: são 7 colunas. */
+@media (max-width: 860px) {
+  .positions-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .positions-table,
+  .positions-table tbody,
+  .positions-table tr,
+  .positions-table td {
+    display: block;
+  }
+
+  .positions-table tr {
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .positions-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    border: 0;
+  }
+
+  .positions-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .positions-table td:first-child {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+
+  .positions-table td:first-child::before,
+  .positions-table .position-actions::before {
+    content: none;
+  }
+
+  .positions-table .position-actions {
+    justify-content: flex-end;
+  }
+}
+
+button.link.position-ticker {
+  font-weight: 650;
+}
+
+.position-name,
+.position-when {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.position-price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.position-actions {
+  text-align: right;
+}
+
+.positions-table .quote-change.is-up {
+  color: var(--ok);
+}
+
+.positions-table .quote-change.is-down {
+  color: var(--error);
+}
+
+.trade-form {
+  margin-top: 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-sunken);
+}
+
+.trade-form h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.trade-form input {
+  background: var(--surface);
+}
+
+.trade-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Cada resultado é um botão, mas sem a cara do botão principal do app (styles.css): alinhado à
+ * esquerda, sem margem em cima e sem o fundo verde ao passar o mouse, só a borda.
+ */
+.trade-results button.trade-result {
+  justify-content: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+}
+
+.trade-results button.trade-result:hover:not(:disabled),
+.trade-results button.trade-result:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.trade-results button.trade-result strong {
+  flex: 0 0 4.5rem;
+  font-weight: 650;
+}
+
+.trade-results button.trade-result span:not(.asset-logo) {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.trade-asset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.trade-asset p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  margin: 0;
+}
+
+.trade-asset p > span:not(.asset-logo) {
+  color: var(--muted);
+}
+
+.trade-quote {
+  margin: 0.75rem 0;
+}
+
+.trade-price {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-blocked {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid var(--warn);
+  border-radius: 12px;
+  background: var(--warn-soft);
+}
+
+.trade-quantity {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.trade-quantity input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-by-value {
+  margin: 0.75rem 0;
+}
+
+.trade-fits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+}
+
+.trade-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin: 1rem 0 0.25rem;
+}
+
+.trade-summary dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.trade-summary dd {
+  margin: 0.15rem 0 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-summary .is-negative {
+  color: var(--error);
+}
+
+.trade-costs {
+  margin-bottom: 0.75rem;
+}
+
+.trade-changed {
+  margin: 0 0 0.5rem;
+  color: var(--warn);
+  font-weight: 650;
+}
+
+/* SPEC-016: evento corporativo depois da compra (até a SPEC-043). */
+.position-event {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--warn);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* "Calcular por valor": em reais ou em % do caixa. */
+.trade-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0 0.5rem;
+  padding: 0;
+  border: 0;
+}
+
+.trade-mode legend {
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.trade-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.percent-input input {
+  padding-right: 2.2rem;
+  padding-left: 0.85rem;
+}
+
+.percent-suffix {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.asset-buy-type {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.asset-buy {
+  margin: 0 0 1.25rem;
+}
+
+.asset-buy-choose ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------- Janela estreita (até 480px) ---------- */
+
+@media (max-width: 640px) {
+  .portfolio-types {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portfolio-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cash-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* O extrato vira cartões: cada célula com o nome da coluna ao lado. */
+  .cash-statement thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .cash-statement,
+  .cash-statement tbody,
+  .cash-statement tr,
+  .cash-statement td {
+    display: block;
+  }
+
+  .cash-statement tr {
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .cash-statement td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    border: 0;
+  }
+
+  .cash-statement td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .cash-statement .cash-number {
+    text-align: right;
+  }
+
+  .cash-statement .cash-actions-cell {
+    justify-content: flex-end;
+    width: auto;
+  }
+
+  .cash-statement .cash-type-cell {
+    text-align: right;
+  }
+
+  .cash-statement .cash-actions-cell::before,
+  .cash-statement .reversal-row td::before {
+    content: none;
+  }
+
+  .positions-totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .position-price {
+    align-items: flex-end;
+  }
+
+  .position-actions {
+    justify-content: flex-end;
+  }
+
+  .position-actions::before {
+    content: none;
+  }
+}

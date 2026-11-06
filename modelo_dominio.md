@@ -46,19 +46,37 @@ Conjunto de posições de um usuário. Um usuário pode ter várias carteiras.
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
-| nome | string | Identificação da carteira |
-| saldo_inicial | decimal | Valor aportado no início |
+| nome | string | Identificação da carteira, única para cada usuário — [SPEC-012](specs/SPEC-012.md) |
+| tipo | enum | `ao_vivo` ou `historica`, escolhido na criação e imutável (RB24, [DA17](adr/DA17-carteira-ao-vivo-e-historica.md)) |
+| inicio_em | date | Ao vivo: o dia da criação; histórica: o dia de pregão escolhido, desde 04/01/2016 |
 | criada_em | date | Data de criação |
 
-### TRANSACAO
-Operação de compra ou venda registrada em uma carteira sobre um ativo.
+Não há saldo guardado na carteira: o caixa vem só dos aportes e retiradas (livro-razão, [DA09](adr/DA09-lancamentos-imutaveis.md); OPEN-11 decidida na SPEC-012).
+
+### LANCAMENTO_CAIXA
+Aporte ou retirada de dinheiro fictício numa carteira ([SPEC-013](specs/SPEC-013.md)). O saldo em caixa é a conta desses lançamentos (livro-razão, [DA09](adr/DA09-lancamentos-imutaveis.md)); nenhum é alterado nem apagado (RB08).
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
-| tipo | string | Compra ou venda |
-| quantidade | decimal | Quantidade negociada |
-| preco_unitario | decimal | Preço por unidade |
-| data | date | Data da operação |
+| tipo | enum | `aporte` ou `retirada` |
+| valor | decimal(15,2) | De R$ 0,01 a R$ 10.000.000,00 (RB13) |
+| data | date | Ao vivo: o dia do registro em Brasília; histórica: o dia de pregão escolhido (RB11, RB25) |
+| registrado_em | datetime | Quando o servidor registrou |
+
+### TRANSACAO
+Operação de compra ou venda registrada em uma carteira sobre um ativo ([SPEC-014](specs/SPEC-014.md)). Nunca é alterada nem apagada (RB08); a posição e o preço médio são calculados a partir delas (RB09, RB10).
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| tipo | enum | `compra` ou `venda` |
+| quantidade | inteiro | De 1 a 1.000.000 (RB27) |
+| preco_unitario | decimal(15,2) | Preço por unidade: a cotação usada, arredondada a 2 casas (RB13) |
+| valor_total | decimal(15,2) | Quantidade × preço unitário |
+| data | date | Ao vivo: o dia do registro e da cotação em Brasília (RB07, RB11) |
+| registrado_em | datetime | Quando o servidor registrou |
+| cotacao_em | datetime | Horário da cotação usada (DA16) |
+| nivel_cotacao | enum | `gratuito` ou `assinante` (DA16) |
+| fonte_cotacao | enum | Fonte da cotação (`brapi`) |
 
 ### SIMULACAO
 Projeção gerada a partir de uma carteira.
@@ -121,6 +139,7 @@ Série histórica de valores do indexador.
 | USUARIO | 1 : N | CARTEIRA | possui |
 | USUARIO | 1 : N | CONSENTIMENTO | aceita |
 | USUARIO | 1 : N | TOKEN_RENOVACAO | mantém sessão |
+| CARTEIRA | 1 : N | LANCAMENTO_CAIXA | registra |
 | CARTEIRA | 1 : N | TRANSACAO | registra |
 | CARTEIRA | 1 : N | SIMULACAO | origina |
 | ATIVO | 1 : N | TRANSACAO | movimenta |

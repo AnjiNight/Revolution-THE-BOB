@@ -42,24 +42,169 @@
     "goToCollaborator": "Área do colaborador",
     "collaboratorTitle": "Área do colaborador",
     "collaboratorNote": "O acesso de colaborador é criado pela equipe. Não é possível se cadastrar por aqui.",
-    "backToLogin": "Voltar ao login de usuário"
+    "backToLogin": "Voltar ao login de usuário",
+    "forgotPassword": "Esqueci minha senha",
+    "accountDeleted": "Sua conta foi excluída. Seus dados foram apagados."
+  },
+  "reset": {
+    "title": "Recuperar senha",
+    "intro": "Informe o e-mail da sua conta. Vamos enviar um código para você criar uma senha nova.",
+    "sendCode": "Enviar código",
+    "codeSent": "Se houver uma conta com {{email}}, enviamos um código para esse e-mail. Ele vale por 15 minutos.",
+    "code": "Código",
+    "codeHint": "8 letras e números, como K7QM-4XPD.",
+    "newPassword": "Nova senha",
+    "submit": "Redefinir senha",
+    "resend": "Reenviar código",
+    "resendIn": "Reenviar código em {{seconds}} s",
+    "resent": "Enviamos um novo código. Use sempre o mais recente.",
+    "otherEmail": "Usar outro e-mail",
+    "back": "Voltar para entrar",
+    "backCollaborator": "Voltar para a Área do colaborador",
+    "done": "Senha redefinida. Entre com a nova senha."
+  },
+  "confirm": {
+    "title": "Confirme seu e-mail",
+    "sent": "Enviamos um código para {{email}}. Ele vale por 15 minutos.",
+    "pendingLogin": "Sua conta ainda não foi confirmada. Enviamos um código novo para {{email}}.",
+    "submit": "Confirmar e entrar",
+    "fixEmail": "Corrigir e-mail"
   },
   "home": {
     "greeting": "Olá, {{name}}!",
-    "role": {
-      "user": "Perfil: usuário",
-      "collaborator": "Perfil: colaborador"
-    },
-    "next": "Sua conta está pronta. As carteiras de simulação chegam nas próximas versões.",
+    "next": "Sua conta está pronta. Já dá para buscar ações e FIIs; as carteiras de simulação chegam nas próximas versões.",
     "logout": "Sair",
-    "collaboratorNext": "As ferramentas da equipe (cadastro de ativos e acompanhamento da coleta de dados) chegam nas próximas versões."
+    "collaboratorNext": "Mantenha o calendário de pregão e o catálogo de ativos. O acompanhamento da coleta de dados chega nas próximas versões.",
+    "profile": "Meu perfil",
+    "upcomingTitle": "O que vem por aí",
+    "soon": "Em breve",
+    "collabTools": {
+      "ingestion": {
+        "title": "Acompanhamento da coleta",
+        "text": "Ver as execuções e as falhas da coleta de cotações e notícias, e repetir quando precisar."
+      }
+    },
+    "calendarReminder": {
+      "missing": "O calendário de pregão de {{year}} não foi publicado. Sem ele, os lançamentos com datas desse ano ficam bloqueados.",
+      "nextYear": "O calendário de pregão de {{year}} ainda não foi publicado. Publique até 31 de dezembro.",
+      "open": "Abrir o calendário"
+    },
+    "cdi": {
+      "loaded": "Série do CDI: de {{from}} a {{to}}",
+      "updated": "atualizada em {{at}}",
+      "loading": "Série do CDI: carregando (o processador busca no Banco Central)",
+      "stale": "A série do CDI está parada em {{date}}. Confira se o processador está ligado.",
+      "failed": "A última atualização do CDI terminou com falha ({{at}}).",
+      "missing_one": "Há {{count}} pregão sem CDI na série.",
+      "missing_other": "Há {{count}} pregões sem CDI na série."
+    },
+    "investidor10": {
+      "summary": "Indicadores (Investidor10): última coleta em {{at}} · {{collected}} de {{total}} ativos",
+      "never": "Indicadores (Investidor10): ainda não coletados (o processador visita as páginas aos poucos)",
+      "failed": "A última coleta do Investidor10 terminou com falha. Confira o registro do processador.",
+      "disabled": "Indicadores e proventos do Investidor10 desligados (INVESTIDOR10_ENABLED). Ligue só com a autorização por escrito, válida até a apresentação."
+    },
+    "availableTitle": "Disponível agora",
+    "open": "Abrir",
+    "tools": {
+      "portfolios": {
+        "title": "Carteiras",
+        "text": "Crie carteiras ao vivo ou históricas e simule seus investimentos."
+      },
+      "search": {
+        "title": "Buscar ativos",
+        "text": "Encontre ações e FIIs por ticker, nome, setor ou segmento."
+      },
+      "calendar": {
+        "title": "Calendário de pregão",
+        "text": "Publique os dias úteis em que a B3 não abre, conferidos com o calendário oficial."
+      },
+      "assets": {
+        "title": "Catálogo de ativos",
+        "text": "Cadastre e mantenha as ações e os FIIs que os usuários encontram na busca."
+      }
+    },
+    "firstPortfolio": {
+      "text": "Você ainda não tem carteiras. Crie uma para começar a simular.",
+      "create": "Criar carteira"
+    }
+  },
+  "profile": {
+    "title": "Meu perfil",
+    "signInMethods": "Formas de acesso",
+    "methodPassword": "E-mail e senha",
+    "createdAt": "Conta criada em",
+    "nameSection": "Nome",
+    "emailSection": "E-mail",
+    "newEmail": "E-mail",
+    "passwordSection": "Senha",
+    "currentPassword": "Senha atual",
+    "newPassword": "Nova senha",
+    "saved": "Alterações salvas.",
+    "passwordChanged": "Senha alterada. As outras sessões desta conta foram encerradas.",
+    "googleOnly": "Esta conta entra pelo Google ({{email}}). O e-mail e a senha são gerenciados pelo Google.",
+    "consentsSection": "Consentimentos",
+    "withdrawConsent": "Para retirar o consentimento, exclua sua conta em Seus dados.",
+    "termsUpdated": "Os termos de uso e a política de privacidade mudaram. Leia o resumo e aceite a nova versão.",
+    "subtitle": "Seus dados de acesso e o histórico de consentimentos.",
+    "roleName": {
+      "user": "Usuário",
+      "collaborator": "Colaborador"
+    },
+    "editName": "Editar nome",
+    "saveName": "Salvar nome",
+    "editEmail": "Trocar e-mail",
+    "saveEmail": "Salvar e-mail",
+    "editPassword": "Trocar senha",
+    "savePassword": "Salvar nova senha",
+    "passwordSummary": "Usada para entrar com e-mail e senha.",
+    "googleAccount": "Conta Google",
+    "consentTitle": "Termos de uso e política de privacidade",
+    "consentMeta": "Versão {{version}}, aceitos em {{date}}",
+    "consentCurrent": "Vigente",
+    "confirmEmail": "Confirmar e-mail",
+    "emailCodeSent": "Enviamos um código para {{email}}. Seu e-mail só muda depois da confirmação.",
+    "pendingEmail": "Aguardando confirmação: {{email}}",
+    "emailChanged": "E-mail trocado. O endereço antigo recebeu um aviso.",
+    "data": {
+      "title": "Seus dados",
+      "intro": "Baixe uma cópia de tudo o que o app guarda sobre você ou exclua sua conta.",
+      "export": "Baixar meus dados",
+      "exported": "Arquivo salvo.",
+      "delete": "Excluir minha conta",
+      "deleteWarning": "Isto apaga sua conta, seus consentimentos e suas sessões. Não dá para desfazer.",
+      "sendCode": "Enviar código para {{email}}",
+      "codeSent": "Enviamos um código para {{email}}. Ele vale por 15 minutos.",
+      "confirmDelete": "Excluir minha conta para sempre",
+      "collaboratorNote": "A exclusão de contas de colaborador é feita pela equipe."
+    }
   },
   "fieldErrors": {
     "required": "Campo obrigatório.",
     "too_short": "Muito curto.",
     "too_long": "Muito longo.",
     "invalid_email": "Informe um e-mail válido.",
-    "terms_not_accepted": "É preciso aceitar os termos para continuar."
+    "terms_not_accepted": "É preciso aceitar os termos para continuar.",
+    "same_password": "A nova senha precisa ser diferente da atual.",
+    "invalid_version": "Versão dos termos desatualizada. Recarregue a tela.",
+    "invalid_code": "O código tem 8 letras e números, como K7QM-4XPD.",
+    "invalid_date": "Informe uma data válida.",
+    "wrong_year": "A data precisa ser do ano escolhido.",
+    "weekend": "Fim de semana nunca tem pregão e não entra na lista.",
+    "duplicate": "Esta data já está na lista.",
+    "invalid_ticker": "Use o código da B3: 4 caracteres e 1 ou 2 números, como PETR4 ou MXRF11.",
+    "invalid_option": "Escolha uma opção da lista.",
+    "wrong_class": "Esta opção não é da classe do ativo.",
+    "immutable": "A classe não pode ser mudada depois do cadastro.",
+    "before_history": "O histórico de cotações começa em 04/01/2016: escolha essa data ou depois.",
+    "future": "Escolha um dia antes de hoje: hoje ainda não tem o fechamento da B3.",
+    "not_trading_day": "Não houve pregão nesse dia (fim de semana ou feriado). Escolha um dia de pregão.",
+    "invalid_amount": "Informe um valor em reais com até 2 casas, como 1.000,00.",
+    "above_max": "O máximo por lançamento é R$ 10.000.000,00.",
+    "not_allowed": "Na carteira ao vivo, a data é sempre a de agora.",
+    "before_start": "Escolha um dia a partir do início da carteira.",
+    "before_last_entry": "Escolha o dia do último lançamento ou depois: na carteira histórica, os lançamentos seguem a ordem das datas.",
+    "invalid_quantity": "Informe uma quantidade inteira, a partir de 1."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -76,7 +221,38 @@
     "google_login_unavailable": "O login com Google não está disponível.",
     "google_token_invalid": "Não foi possível confirmar o login com Google. Tente novamente.",
     "google_email_not_verified": "O Google não confirmou este e-mail.",
-    "google_cancelled": "Login com Google cancelado."
+    "google_cancelled": "Login com Google cancelado.",
+    "invalid_password": "Senha atual incorreta.",
+    "email_change_not_allowed": "O e-mail desta conta vem do Google e não pode ser trocado aqui.",
+    "password_change_not_allowed": "Esta conta entra pelo Google e não tem senha.",
+    "invalid_reset_code": "Código inválido ou vencido. Confira o código ou peça um novo.",
+    "password_reset_unavailable": "A recuperação de senha não está disponível neste servidor.",
+    "email_not_confirmed": "Confirme seu e-mail para entrar.",
+    "invalid_confirmation_code": "Código inválido ou vencido. Confira o código ou peça um novo.",
+    "email_confirmation_unavailable": "A confirmação de e-mail não está disponível neste servidor.",
+    "deletion_not_allowed": "A exclusão de contas de colaborador é feita pela equipe.",
+    "forbidden": "Esta área é só da equipe.",
+    "calendar_not_published": "O calendário de pregão desse ano ainda não foi publicado pela equipe. Sem ele, o app não sabe em quais dias a bolsa abriu.",
+    "ticker_in_use": "Outro ativo já usa este ticker.",
+    "asset_not_found": "Este ativo não existe mais. A lista foi atualizada.",
+    "source_disabled": "Os indicadores do Investidor10 estão desligados.",
+    "portfolio_not_found": "Esta carteira não existe mais.",
+    "portfolio_name_in_use": "Você já tem uma carteira com este nome.",
+    "portfolio_limit_reached": "Você já tem o máximo de 20 carteiras. Exclua uma para criar outra.",
+    "insufficient_cash": "Saldo insuficiente em caixa.",
+    "insufficient_position": "Você não tem essa quantidade do ativo.",
+    "quote_changed": "A cotação mudou. Confira o novo preço.",
+    "market_closed": "A bolsa está fechada hoje.",
+    "no_quote_today": "O ativo ainda não tem cotação hoje.",
+    "asset_inactive": "O ativo foi desativado e não pode ser comprado.",
+    "historical_portfolio": "A compra e venda na carteira histórica chega numa próxima versão.",
+    "entry_not_found": "Esse lançamento não é desta carteira.",
+    "already_reversed": "Esse lançamento já foi estornado.",
+    "reversal_window_closed": "Na carteira ao vivo, compra e venda só se estornam no dia em que foram feitas. Para desfazer, faça a operação contrária.",
+    "reversal_breaks_cash": "Esse estorno deixaria o caixa negativo.",
+    "reversal_breaks_position": "Esse estorno deixaria uma venda maior que a posição.",
+    "no_close_that_day": "O ativo não tem fechamento da B3 nesse dia.",
+    "history_pending": "O histórico de preços deste ativo ainda está sendo carregado."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -203,6 +379,702 @@
     "footer": {
       "project": "Engenharia da Computação, Universidade Presbiteriana Mackenzie.",
       "team": "Luís Gustavo Sampaio Coêlho e Nicoly Araujo de Paschoa"
+    }
+  },
+  "shell": {
+    "skip": "Pular para o conteúdo",
+    "navLabel": "Navegação do app",
+    "home": "Início",
+    "calendar": "Calendário",
+    "assets": "Ativos",
+    "logoutLabel": "Sair da conta",
+    "portfolios": "Carteiras"
+  },
+  "calendar": {
+    "title": "Calendário de pregão",
+    "subtitle": "Os dias úteis em que a B3 não abre. Enquanto um ano não é publicado, o app não aceita datas dele.",
+    "year": "Ano",
+    "published": "Publicado em {{date}}",
+    "publishedFromB3": "Publicado pelo processador em {{date}}, a partir do arquivo da B3",
+    "notPublished": "Não publicado",
+    "b3Note": "Confira com o calendário oficial da B3 antes de publicar. A B3 divulga o do ano seguinte no começo de dezembro.",
+    "loadSuggestion": "Carregar sugestão",
+    "suggestionLoaded": "Sugestão carregada. Confira cada dia com o calendário da B3.",
+    "suggested": "Sugestão",
+    "listTitle": "Dias sem pregão em {{year}}",
+    "count": "Dias na lista: {{count}}",
+    "empty": "Nenhum dia na lista. Carregue a sugestão ou adicione os dias.",
+    "weekendNote": "Sábados e domingos nunca têm pregão e não precisam entrar.",
+    "date": "Data",
+    "reason": "Motivo",
+    "actions": "Ações",
+    "remove": "Remover",
+    "removeLabel": "Remover {{date}} ({{reason}})",
+    "addTitle": "Adicionar dia",
+    "reasonHint": "Como no calendário da B3, por exemplo \"Carnaval\".",
+    "add": "Adicionar",
+    "unsaved": "Há alterações ainda não publicadas.",
+    "yearLocked": "Publique ou descarte as alterações para trocar de ano.",
+    "discard": "Descartar alterações",
+    "publish": "Publicar {{year}}",
+    "confirmText": "A lista substitui a anterior e passa a valer na hora para todos: de segunda a sexta, toda data fora dela conta como dia de pregão.",
+    "confirm": "Publicar agora",
+    "publishedOk": "Calendário de {{year}} publicado."
+  },
+  "assets": {
+    "title": "Ativos",
+    "subtitle": "Busque ações e fundos imobiliários (FIIs) para estudar e simular.",
+    "catalogNote": "O catálogo tem as ações e os FIIs negociados na B3 nos últimos 3 meses.",
+    "searchLabel": "Buscar por ticker ou nome",
+    "searchPlaceholder": "Ex.: PETR4, Itaú ou logística",
+    "classFilter": "Classe",
+    "allClasses": "Todas",
+    "sectorFilter": "Setor ou segmento",
+    "allSectors": "Todos",
+    "clear": "Limpar filtros",
+    "resultCount": "Ativos encontrados: {{count}}",
+    "searching": "Buscando…",
+    "showing": "Mostrando {{shown}} de {{total}}.",
+    "showMore": "Mostrar mais",
+    "loadingMore": "Carregando…",
+    "empty": "Nenhum ativo encontrado com essa busca.",
+    "emptyCatalog": "O catálogo ainda está vazio. As ações e os FIIs chegam com a importação diária.",
+    "listLabel": "Resultado da busca de ativos",
+    "columns": {
+      "asset": "Ativo",
+      "class": "Classe",
+      "sector": "Setor ou segmento",
+      "status": "Situação",
+      "actions": "Ações",
+      "price": "Último preço"
+    },
+    "class": {
+      "stock": "Ação",
+      "fii": "FII"
+    },
+    "classPlural": {
+      "stock": "Ações",
+      "fii": "FIIs"
+    },
+    "sectorLabel": {
+      "stock": "Setor",
+      "fii": "Segmento"
+    },
+    "sectors": {
+      "stock": {
+        "bens_industriais": "Bens industriais",
+        "comunicacoes": "Comunicações",
+        "consumo_ciclico": "Consumo cíclico",
+        "consumo_nao_ciclico": "Consumo não cíclico",
+        "financeiro": "Financeiro",
+        "materiais_basicos": "Materiais básicos",
+        "petroleo_gas_biocombustiveis": "Petróleo, gás e biocombustíveis",
+        "saude": "Saúde",
+        "tecnologia_informacao": "Tecnologia da informação",
+        "utilidade_publica": "Utilidade pública",
+        "outros": "Outros"
+      },
+      "fii": {
+        "lajes_corporativas": "Lajes corporativas",
+        "logistica": "Logística",
+        "shoppings": "Shoppings",
+        "recebiveis": "Recebíveis (papel)",
+        "fundo_de_fundos": "Fundo de fundos",
+        "hibrido": "Híbrido",
+        "residencial": "Residencial",
+        "hoteis": "Hotéis",
+        "renda_urbana": "Renda urbana",
+        "desenvolvimento": "Desenvolvimento",
+        "outros": "Outros"
+      }
+    },
+    "quote": {
+      "none": "Sem cotação ainda",
+      "today": "Cotação das {{time}} (atraso de até {{delay}} min)",
+      "otherDay": "Cotação de {{date}} às {{time}}",
+      "note": "Cotações da brapi, com atraso de até {{delay}} minutos. Não são em tempo real."
+    }
+  },
+  "detail": {
+    "openLabel": "Abrir a ficha de {{ticker}}",
+    "back": "Voltar para Ativos",
+    "loading": "Carregando a ficha…",
+    "notFound": "Ativo não encontrado.",
+    "loadFailed": "Não foi possível abrir a ficha agora.",
+    "retry": "Tentar de novo",
+    "refreshFailed": "Não foi possível atualizar agora. Tentamos de novo em {{minutes}} minutos.",
+    "deactivated": "Desativado no catálogo desde {{date}}.",
+    "closeOf": "Fechamento de {{date}} (B3)",
+    "session": {
+      "title": "Último pregão da B3",
+      "date": "Pregão de {{date}}",
+      "none": "Ainda não há pregão guardado deste ativo."
+    },
+    "helpLabel": "O que é {{term}}?",
+    "terms": {
+      "open": "Abertura",
+      "openHelp": "O preço do primeiro negócio do dia.",
+      "high": "Máxima",
+      "highHelp": "O maior preço negociado no dia.",
+      "low": "Mínima",
+      "lowHelp": "O menor preço negociado no dia.",
+      "close": "Fechamento",
+      "closeHelp": "O preço do último negócio do dia, que a B3 publica como o oficial.",
+      "trades": "Negócios",
+      "tradesHelp": "Quantas compras e vendas deste ativo aconteceram no dia.",
+      "volume": "Volume",
+      "volumeHelp": "Quanto dinheiro trocou de mãos neste ativo no dia."
+    },
+    "history": {
+      "title": "Histórico de cotações",
+      "periodLabel": "Período do gráfico",
+      "periods": {
+        "1m": "1 mês",
+        "6m": "6 meses",
+        "1y": "1 ano",
+        "5y": "5 anos",
+        "max": "Tudo"
+      },
+      "loading": "Carregando o gráfico…",
+      "failed": "Não foi possível carregar o gráfico agora.",
+      "pending": "O histórico deste ativo ainda está sendo carregado. Volte em alguns minutos.",
+      "notFound": "Este ativo não aparece nos arquivos da B3 desde 2016.",
+      "tooFew": "Poucos pregões no período para mostrar o gráfico.",
+      "since": "Histórico desde {{date}}.",
+      "change": "Variação no período",
+      "changeNotCalculated": "Não calculada: há salto de preço no período",
+      "min": "Mínima",
+      "max": "Máxima",
+      "on": "em {{date}}",
+      "chartLabel": "Gráfico dos fechamentos de {{ticker}}: {{period}}",
+      "chartHint": "Use as setas para percorrer os pregões; Home e End vão ao primeiro e ao último.",
+      "cursor": "{{date}}: {{price}}",
+      "jumpsTitle": "Saltos de preço no período",
+      "jump": "{{date}}: {{change}} de um pregão para o seguinte",
+      "jumpsExplain": "Desdobramentos e grupamentos mudam o preço sem mudar o valor de quem tem o ativo; também pode ter sido uma variação real.",
+      "notice": "Preços como a B3 publica, sem ajuste por dividendos, rendimentos de FIIs, desdobramentos ou grupamentos. A variação não é a rentabilidade de quem tinha o ativo.",
+      "source": "Fonte: arquivos da B3 · último fechamento em {{date}}",
+      "priceMode": "Como mostrar os preços",
+      "adjusted": "Ajustado por desdobramentos e grupamentos",
+      "asPublished": "Como a B3 publicou",
+      "noticeAdjusted": "Preços ajustados por desdobramentos, grupamentos e bonificações (eventos da B3), sem ajuste por dividendos ou rendimentos de FIIs. A variação não é a rentabilidade de quem tinha o ativo.",
+      "eventsTitle": "Eventos no período",
+      "event": {
+        "desdobramento": "{{date}}: desdobramento, 1 ação virou {{multiplier}}",
+        "grupamento": "{{date}}: grupamento, 1 ação virou {{multiplier}}",
+        "bonificacao": "{{date}}: bonificação, 1 ação virou {{multiplier}}"
+      },
+      "eventsSource": "Fonte: B3. A data é a data com: o preço muda no pregão seguinte."
+    },
+    "buy": "Comprar",
+    "buyTitle": "Comprar em qual carteira?",
+    "buyLoading": "Carregando as carteiras…",
+    "noLivePortfolio": "Crie uma carteira para comprar.",
+    "buyCancel": "Cancelar"
+  },
+  "portfolios": {
+    "title": "Carteiras",
+    "subtitle": "Cada carteira é uma simulação: ao vivo, com o preço de agora, ou histórica, no passado.",
+    "count": "{{count}} de {{limit}} carteiras",
+    "new": "Nova carteira",
+    "newTitle": "Nova carteira",
+    "loading": "Carregando as carteiras…",
+    "empty": "Você ainda não tem carteiras. Crie uma para começar a simular.",
+    "name": "Nome",
+    "nameHint": "Até {{max}} caracteres. Cada carteira sua tem um nome diferente.",
+    "type": "Tipo (não muda depois)",
+    "types": {
+      "live": {
+        "title": "Ao vivo",
+        "text": "Opera com o preço de agora: as compras e vendas usam a cotação mais recente."
+      },
+      "historical": {
+        "title": "Histórica",
+        "text": "Opera no passado, com dados já conhecidos: você escolhe o dia em que a carteira começa."
+      }
+    },
+    "startDate": "Data de início",
+    "startDateHint": "Um dia de pregão, de {{first}} até ontem.",
+    "create": "Criar carteira",
+    "creating": "Criando…",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "rename": "Renomear",
+    "renameLabel": "Renomear a carteira {{name}}",
+    "delete": "Excluir",
+    "deleteLabel": "Excluir a carteira {{name}}",
+    "deleteConfirm": "Excluir a carteira {{name}}? Isso apaga a carteira e todos os lançamentos dela. Não dá para desfazer.",
+    "deleteButton": "Excluir carteira",
+    "deleted": "Carteira {{name}} excluída.",
+    "since": "desde {{date}}",
+    "label": {
+      "live": "Simulação ao vivo",
+      "historical": "Simulação histórica: resultado calculado com dados já conhecidos"
+    },
+    "back": "Voltar para as carteiras",
+    "comingSoon": "As compras e as vendas chegam nas próximas etapas.",
+    "initialAmount": "Valor inicial (opcional)",
+    "initialAmountHint": "Vira o primeiro aporte da carteira. Em reais, até R$ 10.000.000,00.",
+    "cash": {
+      "title": "Caixa",
+      "balance": "Saldo em caixa",
+      "deposit": "Aportar",
+      "withdraw": "Retirar",
+      "depositTitle": "Novo aporte",
+      "withdrawalTitle": "Nova retirada",
+      "amount": "Valor",
+      "amountHint": "Em reais, de R$ 0,01 a R$ 10.000.000,00.",
+      "date": "Data",
+      "dateHint": "Um dia de pregão, de {{first}} a {{last}}.",
+      "review": "Revisar",
+      "back": "Voltar",
+      "cancel": "Cancelar",
+      "confirmDeposit": "Aportar {{amount}} na carteira “{{name}}”?",
+      "confirmDepositOn": "Aportar {{amount}} na carteira “{{name}}”, com data de {{date}}?",
+      "confirmWithdrawal": "Retirar {{amount}} da carteira “{{name}}”?",
+      "confirmWithdrawalOn": "Retirar {{amount}} da carteira “{{name}}”, com data de {{date}}?",
+      "immutable": "Lançamentos não podem ser alterados nem apagados; um erro se corrige com estorno.",
+      "confirmDepositButton": "Confirmar aporte",
+      "confirmWithdrawalButton": "Confirmar retirada",
+      "saving": "Registrando…",
+      "deposited": "Aporte registrado. Saldo: {{balance}}.",
+      "withdrawn": "Retirada registrada. Saldo: {{balance}}.",
+      "insufficient": "Saldo insuficiente: há {{available}} em caixa.",
+      "empty": "Esta carteira ainda não tem dinheiro. Faça um aporte para começar a simular.",
+      "statement": "Extrato",
+      "loading": "Carregando o caixa…",
+      "columns": {
+        "date": "Data",
+        "type": "Lançamento",
+        "amount": "Valor",
+        "balanceAfter": "Saldo depois",
+        "actions": "Ações"
+      },
+      "types": {
+        "deposit": "Aporte",
+        "withdrawal": "Retirada",
+        "buy": "Compra",
+        "sell": "Venda"
+      },
+      "showMore": "Mostrar mais",
+      "count_one": "{{shown}} de {{count}} lançamento",
+      "count_other": "{{shown}} de {{count}} lançamentos",
+      "tradeDetail": "{{quantity}} {{ticker}} a {{price}}",
+      "reversal": {
+        "reverse": "Estornar",
+        "reverseLabel": "Estornar {{description}}",
+        "reversed": "Estornado em {{date}}",
+        "confirm": "Estornar {{description}}? Ele continua no extrato, riscado, e deixa de contar no caixa e nas posições. Não dá para desfazer o estorno.",
+        "confirmButton": "Confirmar estorno",
+        "cancel": "Cancelar",
+        "saving": "Estornando…",
+        "done": "Lançamento estornado.",
+        "description": {
+          "deposit": "o aporte de {{amount}} de {{date}}",
+          "withdrawal": "a retirada de {{amount}} de {{date}}",
+          "buy": "a compra de {{quantity}} {{ticker}} a {{price}} de {{date}}",
+          "sell": "a venda de {{quantity}} {{ticker}} a {{price}} de {{date}}"
+        },
+        "at": {
+          "deposit": "no aporte de {{amount}} de {{date}}",
+          "withdrawal": "na retirada de {{amount}} de {{date}}",
+          "buy": "na compra de {{quantity}} {{ticker}} de {{date}}",
+          "sell": "na venda de {{quantity}} {{ticker}} de {{date}}"
+        },
+        "that": {
+          "deposit": "esse aporte",
+          "withdrawal": "essa retirada",
+          "buy": "essa compra",
+          "sell": "essa venda"
+        },
+        "breaksCash": "Esse estorno deixaria o caixa negativo {{at}}. Estorne {{that}} antes.",
+        "breaksPosition": "Esse estorno deixaria a venda de {{quantity}} {{ticker}} de {{date}} maior que a posição. Estorne essa venda antes."
+      }
+    },
+    "positions": {
+      "title": "Posições",
+      "loading": "Carregando as posições…",
+      "buy": "Comprar",
+      "sell": "Vender",
+      "sellLabel": "Vender {{ticker}}",
+      "empty": "Nenhum ativo nesta carteira ainda. Use Comprar para começar.",
+      "totals": {
+        "cash": "Caixa",
+        "positions": "Em ativos",
+        "total": "Total"
+      },
+      "columns": {
+        "asset": "Ativo",
+        "quantity": "Quantidade",
+        "averagePrice": "Preço médio",
+        "lastPrice": "Último preço",
+        "marketValue": "Valor atual",
+        "change": "Variação",
+        "actions": "Ações"
+      },
+      "closeOf": "Fechamento de {{date}}",
+      "noPrice": "Sem preço",
+      "changeNote": "Variação sobre o preço médio, sem custos de operação nem proventos.",
+      "dividendsNote": "Proventos e desdobramentos ainda não entram nesta carteira.",
+      "bought": "Compra registrada: {{quantity}} {{ticker}}.",
+      "sold": "Venda registrada: {{quantity}} {{ticker}}.",
+      "at": "às {{time}}",
+      "priceNote": "Último preço: a cotação do pregão, com atraso de até {{delay}} minutos; sem ela, o último fechamento.",
+      "eventWarning": "Teve {{event}} em {{date}}: o valor atual ainda não considera isso.",
+      "event": {
+        "split": "desdobramento",
+        "reverse_split": "grupamento",
+        "bonus": "bonificação"
+      }
+    },
+    "trade": {
+      "buyTitle": "Comprar",
+      "sellTitle": "Vender {{ticker}}",
+      "asset": "Ativo",
+      "assetHint": "Digite o ticker ou o nome, como PETR4 ou Petrobras.",
+      "searching": "Buscando…",
+      "noResults": "Nenhum ativo encontrado.",
+      "changeAsset": "Trocar ativo",
+      "loadingQuote": "Buscando a cotação…",
+      "marketClosed": "A bolsa está fechada. Compras e vendas voltam no próximo pregão, {{date}}.",
+      "marketClosedNoDate": "A bolsa está fechada. Compras e vendas voltam no próximo pregão.",
+      "noQuoteToday": "A primeira cotação de hoje chega por volta das 10h30.",
+      "assetInactive": "Este ativo foi desativado: só dá para vender o que você já tem.",
+      "quantity": "Quantidade",
+      "quantityHint": "Ações e cotas de FII só em número inteiro, até 1.000.000.",
+      "quantityMax": "No máximo 1.000.000 por negociação.",
+      "max": "Máximo",
+      "all": "Tudo",
+      "held": "Você tem {{quantity}}.",
+      "byValue": "Calcular por valor",
+      "byValueAmount": "Quanto você quer investir",
+      "fits": "Cabem {{quantity}} ({{total}}); sobram {{rest}}.",
+      "fitsNone": "Esse valor não compra nenhuma unidade.",
+      "useQuantity": "Usar {{quantity}}",
+      "total": "Total",
+      "cashAfter": "Caixa depois",
+      "costs": "Corretagem, emolumentos da B3 e taxa de custódia não entram na simulação.",
+      "review": "Revisar",
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "confirmBuy": "Comprar {{quantity}} {{ticker}} a {{price}} (cotação das {{time}}) por {{total}}? O caixa fica com {{cash}}.",
+      "confirmSell": "Vender {{quantity}} {{ticker}} a {{price}} (cotação das {{time}}) por {{total}}? O caixa fica com {{cash}}.",
+      "immutable": "Lançamentos não podem ser alterados nem apagados; um erro se corrige com estorno.",
+      "confirmBuyButton": "Confirmar compra",
+      "confirmSellButton": "Confirmar venda",
+      "saving": "Registrando…",
+      "quoteChanged": "A cotação mudou para {{price}} (das {{time}}). Confirmar com o novo preço?",
+      "insufficientCash": "Saldo insuficiente: há {{available}} em caixa.",
+      "insufficientPosition": "Você tem só {{held}} deste ativo.",
+      "date": "Data",
+      "dateHint": "Um dia de pregão, de {{first}} a {{last}}.",
+      "pickDate": "Escolha a data para ver o fechamento daquele dia.",
+      "closeOf": "Fechamento de {{date}} (B3)",
+      "noClose": "Não há fechamento de {{ticker}} em {{date}}. O último antes foi em {{last}}.",
+      "noCloseNoPrevious": "Não há fechamento de {{ticker}} em {{date}}.",
+      "historyPending": "O histórico de preços deste ativo ainda está sendo carregado.",
+      "confirmBuyOn": "Comprar {{quantity}} {{ticker}} a {{price}} (fechamento de {{date}}) por {{total}}? O caixa fica com {{cash}} nessa data.",
+      "confirmSellOn": "Vender {{quantity}} {{ticker}} a {{price}} (fechamento de {{date}}) por {{total}}? O caixa fica com {{cash}} nessa data.",
+      "byValueMode": "Calcular com",
+      "modeAmount": "Valor em R$",
+      "modePercent": "% do caixa",
+      "percentLabel": "Percentual do caixa",
+      "percentHint": "De 1% a 100% do caixa de {{cash}}.",
+      "percentInvalid": "Digite um percentual de 1 a 100."
+    }
+  },
+  "fundamentals": {
+    "title": "Indicadores",
+    "loading": "Carregando os indicadores…",
+    "failed": "Não foi possível carregar os indicadores agora.",
+    "noPage": "Este ativo não tem página no Investidor10.",
+    "notCollected": "Os indicadores deste ativo ainda não foram coletados.",
+    "source": "Fonte: Investidor10 · coletado em {{date}}",
+    "notice": "Indicadores do Investidor10, usados com autorização para este projeto acadêmico. Não são recomendação de compra ou venda.",
+    "group": {
+      "valuation": "Valuation",
+      "efficiency": "Eficiência",
+      "profitability": "Rentabilidade",
+      "dividends": "Dividendos",
+      "debt": "Endividamento",
+      "growth": "Crescimento",
+      "fund": "Fundo"
+    },
+    "fund": {
+      "fundType": "Tipo de fundo",
+      "segment": "Segmento",
+      "mandate": "Mandato",
+      "management": "Gestão",
+      "adminFee": "Taxa de administração",
+      "term": "Prazo",
+      "audience": "Público-alvo"
+    },
+    "history": {
+      "toggle": "Histórico anual dos indicadores",
+      "label": "Histórico anual dos indicadores de {{ticker}}",
+      "indicator": "Indicador"
+    },
+    "indicator": {
+      "p_l": {
+        "name": "P/L",
+        "help": "Preço dividido pelo lucro por ação: quantos anos de lucro pagariam o preço atual."
+      },
+      "p_vp": {
+        "name": "P/VP",
+        "help": "Preço dividido pelo valor patrimonial por ação. Abaixo de 1, a ação custa menos que o patrimônio que representa."
+      },
+      "psr": {
+        "name": "P/Receita (PSR)",
+        "help": "Valor de mercado dividido pela receita dos últimos 12 meses."
+      },
+      "ev_ebitda": {
+        "name": "EV/EBITDA",
+        "help": "Valor da firma (mercado mais dívida líquida) dividido pelo EBITDA: quantos anos de geração de caixa operacional pagariam a empresa."
+      },
+      "ev_ebit": {
+        "name": "EV/EBIT",
+        "help": "Valor da firma dividido pelo lucro operacional (EBIT)."
+      },
+      "p_ebitda": {
+        "name": "P/EBITDA",
+        "help": "Valor de mercado dividido pelo EBITDA."
+      },
+      "p_ebit": {
+        "name": "P/EBIT",
+        "help": "Valor de mercado dividido pelo lucro operacional (EBIT)."
+      },
+      "p_ativo": {
+        "name": "P/Ativo",
+        "help": "Valor de mercado dividido pelo total de ativos da empresa."
+      },
+      "p_ativo_circ_liq": {
+        "name": "P/Ativo circulante líquido",
+        "help": "Valor de mercado dividido pelo ativo circulante menos todo o passivo. Negativo quando as dívidas passam o ativo de curto prazo."
+      },
+      "p_cap_giro": {
+        "name": "P/Capital de giro",
+        "help": "Valor de mercado dividido pelo capital de giro (ativo circulante menos passivo circulante)."
+      },
+      "lpa": {
+        "name": "LPA",
+        "help": "Lucro por ação: o lucro dos últimos 12 meses dividido pelo número de ações."
+      },
+      "vpa": {
+        "name": "VPA",
+        "help": "Valor patrimonial por ação: o patrimônio líquido dividido pelo número de ações."
+      },
+      "margem_bruta": {
+        "name": "Margem bruta",
+        "help": "Quanto sobra da receita depois do custo do que foi vendido."
+      },
+      "margem_ebitda": {
+        "name": "Margem EBITDA",
+        "help": "EBITDA (resultado operacional antes de depreciação) dividido pela receita."
+      },
+      "margem_ebit": {
+        "name": "Margem EBIT",
+        "help": "Lucro operacional (EBIT) dividido pela receita."
+      },
+      "margem_liquida": {
+        "name": "Margem líquida",
+        "help": "Lucro líquido dividido pela receita: quanto de cada real vendido vira lucro."
+      },
+      "giro_ativos": {
+        "name": "Giro dos ativos",
+        "help": "Receita dividida pelo total de ativos: quanto a empresa vende para cada real de ativo."
+      },
+      "roe": {
+        "name": "ROE",
+        "help": "Retorno sobre o patrimônio: lucro líquido dividido pelo patrimônio líquido."
+      },
+      "roa": {
+        "name": "ROA",
+        "help": "Retorno sobre os ativos: lucro líquido dividido pelo total de ativos."
+      },
+      "roic": {
+        "name": "ROIC",
+        "help": "Retorno sobre o capital investido (patrimônio mais dívidas) pela operação."
+      },
+      "dividend_yield": {
+        "name": "Dividend yield",
+        "help": "Proventos pagos nos últimos 12 meses divididos pelo preço atual."
+      },
+      "payout": {
+        "name": "Payout",
+        "help": "Parte do lucro que foi distribuída como dividendos e juros sobre capital próprio."
+      },
+      "liquidez_corrente": {
+        "name": "Liquidez corrente",
+        "help": "Ativo circulante dividido pelo passivo circulante. Acima de 1, o que vence no curto prazo está coberto."
+      },
+      "div_liq_ebitda": {
+        "name": "Dívida líquida/EBITDA",
+        "help": "Quantos anos de EBITDA pagariam a dívida líquida."
+      },
+      "div_liq_ebit": {
+        "name": "Dívida líquida/EBIT",
+        "help": "Quantos anos de lucro operacional pagariam a dívida líquida."
+      },
+      "div_liq_pl": {
+        "name": "Dívida líquida/Patrimônio",
+        "help": "Dívida líquida dividida pelo patrimônio líquido."
+      },
+      "div_bruta_pl": {
+        "name": "Dívida bruta/Patrimônio",
+        "help": "Toda a dívida financeira dividida pelo patrimônio líquido."
+      },
+      "pl_ativos": {
+        "name": "Patrimônio/Ativos",
+        "help": "Parte dos ativos que é financiada com capital próprio."
+      },
+      "passivos_ativos": {
+        "name": "Passivos/Ativos",
+        "help": "Parte dos ativos que é financiada com dívidas e outras obrigações."
+      },
+      "cagr_receitas_5a": {
+        "name": "CAGR das receitas (5 anos)",
+        "help": "Crescimento médio da receita por ano nos últimos 5 anos."
+      },
+      "cagr_lucros_5a": {
+        "name": "CAGR dos lucros (5 anos)",
+        "help": "Crescimento médio do lucro por ano nos últimos 5 anos."
+      },
+      "fii_dy_12m": {
+        "name": "Dividend yield (12 meses)",
+        "help": "Rendimentos pagos nos últimos 12 meses divididos pelo preço atual da cota."
+      },
+      "fii_p_vp": {
+        "name": "P/VP",
+        "help": "Preço da cota dividido pelo valor patrimonial por cota. Abaixo de 1, a cota custa menos que o patrimônio que representa."
+      },
+      "fii_vp_cota": {
+        "name": "Valor patrimonial por cota",
+        "help": "Patrimônio do fundo dividido pelo número de cotas."
+      },
+      "fii_valor_patrimonial": {
+        "name": "Patrimônio do fundo",
+        "help": "Valor de tudo o que o fundo tem, menos o que ele deve."
+      },
+      "fii_ultimo_rendimento": {
+        "name": "Último rendimento",
+        "help": "O último valor distribuído por cota."
+      },
+      "fii_liquidez_diaria": {
+        "name": "Liquidez diária",
+        "help": "Quanto é negociado por dia, em média, na bolsa."
+      },
+      "fii_vacancia": {
+        "name": "Vacância",
+        "help": "Parte dos imóveis do fundo que está sem inquilino."
+      },
+      "fii_cotistas": {
+        "name": "Cotistas",
+        "help": "Quantas pessoas e instituições têm cotas do fundo."
+      },
+      "fii_cotas_emitidas": {
+        "name": "Cotas emitidas",
+        "help": "Quantas cotas o fundo tem."
+      }
+    }
+  },
+  "dividends": {
+    "title": "Proventos",
+    "loading": "Carregando os proventos…",
+    "failed": "Não foi possível carregar os proventos agora.",
+    "total12m": "Total pago nos últimos 12 meses: {{value}} por ação ou cota",
+    "noTotal": "Nenhum provento nos últimos 12 meses.",
+    "none": "Nenhum provento registrado para este ativo no período.",
+    "notCollected": "Os proventos deste ativo ainda não foram coletados. A coleta do Investidor10 passa por todos os ativos, começando pelos mais negociados, e depois os atualiza uma vez por semana.",
+    "tableLabel": "Proventos por ação ou cota",
+    "kind": "Tipo",
+    "exDate": "Data com",
+    "paymentDate": "Pagamento",
+    "value": "Valor",
+    "kinds": {
+      "dividendo": "Dividendo",
+      "jcp": "JCP",
+      "rendimento": "Rendimento",
+      "amortizacao": "Amortização"
+    },
+    "periodLabel": "Período dos proventos",
+    "periods": {
+      "12m": "12 meses",
+      "5y": "5 anos",
+      "all": "Tudo"
+    },
+    "source": "Fonte: Investidor10 · coletado em {{date}}",
+    "sourceOnly": "Fonte: Investidor10",
+    "notice": "Data com: o último dia em que quem tem o ativo ganha o provento. JCP (juros sobre capital próprio) aparece com o valor bruto, antes do imposto. Amortização devolve parte do capital investido no fundo."
+  },
+  "catalog": {
+    "title": "Catálogo de ativos",
+    "subtitle": "Os ativos que os usuários encontram na busca. Ativo nunca é apagado: é desativado. Cada mudança fica registrada.",
+    "statusFilter": "Situação",
+    "statusAll": "Todos",
+    "statusActive": "Ativos",
+    "statusInactive": "Desativados",
+    "activeCount": "Ativos no catálogo: {{count}}",
+    "new": "Novo ativo",
+    "newTitle": "Novo ativo",
+    "editTitle": "Editar {{ticker}}",
+    "ticker": "Ticker",
+    "tickerHint": "Código da B3, como PETR4 ou MXRF11.",
+    "name": "Nome",
+    "class": "Classe",
+    "classHint": "A classe não pode ser mudada depois do cadastro.",
+    "choose": "Escolha…",
+    "create": "Cadastrar",
+    "save": "Salvar",
+    "created": "{{ticker}} cadastrado. O histórico de cotações dele será carregado em alguns minutos.",
+    "updated": "{{ticker}} atualizado.",
+    "unchanged": "Nada mudou em {{ticker}}.",
+    "deactivated": "{{ticker}} desativado.",
+    "reactivated": "{{ticker}} reativado.",
+    "edit": "Editar",
+    "editLabel": "Editar {{ticker}}",
+    "deactivate": "Desativar",
+    "deactivateLabel": "Desativar {{ticker}}",
+    "reactivate": "Reativar",
+    "reactivateLabel": "Reativar {{ticker}}",
+    "deactivateConfirm": "{{ticker}} some da busca e não pode mais ser comprado. Quem já tem continua vendo e pode vender.",
+    "confirmDeactivate": "Desativar agora",
+    "active": "Ativo",
+    "inactive": "Desativado",
+    "empty": "Nenhum ativo com esses filtros.",
+    "emptyCatalog": "Nenhum ativo ainda. A importação diária traz as ações e os FIIs da B3; você também pode usar \"Novo ativo\".",
+    "listLabel": "Ativos do catálogo",
+    "historyPending": "Histórico: carregando…",
+    "historyLoaded": "Histórico de {{from}} a {{to}}",
+    "historyNotFound": "Histórico: não encontrado nos arquivos da B3",
+    "historyWaitingCalendar": "O histórico de cotações de {{years}} só é carregado depois que o calendário de pregão desses anos for publicado (em Calendário).",
+    "quotes": {
+      "lastRun": "Cotações do pregão: última coleta {{when}}",
+      "never": "Cotações do pregão: nenhuma coleta ainda",
+      "whenToday": "às {{time}}",
+      "whenOther": "em {{date}} às {{time}}",
+      "usage": "a cada {{interval}} min · {{used}} de {{quota}} consultas no ciclo da brapi",
+      "exhausted": "A cota da brapi acabou: as cotações voltam {{when}}.",
+      "exhaustedUnknown": "A cota da brapi acabou: as cotações voltam quando ela renovar.",
+      "slower": "Para a cota durar até o fim do ciclo, as cotações são buscadas a cada {{interval}} minutos.",
+      "lastFailed": "A última coleta teve falhas. Os detalhes ficam no registro de execuções.",
+      "free": "a cada {{interval}} min · lista da brapi, sem gastar a cota"
+    },
+    "pendingReviewCount": "Classificação a revisar: {{count}}",
+    "reviewFilter": "Classificação",
+    "reviewAll": "Todas",
+    "reviewPending": "A revisar",
+    "reviewBadge": "Classificação a revisar",
+    "autoDeactivated": "Desativado automaticamente: sem negócio na B3 desde {{date}}",
+    "autoDeactivatedNever": "Desativado automaticamente: sem negócio na B3 nos últimos 3 meses",
+    "importedOn": "Importado da B3 em {{date}}.",
+    "importedPending": "A classificação foi sugerida pela importação: confira o setor ou segmento.",
+    "confirmClassification": "Confirmar classificação",
+    "confirmed": "Classificação de {{ticker}} conferida.",
+    "import": {
+      "never": "Importação da B3: nenhuma ainda",
+      "lastRun": "Importação da B3 {{when}} · novos: {{created}} · desativados: {{deactivated}} · reativados: {{reactivated}}",
+      "failed": "A última importação falhou: a lista da brapi não respondeu. O catálogo não mudou; ela roda de novo no próximo horário.",
+      "b3Behind": "Os arquivos da B3 estavam atrasados: ninguém foi desativado nesta importação."
     }
   }
 }
