@@ -43,6 +43,7 @@
 | 1.33 | SPEC-015 detalhada ([SPEC-015.md](SPEC-015.md)), aguardando a aprovação: estorno que anula o lançamento, aceito só se o livro sem ele continuar válido, com prazo de um dia para compra e venda na carteira ao vivo; recomendações para a OPEN-14 esperando a resposta do Luís |
 | 1.34 | SPEC-015 aprovada (Luís, 06/11/2026) com as recomendações; OPEN-14 resolvida; Requisitos v1.11 (RB28) |
 | 1.35 | SPEC-015 implementada: estorno de aporte, retirada, compra e venda, com a conferência do livro, o prazo de um dia para compra e venda na ao vivo e a exportação na versão 5 |
+| 1.36 | SPEC-016 detalhada ([SPEC-016.md](SPEC-016.md)) para a Nicoly implementar, aguardando a aprovação: compra e venda na carteira histórica com o fechamento da B3 do dia; recomendações para a OPEN-24 ("% do caixa" no "Calcular por valor") e para a OPEN-06 (aviso no lugar do valor quando houve evento depois da compra, até a SPEC-043) esperando a resposta do Luís |
 ---
 
 ## 0. Como ler este documento
@@ -295,7 +296,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-21 | Fonte do histórico do Ibovespa | PE06 | 020 |
 | OPEN-22 | Significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
 | OPEN-23 | Comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
-| OPEN-24 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** a API registra por quantidade (RF12) e a tela tem "Calcular por valor"; a montagem por percentual (cenário da P01) fica com a SPEC-016. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
+| OPEN-24 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** a API registra por quantidade (RF12) e a tela tem "Calcular por valor"; a montagem por percentual (cenário da P01) fica com a SPEC-016, que recomenda "% do caixa" no "Calcular por valor". Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
 | OPEN-26 | Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
@@ -756,6 +757,8 @@ Visão geral por fase:
 
 #### SPEC-016 — Lançamentos na carteira histórica
 
+📄 Detalhada em [SPEC-016.md](SPEC-016.md) — escrita, aguardando a aprovação.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Na carteira histórica, o usuário registra compras e vendas com data passada escolhida (os aportes e retiradas da histórica ficaram com a [SPEC-013](SPEC-013.md), v1.27); o preço é o fechamento do pregão da data; os lançamentos seguem ordem cronológica; a interface rotula o resultado como calculado com dados já conhecidos |
@@ -767,7 +770,7 @@ Visão geral por fase:
 | Entidades | CARTEIRA (tipo†), TRANSACAO, LANCAMENTO_CAIXA†, COTACAO |
 | Drivers | OBJ01, FAS01, QA01 |
 | ADRs | DA09, DA17, DA18 (Proposta) |
-| Depende de | SPEC-008, SPEC-013, SPEC-014 |
+| Depende de | SPEC-008, SPEC-013, SPEC-014, SPEC-015, SPEC-042 |
 | Posição | Reaproveita as regras de 013/014 e exige o histórico de 008. Se for entregue depois da SPEC-019, inclui a carteira histórica na rentabilidade e na evolução patrimonial (valorização até hoje, DA17) |
 | Em aberto | OPEN-05, OPEN-06, OPEN-09, OPEN-14, OPEN-24 |
 | Prioridade derivada | Sem MoSCoW nos requisitos (decisão DA17) |
