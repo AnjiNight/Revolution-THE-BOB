@@ -1,4 +1,10 @@
-import { PORTFOLIO_PATHS, validateNewPortfolio, validateRenamePortfolio } from '@simulador/shared';
+import {
+  PORTFOLIO_PATHS,
+  validateCashStatementQuery,
+  validateNewCashEntry,
+  validateNewPortfolio,
+  validateRenamePortfolio,
+} from '@simulador/shared';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { domainErrorRunner } from '../../../shared/http/domain-errors.js';
 import { HttpError } from '../../../shared/http/http-error.js';
@@ -23,6 +29,7 @@ const run = domainErrorRunner({
   portfolio_not_found: { status: 404, message: 'Carteira não encontrada.' },
   portfolio_name_in_use: { status: 409, message: 'Você já tem uma carteira com este nome.' },
   portfolio_limit_reached: { status: 409, message: 'Você já tem o número máximo de carteiras.' },
+  insufficient_cash: { status: 409, message: 'Saldo insuficiente em caixa.' },
   calendar_not_published: {
     status: 409,
     message: 'O calendário de pregão desse ano ainda não foi publicado.',
@@ -91,6 +98,25 @@ export function registerPortfolioRoutes(
     const id = portfolioId(request);
     await owned(request, () => portfolios.delete(requireAuth(request).userId, id));
     return reply.status(204).send();
+  });
+
+  // SPEC-013 §5.1: saldo e extrato; aporte ou retirada. Nenhuma rota altera ou apaga um lançamento.
+  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.cash, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const { offset } = ensureValid(validateCashStatementQuery(request.query));
+    const statement = await owned(request, () =>
+      portfolios.statement(requireAuth(request).userId, id, offset),
+    );
+    return reply.send(statement);
+  });
+
+  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.cash, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const input = ensureValid(validateNewCashEntry(request.body));
+    const result = await owned(request, () =>
+      portfolios.addCashEntry(requireAuth(request).userId, id, input),
+    );
+    return reply.status(201).send(result);
   });
 }
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  amountFromDigits,
+  formatAmountInput,
   formatAxisPrice,
   formatCalendarDay,
   formatChange,
@@ -105,5 +107,37 @@ describe('cotações (SPEC-009)', () => {
       time: '23:00',
       date: '30/10',
     });
+  });
+});
+
+describe('campo de dinheiro como nos apps de banco (SPEC-013)', () => {
+  it('os dígitos enchem o valor a partir dos centavos', () => {
+    expect(amountFromDigits('5')).toBe('0.05');
+    expect(amountFromDigits('55')).toBe('0.55');
+    expect(amountFromDigits('555')).toBe('5.55');
+    expect(amountFromDigits('55555')).toBe('555.55');
+    expect(amountFromDigits('5555500')).toBe('55555.00');
+  });
+
+  it('lê o texto já formatado do campo: apagar o último dígito volta uma casa', () => {
+    expect(amountFromDigits('1.234,56')).toBe('1234.56');
+    expect(amountFromDigits('1.234,5')).toBe('123.45');
+    expect(amountFromDigits('1,234.567')).toBe('12345.67');
+  });
+
+  it('sem dígito diferente de zero fica vazio; zeros à esquerda saem; no máximo 11 dígitos', () => {
+    expect(amountFromDigits('')).toBe('');
+    expect(amountFromDigits('abc')).toBe('');
+    expect(amountFromDigits('000')).toBe('');
+    expect(amountFromDigits('0005')).toBe('0.05');
+    expect(amountFromDigits('123456789012345')).toBe('123456789.01');
+  });
+
+  it('mostra no formato do idioma, sem o símbolo (o campo tem o "R$" fixo)', () => {
+    expect(formatAmountInput('', 'pt-BR')).toBe('');
+    expect(formatAmountInput('0.05', 'pt-BR')).toBe('0,05');
+    expect(formatAmountInput('55555.00', 'pt-BR')).toBe('55.555,00');
+    expect(formatAmountInput('10000000.00', 'pt-BR')).toBe('10.000.000,00');
+    expect(formatAmountInput('1234.56', 'en')).toBe('1,234.56');
   });
 });

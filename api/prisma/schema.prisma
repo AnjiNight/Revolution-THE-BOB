@@ -80,11 +80,36 @@ model Carteira {
   criadaEm     DateTime     @default(now()) @map("criada_em") @db.Timestamptz(3)
   atualizadaEm DateTime     @map("atualizada_em") @db.Timestamptz(3)
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario          Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  /// SPEC-013: aportes e retiradas (livro-razão do caixa).
+  lancamentosCaixa LancamentoCaixa[]
 
   @@unique([usuarioId, nomeChave])
   @@index([usuarioId, criadaEm])
   @@map("carteira")
+}
+
+enum TipoLancamentoCaixa {
+  aporte
+  retirada
+
+  @@map("tipo_lancamento_caixa")
+}
+
+/// Aporte ou retirada (SPEC-013), no livro-razão do caixa (DA09): o banco recusa alteração (RB08,
+/// gatilho na migração). Na ao vivo, `data` é o dia de `registrado_em` em Brasília.
+model LancamentoCaixa {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carteiraId   String              @map("carteira_id") @db.Uuid
+  tipo         TipoLancamentoCaixa
+  valor        Decimal             @db.Decimal(15, 2)
+  data         DateTime            @db.Date
+  registradoEm DateTime            @map("registrado_em") @db.Timestamptz(3)
+
+  carteira Carteira @relation(fields: [carteiraId], references: [id], onDelete: Cascade)
+
+  @@index([carteiraId, data, registradoEm])
+  @@map("lancamento_caixa")
 }
 
 /// Exclusão de uma carteira (OPEN-15), sem dado pessoal: nem nome, nem dono.

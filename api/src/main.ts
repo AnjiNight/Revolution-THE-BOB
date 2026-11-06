@@ -45,6 +45,7 @@ import {
   PrismaTaskRunRepository,
 } from './modules/market-data/infrastructure/prisma-quote-repository.js';
 import { PortfolioService } from './modules/portfolios/application/portfolio-service.js';
+import { PrismaCashEntryRepository } from './modules/portfolios/infrastructure/prisma-cash-entry-repository.js';
 import { PrismaPortfolioRepository } from './modules/portfolios/infrastructure/prisma-portfolio-repository.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
@@ -139,10 +140,13 @@ async function main(): Promise<void> {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
     // Sem SMTP (só fora de produção), a confirmação de e-mail e a recuperação de senha ficam
     // desligadas (503); o login com Google continua funcionando.
-    // SPEC-012: carteiras; o calendário confere a data de início da histórica.
+    // SPEC-012: carteiras; o calendário confere a data de início da histórica e, na SPEC-013, a
+    // data dos aportes e retiradas da histórica.
     const calendar = new CalendarService({ calendars });
     const portfolios = new PortfolioService({
       portfolios: new PrismaPortfolioRepository(prisma),
+      // SPEC-013: o livro-razão do caixa.
+      cash: new PrismaCashEntryRepository(prisma),
       calendar,
     });
     const { auth, profile, passwordReset, accountData } = createIdentityServices({

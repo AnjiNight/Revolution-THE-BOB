@@ -77,10 +77,11 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   const accessTokens = new JwtAccessTokenService(TEST_JWT_SECRET, 15);
   const mailer = new FakeEmailSender();
   const background = new BackgroundTasks();
-  // Carteiras (SPEC-012) em memória; o calendário é o mesmo das rotas (definido mais abaixo).
+  // Carteiras (SPEC-012) e o caixa delas (SPEC-013) em memória; o calendário é o mesmo das rotas (definido mais abaixo).
   const portfolioRepo = new InMemoryPortfolioRepository();
   const portfolios = new PortfolioService({
     portfolios: portfolioRepo,
+    cash: portfolioRepo.cash,
     calendar: { tradingCalendar: (from, to) => calendar.tradingCalendar(from, to) },
     ...(options.clock ? { clock: options.clock } : {}),
   });

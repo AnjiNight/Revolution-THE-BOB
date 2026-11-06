@@ -11,6 +11,7 @@ import type {
   StoredPortfolio,
 } from '../application/ports.js';
 import { PortfolioNameInUseError } from '../domain/errors.js';
+import { cashEntryData, lockPortfolio } from './prisma-cash-entry-repository.js';
 
 const TYPE_TO_TIPO: Record<PortfolioType, TipoCarteira> = {
   live: 'ao_vivo',
@@ -69,6 +70,10 @@ export class PrismaPortfolioRepository implements PortfolioRepository {
           inicioEm: fromIsoDate(portfolio.startDate),
           criadaEm: portfolio.at,
           atualizadaEm: portfolio.at,
+          // SPEC-013: o "Valor inicial" entra na mesma instrução, então vai junto ou nada fica.
+          ...(portfolio.initialDeposit
+            ? { lancamentosCaixa: { create: [cashEntryData(portfolio.initialDeposit)] } }
+            : {}),
         },
       });
       return toStored(row);
@@ -91,12 +96,17 @@ export class PrismaPortfolioRepository implements PortfolioRepository {
     }
   }
 
-  /** Os lançamentos (SPEC-013 em diante) vão junto em cascata; até lá, a carteira tem 0. */
+  /**
+   * Os lançamentos vão junto em cascata, e o registro guarda quantos eram (SPEC-013). A carteira é
+   * travada antes de contar: um aporte chegando ao mesmo tempo entra antes ou não entra.
+   */
   async delete(id: string, at: Date): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      await lockPortfolio(tx, id);
+      const entries = await tx.lancamentoCaixa.count({ where: { carteiraId: id } });
       const row = await tx.carteira.delete({ where: { id } });
       await tx.exclusaoCarteira.create({
-        data: { carteiraId: row.id, tipo: row.tipo, lancamentos: 0, excluidaEm: at },
+        data: { carteiraId: row.id, tipo: row.tipo, lancamentos: entries, excluidaEm: at },
       });
     });
   }

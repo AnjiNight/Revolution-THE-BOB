@@ -98,8 +98,8 @@ export interface ConsentList {
 
 /** Identificação do arquivo de exportação (SPEC-034). Cada Spec que acrescentar dados sobe a versão. */
 export const PERSONAL_DATA_FORMAT = 'simulador-investimentos/dados-pessoais';
-/** 2: SPEC-012, carteiras. */
-export const PERSONAL_DATA_VERSION = 2;
+/** 2: SPEC-012, carteiras. 3: SPEC-013, aportes e retiradas de cada carteira. */
+export const PERSONAL_DATA_VERSION = 3;
 
 /**
  * Arquivo "Baixar meus dados" (SPEC-034, LGPD). Tudo o que o app guarda sobre a pessoa, sem
@@ -128,7 +128,7 @@ export interface PersonalDataExport {
     expiresAt: string;
     ended: boolean;
   }>;
-  /** SPEC-012: as carteiras (os lançamentos entram com as Specs deles). */
+  /** SPEC-012: as carteiras; SPEC-013: os aportes e retiradas de cada uma, na ordem do livro-razão. */
   portfolios: Array<{
     id: string;
     name: string;
@@ -136,6 +136,13 @@ export interface PersonalDataExport {
     startDate: string;
     createdAt: string;
     updatedAt: string;
+    cashEntries: Array<{
+      type: 'deposit' | 'withdrawal';
+      /** Decimal em texto com 2 casas: "1234.56". */
+      amount: string;
+      date: string;
+      recordedAt: string;
+    }>;
   }>;
 }
 
@@ -171,7 +178,13 @@ export type FieldErrorCode =
   // SPEC-012: data de início da carteira histórica.
   | 'before_history'
   | 'future'
-  | 'not_trading_day';
+  | 'not_trading_day'
+  // SPEC-013: aportes e retiradas.
+  | 'invalid_amount'
+  | 'above_max'
+  | 'not_allowed'
+  | 'before_start'
+  | 'before_last_entry';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 

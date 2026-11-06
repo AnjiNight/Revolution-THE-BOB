@@ -17,6 +17,7 @@ import type {
   FundamentalsErrorCode,
   LoginInput,
   NewAssetInput,
+  NewCashEntryInput,
   NewPortfolioInput,
   PortfolioErrorCode,
   RenamePortfolioInput,
@@ -98,6 +99,9 @@ export const PORTFOLIO_CHANNELS = {
   get: 'portfolios:get',
   rename: 'portfolios:rename',
   delete: 'portfolios:delete',
+  // SPEC-013: saldo e extrato; aporte ou retirada.
+  cash: 'portfolios:cash',
+  addCash: 'portfolios:add-cash',
 } as const;
 
 /** Erros que a interface sabe traduzir. */
@@ -112,12 +116,17 @@ export type ClientAuthError =
   | 'unexpected'
   | 'google_cancelled';
 
+/** Dado do servidor para corrigir o pedido, como o saldo disponível (SPEC-013). */
+export type ErrorDetails = Readonly<Record<string, string>>;
+
 export type AuthResult =
-  { ok: true; user: PublicUser } | { ok: false; error: ClientAuthError; fields?: FieldErrors };
+  | { ok: true; user: PublicUser }
+  | { ok: false; error: ClientAuthError; fields?: FieldErrors; details?: ErrorDetails };
 
 /** Resultado genérico das chamadas do perfil. */
 export type ClientResult<T> =
-  { ok: true; data: T } | { ok: false; error: ClientAuthError; fields?: FieldErrors };
+  | { ok: true; data: T }
+  | { ok: false; error: ClientAuthError; fields?: FieldErrors; details?: ErrorDetails };
 
 export type {
   AccountDeletionConfirmInput,
@@ -133,6 +142,7 @@ export type {
   EmailConfirmationResendInput,
   LoginInput,
   NewAssetInput,
+  NewCashEntryInput,
   NewPortfolioInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,

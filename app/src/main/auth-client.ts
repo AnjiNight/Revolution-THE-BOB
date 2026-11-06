@@ -10,6 +10,7 @@ import {
   isPriceHistoryPeriod,
   parseCalendarYear,
   PORTFOLIO_PATHS,
+  portfolioCashPath,
   portfolioPath,
   PROFILE_PATHS,
   TERMS_VERSION,
@@ -43,6 +44,9 @@ import {
   type Investidor10Status,
   type LoginInput,
   type NewAssetInput,
+  type CashEntryResult,
+  type CashStatement,
+  type NewCashEntryInput,
   type NewPortfolioInput,
   type PasswordResetConfirmInput,
   type PasswordResetRequestInput,
@@ -60,7 +64,12 @@ import {
   type UpdateNameInput,
   type UserProfile,
 } from '@simulador/shared';
-import type { AuthResult, ClientAuthError, ClientResult } from '../shared/auth-ipc.js';
+import type {
+  AuthResult,
+  ClientAuthError,
+  ClientResult,
+  ErrorDetails,
+} from '../shared/auth-ipc.js';
 import type { SecretStore } from './secret-store.js';
 import { validateServerUrl } from './server-health.js';
 
@@ -103,12 +112,14 @@ const KNOWN_ERRORS: ReadonlyArray<
   'portfolio_not_found',
   'portfolio_name_in_use',
   'portfolio_limit_reached',
+  'insufficient_cash',
 ];
 
 class RequestFailed extends Error {
   constructor(
     readonly error: ClientAuthError,
     readonly fields?: FieldErrors,
+    readonly details?: ErrorDetails,
   ) {
     super(error);
   }
@@ -331,6 +342,24 @@ export class AuthClient {
       await this.authorizedRequest<undefined>('DELETE', portfolioUrl(id));
       return null;
     });
+  }
+
+  /** SPEC-013: saldo e extrato, do mais recente ao mais antigo, a partir de `offset`. */
+  cashStatement(id: string, offset = 0): Promise<ClientResult<CashStatement>> {
+    return this.call(() =>
+      this.authorizedRequest<CashStatement>('GET', portfolioCashUrl(id, offset)),
+    );
+  }
+
+  /** SPEC-013: aporte ou retirada; `insufficient_cash` traz `details.available`. */
+  addCashEntry(id: string, input: NewCashEntryInput): Promise<ClientResult<CashEntryResult>> {
+    return this.call(() =>
+      this.authorizedRequest<CashEntryResult>('POST', portfolioCashUrl(id), {
+        type: input.type,
+        amount: input.amount,
+        ...(input.date ? { date: input.date } : {}),
+      }),
+    );
   }
 
   /** Colaborador (SPEC-007): até que dia a série do CDI está carregada e a última atualização. */
@@ -630,7 +659,11 @@ export class AuthClient {
 
     const code = json?.error as AuthErrorCode | undefined;
     if (code && KNOWN_ERRORS.includes(code)) {
-      throw new RequestFailed(code, json?.fields as FieldErrors | undefined);
+      throw new RequestFailed(
+        code,
+        json?.fields as FieldErrors | undefined,
+        stringRecord(json?.details),
+      );
     }
     throw new RequestFailed(response.status >= 500 ? 'server_unavailable' : 'unexpected');
   }
@@ -675,9 +708,28 @@ function calendarUrl(path: string, year: number): string {
 
 function failure(error: unknown): AuthResult {
   if (error instanceof RequestFailed) {
-    return error.fields
-      ? { ok: false, error: error.error, fields: error.fields }
-      : { ok: false, error: error.error };
+    return {
+      ok: false,
+      error: error.error,
+      ...(error.fields ? { fields: error.fields } : {}),
+      ...(error.details ? { details: error.details } : {}),
+    };
   }
   return { ok: false, error: 'unexpected' };
+}
+
+/** `details` do corpo de erro: só um objeto de textos passa adiante (SPEC-013). */
+function stringRecord(value: unknown): ErrorDetails | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, string] => typeof entry[1] === 'string',
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+/** O id da carteira vem da interface: só um UUID entra no caminho da rota do caixa. */
+function portfolioCashUrl(id: string, offset = 0): string {
+  if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+  const path = portfolioCashPath(id);
+  return Number.isSafeInteger(offset) && offset > 0 ? `${path}?offset=${offset}` : path;
 }

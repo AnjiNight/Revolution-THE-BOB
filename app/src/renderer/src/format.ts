@@ -76,6 +76,35 @@ export function formatMoney(value: string, language: string): string {
   }).format(Number(value));
 }
 
+/** Dígitos aceitos no campo de dinheiro: até R$ 999.999.999,99 (o teto da regra é bem menor). */
+const MONEY_DIGITS_MAX = 11;
+
+/**
+ * Campo de dinheiro como nos apps de banco (SPEC-013): os dígitos digitados enchem o valor a partir
+ * dos centavos ("5" → 0,05; "555" → 5,55). Recebe o texto do campo, com ou sem pontuação, e devolve
+ * o decimal da API ("5.55"), ou vazio se não houver dígito diferente de zero.
+ */
+export function amountFromDigits(text: string): string {
+  const digits = text.replace(/\D/g, '').replace(/^0+/, '').slice(0, MONEY_DIGITS_MAX);
+  if (digits === '') return '';
+  const padded = digits.padStart(3, '0');
+  return `${padded.slice(0, -2)}.${padded.slice(-2)}`;
+}
+
+/**
+ * O decimal da API ("1234.56") no formato do idioma, sem o símbolo da moeda (o campo mostra o
+ * "R$" fixo na frente): "1.234,56" em português, "1,234.56" em inglês. Vazio fica vazio.
+ */
+export function formatAmountInput(amount: string, language: string): string {
+  if (amount === '') return '';
+  const [whole = '0', fraction = '00'] = amount.split('.');
+  const grouped = new Intl.NumberFormat(language, { useGrouping: true }).format(BigInt(whole));
+  const decimal = new Intl.NumberFormat(language)
+    .formatToParts(0.5)
+    .find((part) => part.type === 'decimal');
+  return `${grouped}${decimal?.value ?? ','}${fraction.padEnd(2, '0')}`;
+}
+
 /** Volume financeiro abreviado (SPEC-010): "R$ 3,3 bi", "R$ 31,2 mi"; em inglês, "R$3.3B". */
 export function formatCompactMoney(value: string, language: string): string {
   return new Intl.NumberFormat(language, {

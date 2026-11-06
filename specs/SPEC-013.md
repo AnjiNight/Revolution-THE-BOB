@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Escrita em 05/11/2026 com as recomendações aceitas pelo Luís (§4.1). Aguarda a aprovação. Implementar só depois da SPEC-012 pronta e revisada |
+| Status | ✅ Escrita em 05/11/2026 com as recomendações aceitas pelo Luís (§4.1), aprovada por ele em 06/11/2026 e implementada (§9) |
 | Fase | 3 — Núcleo da carteira ([mapa de specs](mapa_specs.md)), depois da SPEC-012 |
 | Prioridade | *Must* (RF13) |
 | Depende de | [SPEC-005](SPEC-005.md) (calendário), [SPEC-012](SPEC-012.md) (carteiras: tabela, tela e formulário de criação) |
@@ -142,3 +142,35 @@ Na ao vivo, `data` é o dia de `registrado_em` no horário de Brasília. A migra
 | OPEN-08 | ⏳ Compra e venda com a bolsa fechada: SPEC-014. Aporte e retirada não dependem dela (decisão 1) |
 | OPEN-43 | ⏳ Falta o caso de uso de aporte no diagrama de casos de uso |
 | Rendimento do caixa | Fora do escopo; se a equipe quiser o caixa rendendo CDI, vira uma Spec própria |
+
+## 9. Verificação (06/11/2026)
+
+**Ajustes da implementação:**
+
+| Tema | Ajuste |
+|---|---|
+| Saldo disponível no erro | O corpo de erro ganhou o campo `details`: `insufficient_cash` responde `{ error, message, details: { available: "1000.00" } }`. As próximas Specs usam o mesmo campo (a SPEC-014, para a posição e a cotação nova) |
+| Valores | A API aceita "1000", "1000.5" ou "1000.50"; a resposta sempre traz 2 casas ("1000.00"). Na tela, a pedido do Luís (06/11/2026), o campo é como nos apps de banco e de corretora: "R$" fixo na frente, teclado numérico e os dígitos enchendo o valor a partir dos centavos, já com o ponto do milhar e a vírgula (digitar 5, 5, 5 mostra R$ 0,05, R$ 0,55, R$ 5,55; "1,234.56" em inglês) |
+| Motivos de recusa | Novos códigos de campo: `invalid_amount` (formato, zero ou negativo), `above_max`, `not_allowed` (data enviada na ao vivo), `before_start` e `before_last_entry` |
+| Trava | A carteira é travada (`SELECT … FOR UPDATE`) enquanto o lançamento é conferido e gravado. A exclusão da carteira usa a mesma trava, para contar os lançamentos certo; de quebra, excluir uma carteira que acabou de ser apagada por outro pedido responde 404 em vez de erro inesperado |
+| Dia do lançamento | O banco recusa `data` depois do dia de `registrado_em` no fuso `America/Sao_Paulo` e antes de 04/01/2016 |
+| Extrato | Mostra "X de Y lançamentos" acima do **Mostrar mais**; `offset` que não é número dá 400 |
+| Confirmação | O nome da carteira vai entre aspas ("Aportar R$ 500,00 na carteira “E se em 2019”, com data de 3 de jun. de 2019?"), porque nomes com "em" ficavam confusos |
+
+| Critério | Resultado |
+|---|---|
+| CA01 | ✅ `cash-ledger.test.ts`: sem lançamentos, contas feitas à mão, 0,10 + 0,20 = 0,30, o teto somado 12 vezes, a ordem do livro (dia, momento, id) e valor inválido como erro |
+| CA02 | ✅ Ao vivo num sábado às 15h30 e às 23h30 de Brasília (já domingo em UTC): o dia é o de Brasília; data enviada: `not_allowed` |
+| CA03 | ✅ Sem data, antes do início, sábado, Tiradentes, hoje e futuro recusados com o motivo; antes do último lançamento: `before_last_entry`; o mesmo dia do último é aceito; ano sem calendário: `calendar_not_published` |
+| CA04 | ✅ `insufficient_cash` com o disponível; retirar o saldo inteiro deixa R$ 0,00; duas retiradas de R$ 600,00 ao mesmo tempo com R$ 1.000,00: uma passa e a outra é recusada (em memória e no PostgreSQL) |
+| CA05 | ✅ Zero, negativo, 3 casas, "1.000,00", número fora de texto e acima do teto recusados; R$ 0,01 e R$ 10.000.000,00 aceitos |
+| CA06 | ✅ Valor inicial na ao vivo (dia da criação) e na histórica (data de início); valor inválido não cria a carteira; no PostgreSQL, nome repetido não deixa o aporte gravado |
+| CA07 | ✅ Nenhuma rota altera ou apaga; o gatilho recusa a alteração; excluir a carteira apaga os lançamentos e o registro conta quantos eram; excluir a conta também leva |
+| CA08 | ✅ 105 lançamentos: os 100 mais recentes com o saldo depois de cada um, e o resto com `offset=100`; carteira de outro usuário: 404 com o aviso no log |
+| CA09 | ✅ Exportação na versão 3, com `cashEntries` em cada carteira na ordem do livro |
+| CA10 | ✅ Conferido na pré-visualização (dados simulados): saldo, Aportar e Retirar com confirmação, saldo insuficiente com o disponível, histórica (antes do último lançamento, feriado, mesmo dia), extrato e **Mostrar mais** (107 lançamentos), carteira sem dinheiro, valor inicial (inclusive inválido) em português e inglês; 480 px sem rolagem lateral, com o extrato em cartões; o foco abre no Valor, vai para o botão de confirmar e volta para Aportar ou Retirar. ⏳ Conferir na tela do Electron com o servidor de verdade |
+| CA11 | ✅ Requisitos 1.9 (feito junto com a Spec); migração `20261106120000_lancamentos_caixa` sem diferença para o esquema do Prisma, desfeita e refeita no banco de teste |
+
+Total: **805 testes** passando (com o banco real), lint, tipos e formatação.
+
+**Para as próximas Specs:** a SPEC-014 acrescenta compra e venda à conta do caixa (`cash-ledger.ts`) e ao extrato, e usa a mesma trava da carteira.

@@ -129,6 +129,142 @@ button.link.portfolio-open {
   font-size: 0.95rem;
 }
 
+/* ---------- Caixa (SPEC-013) ---------- */
+
+/* Campo de dinheiro: "R$" fixo dentro do campo, valor alinhado com números de mesma largura. */
+.money-input {
+  position: relative;
+}
+
+.money-prefix {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.money-input input {
+  padding-left: 2.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-panel {
+  margin: 1.5rem 0;
+}
+
+.cash-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cash-head h2 {
+  margin: 0;
+}
+
+.cash-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.5rem 0 0;
+}
+
+.cash-balance span {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.cash-balance strong {
+  font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.cash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cash-form {
+  margin-top: 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-sunken);
+}
+
+.cash-form h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.cash-form input {
+  background: var(--surface);
+}
+
+.cash-confirm {
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.cash-confirm-question {
+  margin: 0 0 0.35rem;
+  font-weight: 650;
+}
+
+.cash-panel .form-success {
+  margin-top: 1rem;
+}
+
+.cash-statement-block {
+  margin-top: 1.5rem;
+}
+
+.cash-statement-block h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.cash-statement {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.925rem;
+}
+
+.cash-statement th {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.cash-statement td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.cash-statement .cash-number {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cash-statement .cash-deposit {
+  color: var(--ok);
+}
+
 /* ---------- Janela estreita (até 480px) ---------- */
 
 @media (max-width: 640px) {
@@ -139,5 +275,51 @@ button.link.portfolio-open {
   .portfolio-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .cash-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* O extrato vira cartões: cada célula com o nome da coluna ao lado. */
+  .cash-statement thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .cash-statement,
+  .cash-statement tbody,
+  .cash-statement tr,
+  .cash-statement td {
+    display: block;
+  }
+
+  .cash-statement tr {
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .cash-statement td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    border: 0;
+  }
+
+  .cash-statement td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .cash-statement .cash-number {
+    text-align: right;
   }
 }

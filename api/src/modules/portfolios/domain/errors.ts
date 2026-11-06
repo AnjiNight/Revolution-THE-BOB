@@ -23,6 +23,17 @@ export class PortfolioLimitReachedError extends DomainError {
   readonly code = 'portfolio_limit_reached';
 }
 
+/** RB26: a retirada passa do saldo em caixa; `details.available` diz quanto há. */
+export class InsufficientCashError extends DomainError {
+  readonly code = 'insufficient_cash';
+  override readonly details: Readonly<Record<string, string>>;
+
+  constructor(available: string) {
+    super('saldo insuficiente');
+    this.details = { available };
+  }
+}
+
 /** Entrada que a regra do servidor recusa (data de início no futuro ou fora de pregão). */
 export class PortfolioValidationError extends DomainError {
   readonly code = 'validation_error';

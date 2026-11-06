@@ -4,6 +4,8 @@ import type {
   AssetFundamentals,
   AssetSearchResult,
   CalendarSuggestion,
+  CashEntryResult,
+  CashStatement,
   CatalogAsset,
   CatalogListResult,
   CdiStatus,
@@ -81,6 +83,9 @@ const api: DesktopApi = {
     get: (id) => invoke<ClientResult<Portfolio>>(PORTFOLIO_CHANNELS.get, id),
     rename: (id, input) => invoke<ClientResult<Portfolio>>(PORTFOLIO_CHANNELS.rename, id, input),
     delete: (id) => invoke<ClientResult<null>>(PORTFOLIO_CHANNELS.delete, id),
+    cash: (id, offset) => invoke<ClientResult<CashStatement>>(PORTFOLIO_CHANNELS.cash, id, offset),
+    addCash: (id, input) =>
+      invoke<ClientResult<CashEntryResult>>(PORTFOLIO_CHANNELS.addCash, id, input),
   },
   fundamentals: {
     get: (id) => invoke<ClientResult<AssetFundamentals>>(FUNDAMENTALS_CHANNELS.fundamentals, id),

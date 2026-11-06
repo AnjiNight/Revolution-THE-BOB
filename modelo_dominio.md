@@ -53,6 +53,16 @@ Conjunto de posições de um usuário. Um usuário pode ter várias carteiras.
 
 Não há saldo guardado na carteira: o caixa vem só dos aportes e retiradas (livro-razão, [DA09](adr/DA09-lancamentos-imutaveis.md); OPEN-11 decidida na SPEC-012).
 
+### LANCAMENTO_CAIXA
+Aporte ou retirada de dinheiro fictício numa carteira ([SPEC-013](specs/SPEC-013.md)). O saldo em caixa é a conta desses lançamentos (livro-razão, [DA09](adr/DA09-lancamentos-imutaveis.md)); nenhum é alterado nem apagado (RB08).
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| tipo | enum | `aporte` ou `retirada` |
+| valor | decimal(15,2) | De R$ 0,01 a R$ 10.000.000,00 (RB13) |
+| data | date | Ao vivo: o dia do registro em Brasília; histórica: o dia de pregão escolhido (RB11, RB25) |
+| registrado_em | datetime | Quando o servidor registrou |
+
 ### TRANSACAO
 Operação de compra ou venda registrada em uma carteira sobre um ativo.
 
@@ -124,6 +134,7 @@ Série histórica de valores do indexador.
 | USUARIO | 1 : N | CARTEIRA | possui |
 | USUARIO | 1 : N | CONSENTIMENTO | aceita |
 | USUARIO | 1 : N | TOKEN_RENOVACAO | mantém sessão |
+| CARTEIRA | 1 : N | LANCAMENTO_CAIXA | registra |
 | CARTEIRA | 1 : N | TRANSACAO | registra |
 | CARTEIRA | 1 : N | SIMULACAO | origina |
 | ATIVO | 1 : N | TRANSACAO | movimenta |

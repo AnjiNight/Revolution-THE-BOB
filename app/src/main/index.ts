@@ -15,6 +15,7 @@ import type {
   EmailConfirmationResendInput,
   LoginInput,
   NewAssetInput,
+  NewCashEntryInput,
   NewPortfolioInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
@@ -205,6 +206,13 @@ app.whenReady().then(() => {
     auth.renamePortfolio(id, input),
   );
   ipcMain.handle(PORTFOLIO_CHANNELS.delete, (_event, id: string) => auth.deletePortfolio(id));
+  // Caixa (SPEC-013): saldo, extrato, aporte e retirada.
+  ipcMain.handle(PORTFOLIO_CHANNELS.cash, (_event, id: string, offset?: number) =>
+    auth.cashStatement(id, offset),
+  );
+  ipcMain.handle(PORTFOLIO_CHANNELS.addCash, (_event, id: string, input: NewCashEntryInput) =>
+    auth.addCashEntry(id, input),
+  );
 
   // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.
   ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());

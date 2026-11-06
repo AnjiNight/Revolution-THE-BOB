@@ -12,7 +12,10 @@ import { CalendarService } from '../../market-data/application/calendar-service.
 import { CdiStatusService } from '../../market-data/application/cdi-status-service.js';
 import { FundamentalsService } from '../../market-data/application/fundamentals-service.js';
 import { PortfolioService } from '../../portfolios/application/portfolio-service.js';
-import { InMemoryPortfolioRepository } from '../../portfolios/testing/fakes.js';
+import {
+  InMemoryCashEntryRepository,
+  InMemoryPortfolioRepository,
+} from '../../portfolios/testing/fakes.js';
 import {
   InMemoryCalendarRepository,
   InMemoryFundamentals,
@@ -134,6 +137,7 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       }),
       portfolios: new PortfolioService({
         portfolios: new InMemoryPortfolioRepository(),
+        cash: new InMemoryCashEntryRepository(),
         calendar: new CalendarService({ calendars: new InMemoryCalendarRepository() }),
       }),
     });

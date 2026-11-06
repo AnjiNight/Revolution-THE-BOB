@@ -15,7 +15,7 @@ export function domainErrorRunner(table: DomainErrorTable) {
     } catch (error) {
       const mapped = error instanceof DomainError ? table[error.code] : undefined;
       if (error instanceof DomainError && mapped) {
-        throw new HttpError(mapped.status, error.code, mapped.message, error.fields);
+        throw new HttpError(mapped.status, error.code, mapped.message, error.fields, error.details);
       }
       throw error;
     }

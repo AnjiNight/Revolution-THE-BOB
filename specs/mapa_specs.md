@@ -37,6 +37,7 @@
 | 1.27 | SPEC-012 aprovada (Nicoly, 05/11/2026) e implementada: carteiras ao vivo e históricas, com nome único por usuário, até 20, exclusão definitiva com registro sem dado pessoal e a seção `portfolios` na exportação (versão 2) |
 | 1.28 | SPEC-013 detalhada ([SPEC-013.md](SPEC-013.md)), aguardando a aprovação: aportes e retiradas nas carteiras ao vivo e histórica, com "Valor inicial" na criação; a SPEC-016 passa a cuidar só de compra e venda na histórica; Requisitos v1.9 (RB11 só para compra e venda) |
 | 1.29 | SPEC-014 detalhada ([SPEC-014.md](SPEC-014.md)), aguardando a aprovação: compra e venda na carteira ao vivo com a cotação do próprio dia, posições e preço médio; recomendações para OPEN-06 (nova SPEC-043, proventos e eventos na carteira), OPEN-08, OPEN-12 e OPEN-24 esperando a resposta do Luís |
+| 1.30 | SPEC-013 aprovada (Luís, 06/11/2026) e implementada: aportes e retiradas nas carteiras ao vivo e histórica, valor inicial na criação, saldo e extrato, lançamentos imutáveis no banco e a exportação na versão 3 |
 ---
 
 ## 0. Como ler este documento
@@ -690,7 +691,7 @@ Visão geral por fase:
 
 #### SPEC-013 — Aportes e retiradas de caixa
 
-📄 Detalhada em [SPEC-013.md](SPEC-013.md) — escrita, aguardando a aprovação.
+📄 Detalhada em [SPEC-013.md](SPEC-013.md) — aprovada (Luís, 06/11/2026) e implementada.
 
 | Campo | Conteúdo |
 |---|---|

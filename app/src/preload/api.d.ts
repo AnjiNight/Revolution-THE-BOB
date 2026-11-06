@@ -4,6 +4,8 @@ import type {
   AssetFundamentals,
   AssetSearchResult,
   CalendarSuggestion,
+  CashEntryResult,
+  CashStatement,
   CatalogAsset,
   CatalogListResult,
   CdiStatus,
@@ -33,6 +35,7 @@ import type {
   EmailConfirmationResendInput,
   LoginInput,
   NewAssetInput,
+  NewCashEntryInput,
   NewPortfolioInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
@@ -97,6 +100,10 @@ export interface DesktopApi {
     rename(id: string, input: RenamePortfolioInput): Promise<ClientResult<Portfolio>>;
     /** Apaga a carteira e os lançamentos dela, sem volta. */
     delete(id: string): Promise<ClientResult<null>>;
+    /** SPEC-013: saldo e extrato, 100 por vez a partir de `offset` ("Mostrar mais"). */
+    cash(id: string, offset?: number): Promise<ClientResult<CashStatement>>;
+    /** SPEC-013: aporte ou retirada; `insufficient_cash` traz `details.available`. */
+    addCash(id: string, input: NewCashEntryInput): Promise<ClientResult<CashEntryResult>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

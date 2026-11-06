@@ -1,9 +1,12 @@
 import {
   AUTH_PATHS,
   PORTFOLIO_PATHS,
+  portfolioCashPath,
   portfolioPath,
   PROFILE_PATHS,
   type AuthSession,
+  type CashEntryResult,
+  type CashStatement,
   type Portfolio,
   type PortfolioList,
 } from '@simulador/shared';
@@ -210,12 +213,252 @@ describe('rotas das carteiras (SPEC-012)', () => {
     ]);
   });
 
-  it('exportação: seção portfolios e versão 2 (CA07)', async () => {
+  it('exportação: seção portfolios (CA07); a SPEC-013 subiu a versão para 3', async () => {
     await create({ name: 'Dividendos', type: 'live' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 2,
-      portfolios: [{ name: 'Dividendos', type: 'live', startDate: '2026-11-05' }],
+      version: 3,
+      portfolios: [{ name: 'Dividendos', type: 'live', startDate: '2026-11-05', cashEntries: [] }],
+    });
+  });
+});
+
+describe('caixa das carteiras (SPEC-013)', () => {
+  let t: TestApp;
+  let ana: AuthSession;
+
+  beforeEach(async () => {
+    now = new Date('2026-11-05T15:00:00Z');
+    t = await buildTestApp({ clock: () => now });
+    for (const year of [2019, 2021, 2026]) {
+      await t.calendar.publish(year, { nonTradingDays: suggestNonTradingDays(year) }, 'colab');
+    }
+    ana = await t.registerConfirmed();
+  });
+
+  afterEach(async () => {
+    await t.app.close();
+  });
+
+  const call = (
+    method: 'GET' | 'POST' | 'DELETE',
+    url: string,
+    session: AuthSession | null,
+    payload?: Record<string, unknown>,
+  ) =>
+    t.app.inject({
+      method,
+      url,
+      ...(session ? { headers: { authorization: `Bearer ${session.accessToken}` } } : {}),
+      ...(payload ? { payload } : {}),
+    });
+
+  const newPortfolio = async (payload: Record<string, unknown>) =>
+    (await call('POST', PORTFOLIO_PATHS.list, ana, payload)).json<{ portfolio: Portfolio }>()
+      .portfolio.id;
+  const live = () => newPortfolio({ name: 'Ao vivo', type: 'live' });
+  const historical = () =>
+    newPortfolio({ name: 'E se em 2019', type: 'historical', startDate: '2019-01-02' });
+
+  const add = (id: string, payload: Record<string, unknown>, session = ana) =>
+    call('POST', portfolioCashPath(id), session, payload);
+  const statement = async (id: string, query = '') =>
+    (await call('GET', `${portfolioCashPath(id)}${query}`, ana)).json<CashStatement>();
+  const dateError = async (id: string, date?: string) =>
+    (await add(id, { type: 'deposit', amount: '10', ...(date ? { date } : {}) })).json<{
+      fields?: Record<string, string>;
+    }>().fields?.date;
+
+  it('ao vivo: aporte e retirada no momento atual, em qualquer dia; data enviada é recusada (CA02)', async () => {
+    const id = await live();
+    now = new Date('2026-11-07T18:30:00Z'); // sábado, 15:30 em Brasília
+    const deposit = await add(id, { type: 'deposit', amount: '1000' });
+    expect(deposit.statusCode).toBe(201);
+    expect(deposit.json<CashEntryResult>()).toEqual({
+      entry: {
+        id: expect.any(String),
+        type: 'deposit',
+        amount: '1000.00',
+        date: '2026-11-07',
+        recordedAt: '2026-11-07T18:30:00.000Z',
+        balanceAfter: '1000.00',
+      },
+      balance: '1000.00',
+    });
+    now = new Date('2026-11-08T02:30:00Z'); // ainda sábado, 23:30 em Brasília
+    const withdrawal = await add(id, { type: 'withdrawal', amount: '250.5' });
+    expect(withdrawal.json<CashEntryResult>()).toMatchObject({
+      entry: { date: '2026-11-07', amount: '250.50', balanceAfter: '749.50' },
+      balance: '749.50',
+    });
+    expect(await dateError(id, '2026-11-06')).toBe('not_allowed');
+  });
+
+  it('histórica: pregão, não antes do início nem do último lançamento, antes de hoje (CA03)', async () => {
+    const id = await historical();
+    expect(await dateError(id)).toBe('required');
+    expect(await dateError(id, '2018-12-28')).toBe('before_start');
+    expect(await dateError(id, '2019-01-05')).toBe('not_trading_day'); // sábado
+    expect(await dateError(id, '2021-04-21')).toBe('not_trading_day'); // Tiradentes
+    expect(await dateError(id, '2026-11-05')).toBe('future'); // hoje
+    expect(await dateError(id, '2026-12-01')).toBe('future');
+
+    expect(
+      (await add(id, { type: 'deposit', amount: '1000', date: '2019-03-15' })).statusCode,
+    ).toBe(201);
+    expect(await dateError(id, '2019-03-14')).toBe('before_last_entry');
+    // O mesmo dia do último lançamento é aceito.
+    expect((await add(id, { type: 'deposit', amount: '1', date: '2019-03-15' })).statusCode).toBe(
+      201,
+    );
+
+    const unpublished = await add(id, { type: 'deposit', amount: '10', date: '2020-03-02' });
+    expect(unpublished.statusCode).toBe(409);
+    expect(unpublished.json()).toMatchObject({ error: 'calendar_not_published' });
+    expect((await statement(id)).balance).toBe('1001.00');
+  });
+
+  it('retirada maior que o saldo: insufficient_cash com o disponível (CA04)', async () => {
+    const id = await live();
+    await add(id, { type: 'deposit', amount: '1000' });
+    const tooMuch = await add(id, { type: 'withdrawal', amount: '1000.01' });
+    expect(tooMuch.statusCode).toBe(409);
+    expect(tooMuch.json()).toMatchObject({
+      error: 'insufficient_cash',
+      details: { available: '1000.00' },
+    });
+    const all = await add(id, { type: 'withdrawal', amount: '1000' });
+    expect(all.json<CashEntryResult>().balance).toBe('0.00');
+  });
+
+  it('duas retiradas ao mesmo tempo nunca deixam o caixa negativo (CA04)', async () => {
+    const id = await live();
+    await add(id, { type: 'deposit', amount: '1000' });
+    const results = await Promise.all([
+      add(id, { type: 'withdrawal', amount: '600' }),
+      add(id, { type: 'withdrawal', amount: '600' }),
+    ]);
+    expect(results.map((res) => res.statusCode).sort()).toEqual([201, 409]);
+    expect((await statement(id)).balance).toBe('400.00');
+  });
+
+  it('valores de R$ 0,01 a R$ 10.000.000,00 com até 2 casas (CA05)', async () => {
+    const id = await live();
+    for (const amount of ['0', '-5', '0.001', '10000000.01', '1.000,00']) {
+      const res = await add(id, { type: 'deposit', amount });
+      expect(res.statusCode).toBe(400);
+      expect(res.json<{ fields: Record<string, string> }>().fields.amount).toBeDefined();
+    }
+    expect((await add(id, { type: 'deposit', amount: '10000000.00' })).statusCode).toBe(201);
+    expect((await add(id, { type: 'deposit', amount: '0.01' })).statusCode).toBe(201);
+  });
+
+  it('valor inicial vira o primeiro aporte; com erro, nada é gravado (CA06)', async () => {
+    const liveId = await newPortfolio({ name: 'Ao vivo', type: 'live', initialAmount: '5000' });
+    expect((await statement(liveId)).entries).toEqual([
+      expect.objectContaining({ type: 'deposit', amount: '5000.00', date: '2026-11-05' }),
+    ]);
+    const historicalId = await newPortfolio({
+      name: 'E se',
+      type: 'historical',
+      startDate: '2019-01-02',
+      initialAmount: '5000.00',
+    });
+    expect((await statement(historicalId)).entries[0]).toMatchObject({
+      date: '2019-01-02',
+      balanceAfter: '5000.00',
+    });
+
+    const invalid = await call('POST', PORTFOLIO_PATHS.list, ana, {
+      name: 'Errada',
+      type: 'live',
+      initialAmount: '0',
+    });
+    expect(invalid.json()).toMatchObject({ fields: { initialAmount: 'invalid_amount' } });
+    const names = (await call('GET', PORTFOLIO_PATHS.list, ana))
+      .json<PortfolioList>()
+      .portfolios.map((p) => p.name);
+    expect(names).not.toContain('Errada');
+  });
+
+  it('extrato do mais recente ao mais antigo, 100 por vez com Mostrar mais (CA08)', async () => {
+    const id = await live();
+    for (let i = 1; i <= 105; i += 1) {
+      now = new Date(Date.parse('2026-11-05T15:00:00Z') + i * 1000);
+      await add(id, { type: 'deposit', amount: String(i) });
+    }
+    const first = await statement(id);
+    expect(first).toMatchObject({ balance: '5565.00', hasMore: true, total: 105 });
+    expect(first.entries).toHaveLength(100);
+    expect(first.entries[0]).toMatchObject({ amount: '105.00', balanceAfter: '5565.00' });
+    expect(first.entries[1]).toMatchObject({ amount: '104.00', balanceAfter: '5460.00' });
+
+    const more = await statement(id, '?offset=100');
+    expect(more).toMatchObject({ hasMore: false, total: 105 });
+    expect(more.entries.map((entry) => entry.amount)).toEqual([
+      '5.00',
+      '4.00',
+      '3.00',
+      '2.00',
+      '1.00',
+    ]);
+    expect((await call('GET', `${portfolioCashPath(id)}?offset=abc`, ana)).statusCode).toBe(400);
+  });
+
+  it('carteira de outro usuário: 404 com aviso no log; colaborador 403; sem sessão 401', async () => {
+    const bia = await t.registerConfirmed({
+      name: 'Bia Lima',
+      email: 'bia@exemplo.com',
+      password: 'outra-senha-longa',
+    });
+    const biaPortfolio = (
+      await call('POST', PORTFOLIO_PATHS.list, bia, { name: 'Da Bia', type: 'live' })
+    ).json<{ portfolio: Portfolio }>().portfolio.id;
+    expect((await call('GET', portfolioCashPath(biaPortfolio), ana)).statusCode).toBe(404);
+    expect((await add(biaPortfolio, { type: 'deposit', amount: '10' })).statusCode).toBe(404);
+    expect(t.logs.text).toContain('tentativa de acessar carteira de outro usuário');
+    expect((await call('GET', portfolioCashPath(biaPortfolio), null)).statusCode).toBe(401);
+    expect((await call('GET', portfolioCashPath('nao-e-uuid'), ana)).statusCode).toBe(404);
+  });
+
+  it('excluir a carteira apaga os lançamentos e o registro conta quantos eram (CA07)', async () => {
+    const id = await live();
+    await add(id, { type: 'deposit', amount: '100' });
+    await add(id, { type: 'withdrawal', amount: '40' });
+    expect((await call('DELETE', portfolioPath(id), ana)).statusCode).toBe(204);
+    expect(t.portfolioRepo.deletions).toEqual([
+      { portfolioId: id, type: 'live', entries: 2, at: now },
+    ]);
+    expect(t.portfolioRepo.cash.entries).toHaveLength(0);
+  });
+
+  it('exportação com os lançamentos de cada carteira, na ordem do livro (CA09)', async () => {
+    const id = await historical();
+    await add(id, { type: 'deposit', amount: '1000', date: '2019-03-15' });
+    now = new Date('2026-11-05T16:00:00Z');
+    await add(id, { type: 'withdrawal', amount: '100', date: '2019-04-01' });
+    const res = await call('GET', PROFILE_PATHS.export, ana);
+    expect(res.json()).toMatchObject({
+      version: 3,
+      portfolios: [
+        {
+          id,
+          cashEntries: [
+            {
+              type: 'deposit',
+              amount: '1000.00',
+              date: '2019-03-15',
+              recordedAt: '2026-11-05T15:00:00.000Z',
+            },
+            {
+              type: 'withdrawal',
+              amount: '100.00',
+              date: '2019-04-01',
+              recordedAt: '2026-11-05T16:00:00.000Z',
+            },
+          ],
+        },
+      ],
     });
   });
 });

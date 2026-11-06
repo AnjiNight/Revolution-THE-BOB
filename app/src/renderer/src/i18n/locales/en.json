@@ -198,7 +198,12 @@
     "immutable": "The class can't be changed after the asset is created.",
     "before_history": "The price history starts on 01/04/2016: choose that date or later.",
     "future": "Choose a day before today: today doesn't have B3's close yet.",
-    "not_trading_day": "There was no trading session that day (weekend or holiday). Choose a trading day."
+    "not_trading_day": "There was no trading session that day (weekend or holiday). Choose a trading day.",
+    "invalid_amount": "Enter an amount in reais with up to 2 decimals, like 1,000.00.",
+    "above_max": "The maximum per entry is R$10,000,000.00.",
+    "not_allowed": "In a live portfolio, the date is always now.",
+    "before_start": "Choose a day on or after the portfolio's start.",
+    "before_last_entry": "Choose the day of the last entry or later: a historical portfolio's entries follow date order."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -232,7 +237,8 @@
     "source_disabled": "Investidor10 indicators are turned off.",
     "portfolio_not_found": "This portfolio no longer exists.",
     "portfolio_name_in_use": "You already have a portfolio with this name.",
-    "portfolio_limit_reached": "You already have the maximum of 20 portfolios. Delete one to create another."
+    "portfolio_limit_reached": "You already have the maximum of 20 portfolios. Delete one to create another.",
+    "insufficient_cash": "Not enough cash."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -587,7 +593,51 @@
       "historical": "Historical simulation: result calculated with data already known"
     },
     "back": "Back to portfolios",
-    "comingSoon": "Deposits, purchases and sales arrive in the next steps."
+    "comingSoon": "Purchases and sales come in the next steps.",
+    "initialAmount": "Initial amount (optional)",
+    "initialAmountHint": "Becomes the portfolio's first deposit. In reais, up to R$10,000,000.00.",
+    "cash": {
+      "title": "Cash",
+      "balance": "Cash balance",
+      "deposit": "Deposit",
+      "withdraw": "Withdraw",
+      "depositTitle": "New deposit",
+      "withdrawalTitle": "New withdrawal",
+      "amount": "Amount",
+      "amountHint": "In reais, from R$0.01 to R$10,000,000.00.",
+      "date": "Date",
+      "dateHint": "A trading day, from {{first}} to {{last}}.",
+      "review": "Review",
+      "back": "Back",
+      "cancel": "Cancel",
+      "confirmDeposit": "Deposit {{amount}} into the portfolio “{{name}}”?",
+      "confirmDepositOn": "Deposit {{amount}} into the portfolio “{{name}}”, dated {{date}}?",
+      "confirmWithdrawal": "Withdraw {{amount}} from the portfolio “{{name}}”?",
+      "confirmWithdrawalOn": "Withdraw {{amount}} from the portfolio “{{name}}”, dated {{date}}?",
+      "immutable": "Entries can't be changed or deleted; a mistake is fixed with a reversal.",
+      "confirmDepositButton": "Confirm deposit",
+      "confirmWithdrawalButton": "Confirm withdrawal",
+      "saving": "Saving…",
+      "deposited": "Deposit saved. Balance: {{balance}}.",
+      "withdrawn": "Withdrawal saved. Balance: {{balance}}.",
+      "insufficient": "Not enough cash: there is {{available}} available.",
+      "empty": "This portfolio has no money yet. Make a deposit to start simulating.",
+      "statement": "Statement",
+      "loading": "Loading the cash…",
+      "columns": {
+        "date": "Date",
+        "type": "Entry",
+        "amount": "Amount",
+        "balanceAfter": "Balance after"
+      },
+      "types": {
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal"
+      },
+      "showMore": "Show more",
+      "count_one": "{{shown}} of {{count}} entry",
+      "count_other": "{{shown}} of {{count}} entries"
+    }
   },
   "fundamentals": {
     "title": "Indicators",

@@ -15,6 +15,8 @@ import type { ClientAuthError } from '../../../shared/auth-ipc';
 import '../assets.css';
 import '../portfolios.css';
 import { formatCalendarDay } from '../format';
+import { MoneyField } from './MoneyField';
+import { PortfolioCash } from './PortfolioCash';
 import { TextField } from './TextField';
 
 type ListState =
@@ -169,6 +171,7 @@ function NewPortfolioForm({
   const [name, setName] = useState('');
   const [type, setType] = useState<PortfolioType>('live');
   const [startDate, setStartDate] = useState('');
+  const [initialAmount, setInitialAmount] = useState('');
   const [fields, setFields] = useState<FieldErrors>({});
   const [error, setError] = useState<ClientAuthError | null>(null);
   const [saving, setSaving] = useState(false);
@@ -177,13 +180,15 @@ function NewPortfolioForm({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setSaving(true);
     setFields({});
     setError(null);
+    setSaving(true);
     const result = await window.api.portfolios.create({
       name,
       type,
       ...(type === 'historical' ? { startDate } : {}),
+      // SPEC-013: o campo de dinheiro já entrega o decimal da API ("5000.00").
+      ...(initialAmount ? { initialAmount } : {}),
     });
     setSaving(false);
     if (result.ok) return onCreated(result.data);
@@ -243,6 +248,14 @@ function NewPortfolioForm({
             })}
           />
         )}
+
+        <MoneyField
+          label={t('portfolios.initialAmount')}
+          value={initialAmount}
+          onChange={setInitialAmount}
+          error={fields.initialAmount}
+          hint={t('portfolios.initialAmountHint')}
+        />
 
         {error && error !== 'validation_error' && error !== 'portfolio_name_in_use' && (
           <p className="form-error" role="alert">
@@ -418,8 +431,8 @@ function PortfolioRow({
 }
 
 /**
- * Tela de uma carteira (SPEC-012 §5.2): nome, rótulo do tipo e data de início. Os lançamentos
- * chegam com as próximas Specs (013 em diante).
+ * Tela de uma carteira (SPEC-012 §5.2): nome, rótulo do tipo e data de início; o caixa com o
+ * extrato (SPEC-013). As compras e vendas chegam com as próximas Specs (014 em diante).
  */
 export function PortfolioPage({
   portfolioId,
@@ -489,6 +502,7 @@ export function PortfolioPage({
               </span>
             </p>
           </header>
+          <PortfolioCash portfolio={state.portfolio} onSessionExpired={onSessionExpired} />
           <p className="assets-note">
             <Info weight="fill" aria-hidden="true" />
             <span>{t('portfolios.comingSoon')}</span>

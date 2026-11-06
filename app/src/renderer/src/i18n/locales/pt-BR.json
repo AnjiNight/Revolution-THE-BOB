@@ -198,7 +198,12 @@
     "immutable": "A classe não pode ser mudada depois do cadastro.",
     "before_history": "O histórico de cotações começa em 04/01/2016: escolha essa data ou depois.",
     "future": "Escolha um dia antes de hoje: hoje ainda não tem o fechamento da B3.",
-    "not_trading_day": "Não houve pregão nesse dia (fim de semana ou feriado). Escolha um dia de pregão."
+    "not_trading_day": "Não houve pregão nesse dia (fim de semana ou feriado). Escolha um dia de pregão.",
+    "invalid_amount": "Informe um valor em reais com até 2 casas, como 1.000,00.",
+    "above_max": "O máximo por lançamento é R$ 10.000.000,00.",
+    "not_allowed": "Na carteira ao vivo, a data é sempre a de agora.",
+    "before_start": "Escolha um dia a partir do início da carteira.",
+    "before_last_entry": "Escolha o dia do último lançamento ou depois: na carteira histórica, os lançamentos seguem a ordem das datas."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -232,7 +237,8 @@
     "source_disabled": "Os indicadores do Investidor10 estão desligados.",
     "portfolio_not_found": "Esta carteira não existe mais.",
     "portfolio_name_in_use": "Você já tem uma carteira com este nome.",
-    "portfolio_limit_reached": "Você já tem o máximo de 20 carteiras. Exclua uma para criar outra."
+    "portfolio_limit_reached": "Você já tem o máximo de 20 carteiras. Exclua uma para criar outra.",
+    "insufficient_cash": "Saldo insuficiente em caixa."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -587,7 +593,51 @@
       "historical": "Simulação histórica: resultado calculado com dados já conhecidos"
     },
     "back": "Voltar para as carteiras",
-    "comingSoon": "Os aportes, as compras e as vendas chegam nas próximas etapas."
+    "comingSoon": "As compras e as vendas chegam nas próximas etapas.",
+    "initialAmount": "Valor inicial (opcional)",
+    "initialAmountHint": "Vira o primeiro aporte da carteira. Em reais, até R$ 10.000.000,00.",
+    "cash": {
+      "title": "Caixa",
+      "balance": "Saldo em caixa",
+      "deposit": "Aportar",
+      "withdraw": "Retirar",
+      "depositTitle": "Novo aporte",
+      "withdrawalTitle": "Nova retirada",
+      "amount": "Valor",
+      "amountHint": "Em reais, de R$ 0,01 a R$ 10.000.000,00.",
+      "date": "Data",
+      "dateHint": "Um dia de pregão, de {{first}} a {{last}}.",
+      "review": "Revisar",
+      "back": "Voltar",
+      "cancel": "Cancelar",
+      "confirmDeposit": "Aportar {{amount}} na carteira “{{name}}”?",
+      "confirmDepositOn": "Aportar {{amount}} na carteira “{{name}}”, com data de {{date}}?",
+      "confirmWithdrawal": "Retirar {{amount}} da carteira “{{name}}”?",
+      "confirmWithdrawalOn": "Retirar {{amount}} da carteira “{{name}}”, com data de {{date}}?",
+      "immutable": "Lançamentos não podem ser alterados nem apagados; um erro se corrige com estorno.",
+      "confirmDepositButton": "Confirmar aporte",
+      "confirmWithdrawalButton": "Confirmar retirada",
+      "saving": "Registrando…",
+      "deposited": "Aporte registrado. Saldo: {{balance}}.",
+      "withdrawn": "Retirada registrada. Saldo: {{balance}}.",
+      "insufficient": "Saldo insuficiente: há {{available}} em caixa.",
+      "empty": "Esta carteira ainda não tem dinheiro. Faça um aporte para começar a simular.",
+      "statement": "Extrato",
+      "loading": "Carregando o caixa…",
+      "columns": {
+        "date": "Data",
+        "type": "Lançamento",
+        "amount": "Valor",
+        "balanceAfter": "Saldo depois"
+      },
+      "types": {
+        "deposit": "Aporte",
+        "withdrawal": "Retirada"
+      },
+      "showMore": "Mostrar mais",
+      "count_one": "{{shown}} de {{count}} lançamento",
+      "count_other": "{{shown}} de {{count}} lançamentos"
+    }
   },
   "fundamentals": {
     "title": "Indicadores",
