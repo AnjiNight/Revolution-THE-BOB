@@ -122,6 +122,25 @@ export class PrismaQuoteRepository implements QuoteRepository {
     }));
   }
 
+  /** SPEC-016: o fechamento da B3 do dia, como publicado, ou `null` sem negócio nesse dia. */
+  async closeOn(assetId: string, date: IsoDate): Promise<string | null> {
+    const row = await this.prisma.cotacaoDiaria.findFirst({
+      where: { ativoId: assetId, fonte: 'b3_cotahist', data: fromIsoDate(date) },
+      select: { fechamento: true },
+    });
+    return row ? normalize(row.fechamento.toFixed()) : null;
+  }
+
+  /** SPEC-016: o último dia com negócio na B3 antes da data, ou `null`. */
+  async lastTradingDayBefore(assetId: string, date: IsoDate): Promise<IsoDate | null> {
+    const row = await this.prisma.cotacaoDiaria.findFirst({
+      where: { ativoId: assetId, fonte: 'b3_cotahist', data: { lt: fromIsoDate(date) } },
+      select: { data: true },
+      orderBy: { data: 'desc' },
+    });
+    return row ? toIsoDate(row.data) : null;
+  }
+
   /** SPEC-010: fechamentos da B3 de um ativo desde `from` (Tudo: desde o primeiro), em ordem. */
   async closes(assetId: string, from: IsoDate | null): Promise<DailyClose[]> {
     const rows = await this.prisma.cotacaoDiaria.findMany({

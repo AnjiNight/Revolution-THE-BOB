@@ -574,6 +574,60 @@ button.link.position-ticker {
   font-weight: 650;
 }
 
+/* SPEC-016: evento corporativo depois da compra (até a SPEC-043). */
+.position-event {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--warn);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* "Calcular por valor": em reais ou em % do caixa. */
+.trade-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0 0.5rem;
+  padding: 0;
+  border: 0;
+}
+
+.trade-mode legend {
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.trade-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.percent-input input {
+  padding-right: 2.2rem;
+  padding-left: 0.85rem;
+}
+
+.percent-suffix {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.asset-buy-type {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
 .asset-buy {
   margin: 0 0 1.25rem;
 }

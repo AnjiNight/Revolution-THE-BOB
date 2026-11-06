@@ -26,10 +26,13 @@ import { CalendarNotPublishedError } from '../../financial-calculation/trading-c
 import {
   AssetInactiveError,
   HistoricalPortfolioError,
+  HistoryPendingError,
   InsufficientCashError,
   InsufficientPositionError,
   MarketClosedError,
+  NoCloseThatDayError,
   NoQuoteTodayError,
+  PortfolioValidationError,
   QuoteChangedError,
   TradeAssetNotFoundError,
 } from '../domain/errors.js';
@@ -58,20 +61,29 @@ export interface TradingServiceDeps {
   clock?: () => Date;
 }
 
+/** O preço da negociação e de onde veio: na ao vivo, a cotação do pregão; na histórica, o fechamento. */
+type Priced =
+  | { kind: 'live'; price: string; date: IsoDate; quote: MarketQuote }
+  | { kind: 'historical'; price: string; date: IsoDate };
+
 type Tradability =
-  | { ok: true; quote: MarketQuote }
+  | { ok: true; priced: Priced }
   | {
       ok: false;
       reason: TradeBlockReason;
       nextTradingDay: IsoDate | null;
+      /** SPEC-016, no `no_close_that_day`: o último dia com negócio antes do escolhido. */
+      lastTradingDay?: IsoDate | null;
       /** O ano sem calendário, no `calendar_not_published`. */
       year?: number;
     };
 
 /**
- * Compra e venda na carteira ao vivo (SPEC-014): com a última cotação do pregão do nível do usuário,
- * que precisa ser de hoje, em dia de pregão (RB07, RB11). A compra precisa de caixa (RB05) e a
- * venda, de posição (RB06). As posições e o preço médio vêm das negociações (RB09, RB10).
+ * Compra e venda (SPEC-014 e SPEC-016). Na carteira ao vivo, com a última cotação do pregão do nível
+ * do usuário, que precisa ser de hoje, em dia de pregão (RB07, RB11). Na histórica, com o fechamento
+ * da B3 do dia escolhido, com as regras de data da histórica (RB11, RB12, RB25). Nas duas, a compra
+ * precisa de caixa (RB05) e a venda, de posição (RB06); posições e preço médio vêm das negociações
+ * (RB09, RB10), sem as estornadas (RB28).
  */
 export class TradingService {
   private readonly clock: () => Date;
@@ -102,60 +114,86 @@ export class TradingService {
       positionsValue: centsToAmount(value),
       total: centsToAmount(toCents(cash) + value),
       positions,
+      lastEntryDate: lastDate(ledger),
     };
   }
 
-  /** O preço que a negociação usaria agora, ou o motivo de não dar (SPEC-014 §5.1). */
-  async tradeQuote(userId: string, id: string, assetId: string): Promise<TradeQuote> {
+  /**
+   * O preço que a negociação usaria, ou o motivo de não dar (SPEC-014 §5.1). Na histórica, para a
+   * data pedida (SPEC-016 §5.1); data fora das regras é `validation_error`, como no POST.
+   */
+  async tradeQuote(
+    userId: string,
+    id: string,
+    assetId: string,
+    date?: IsoDate,
+  ): Promise<TradeQuote> {
     const portfolio = await ownedPortfolio(this.deps.portfolios, userId, id);
     const asset = await this.asset(assetId);
     const ledger = activeLedger(await this.deps.ledger.ledger(id));
     const common = {
       cash: cashLedger(ledgerItems(ledger)).balance,
       held: holdings(tradeMovements(ledger.trades)).get(assetId)?.quantity ?? 0,
-      buyable: asset.active,
+      // SPEC-016: na histórica, o ativo desativado pode ser comprado (estava na bolsa naquele dia).
+      buyable: portfolio.type === 'historical' || asset.active,
     };
-    const status = await this.tradability(portfolio, asset.id);
+    const status = await this.tradability(portfolio, asset.id, date, ledger);
     if (!status.ok) {
       return {
         ...common,
         tradable: false,
         reason: status.reason,
         nextTradingDay: status.nextTradingDay,
+        ...(status.reason === 'no_close_that_day'
+          ? { lastTradingDay: status.lastTradingDay ?? null }
+          : {}),
       };
     }
+    const { priced } = status;
     return {
       ...common,
       tradable: true,
-      price: roundToCents(status.quote.price),
-      quotedAt: status.quote.at.toISOString(),
-      level: status.quote.level,
-      delayMinutes: FREE_QUOTE_DELAY_MINUTES,
+      price: priced.price,
+      date: priced.date,
+      source: priced.kind === 'live' ? 'brapi' : 'b3',
+      quotedAt: priced.kind === 'live' ? priced.quote.at.toISOString() : null,
+      level: priced.kind === 'live' ? priced.quote.level : null,
+      delayMinutes: priced.kind === 'live' ? FREE_QUOTE_DELAY_MINUTES : null,
     };
   }
 
   /**
-   * Registra a compra ou a venda. Antes da trava: dia de pregão, cotação de hoje, ativo e a cotação
-   * vista. Com a carteira travada: caixa na compra, posição na venda.
+   * Registra a compra ou a venda. Antes da trava: o preço (cotação de hoje ou fechamento do dia), o
+   * ativo e, na ao vivo, a cotação vista. Com a carteira travada: a data na histórica (RB25), caixa
+   * na compra, posição na venda.
    */
   async trade(userId: string, id: string, input: NewTradeInput): Promise<TradeResult> {
     const portfolio = await ownedPortfolio(this.deps.portfolios, userId, id);
-    const asset = await this.asset(input.assetId);
-    const status = await this.tradability(portfolio, asset.id);
-    if (!status.ok) throw blockError(status);
-    if (input.type === 'buy' && !asset.active) throw new AssetInactiveError();
-
-    const { quote } = status;
-    const price = roundToCents(quote.price);
-    if (quote.at.toISOString() !== input.quotedAt) {
-      throw new QuoteChangedError(price, quote.at.toISOString());
+    if (portfolio.type === 'live' && input.quotedAt === undefined) {
+      throw new PortfolioValidationError({ quotedAt: 'required' });
     }
-    const total = tradeTotal(input.quantity, price);
+    const asset = await this.asset(input.assetId);
+    const status = await this.tradability(portfolio, asset.id, input.date, null);
+    if (!status.ok) throw blockError(status);
+    const { priced } = status;
+    if (priced.kind === 'live') {
+      if (input.type === 'buy' && !asset.active) throw new AssetInactiveError();
+      if (priced.quote.at.toISOString() !== input.quotedAt) {
+        throw new QuoteChangedError(priced.price, priced.quote.at.toISOString());
+      }
+    }
+    const total = tradeTotal(input.quantity, priced.price);
     const now = this.clock();
 
     let after: PortfolioLedger = { cash: [], trades: [], reversals: [] };
     const stored = await this.deps.ledger.appendTradeLocked(id, (locked): NewStoredTrade => {
       const current = activeLedger(locked);
+      // RB25: na histórica, nada antes do último lançamento que vale.
+      const last = lastDate(current);
+      if (priced.kind === 'historical' && last && priced.date < last) {
+        throw new PortfolioValidationError({ date: 'before_last_entry' });
+      }
+      // Na histórica não há nada depois da data (RB25): o caixa e a posição de agora são os dela.
       const cash = cashLedger(ledgerItems(current)).balance;
       if (input.type === 'buy' && !canSpend(cash, total)) throw new InsufficientCashError(cash);
       if (input.type === 'sell') {
@@ -166,13 +204,13 @@ export class TradingService {
         assetId: asset.id,
         type: input.type,
         quantity: input.quantity,
-        price,
+        price: priced.price,
         total,
-        date: isoDateInBrasilia(now),
+        date: priced.date,
         recordedAt: now,
-        quotedAt: quote.at,
-        level: quote.level,
-        source: quote.source,
+        quotedAt: priced.kind === 'live' ? priced.quote.at : null,
+        level: priced.kind === 'live' ? priced.quote.level : null,
+        source: priced.kind === 'live' ? priced.quote.source : 'b3',
       };
       after = {
         cash: current.cash,
@@ -186,20 +224,27 @@ export class TradingService {
     return {
       trade: toPublicTrade(stored, asset.ticker),
       cash: cashLedger(ledgerItems(after)).balance,
-      position: holding ? this.valued(holding, asset, quote) : null,
+      position: holding ? await this.position(holding) : null,
     };
   }
 
   /**
-   * Pode negociar agora? Carteira ao vivo (a histórica é da SPEC-016), dia de pregão (RB11) e
-   * cotação do pregão de hoje, no horário de Brasília (RB07). Depois do fechamento, vale a última
-   * cotação do dia (SPEC-014 §4.1, decisão 1).
+   * Pode negociar? Ao vivo (SPEC-014): dia de pregão (RB11) e cotação do pregão de hoje, no horário
+   * de Brasília (RB07); depois do fechamento, vale a última cotação do dia. Histórica (SPEC-016):
+   * a data pedida dentro das regras da histórica e o fechamento da B3 desse dia.
    */
-  private async tradability(portfolio: StoredPortfolio, assetId: string): Promise<Tradability> {
-    if (portfolio.type === 'historical') {
-      return { ok: false, reason: 'historical_portfolio', nextTradingDay: null };
-    }
+  private async tradability(
+    portfolio: StoredPortfolio,
+    assetId: string,
+    requested: IsoDate | undefined,
+    ledger: PortfolioLedger | null,
+  ): Promise<Tradability> {
     const today = isoDateInBrasilia(this.clock());
+    if (portfolio.type === 'historical') {
+      return this.historicalPrice(portfolio, assetId, requested, today, ledger);
+    }
+    // DA17: na ao vivo, o momento é o do servidor.
+    if (requested !== undefined) throw new PortfolioValidationError({ date: 'not_allowed' });
     try {
       const calendar = await this.deps.calendar.tradingCalendar(yearOf(today), yearOf(today));
       if (!calendar.isTradingDay(today)) {
@@ -220,7 +265,67 @@ export class TradingService {
     if (!quote || isoDateInBrasilia(quote.at) !== today) {
       return { ok: false, reason: 'no_quote_today', nextTradingDay: null };
     }
-    return { ok: true, quote };
+    return {
+      ok: true,
+      priced: { kind: 'live', price: roundToCents(quote.price), date: today, quote },
+    };
+  }
+
+  /**
+   * SPEC-016: a data da histórica (as regras do aporte da SPEC-013) e o fechamento da B3 do dia,
+   * como publicado (§4.1, decisão 1). Com o livro, confere também o último lançamento (RB25); a
+   * negociação confere de novo com a carteira travada.
+   */
+  private async historicalPrice(
+    portfolio: StoredPortfolio,
+    assetId: string,
+    requested: IsoDate | undefined,
+    today: IsoDate,
+    ledger: PortfolioLedger | null,
+  ): Promise<Tradability> {
+    if (requested === undefined) throw new PortfolioValidationError({ date: 'required' });
+    if (requested < portfolio.startDate) {
+      throw new PortfolioValidationError({ date: 'before_start' });
+    }
+    if (requested >= today) throw new PortfolioValidationError({ date: 'future' });
+    try {
+      const calendar = await this.deps.calendar.tradingCalendar(
+        yearOf(requested),
+        yearOf(requested),
+      );
+      if (!calendar.isTradingDay(requested)) {
+        throw new PortfolioValidationError({ date: 'not_trading_day' });
+      }
+    } catch (error) {
+      if (error instanceof CalendarNotPublishedError) {
+        return {
+          ok: false,
+          reason: 'calendar_not_published',
+          nextTradingDay: null,
+          year: error.year,
+        };
+      }
+      throw error;
+    }
+    const last = ledger ? lastDate(ledger) : null;
+    if (last && requested < last) throw new PortfolioValidationError({ date: 'before_last_entry' });
+
+    if (!(await this.deps.market.historyRange(assetId))) {
+      return { ok: false, reason: 'history_pending', nextTradingDay: null };
+    }
+    const close = await this.deps.market.closeOn(assetId, requested);
+    if (close === null) {
+      return {
+        ok: false,
+        reason: 'no_close_that_day',
+        nextTradingDay: null,
+        lastTradingDay: await this.deps.market.lastTradingDayBefore(assetId, requested),
+      };
+    }
+    return {
+      ok: true,
+      priced: { kind: 'historical', price: roundToCents(close), date: requested },
+    };
   }
 
   private async asset(assetId: string): Promise<MarketAsset> {
@@ -229,7 +334,11 @@ export class TradingService {
     return asset;
   }
 
-  /** A posição com o último preço conhecido: a cotação do pregão; sem ela, o último fechamento. */
+  /**
+   * A posição com o último preço conhecido: a cotação do pregão; sem ela, o último fechamento.
+   * SPEC-016: com desdobramento, grupamento ou bonificação desde a primeira compra em posição, o
+   * valor atual e a variação ficam de fora até a SPEC-043 (a quantidade ainda não é corrigida).
+   */
   private async position(holding: Holding): Promise<Position> {
     const asset = (await this.deps.market.asset(holding.assetId)) ?? {
       id: holding.assetId,
@@ -238,35 +347,35 @@ export class TradingService {
       assetClass: 'stock' as const,
       active: false,
     };
+    const events = await this.deps.market.eventsFrom(holding.assetId, holding.since);
+    const base = { ...basePosition(holding, asset), events };
     const quote = await this.deps.market.latestQuote(holding.assetId, USER_LEVEL);
-    if (quote) return this.valued(holding, asset, quote);
-    const close = await this.deps.market.lastClose(holding.assetId);
-    const base = basePosition(holding, asset);
-    if (!close) return base;
-    const valuation = valuate(holding, close.close);
-    return {
+    const close = quote ? null : await this.deps.market.lastClose(holding.assetId);
+    const price = quote?.price ?? close?.close;
+    if (price === undefined) return base;
+    const priced: Position = {
       ...base,
-      lastPrice: roundToCents(close.close),
-      lastPriceKind: 'close',
-      lastPriceDate: close.date,
-      marketValue: valuation.marketValue,
-      change: valuation.change,
-      changePercent: valuation.changePercent,
+      lastPrice: roundToCents(price),
+      ...(quote
+        ? { lastPriceKind: 'intraday', lastPriceAt: quote.at.toISOString() }
+        : { lastPriceKind: 'close', lastPriceDate: close?.date ?? null }),
     };
-  }
-
-  private valued(holding: Holding, asset: MarketAsset, quote: MarketQuote): Position {
-    const valuation = valuate(holding, quote.price);
+    if (events.length > 0) return priced;
+    const valuation = valuate(holding, price);
     return {
-      ...basePosition(holding, asset),
-      lastPrice: roundToCents(quote.price),
-      lastPriceKind: 'intraday',
-      lastPriceAt: quote.at.toISOString(),
+      ...priced,
       marketValue: valuation.marketValue,
       change: valuation.change,
       changePercent: valuation.changePercent,
     };
   }
+}
+
+/** O dia do último lançamento que vale (caixa ou negociação), ou `null`. */
+function lastDate(ledger: PortfolioLedger): IsoDate | null {
+  let last: IsoDate | null = null;
+  for (const item of ledgerItems(ledger)) if (last === null || item.date > last) last = item.date;
+  return last;
 }
 
 function basePosition(holding: Holding, asset: MarketAsset): Position {
@@ -284,6 +393,7 @@ function basePosition(holding: Holding, asset: MarketAsset): Position {
     marketValue: null,
     change: null,
     changePercent: null,
+    events: [],
   };
 }
 
@@ -310,6 +420,10 @@ function blockError(status: Extract<Tradability, { ok: false }>) {
       return new NoQuoteTodayError();
     case 'calendar_not_published':
       return new CalendarNotPublishedError(status.year ?? 0);
+    case 'no_close_that_day':
+      return new NoCloseThatDayError(status.lastTradingDay ?? null);
+    case 'history_pending':
+      return new HistoryPendingError();
   }
 }
 
@@ -324,7 +438,8 @@ function toPublicTrade(trade: StoredTrade, ticker: string): Trade {
     total: trade.total,
     date: trade.date,
     recordedAt: trade.recordedAt.toISOString(),
-    quotedAt: trade.quotedAt.toISOString(),
+    quotedAt: trade.quotedAt?.toISOString() ?? null,
     level: trade.level,
+    source: trade.source,
   };
 }

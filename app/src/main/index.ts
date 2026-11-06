@@ -216,8 +216,9 @@ app.whenReady().then(() => {
   );
   // Compra e venda (SPEC-014): o servidor confere bolsa, cotação, caixa e posição.
   ipcMain.handle(PORTFOLIO_CHANNELS.positions, (_event, id: string) => auth.portfolioPositions(id));
-  ipcMain.handle(PORTFOLIO_CHANNELS.tradeQuote, (_event, id: string, assetId: string) =>
-    auth.tradeQuote(id, assetId),
+  ipcMain.handle(
+    PORTFOLIO_CHANNELS.tradeQuote,
+    (_event, id: string, assetId: string, date?: string) => auth.tradeQuote(id, assetId, date),
   );
   ipcMain.handle(PORTFOLIO_CHANNELS.trade, (_event, id: string, input: NewTradeInput) =>
     auth.trade(id, input),

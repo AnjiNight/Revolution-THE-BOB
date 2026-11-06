@@ -55,6 +55,12 @@ const run = domainErrorRunner({
     message: 'Na carteira ao vivo, compra e venda só se estornam no dia em que foram feitas.',
   },
   reversal_breaks_cash: { status: 409, message: 'Esse estorno deixaria o caixa negativo.' },
+  // SPEC-016
+  no_close_that_day: { status: 409, message: 'O ativo não tem fechamento da B3 nesse dia.' },
+  history_pending: {
+    status: 409,
+    message: 'O histórico de preços deste ativo ainda está sendo carregado.',
+  },
   reversal_breaks_position: {
     status: 409,
     message: 'Esse estorno deixaria uma venda maior que a posição.',
@@ -160,9 +166,9 @@ export function registerPortfolioRoutes(
 
   app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.tradeQuote, userOnly, async (request, reply) => {
     const id = portfolioId(request);
-    const { assetId } = ensureValid(validateTradeQuoteQuery(request.query));
+    const { assetId, date } = ensureValid(validateTradeQuoteQuery(request.query));
     const quote = await owned(request, () =>
-      trading.tradeQuote(requireAuth(request).userId, id, assetId),
+      trading.tradeQuote(requireAuth(request).userId, id, assetId, date),
     );
     return reply.send(quote);
   });

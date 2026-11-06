@@ -328,6 +328,14 @@ describe.skipIf(!url)('histórico de cotações no PostgreSQL', () => {
       ]);
     });
 
+    it('SPEC-016: o fechamento de um dia e o último dia com negócio antes', async () => {
+      expect(await quotes.closeOn(PETR4, '2026-10-29')).toBe('38.000001');
+      expect(await quotes.closeOn(PETR4, '2026-10-31')).toBeNull();
+      expect(await quotes.lastTradingDayBefore(PETR4, '2026-10-30')).toBe('2026-10-29');
+      expect(await quotes.lastTradingDayBefore(PETR4, '2026-11-02')).toBe('2026-10-30');
+      expect(await quotes.lastTradingDayBefore(PETR4, '2026-10-28')).toBeNull();
+    });
+
     it('situação do histórico de um ativo só, igual à da lista', async () => {
       await calendars.publish(
         {

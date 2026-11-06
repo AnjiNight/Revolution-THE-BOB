@@ -250,7 +250,9 @@
     "already_reversed": "That entry was already reversed.",
     "reversal_window_closed": "In a live portfolio, purchases and sales can only be reversed on the day they were made. To undo one, make the opposite trade.",
     "reversal_breaks_cash": "This reversal would make cash negative.",
-    "reversal_breaks_position": "This reversal would make a sale larger than the position."
+    "reversal_breaks_position": "This reversal would make a sale larger than the position.",
+    "no_close_that_day": "This asset has no B3 close on that day.",
+    "history_pending": "This asset's price history is still being loaded."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -567,7 +569,7 @@
     "buy": "Buy",
     "buyTitle": "Buy in which portfolio?",
     "buyLoading": "Loading the portfolios…",
-    "noLivePortfolio": "Create a live portfolio to buy.",
+    "noLivePortfolio": "Create a portfolio to buy.",
     "buyCancel": "Cancel"
   },
   "portfolios": {
@@ -714,11 +716,16 @@
       "noPrice": "No price",
       "changeNote": "Change over the average price, without trading costs or dividends.",
       "dividendsNote": "Dividends and splits don't enter this portfolio yet.",
-      "historical": "Buying and selling in a historical portfolio comes in a later version.",
       "bought": "Purchase saved: {{quantity}} {{ticker}}.",
       "sold": "Sale saved: {{quantity}} {{ticker}}.",
       "at": "at {{time}}",
-      "priceNote": "Last price: the trading-session quote, delayed up to {{delay}} minutes; without it, the last close."
+      "priceNote": "Last price: the trading-session quote, delayed up to {{delay}} minutes; without it, the last close.",
+      "eventWarning": "Had a {{event}} on {{date}}: the current value doesn't account for it yet.",
+      "event": {
+        "split": "split",
+        "reverse_split": "reverse split",
+        "bonus": "bonus issue"
+      }
     },
     "trade": {
       "buyTitle": "Buy",
@@ -758,7 +765,22 @@
       "saving": "Saving…",
       "quoteChanged": "The quote changed to {{price}} (from {{time}}). Confirm with the new price?",
       "insufficientCash": "Not enough cash: there is {{available}} available.",
-      "insufficientPosition": "You only hold {{held}} of this asset."
+      "insufficientPosition": "You only hold {{held}} of this asset.",
+      "date": "Date",
+      "dateHint": "A trading day, from {{first}} to {{last}}.",
+      "pickDate": "Choose the date to see that day's close.",
+      "closeOf": "Close of {{date}} (B3)",
+      "noClose": "There is no close for {{ticker}} on {{date}}. The last one before was on {{last}}.",
+      "noCloseNoPrevious": "There is no close for {{ticker}} on {{date}}.",
+      "historyPending": "This asset's price history is still being loaded.",
+      "confirmBuyOn": "Buy {{quantity}} {{ticker}} at {{price}} (close of {{date}}) for {{total}}? Cash will be {{cash}} on that date.",
+      "confirmSellOn": "Sell {{quantity}} {{ticker}} at {{price}} (close of {{date}}) for {{total}}? Cash will be {{cash}} on that date.",
+      "byValueMode": "Calculate with",
+      "modeAmount": "Amount in R$",
+      "modePercent": "% of cash",
+      "percentLabel": "Percentage of cash",
+      "percentHint": "From 1% to 100% of the cash of {{cash}}.",
+      "percentInvalid": "Enter a percentage from 1 to 100."
     }
   },
   "fundamentals": {

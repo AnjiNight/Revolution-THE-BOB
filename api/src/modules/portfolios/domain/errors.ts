@@ -82,6 +82,25 @@ export class HistoricalPortfolioError extends DomainError {
   readonly code = 'historical_portfolio';
 }
 
+/**
+ * SPEC-016: na histórica, o ativo não tem fechamento da B3 no dia escolhido (não teve negócio, ou o
+ * arquivo do dia ainda não chegou); `details.lastTradingDay`, o último dia com negócio antes.
+ */
+export class NoCloseThatDayError extends DomainError {
+  readonly code = 'no_close_that_day';
+  override readonly details: Readonly<Record<string, string>> | undefined;
+
+  constructor(lastTradingDay: string | null) {
+    super('sem fechamento nesse dia');
+    this.details = lastTradingDay ? { lastTradingDay } : undefined;
+  }
+}
+
+/** SPEC-016: o histórico de preços do ativo ainda não foi carregado (SPEC-008). */
+export class HistoryPendingError extends DomainError {
+  readonly code = 'history_pending';
+}
+
 /** O ativo pedido não está no catálogo. */
 export class TradeAssetNotFoundError extends DomainError {
   readonly code = 'asset_not_found';

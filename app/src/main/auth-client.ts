@@ -130,6 +130,8 @@ const KNOWN_ERRORS: ReadonlyArray<
   'reversal_window_closed',
   'reversal_breaks_cash',
   'reversal_breaks_position',
+  'no_close_that_day',
+  'history_pending',
 ];
 
 class RequestFailed extends Error {
@@ -390,13 +392,16 @@ export class AuthClient {
   }
 
   /** SPEC-014: o preço que a negociação usaria agora, ou o motivo de não dar. */
-  tradeQuote(id: string, assetId: string): Promise<ClientResult<TradeQuote>> {
+  tradeQuote(id: string, assetId: string, date?: string): Promise<ClientResult<TradeQuote>> {
     return this.call(() => {
       if (typeof assetId !== 'string' || !UUID_PATTERN.test(assetId)) {
         throw new RequestFailed('unexpected');
       }
+      // SPEC-016: na histórica, a data da negociação (só AAAA-MM-DD entra na query string).
+      const query = new URLSearchParams({ assetId });
+      if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) query.set('date', date);
       const path = portfolioRouteUrl(PORTFOLIO_PATHS.tradeQuote, id);
-      return this.authorizedRequest<TradeQuote>('GET', path + '?assetId=' + assetId);
+      return this.authorizedRequest<TradeQuote>('GET', path + '?' + query.toString());
     });
   }
 
@@ -407,7 +412,9 @@ export class AuthClient {
         type: input.type,
         assetId: input.assetId,
         quantity: input.quantity,
-        quotedAt: input.quotedAt,
+        // Ao vivo, o horário da cotação vista; na histórica (SPEC-016), a data.
+        ...(input.quotedAt ? { quotedAt: input.quotedAt } : {}),
+        ...(input.date ? { date: input.date } : {}),
       }),
     );
   }

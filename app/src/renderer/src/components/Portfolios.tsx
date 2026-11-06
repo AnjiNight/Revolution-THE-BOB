@@ -8,7 +8,7 @@ import {
   type PortfolioList,
   type PortfolioType,
 } from '@simulador/shared';
-import { ArrowLeft, Info, Plus } from '@phosphor-icons/react';
+import { ArrowLeft, Plus } from '@phosphor-icons/react';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
@@ -518,21 +518,15 @@ export function PortfolioPage({
             onChanged={changed}
             onSessionExpired={onSessionExpired}
           />
-          {state.portfolio.type === 'live' ? (
-            <PortfolioPositions
-              portfolio={state.portfolio}
-              version={version}
-              startBuying={buyAsset}
-              onChanged={changed}
-              onOpenAsset={onOpenAsset}
-              onSessionExpired={onSessionExpired}
-            />
-          ) : (
-            <p className="assets-note">
-              <Info weight="fill" aria-hidden="true" />
-              <span>{t('portfolios.positions.historical')}</span>
-            </p>
-          )}
+          {/* SPEC-016: a histórica também compra e vende, com a data escolhida. */}
+          <PortfolioPositions
+            portfolio={state.portfolio}
+            version={version}
+            startBuying={buyAsset}
+            onChanged={changed}
+            onOpenAsset={onOpenAsset}
+            onSessionExpired={onSessionExpired}
+          />
         </>
       )}
     </div>

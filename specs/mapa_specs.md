@@ -44,6 +44,8 @@
 | 1.34 | SPEC-015 aprovada (Luís, 06/11/2026) com as recomendações; OPEN-14 resolvida; Requisitos v1.11 (RB28) |
 | 1.35 | SPEC-015 implementada: estorno de aporte, retirada, compra e venda, com a conferência do livro, o prazo de um dia para compra e venda na ao vivo e a exportação na versão 5 |
 | 1.36 | SPEC-016 detalhada ([SPEC-016.md](SPEC-016.md)) para a Nicoly implementar, aguardando a aprovação: compra e venda na carteira histórica com o fechamento da B3 do dia; recomendações para a OPEN-24 ("% do caixa" no "Calcular por valor") e para a OPEN-06 (aviso no lugar do valor quando houve evento depois da compra, até a SPEC-043) esperando a resposta do Luís |
+| 1.37 | SPEC-016 aprovada (Luís, 06/11/2026) com as recomendações; OPEN-24 resolvida ("% do caixa" no "Calcular por valor") |
+| 1.38 | SPEC-016 implementada: compra e venda na carteira histórica com o fechamento da B3 do dia, "% do caixa", aviso de evento corporativo até a SPEC-043 e a exportação na versão 6. Fase 3 completa, faltando só a SPEC-043 |
 ---
 
 ## 0. Como ler este documento
@@ -296,7 +298,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-21 | Fonte do histórico do Ibovespa | PE06 | 020 |
 | OPEN-22 | Significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
 | OPEN-23 | Comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
-| OPEN-24 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** a API registra por quantidade (RF12) e a tela tem "Calcular por valor"; a montagem por percentual (cenário da P01) fica com a SPEC-016, que recomenda "% do caixa" no "Calcular por valor". Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
+| OPEN-24 | ✅ **Resolvida nas SPECs [014](SPEC-014.md) e [016](SPEC-016.md):** a API registra por quantidade (RF12); a tela tem "Calcular por valor", em reais ou em "% do caixa" (o "50% em PETR4" da P01); montar vários ativos de uma vez fica fora. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
 | OPEN-26 | Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
@@ -757,7 +759,7 @@ Visão geral por fase:
 
 #### SPEC-016 — Lançamentos na carteira histórica
 
-📄 Detalhada em [SPEC-016.md](SPEC-016.md) — escrita, aguardando a aprovação.
+📄 Detalhada em [SPEC-016.md](SPEC-016.md) — aprovada (Luís, 06/11/2026) e implementada.
 
 | Campo | Conteúdo |
 |---|---|

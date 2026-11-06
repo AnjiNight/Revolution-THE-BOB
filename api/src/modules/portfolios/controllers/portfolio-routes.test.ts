@@ -213,11 +213,11 @@ describe('rotas das carteiras (SPEC-012)', () => {
     ]);
   });
 
-  it('exportação: seção portfolios (CA07); as SPECs 013 a 015 subiram a versão para 5', async () => {
+  it('exportação: seção portfolios (CA07); as SPECs 013 a 016 subiram a versão para 6', async () => {
     await create({ name: 'Dividendos', type: 'live' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 5,
+      version: 6,
       portfolios: [
         { name: 'Dividendos', type: 'live', startDate: '2026-11-05', cashEntries: [], trades: [] },
       ],
@@ -444,7 +444,7 @@ describe('caixa das carteiras (SPEC-013)', () => {
     await add(id, { type: 'withdrawal', amount: '100', date: '2019-04-01' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 5,
+      version: 6,
       portfolios: [
         {
           id,

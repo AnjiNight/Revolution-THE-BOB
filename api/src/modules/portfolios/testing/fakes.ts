@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { PositionEvent } from '@simulador/shared';
 import type {
   LedgerRepository,
   MarketAsset,
@@ -129,6 +130,10 @@ export class FakePortfolioMarket implements PortfolioMarket {
   readonly assets = new Map<string, MarketAsset>();
   readonly quotes = new Map<string, MarketQuote>();
   readonly closes = new Map<string, { date: string; close: string }>();
+  /** SPEC-016: fechamentos da B3 por ativo e dia ("AAAA-MM-DD" → preço). */
+  readonly dailyCloses = new Map<string, Map<string, string>>();
+  /** SPEC-016: eventos corporativos por ativo. */
+  readonly events = new Map<string, PositionEvent[]>();
 
   asset(assetId: string): Promise<MarketAsset | null> {
     return Promise.resolve(this.assets.get(assetId) ?? null);
@@ -140,6 +145,28 @@ export class FakePortfolioMarket implements PortfolioMarket {
 
   lastClose(assetId: string): Promise<{ date: string; close: string } | null> {
     return Promise.resolve(this.closes.get(assetId) ?? null);
+  }
+
+  historyRange(assetId: string): Promise<{ from: string; to: string } | null> {
+    const days = [...(this.dailyCloses.get(assetId)?.keys() ?? [])].sort();
+    const [from] = days;
+    const to = days.at(-1);
+    return Promise.resolve(from && to ? { from, to } : null);
+  }
+
+  closeOn(assetId: string, date: string): Promise<string | null> {
+    return Promise.resolve(this.dailyCloses.get(assetId)?.get(date) ?? null);
+  }
+
+  lastTradingDayBefore(assetId: string, date: string): Promise<string | null> {
+    const days = [...(this.dailyCloses.get(assetId)?.keys() ?? [])].filter((day) => day < date);
+    return Promise.resolve(days.sort().at(-1) ?? null);
+  }
+
+  eventsFrom(assetId: string, date: string): Promise<PositionEvent[]> {
+    return Promise.resolve(
+      (this.events.get(assetId) ?? []).filter((event) => event.exDate >= date),
+    );
   }
 }
 

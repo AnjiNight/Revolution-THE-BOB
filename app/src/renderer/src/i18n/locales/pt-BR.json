@@ -250,7 +250,9 @@
     "already_reversed": "Esse lançamento já foi estornado.",
     "reversal_window_closed": "Na carteira ao vivo, compra e venda só se estornam no dia em que foram feitas. Para desfazer, faça a operação contrária.",
     "reversal_breaks_cash": "Esse estorno deixaria o caixa negativo.",
-    "reversal_breaks_position": "Esse estorno deixaria uma venda maior que a posição."
+    "reversal_breaks_position": "Esse estorno deixaria uma venda maior que a posição.",
+    "no_close_that_day": "O ativo não tem fechamento da B3 nesse dia.",
+    "history_pending": "O histórico de preços deste ativo ainda está sendo carregado."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -567,7 +569,7 @@
     "buy": "Comprar",
     "buyTitle": "Comprar em qual carteira?",
     "buyLoading": "Carregando as carteiras…",
-    "noLivePortfolio": "Crie uma carteira ao vivo para comprar.",
+    "noLivePortfolio": "Crie uma carteira para comprar.",
     "buyCancel": "Cancelar"
   },
   "portfolios": {
@@ -714,11 +716,16 @@
       "noPrice": "Sem preço",
       "changeNote": "Variação sobre o preço médio, sem custos de operação nem proventos.",
       "dividendsNote": "Proventos e desdobramentos ainda não entram nesta carteira.",
-      "historical": "A compra e venda na carteira histórica chega numa próxima versão.",
       "bought": "Compra registrada: {{quantity}} {{ticker}}.",
       "sold": "Venda registrada: {{quantity}} {{ticker}}.",
       "at": "às {{time}}",
-      "priceNote": "Último preço: a cotação do pregão, com atraso de até {{delay}} minutos; sem ela, o último fechamento."
+      "priceNote": "Último preço: a cotação do pregão, com atraso de até {{delay}} minutos; sem ela, o último fechamento.",
+      "eventWarning": "Teve {{event}} em {{date}}: o valor atual ainda não considera isso.",
+      "event": {
+        "split": "desdobramento",
+        "reverse_split": "grupamento",
+        "bonus": "bonificação"
+      }
     },
     "trade": {
       "buyTitle": "Comprar",
@@ -758,7 +765,22 @@
       "saving": "Registrando…",
       "quoteChanged": "A cotação mudou para {{price}} (das {{time}}). Confirmar com o novo preço?",
       "insufficientCash": "Saldo insuficiente: há {{available}} em caixa.",
-      "insufficientPosition": "Você tem só {{held}} deste ativo."
+      "insufficientPosition": "Você tem só {{held}} deste ativo.",
+      "date": "Data",
+      "dateHint": "Um dia de pregão, de {{first}} a {{last}}.",
+      "pickDate": "Escolha a data para ver o fechamento daquele dia.",
+      "closeOf": "Fechamento de {{date}} (B3)",
+      "noClose": "Não há fechamento de {{ticker}} em {{date}}. O último antes foi em {{last}}.",
+      "noCloseNoPrevious": "Não há fechamento de {{ticker}} em {{date}}.",
+      "historyPending": "O histórico de preços deste ativo ainda está sendo carregado.",
+      "confirmBuyOn": "Comprar {{quantity}} {{ticker}} a {{price}} (fechamento de {{date}}) por {{total}}? O caixa fica com {{cash}} nessa data.",
+      "confirmSellOn": "Vender {{quantity}} {{ticker}} a {{price}} (fechamento de {{date}}) por {{total}}? O caixa fica com {{cash}} nessa data.",
+      "byValueMode": "Calcular com",
+      "modeAmount": "Valor em R$",
+      "modePercent": "% do caixa",
+      "percentLabel": "Percentual do caixa",
+      "percentHint": "De 1% a 100% do caixa de {{cash}}.",
+      "percentInvalid": "Digite um percentual de 1 a 100."
     }
   },
   "fundamentals": {

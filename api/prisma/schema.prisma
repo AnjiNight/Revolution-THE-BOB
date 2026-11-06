@@ -138,8 +138,9 @@ model Transacao {
   valorTotal    Decimal       @map("valor_total") @db.Decimal(15, 2)
   data          DateTime      @db.Date
   registradoEm  DateTime      @map("registrado_em") @db.Timestamptz(3)
-  cotacaoEm     DateTime      @map("cotacao_em") @db.Timestamptz(3)
-  nivelCotacao  NivelCotacao  @map("nivel_cotacao")
+  /// SPEC-016: vazio na carteira histórica, que usa o fechamento da B3 do dia.
+  cotacaoEm     DateTime?     @map("cotacao_em") @db.Timestamptz(3)
+  nivelCotacao  NivelCotacao? @map("nivel_cotacao")
   fonteCotacao  FonteCotacao  @map("fonte_cotacao")
 
   carteira Carteira @relation(fields: [carteiraId], references: [id], onDelete: Cascade)

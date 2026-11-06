@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Escrita em 06/11/2026 para a Nicoly implementar. As decisões do §4.1 são **recomendações** e aguardam a resposta do Luís; o resto aguarda a aprovação |
+| Status | ✅ Escrita em 06/11/2026; aprovada pelo Luís no mesmo dia com as recomendações do §4.1 ("pode fazer a spec016") e implementada (§9) |
 | Fase | 3 — Núcleo da carteira ([mapa de specs](mapa_specs.md)), depois da SPEC-015 |
 | Prioridade | Sem MoSCoW nos requisitos (decisão DA17); é o cenário da P01 ("e se eu tivesse investido?") |
 | Depende de | [SPEC-008](SPEC-008.md) (fechamentos da B3 desde 2016), [SPEC-013](SPEC-013.md) (caixa da histórica), [SPEC-014](SPEC-014.md) (compra e venda, posições), [SPEC-015](SPEC-015.md) (estorno), [SPEC-042](SPEC-042.md) (eventos corporativos) |
@@ -48,7 +48,7 @@ Na **carteira histórica**, o usuário passa a **comprar e vender** numa data pa
 
 ## 4. Decisões
 
-### 4.1 Recomendações (aguardam a resposta do Luís)
+### 4.1 Aceitas pelo Luís em 06/11/2026 (as recomendações)
 
 | # | Tema | Recomendação | Motivo |
 |---|---|---|---|
@@ -137,6 +137,37 @@ A carteira não fica gravada na negociação de outro jeito: o tipo da carteira 
 
 | ID | Situação |
 |---|---|
-| OPEN-24 | ⏳ Recomendação 3 (§4.1): "% do caixa" no "Calcular por valor"; montar vários ativos de uma vez fica fora |
-| OPEN-06 | ⏳ Recomendação 2: até a SPEC-043, aviso no lugar do valor quando houve evento depois da compra; SPEC-043 logo depois desta |
+| OPEN-24 | ✅ Decisão 3 (§4.1): "% do caixa" no "Calcular por valor"; montar vários ativos de uma vez fica fora |
+| OPEN-06 | ⏳ Decisão 2: até a SPEC-043, aviso no lugar do valor quando houve evento depois da compra; o tratamento na carteira continua com a SPEC-043, que vem logo depois desta |
 | OPEN-43 | ⏳ O diagrama de casos de uso continua sem a carteira histórica |
+
+## 9. Verificação (06/11/2026)
+
+**Ajustes da implementação:**
+
+| Tema | Ajuste |
+|---|---|
+| Datas erradas na cotação | Na `trade-quote` da histórica, a data fora das regras volta como `validation_error` com o motivo em `date` (o mesmo do POST), e a tela mostra no próprio campo |
+| Fechamento que não chegou | O "não teve negócio" e o "o arquivo do dia ainda não chegou" viram uma mensagem só: "Não há fechamento de PETR4 em 15/03/2019. O último antes foi em 13/03/2019." |
+| Data mínima na tela | `positions` ganhou `lastEntryDate` (o último lançamento que vale), e o campo de data começa nele ou no início da carteira, o que vier depois |
+| Avaliação com evento | Com evento, a posição mostra o último preço, mas não o valor atual nem a variação; o total "Em ativos" não soma essa posição |
+| "% do caixa" | Inteiro de 1 a 100, sobre o caixa da data (na ao vivo, o de agora) |
+| Repositório | O `PrismaQuoteRepository` (SPEC-008) ganhou `closeOn` e `lastTradingDayBefore`; o adaptador `api/src/portfolio-market.ts` liga também os eventos da SPEC-042 |
+| Ao vivo | Sem mudança de comportamento; a rota passou a exigir o `quotedAt` só na ao vivo (`required`), e a data enviada na ao vivo é `not_allowed` |
+
+| Critério | Resultado |
+|---|---|
+| CA01 | ✅ Compra de 100 PETR4 em 15/03/2019 a R$ 25,30 (o fechamento), caixa R$ 7.470,00; venda de 60 em 20/05/2019 a R$ 28,00, preço médio igual; posições avaliadas com a cotação de hoje (`historical-trading-routes.test.ts`) |
+| CA02 | ✅ Sem data, antes do início, Carnaval, hoje e antes do último lançamento recusados com o motivo; 2020 sem calendário: `calendar_not_published` na cotação e na negociação |
+| CA03 | ✅ `no_close_that_day` com o último dia com negócio antes; ativo sem histórico: `history_pending` |
+| CA04 | ✅ Ativo desativado com fechamento no dia comprado na histórica; na ao vivo continua `asset_inactive` |
+| CA05 | ✅ MGLU3 comprada em 2019 com desdobramento em 2020: o evento na posição, sem valor atual nem variação |
+| CA06 | ✅ Estorno de compra da histórica semanas depois, sem prazo |
+| CA07 | ✅ No PostgreSQL: a negociação da histórica grava e volta sem horário nem nível, com a fonte da B3; o banco recusa fonte que não é a B3, o dia do registro, sábado, antes de 2016 e nível sem horário; a ao vivo segue as regras da SPEC-014; `closeOn` e `lastTradingDayBefore` testados com o banco; migração `20261107120000_transacoes_historicas` sem diferença para o esquema, desfeita e refeita no banco de teste |
+| CA08 | ✅ "% do caixa": na pré-visualização, 50% de R$ 7.500,00 a R$ 30,43 = 123 unidades (R$ 3.742,89), sobram R$ 7,11 |
+| CA09 | ✅ Exportação na versão 6, com as negociações da histórica (`quotedAt` e `level` `null`, `source` "b3") |
+| CA10 | ✅ Conferido na pré-visualização (dados simulados): Posições na histórica, Comprar com a data (mínima no último lançamento, fim de semana recusado no campo), "Fechamento de 10 de jun. de 2019 (B3)", "% do caixa", confirmação "com data de…", extrato com a compra na data escolhida, aviso de desdobramento, Comprar pela ficha nas históricas. ⏳ Conferir no Electron |
+
+Total: **866 testes** passando (com o banco real), lint, tipos e formatação.
+
+**Para as próximas Specs:** a SPEC-043 corrige a quantidade e o preço médio nos eventos (e aí o aviso some) e soma os proventos ao caixa, nas duas carteiras.

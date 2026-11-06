@@ -400,4 +400,53 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
     await users.deleteAccount(userId, at);
     expect(await prisma.estorno.count()).toBe(0);
   });
+
+  // --- SPEC-016: negociação na carteira histórica ---
+
+  const historicalBuy = (assetId: string, overrides: Record<string, unknown> = {}) => ({
+    ...buy(assetId, 100, '25.30'),
+    date: '2019-03-15',
+    quotedAt: null,
+    level: null,
+    source: 'b3' as const,
+    ...overrides,
+  });
+
+  it('histórica: grava e lê de volta a negociação sem horário de cotação, com a fonte da B3 (CA07)', async () => {
+    const assetId = await newAsset();
+    const portfolio = await portfolios.create(
+      newPortfolio('E se', { initialDeposit: deposit('10000', '2019-01-02') }),
+    );
+    const stored = await ledger.appendTradeLocked(portfolio.id, () => historicalBuy(assetId));
+    expect(stored).toMatchObject({
+      date: '2019-03-15',
+      price: '25.30',
+      total: '2530.00',
+      quotedAt: null,
+      level: null,
+      source: 'b3',
+    });
+    expect((await ledger.ledger(portfolio.id)).trades).toEqual([stored]);
+  });
+
+  it('histórica: o banco recusa fonte que não é a B3, dia de hoje e fim de semana; a ao vivo continua igual (CA07)', async () => {
+    const assetId = await newAsset();
+    const portfolio = await portfolios.create(
+      newPortfolio('E se', { initialDeposit: deposit('10000', '2019-01-02') }),
+    );
+    const refused = (overrides: Record<string, unknown>) =>
+      expect(
+        ledger.appendTradeLocked(
+          portfolio.id,
+          () => historicalBuy(assetId, overrides) as ReturnType<typeof historicalBuy>,
+        ),
+      ).rejects.toThrow();
+    await refused({ source: 'brapi' });
+    await refused({ date: '2026-11-05' }); // o dia do registro: só a ao vivo
+    await refused({ date: '2019-03-16' }); // sábado
+    await refused({ date: '2015-12-30' });
+    // Sem horário, mas com nível: nem uma regra nem a outra.
+    await refused({ level: 'free' });
+    expect(await prisma.transacao.count()).toBe(0);
+  });
 });

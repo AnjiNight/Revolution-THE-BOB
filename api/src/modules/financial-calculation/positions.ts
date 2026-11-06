@@ -20,6 +20,8 @@ export interface Holding {
   assetId: string;
   quantity: number;
   averagePrice: string;
+  /** SPEC-016: o dia da primeira compra desde que a posição foi aberta (ou reaberta). */
+  since: IsoDate;
 }
 
 /** O preço médio anda em milionésimos de real: arredondar a cada compra não acumula erro. */
@@ -45,17 +47,25 @@ function microsOf(text: string): bigint {
  * Venda maior que a posição é erro: quem grava confere antes (RB06).
  */
 export function holdings(trades: readonly TradeMovement[]): Map<string, Holding> {
-  const positions = new Map<string, { quantity: bigint; average: bigint }>();
+  const positions = new Map<string, { quantity: bigint; average: bigint; since: IsoDate }>();
   for (const trade of [...trades].sort(compareMovements)) {
     if (!Number.isInteger(trade.quantity) || trade.quantity < 1) {
       throw new RangeError(`quantidade inválida na negociação ${trade.id}: ${trade.quantity}`);
     }
     const quantity = BigInt(trade.quantity);
-    const current = positions.get(trade.assetId) ?? { quantity: 0n, average: 0n };
+    const current = positions.get(trade.assetId) ?? {
+      quantity: 0n,
+      average: 0n,
+      since: trade.date,
+    };
     if (trade.type === 'buy') {
       const cost = current.average * current.quantity + toCents(trade.total) * MICROS_PER_CENT;
       const total = current.quantity + quantity;
-      positions.set(trade.assetId, { quantity: total, average: divideHalfUp(cost, total) });
+      positions.set(trade.assetId, {
+        quantity: total,
+        average: divideHalfUp(cost, total),
+        since: current.since,
+      });
       continue;
     }
     if (quantity > current.quantity) {
@@ -63,7 +73,7 @@ export function holdings(trades: readonly TradeMovement[]): Map<string, Holding>
     }
     const left = current.quantity - quantity;
     if (left === 0n) positions.delete(trade.assetId);
-    else positions.set(trade.assetId, { quantity: left, average: current.average });
+    else positions.set(trade.assetId, { ...current, quantity: left });
   }
   return new Map(
     [...positions].map(([assetId, position]) => [
@@ -72,6 +82,7 @@ export function holdings(trades: readonly TradeMovement[]): Map<string, Holding>
         assetId,
         quantity: Number(position.quantity),
         averagePrice: formatMicros(position.average),
+        since: position.since,
       },
     ]),
   );

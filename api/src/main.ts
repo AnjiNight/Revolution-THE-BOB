@@ -154,6 +154,8 @@ async function main(): Promise<void> {
       assets: assetRepository,
       intraday: intradayQuotes,
       history: quotes,
+      // SPEC-016: desdobramentos, grupamentos e bonificações (SPEC-042).
+      events,
     });
     const portfolios = new PortfolioService({
       portfolios: portfolioRepository,

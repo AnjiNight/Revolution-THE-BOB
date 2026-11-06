@@ -3,6 +3,7 @@ import type {
   CashEntryType,
   IsoDate,
   PortfolioType,
+  PositionEvent,
   QuoteLevelCode,
   TradeType,
 } from '@simulador/shared';
@@ -36,9 +37,10 @@ export interface StoredTrade {
   total: string;
   date: IsoDate;
   recordedAt: Date;
-  quotedAt: Date;
-  level: QuoteLevelCode;
-  source: 'brapi';
+  /** Ao vivo: horário e nível da cotação; histórica (SPEC-016): `null`, com o fechamento da B3. */
+  quotedAt: Date | null;
+  level: QuoteLevelCode | null;
+  source: 'brapi' | 'b3';
 }
 
 export type NewStoredTrade = Omit<StoredTrade, 'id' | 'portfolioId'>;
@@ -121,6 +123,14 @@ export interface PortfolioMarket {
   latestQuote(assetId: string, level: QuoteLevelCode): Promise<MarketQuote | null>;
   /** O último fechamento guardado do histórico (SPEC-008), para avaliar sem cotação do pregão. */
   lastClose(assetId: string): Promise<{ date: IsoDate; close: string } | null>;
+  /** SPEC-016: primeiro e último pregão da B3 guardados do ativo; `null` sem histórico. */
+  historyRange(assetId: string): Promise<{ from: IsoDate; to: IsoDate } | null>;
+  /** SPEC-016: o fechamento da B3 do dia (como publicado), ou `null` sem negócio nesse dia. */
+  closeOn(assetId: string, date: IsoDate): Promise<string | null>;
+  /** SPEC-016: o último dia com negócio antes da data, ou `null`. */
+  lastTradingDayBefore(assetId: string, date: IsoDate): Promise<IsoDate | null>;
+  /** SPEC-016: desdobramentos, grupamentos e bonificações com data com a partir da data. */
+  eventsFrom(assetId: string, date: IsoDate): Promise<PositionEvent[]>;
 }
 
 /** Carteira como fica guardada (SPEC-012 §6). */

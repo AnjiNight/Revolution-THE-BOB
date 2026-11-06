@@ -288,8 +288,10 @@ export class PortfolioService {
           total: trade.total,
           date: trade.date,
           recordedAt: trade.recordedAt.toISOString(),
-          quotedAt: trade.quotedAt.toISOString(),
+          // SPEC-016: na histórica, sem horário nem nível (fechamento da B3 do dia).
+          quotedAt: trade.quotedAt?.toISOString() ?? null,
           level: trade.level,
+          source: trade.source,
           reversedAt: reversedAt(trade.id),
         })),
       };

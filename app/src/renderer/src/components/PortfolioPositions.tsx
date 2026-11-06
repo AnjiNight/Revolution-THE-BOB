@@ -138,6 +138,12 @@ export function PortfolioPositions({
           portfolio={portfolio}
           type={form.type}
           initialAsset={form.asset}
+          // SPEC-016: na histórica, a data começa no início ou no último lançamento (RB25).
+          firstDay={
+            data?.lastEntryDate && data.lastEntryDate > portfolio.startDate
+              ? data.lastEntryDate
+              : portfolio.startDate
+          }
           onDone={done}
           onCancel={() => close(form.opener)}
           onSessionExpired={onSessionExpired}
@@ -272,6 +278,15 @@ function PositionRow({
           {position.ticker}
         </button>
         <span className="position-name">{position.name}</span>
+        {/* SPEC-016: evento depois da compra, até a SPEC-043 corrigir a quantidade. */}
+        {position.events.map((event) => (
+          <span key={event.kind + event.exDate} className="position-event">
+            {t('portfolios.positions.eventWarning', {
+              event: t(`portfolios.positions.event.${event.kind}`),
+              date: formatCalendarDay(event.exDate, language),
+            })}
+          </span>
+        ))}
       </td>
       <td data-label={t(`${columns}.quantity`)} className="cash-number">
         {new Intl.NumberFormat(language).format(position.quantity)}

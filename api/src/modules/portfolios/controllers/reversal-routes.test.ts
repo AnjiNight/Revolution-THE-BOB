@@ -297,7 +297,7 @@ describe('estorno de lançamento (SPEC-015)', () => {
     expect(anonymous.statusCode).toBe(401);
   });
 
-  it('exportação com o momento do estorno, versão 5; exclusão conta os estornos (CA07, CA09)', async () => {
+  it('exportação com o momento do estorno, versão 6; exclusão conta os estornos (CA07, CA09)', async () => {
     const deposit = await firstEntryId();
     const buy = await deal('buy', 10);
     expect((await reverse(buy)).statusCode).toBe(201);
@@ -307,7 +307,7 @@ describe('estorno de lançamento (SPEC-015)', () => {
       version: number;
       portfolios: Array<{ cashEntries: unknown[]; trades: unknown[] }>;
     }>();
-    expect(exported.version).toBe(5);
+    expect(exported.version).toBe(6);
     expect(exported.portfolios[0]?.cashEntries).toEqual([
       expect.objectContaining({ amount: '5000.00', reversedAt: null }),
     ]);

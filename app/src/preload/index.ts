@@ -91,8 +91,8 @@ const api: DesktopApi = {
     addCash: (id, input) =>
       invoke<ClientResult<CashEntryResult>>(PORTFOLIO_CHANNELS.addCash, id, input),
     positions: (id) => invoke<ClientResult<PortfolioPositions>>(PORTFOLIO_CHANNELS.positions, id),
-    tradeQuote: (id, assetId) =>
-      invoke<ClientResult<TradeQuote>>(PORTFOLIO_CHANNELS.tradeQuote, id, assetId),
+    tradeQuote: (id, assetId, date) =>
+      invoke<ClientResult<TradeQuote>>(PORTFOLIO_CHANNELS.tradeQuote, id, assetId, date),
     trade: (id, input) => invoke<ClientResult<TradeResult>>(PORTFOLIO_CHANNELS.trade, id, input),
     reverse: (id, entryId) =>
       invoke<ClientResult<ReversalResult>>(PORTFOLIO_CHANNELS.reverse, id, entryId),

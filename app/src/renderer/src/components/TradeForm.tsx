@@ -1,8 +1,11 @@
 import {
+  addDays,
   centsToAmount,
+  isoDateInBrasilia,
   TRADE_QUANTITY_MAX,
   type Asset,
   type FieldErrorCode,
+  type IsoDate,
   type Portfolio,
   type TradeQuote,
   type TradeResult,
@@ -14,6 +17,7 @@ import type { ClientAuthError } from '../../../shared/auth-ipc';
 import { formatCalendarDay, formatMoney, quoteMoment } from '../format';
 import { AssetLogo } from './AssetLogo';
 import { MoneyField } from './MoneyField';
+import { TextField } from './TextField';
 
 /** O ativo da negociação: o que a tela mostra dele (com o logo, SPEC-040). */
 export type TradeAsset = Pick<Asset, 'id' | 'ticker' | 'name' | 'class' | 'hasLogo'>;
@@ -30,6 +34,8 @@ function cents(value: string): bigint {
 }
 
 type QuoteState =
+  /** SPEC-016: na histórica, enquanto a data não foi escolhida. */
+  | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'ready'; quote: TradeQuote }
   | { status: 'failed'; error: ClientAuthError };
@@ -44,6 +50,7 @@ export function TradeForm({
   portfolio,
   type,
   initialAsset,
+  firstDay,
   onDone,
   onCancel,
   onSessionExpired,
@@ -51,6 +58,8 @@ export function TradeForm({
   portfolio: Portfolio;
   type: TradeType;
   initialAsset: TradeAsset | null;
+  /** SPEC-016, na histórica: o primeiro dia aceito para a data (início ou último lançamento). */
+  firstDay: IsoDate;
   onDone: (result: TradeResult) => void;
   onCancel: () => void;
   onSessionExpired: () => void;
@@ -76,6 +85,7 @@ export function TradeForm({
           portfolio={portfolio}
           type={type}
           asset={asset}
+          firstDay={firstDay}
           onChangeAsset={type === 'buy' && !initialAsset ? () => setAsset(null) : null}
           onDone={onDone}
           onCancel={onCancel}
@@ -184,6 +194,7 @@ function TradeDetails({
   portfolio,
   type,
   asset,
+  firstDay,
   onChangeAsset,
   onDone,
   onCancel,
@@ -192,6 +203,8 @@ function TradeDetails({
   portfolio: Portfolio;
   type: TradeType;
   asset: TradeAsset;
+  /** SPEC-016, na histórica: o primeiro dia aceito (início ou último lançamento, RB25). */
+  firstDay: IsoDate;
   onChangeAsset: (() => void) | null;
   onDone: (result: TradeResult) => void;
   onCancel: () => void;
@@ -202,40 +215,70 @@ function TradeDetails({
   const quantityId = useId();
   const questionId = useId();
   const warningId = useId();
-  const [state, setState] = useState<QuoteState>({ status: 'loading' });
+  const percentId = useId();
+  const historical = portfolio.type === 'historical';
+  // SPEC-016: na histórica, o dia da negociação; a cotação é o fechamento desse dia.
+  const [date, setDate] = useState('');
+  const [dateError, setDateError] = useState<FieldErrorCode | undefined>(undefined);
+  const quoteKey = historical ? date : 'live';
+  const [state, setState] = useState<QuoteState & { key: string }>({
+    status: 'loading',
+    key: quoteKey,
+  });
   const [reload, setReload] = useState(0);
   const [quantityText, setQuantityText] = useState('');
   const [byValue, setByValue] = useState(false);
+  const [byValueMode, setByValueMode] = useState<'amount' | 'percent'>('amount');
   const [amount, setAmount] = useState('');
+  const [percentText, setPercentText] = useState('');
   const [step, setStep] = useState<'edit' | 'confirm'>('edit');
   const [quantityError, setQuantityError] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
   const [error, setError] = useState<ClientAuthError | null>(null);
   const [saving, setSaving] = useState(false);
   const confirmButton = useRef<HTMLButtonElement>(null);
+  // O último dia aceito na histórica é ontem ou antes: o servidor confere se foi dia de pregão.
+  const lastDay = addDays(isoDateInBrasilia(new Date()), -1);
 
-  // A cotação ao abrir e a cada 5 minutos (e de novo quando o servidor recusa por causa dela).
+  // Ao vivo: a cotação ao abrir e a cada 5 minutos. Histórica: o fechamento de cada data escolhida.
+  // E de novo quando o servidor recusa por causa dela.
   useEffect(() => {
+    if (historical && !date) return undefined;
     let active = true;
     const load = () =>
-      void window.api.portfolios.tradeQuote(portfolio.id, asset.id).then((result) => {
-        if (!active) return;
-        if (!result.ok && result.error === 'unauthorized') return onSessionExpired();
-        setState(
-          result.ok
-            ? { status: 'ready', quote: result.data }
-            : { status: 'failed', error: result.error },
-        );
-      });
+      void window.api.portfolios
+        .tradeQuote(portfolio.id, asset.id, historical ? date : undefined)
+        .then((result) => {
+          if (!active) return;
+          if (!result.ok && result.error === 'unauthorized') return onSessionExpired();
+          if (!result.ok && result.fields?.date) {
+            setDateError(result.fields.date);
+            setState({ status: 'failed', error: 'validation_error', key: quoteKey });
+            return;
+          }
+          setDateError(undefined);
+          setState(
+            result.ok
+              ? { status: 'ready', quote: result.data, key: quoteKey }
+              : { status: 'failed', error: result.error, key: quoteKey },
+          );
+        });
     load();
-    const timer = setInterval(load, QUOTE_REFRESH_MS);
+    const timer = historical ? undefined : setInterval(load, QUOTE_REFRESH_MS);
     return () => {
       active = false;
-      clearInterval(timer);
+      if (timer) clearInterval(timer);
     };
-  }, [portfolio.id, asset.id, onSessionExpired, reload]);
+  }, [portfolio.id, asset.id, onSessionExpired, reload, historical, date, quoteKey]);
 
-  const quote = state.status === 'ready' ? state.quote : null;
+  // A cotação mostrada é sempre a da data escolhida agora (a de antes não vale enquanto carrega).
+  const current: QuoteState =
+    historical && !date
+      ? { status: 'idle' }
+      : state.key === quoteKey
+        ? state
+        : { status: 'loading' };
+  const quote = current.status === 'ready' ? current.quote : null;
   const ready = quote?.tradable ? quote : null;
   const priceCents = ready ? cents(ready.price) : 0n;
   const cashCents = quote ? cents(quote.cash) : 0n;
@@ -250,10 +293,21 @@ function TradeDetails({
   const money = (value: bigint) => formatMoney(centsToAmount(value), language);
   const blocked = type === 'buy' && quote !== null && !quote.buyable;
 
-  // "Calcular por valor": quantas unidades cabem na quantia, arredondando para baixo.
-  const amountCents = amount ? cents(amount) : 0n;
+  // "Calcular por valor": em reais ou em % do caixa (SPEC-016, o "50% em PETR4" da P01), quantas
+  // unidades cabem, arredondando para baixo.
+  const percent = /^\d{1,3}$/.test(percentText) ? Number(percentText) : null;
+  const percentValid = percent !== null && percent >= 1 && percent <= 100;
+  const amountCents =
+    byValueMode === 'percent'
+      ? percentValid
+        ? (cashCents * BigInt(percent)) / 100n
+        : 0n
+      : amount
+        ? cents(amount)
+        : 0n;
   const fits = priceCents > 0n ? amountCents / priceCents : 0n;
   const fitsCapped = fits > BigInt(TRADE_QUANTITY_MAX) ? BigInt(TRADE_QUANTITY_MAX) : fits;
+  const showFits = byValueMode === 'percent' ? percentValid : amount !== '';
 
   const review = (event: FormEvent) => {
     event.preventDefault();
@@ -285,7 +339,8 @@ function TradeDetails({
       type,
       assetId: asset.id,
       quantity,
-      quotedAt: ready.quotedAt,
+      // Ao vivo, a cotação vista; na histórica, a data (o fechamento dela não muda).
+      ...(historical ? { date: ready.date } : { quotedAt: ready.quotedAt ?? '' }),
     });
     setSaving(false);
     if (result.ok) return onDone(result.data);
@@ -296,6 +351,7 @@ function TradeDetails({
       setState({
         status: 'ready',
         quote: { ...ready, price: details.price, quotedAt: details.quotedAt },
+        key: quoteKey,
       });
       setChanged(true);
       // O botão ficou desativado enquanto gravava: o foco volta para ele.
@@ -319,23 +375,32 @@ function TradeDetails({
       setQuantityError(quantityMessage(result.fields.quantity));
       return;
     }
-    // Bolsa fechou, cotação sumiu ou ativo desativado: a cotação de agora explica.
+    if (result.fields?.date) {
+      setDateError(result.fields.date);
+      return;
+    }
+    // Bolsa fechou, cotação sumiu, ativo desativado ou outro lançamento chegou antes: a cotação de
+    // agora explica.
     setError(result.error);
-    setReload((current) => current + 1);
+    setReload((value) => value + 1);
   };
 
   const quantityMessage = (code: FieldErrorCode) =>
     code === 'above_max' ? t('portfolios.trade.quantityMax') : t(`fieldErrors.${code}`);
 
-  const time = ready ? quoteMoment(ready.quotedAt, language).time : '';
+  const time = ready?.quotedAt ? quoteMoment(ready.quotedAt, language).time : '';
   const values = {
     quantity: quantity ?? 0,
     ticker: asset.ticker,
     price: ready ? formatMoney(ready.price, language) : '',
     time,
+    date: ready ? formatCalendarDay(ready.date, language) : '',
     total: money(totalCents),
     cash: money(cashAfter),
   };
+  const question = historical
+    ? t(type === 'buy' ? 'portfolios.trade.confirmBuyOn' : 'portfolios.trade.confirmSellOn', values)
+    : t(type === 'buy' ? 'portfolios.trade.confirmBuy' : 'portfolios.trade.confirmSell', values);
 
   return (
     <div className="trade-details">
@@ -351,7 +416,27 @@ function TradeDetails({
         )}
       </div>
 
-      <QuoteLine state={state} />
+      {historical && step === 'edit' && (
+        <TextField
+          label={t('portfolios.trade.date')}
+          type="date"
+          value={date}
+          onChange={(value) => {
+            setDate(value);
+            setDateError(undefined);
+          }}
+          autoComplete="off"
+          min={firstDay}
+          max={lastDay}
+          error={dateError}
+          hint={t('portfolios.trade.dateHint', {
+            first: formatCalendarDay(firstDay, language),
+            last: formatCalendarDay(lastDay, language),
+          })}
+        />
+      )}
+
+      <QuoteLine state={current} ticker={asset.ticker} date={date} />
 
       {error && error !== 'validation_error' && (
         <p className="form-error" role="alert">
@@ -369,7 +454,7 @@ function TradeDetails({
                 type="text"
                 inputMode="numeric"
                 autoComplete="off"
-                autoFocus
+                autoFocus={!historical}
                 value={quantityText}
                 aria-invalid={quantityError ? true : undefined}
                 aria-describedby={`${quantityId}-hint${quantityError ? ` ${quantityId}-error` : ''}`}
@@ -408,12 +493,56 @@ function TradeDetails({
               </button>
               {byValue && (
                 <>
-                  <MoneyField
-                    label={t('portfolios.trade.byValueAmount')}
-                    value={amount}
-                    onChange={setAmount}
-                  />
-                  {amount && (
+                  <fieldset className="trade-mode">
+                    <legend>{t('portfolios.trade.byValueMode')}</legend>
+                    {(['amount', 'percent'] as const).map((mode) => (
+                      <label key={mode}>
+                        <input
+                          type="radio"
+                          name={`${percentId}-mode`}
+                          checked={byValueMode === mode}
+                          onChange={() => setByValueMode(mode)}
+                        />
+                        {mode === 'amount'
+                          ? t('portfolios.trade.modeAmount')
+                          : t('portfolios.trade.modePercent')}
+                      </label>
+                    ))}
+                  </fieldset>
+                  {byValueMode === 'amount' ? (
+                    <MoneyField
+                      label={t('portfolios.trade.byValueAmount')}
+                      value={amount}
+                      onChange={setAmount}
+                    />
+                  ) : (
+                    <div className="field">
+                      <label htmlFor={percentId}>{t('portfolios.trade.percentLabel')}</label>
+                      <div className="money-input percent-input">
+                        <input
+                          id={percentId}
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          value={percentText}
+                          aria-invalid={percentText !== '' && !percentValid ? true : undefined}
+                          aria-describedby={`${percentId}-hint`}
+                          onChange={(event) =>
+                            setPercentText(event.target.value.replace(/\D/g, '').slice(0, 3))
+                          }
+                        />
+                        <span className="percent-suffix" aria-hidden="true">
+                          %
+                        </span>
+                      </div>
+                      <p id={`${percentId}-hint`} className="field-hint">
+                        {percentText !== '' && !percentValid
+                          ? t('portfolios.trade.percentInvalid')
+                          : t('portfolios.trade.percentHint', { cash: money(cashCents) })}
+                      </p>
+                    </div>
+                  )}
+                  {showFits && (
                     <p className="trade-fits" role="status">
                       {fitsCapped > 0n
                         ? t('portfolios.trade.fits', {
@@ -479,10 +608,7 @@ function TradeDetails({
             </p>
           )}
           <p id={questionId} className="cash-confirm-question">
-            {t(
-              type === 'buy' ? 'portfolios.trade.confirmBuy' : 'portfolios.trade.confirmSell',
-              values,
-            )}
+            {question}
           </p>
           <p id={warningId} className="field-hint">
             {t('portfolios.trade.immutable')} {t('portfolios.trade.costs')}
@@ -522,10 +648,16 @@ function TradeDetails({
   );
 }
 
-/** O preço que a negociação usaria, com o horário e o atraso; ou por que não dá agora. */
-function QuoteLine({ state }: { state: QuoteState }) {
+/**
+ * O preço que a negociação usaria: ao vivo, com o horário e o atraso; na histórica, o fechamento da
+ * B3 do dia escolhido. Ou por que não dá.
+ */
+function QuoteLine({ state, ticker, date }: { state: QuoteState; ticker: string; date: string }) {
   const { t, i18n } = useTranslation();
   const language = i18n.language;
+  if (state.status === 'idle') {
+    return <p className="field-hint">{t('portfolios.trade.pickDate')}</p>;
+  }
   if (state.status === 'loading') {
     return (
       <p className="loading" role="status">
@@ -534,6 +666,8 @@ function QuoteLine({ state }: { state: QuoteState }) {
     );
   }
   if (state.status === 'failed') {
+    // A data errada já aparece no campo.
+    if (state.error === 'validation_error') return null;
     return (
       <p className="form-error" role="alert">
         {t(`authErrors.${state.error}`)}
@@ -542,6 +676,7 @@ function QuoteLine({ state }: { state: QuoteState }) {
   }
   const { quote } = state;
   if (!quote.tradable) {
+    const day = date ? formatCalendarDay(date, language) : '';
     const message =
       quote.reason === 'market_closed'
         ? quote.nextTradingDay
@@ -551,7 +686,17 @@ function QuoteLine({ state }: { state: QuoteState }) {
           : t('portfolios.trade.marketClosedNoDate')
         : quote.reason === 'no_quote_today'
           ? t('portfolios.trade.noQuoteToday')
-          : t(`authErrors.${quote.reason}`);
+          : quote.reason === 'no_close_that_day'
+            ? quote.lastTradingDay
+              ? t('portfolios.trade.noClose', {
+                  ticker,
+                  date: day,
+                  last: formatCalendarDay(quote.lastTradingDay, language),
+                })
+              : t('portfolios.trade.noCloseNoPrevious', { ticker, date: day })
+            : quote.reason === 'history_pending'
+              ? t('portfolios.trade.historyPending')
+              : t(`authErrors.${quote.reason}`);
     return (
       <p className="trade-blocked" role="status">
         {message}
@@ -562,10 +707,12 @@ function QuoteLine({ state }: { state: QuoteState }) {
     <div className="trade-quote">
       <p className="trade-price">{formatMoney(quote.price, language)}</p>
       <p className="field-hint">
-        {t('assets.quote.today', {
-          time: quoteMoment(quote.quotedAt, language).time,
-          delay: quote.delayMinutes,
-        })}
+        {quote.source === 'b3' || !quote.quotedAt
+          ? t('portfolios.trade.closeOf', { date: formatCalendarDay(quote.date, language) })
+          : t('assets.quote.today', {
+              time: quoteMoment(quote.quotedAt, language).time,
+              delay: quote.delayMinutes,
+            })}
       </p>
       {!quote.buyable && <p className="trade-blocked">{t('portfolios.trade.assetInactive')}</p>}
     </div>

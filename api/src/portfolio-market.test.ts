@@ -30,7 +30,7 @@ const intradayQuote: LatestIntradayQuote = {
   storedPreviousClose: null,
 };
 
-describe('dados de mercado para a carteira (SPEC-014)', () => {
+describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
   const levels: string[] = [];
   const market = portfolioMarket({
     assets: {
@@ -46,6 +46,12 @@ describe('dados de mercado para a carteira (SPEC-014)', () => {
       },
     },
     history: {
+      quoteRange: (assetId) =>
+        Promise.resolve(assetId === 'a1' ? { from: '2016-01-04', to: '2026-11-04' } : null),
+      closeOn: (assetId, date) =>
+        Promise.resolve(assetId === 'a1' && date === '2019-03-15' ? '25.3' : null),
+      lastTradingDayBefore: (assetId, date) =>
+        Promise.resolve(assetId === 'a1' && date > '2019-03-13' ? '2019-03-13' : null),
       sessions: (assetId) =>
         Promise.resolve(
           assetId === 'a1'
@@ -63,6 +69,31 @@ describe('dados de mercado para a carteira (SPEC-014)', () => {
             : [],
         ),
     },
+    events: {
+      forAsset: (assetId) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [
+                { kind: 'desdobramento', exDate: '2019-03-15', factor: '2' },
+                { kind: 'grupamento', exDate: '2021-06-01', factor: '0.1' },
+              ]
+            : [],
+        ),
+    },
+  });
+
+  it('SPEC-016: fechamento do dia, último dia com negócio e eventos a partir da compra', async () => {
+    expect(await market.historyRange('a1')).toEqual({ from: '2016-01-04', to: '2026-11-04' });
+    expect(await market.historyRange('a3')).toBeNull();
+    expect(await market.closeOn('a1', '2019-03-15')).toBe('25.3');
+    expect(await market.closeOn('a1', '2019-03-14')).toBeNull();
+    expect(await market.lastTradingDayBefore('a1', '2019-03-14')).toBe('2019-03-13');
+    // A data com no dia da compra conta.
+    expect(await market.eventsFrom('a1', '2019-03-15')).toEqual([
+      { kind: 'split', exDate: '2019-03-15' },
+      { kind: 'reverse_split', exDate: '2021-06-01' },
+    ]);
+    expect(await market.eventsFrom('a1', '2021-06-02')).toEqual([]);
   });
 
   it('o ativo com a situação; o desativado vem com active false; o que não existe, null', async () => {

@@ -91,7 +91,10 @@ export type PortfolioErrorCode =
   | 'already_reversed'
   | 'reversal_window_closed'
   | 'reversal_breaks_cash'
-  | 'reversal_breaks_position';
+  | 'reversal_breaks_position'
+  // SPEC-016
+  | 'no_close_that_day'
+  | 'history_pending';
 
 // --- Caixa (SPEC-013) ---
 
@@ -341,9 +344,18 @@ export interface Trade {
   date: IsoDate;
   /** ISO 8601: quando o servidor registrou. */
   recordedAt: string;
-  /** ISO 8601: horário da cotação usada. */
-  quotedAt: string;
-  level: QuoteLevelCode;
+  /** ISO 8601: horário da cotação usada; `null` na histórica, que usa o fechamento do dia. */
+  quotedAt: string | null;
+  /** `null` na histórica (SPEC-016). */
+  level: QuoteLevelCode | null;
+  /** `brapi`: cotação do pregão (ao vivo); `b3`: fechamento da B3 (histórica, SPEC-016). */
+  source: 'brapi' | 'b3';
+}
+
+/** Desdobramento, grupamento ou bonificação (SPEC-042), com a data com. */
+export interface PositionEvent {
+  kind: 'split' | 'reverse_split' | 'bonus';
+  exDate: IsoDate;
 }
 
 /**
@@ -368,22 +380,35 @@ export interface Position {
   /** Valor atual menos o custo (quantidade × preço médio), em reais e em % com 2 casas. */
   change: string | null;
   changePercent: string | null;
+  /**
+   * SPEC-016: eventos corporativos desde a primeira compra ainda em posição. Até a SPEC-043, com
+   * algum, `marketValue`, `change` e `changePercent` vêm `null` (a quantidade não foi corrigida).
+   */
+  events: PositionEvent[];
 }
 
 /** Corpo de `GET /api/portfolios/:id/positions`. */
 export interface PortfolioPositions {
   cash: string;
-  /** Soma do valor atual das posições com preço. */
+  /** Soma do valor atual das posições com preço (sem as que têm evento). */
   positionsValue: string;
   /** Caixa + posições. */
   total: string;
   /** Em ordem de ticker. */
   positions: Position[];
+  /** SPEC-016: dia do último lançamento que vale, para a data mínima na histórica (RB25). */
+  lastEntryDate: IsoDate | null;
 }
 
-/** Por que não dá para negociar agora (SPEC-014 §4.1). */
+/** Por que não dá para negociar agora (SPECs 014 e 016). */
 export type TradeBlockReason =
-  'market_closed' | 'no_quote_today' | 'historical_portfolio' | 'calendar_not_published';
+  | 'market_closed'
+  | 'no_quote_today'
+  | 'historical_portfolio'
+  | 'calendar_not_published'
+  // SPEC-016: na histórica.
+  | 'no_close_that_day'
+  | 'history_pending';
 
 /**
  * Corpo de `GET /api/portfolios/:id/trade-quote?assetId=`: o preço que a negociação usaria agora,
@@ -400,19 +425,31 @@ export type TradeQuote = {
       tradable: true;
       /** Com 2 casas: o preço que a negociação vai usar. */
       price: string;
-      quotedAt: string;
-      level: QuoteLevelCode;
-      delayMinutes: number;
+      /** O dia da negociação: hoje na ao vivo; o escolhido na histórica. */
+      date: IsoDate;
+      source: 'brapi' | 'b3';
+      /** Ao vivo: o horário e o nível da cotação; na histórica, `null` (fechamento do dia). */
+      quotedAt: string | null;
+      level: QuoteLevelCode | null;
+      delayMinutes: number | null;
     }
-  | { tradable: false; reason: TradeBlockReason; nextTradingDay: IsoDate | null }
+  | {
+      tradable: false;
+      reason: TradeBlockReason;
+      nextTradingDay: IsoDate | null;
+      /** SPEC-016, no `no_close_that_day`: o último dia com negócio antes do escolhido. */
+      lastTradingDay?: IsoDate | null;
+    }
 );
 
 export interface NewTradeInput {
   type: TradeType;
   assetId: string;
   quantity: number;
-  /** O horário da cotação que a pessoa viu (`TradeQuote.quotedAt`). */
-  quotedAt: string;
+  /** Ao vivo: o horário da cotação que a pessoa viu (`TradeQuote.quotedAt`). */
+  quotedAt?: string;
+  /** SPEC-016, só na histórica: o dia da negociação. */
+  date?: IsoDate;
 }
 
 /** Corpo de `POST /api/portfolios/:id/trades`. `position` vem `null` quando a venda zera. */
@@ -437,14 +474,27 @@ export interface MarketClosedDetails {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 
-/** Query string de `trade-quote`: o id do ativo. */
-export function validateTradeQuoteQuery(input: unknown): ValidationResult<{ assetId: string }> {
-  const raw = asRecord(input).assetId;
-  if (raw === undefined || raw === '') return { success: false, fields: { assetId: 'required' } };
-  if (typeof raw !== 'string' || !UUID_PATTERN.test(raw)) {
-    return { success: false, fields: { assetId: 'invalid_option' } };
+/** Query string de `trade-quote`: o id do ativo e, na histórica, a data (SPEC-016). */
+export function validateTradeQuoteQuery(
+  input: unknown,
+): ValidationResult<{ assetId: string; date?: IsoDate }> {
+  const record = asRecord(input);
+  const raw = record.assetId;
+  const fields: FieldErrors = {};
+  if (raw === undefined || raw === '') fields.assetId = 'required';
+  else if (typeof raw !== 'string' || !UUID_PATTERN.test(raw)) fields.assetId = 'invalid_option';
+  const date = record.date;
+  if (date !== undefined && date !== '' && (typeof date !== 'string' || !isIsoDate(date))) {
+    fields.date = 'invalid_date';
   }
-  return { success: true, data: { assetId: raw.toLowerCase() } };
+  if (Object.keys(fields).length > 0) return { success: false, fields };
+  return {
+    success: true,
+    data: {
+      assetId: (raw as string).toLowerCase(),
+      ...(typeof date === 'string' && date !== '' ? { date } : {}),
+    },
+  };
 }
 
 /** Valida uma compra ou venda (SPEC-014 §5.1); se dá para negociar agora, quem diz é o servidor. */
@@ -460,8 +510,15 @@ export function validateNewTrade(input: unknown): ValidationResult<NewTradeInput
   else if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1) {
     fields.quantity = 'invalid_quantity';
   } else if (quantity > TRADE_QUANTITY_MAX) fields.quantity = 'above_max';
-  if (typeof raw.quotedAt !== 'string' || !ISO_INSTANT.test(raw.quotedAt)) {
-    fields.quotedAt = raw.quotedAt === undefined ? 'required' : 'invalid_date';
+  // Ao vivo manda o horário da cotação; a histórica, a data (SPEC-016). Qual é obrigatório
+  // depende da carteira e fica com o servidor; aqui, só o formato.
+  const quotedAt = raw.quotedAt;
+  if (quotedAt !== undefined && (typeof quotedAt !== 'string' || !ISO_INSTANT.test(quotedAt))) {
+    fields.quotedAt = 'invalid_date';
+  }
+  const date = raw.date;
+  if (date !== undefined && (typeof date !== 'string' || !isIsoDate(date))) {
+    fields.date = 'invalid_date';
   }
   if (Object.keys(fields).length > 0) return { success: false, fields };
   return {
@@ -470,7 +527,8 @@ export function validateNewTrade(input: unknown): ValidationResult<NewTradeInput
       type: raw.type as TradeType,
       assetId: (raw.assetId as string).toLowerCase(),
       quantity: quantity as number,
-      quotedAt: new Date(raw.quotedAt as string).toISOString(),
+      ...(typeof quotedAt === 'string' ? { quotedAt: new Date(quotedAt).toISOString() } : {}),
+      ...(typeof date === 'string' ? { date } : {}),
     },
   };
 }

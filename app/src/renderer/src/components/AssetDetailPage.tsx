@@ -589,10 +589,11 @@ function BuyFromAsset({
       if (result.error === 'unauthorized') return onSessionExpired();
       return setChoice({ status: 'failed', error: result.error });
     }
-    const live = result.data.portfolios.filter((portfolio) => portfolio.type === 'live');
-    const [only] = live;
-    if (live.length === 1 && only) return onBuy(only.id, asset);
-    setChoice(live.length === 0 ? { status: 'none' } : { status: 'choose', portfolios: live });
+    // SPEC-016: as carteiras históricas também (o formulário pede a data).
+    const { portfolios } = result.data;
+    const [only] = portfolios;
+    if (portfolios.length === 1 && only) return onBuy(only.id, asset);
+    setChoice(portfolios.length === 0 ? { status: 'none' } : { status: 'choose', portfolios });
   };
 
   return (
@@ -626,6 +627,9 @@ function BuyFromAsset({
                   onClick={() => onBuy(portfolio.id, asset)}
                 >
                   {portfolio.name}
+                  <span className="asset-buy-type">
+                    {t(`portfolios.types.${portfolio.type}.title`)}
+                  </span>
                 </button>
               </li>
             ))}

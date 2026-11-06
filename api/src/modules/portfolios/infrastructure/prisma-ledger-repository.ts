@@ -60,9 +60,11 @@ export function toStoredTrade(row: Transacao): StoredTrade {
     total: row.valorTotal.toFixed(2),
     date: isoDate(row.data),
     recordedAt: row.registradoEm,
+    // SPEC-016: a negociação da histórica não tem horário nem nível (fechamento da B3 do dia).
     quotedAt: row.cotacaoEm,
-    level: row.nivelCotacao === 'assinante' ? 'subscriber' : 'free',
-    source: 'brapi',
+    level:
+      row.nivelCotacao === null ? null : row.nivelCotacao === 'assinante' ? 'subscriber' : 'free',
+    source: row.fonteCotacao === 'b3_cotahist' ? 'b3' : 'brapi',
   };
 }
 
@@ -87,8 +89,8 @@ function tradeData(portfolioId: string, trade: NewStoredTrade) {
     data: fromIsoDate(trade.date),
     registradoEm: trade.recordedAt,
     cotacaoEm: trade.quotedAt,
-    nivelCotacao: LEVEL_TO_NIVEL[trade.level],
-    fonteCotacao: trade.source,
+    nivelCotacao: trade.level === null ? null : LEVEL_TO_NIVEL[trade.level],
+    fonteCotacao: trade.source === 'b3' ? ('b3_cotahist' as const) : ('brapi' as const),
   };
 }
 

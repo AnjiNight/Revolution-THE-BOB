@@ -100,9 +100,10 @@ export interface ConsentList {
 export const PERSONAL_DATA_FORMAT = 'simulador-investimentos/dados-pessoais';
 /**
  * 2: SPEC-012, carteiras. 3: SPEC-013, aportes e retiradas de cada carteira. 4: SPEC-014, compras e
- * vendas de cada carteira. 5: SPEC-015, o momento do estorno de cada lançamento.
+ * vendas de cada carteira. 5: SPEC-015, o momento do estorno de cada lançamento. 6: SPEC-016,
+ * compras e vendas da carteira histórica (sem horário de cotação, com a fonte).
  */
-export const PERSONAL_DATA_VERSION = 5;
+export const PERSONAL_DATA_VERSION = 6;
 
 /**
  * Arquivo "Baixar meus dados" (SPEC-034, LGPD). Tudo o que o app guarda sobre a pessoa, sem
@@ -157,8 +158,10 @@ export interface PersonalDataExport {
       total: string;
       date: string;
       recordedAt: string;
-      quotedAt: string;
-      level: 'free' | 'subscriber';
+      /** `null` na histórica (SPEC-016), que usa o fechamento do dia. */
+      quotedAt: string | null;
+      level: 'free' | 'subscriber' | null;
+      source: 'brapi' | 'b3';
       /** SPEC-015: ISO 8601 do estorno, ou `null`. */
       reversedAt: string | null;
     }>;

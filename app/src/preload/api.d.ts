@@ -112,7 +112,8 @@ export interface DesktopApi {
     /** SPEC-014: posições, com o caixa e o total. */
     positions(id: string): Promise<ClientResult<PortfolioPositions>>;
     /** SPEC-014: o preço que a negociação usaria agora, ou o motivo de não dar. */
-    tradeQuote(id: string, assetId: string): Promise<ClientResult<TradeQuote>>;
+    /** SPEC-016: na histórica, com a data da negociação. */
+    tradeQuote(id: string, assetId: string, date?: string): Promise<ClientResult<TradeQuote>>;
     /** SPEC-014: compra ou venda; os erros trazem o detalhe em details. */
     trade(id: string, input: NewTradeInput): Promise<ClientResult<TradeResult>>;
     /** SPEC-015: estorna um lançamento; a recusa traz em details o lançamento que quebraria. */
