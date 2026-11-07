@@ -94,6 +94,20 @@ describe('proventos na carteira (SPEC-043, decisões 2, 3 e 6)', () => {
     ]);
   });
 
+  it('a receber em ordem de pagamento; sem data no fim', () => {
+    const result = timeline({
+      trades: [buy('t1', 'petr', 100, '3000.00', '2026-08-01')],
+      income: [
+        income('a', 'petr', 'dividendo', '2026-08-21', null, '0.1'),
+        income('b', 'petr', 'jcp', '2026-08-21', '2026-12-21', '0.1'),
+        income('c', 'petr', 'jcp', '2026-09-01', '2026-11-23', '0.1'),
+      ],
+      events: [],
+      until: '2026-11-06',
+    });
+    expect(result.pending.map((p) => p.id)).toEqual(['c', 'b', 'a']);
+  });
+
   it('JCP líquido: 15% até 2025 e 17,5% a partir de 2026, IR arredondado para cima', () => {
     const result = timeline({
       trades: [buy('t1', 'petr', 100, '3000.00', '2025-01-02')],

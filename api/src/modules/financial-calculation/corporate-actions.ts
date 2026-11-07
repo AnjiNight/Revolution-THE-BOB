@@ -166,6 +166,12 @@ export function timeline(input: TimelineInput): Timeline {
   }
 
   result.movements.sort(compareMovements);
+  // A receber pela data de pagamento; os sem data no fim.
+  result.pending.sort(
+    (a, b) =>
+      (a.paymentDate ?? '9999-12-31').localeCompare(b.paymentDate ?? '9999-12-31') ||
+      a.exDate.localeCompare(b.exDate),
+  );
   result.holdings = new Map(
     [...positions].map(([assetId, state]) => [
       assetId,

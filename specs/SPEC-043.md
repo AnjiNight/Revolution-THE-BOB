@@ -166,7 +166,7 @@ As do §4.2, em português e inglês, pelo teclado, a 480 px, com "Fonte: Invest
 | CA07 | ✅ Interruptor desligado: sem proventos no caixa nem no extrato, aviso; caixa negativo (−R$ 58,50) recusa retirada e aceita aporte |
 | CA08 | ✅ `cash` da histórica em 20/05/2019: o dividendo de 02/05 entra, o JCP de 03/06 não (R$ 7.520,00) |
 | CA09 | ✅ Exportação sem mudança (`version` 6, só os lançamentos do usuário) |
-| CA10 | ⏳ Telas feitas (extrato com provento, IR e "Fonte: Investidor10", venda de fração, "A receber", posições com "Proventos recebidos", eventos aplicados, "ainda não carregados", aviso de proventos desligados e de caixa negativo, em português e inglês), com tipos e lint. Conferir no Electron |
+| CA10 | ✅ Conferido na pré-visualização das telas do app, com as respostas da API real de uma conta de teste local (histórica de 2019 com PETR4, MXRF11, ITSA4 e MGLU3): extrato com provento, IR e "Fonte: Investidor10"; "A receber" em ordem de pagamento (ajuste feito na conferência); posições com "Proventos recebidos", "A receber" com o próximo pagamento e os eventos aplicados ("Grupamento em 24 de mai. de 2024: 100 → 10"); a nota de rodapé nova; português e inglês; 480 px em cartões. Os avisos de proventos desligados e de caixa negativo ficaram nos testes de rota. ⏳ Abrir no Electron, com a ponte real |
 | CA11 | ✅ Núcleo com 12 testes de unidade dos arredondamentos; 17 ativos desde 2016, 1.446 linhas no extrato: posições em 26 a 41 ms e extrato em 21 a 27 ms |
 
 Total: **883 testes** passando e **118 com o banco** de teste, mais lint, tipos e formatação.
