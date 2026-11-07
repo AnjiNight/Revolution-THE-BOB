@@ -654,7 +654,26 @@
         "deposit": "Deposit",
         "withdrawal": "Withdrawal",
         "buy": "Purchase",
-        "sell": "Sale"
+        "sell": "Sale",
+        "income": "Income"
+      },
+      "income": {
+        "kinds": {
+          "dividendo": "Dividend",
+          "jcp": "Interest on equity",
+          "rendimento": "Distribution",
+          "amortizacao": "Amortization"
+        },
+        "fraction": "Fractional share sale",
+        "detail": "{{quantity}} {{ticker}} × {{perShare}} (record date {{exDate}})",
+        "tax": "gross {{gross}}, tax {{tax}}",
+        "fractionDetail": "{{shares}} {{ticker}} at {{price}}",
+        "source": "Source: Investidor10",
+        "pendingTitle": "To receive",
+        "pendingOn": "{{kind}} {{ticker}}: {{amount}} on {{date}}",
+        "pendingNoDate": "{{kind}} {{ticker}}: {{amount}}, no payment date yet",
+        "disabled": "Income is off: cash doesn't include dividends.",
+        "negative": "Cash went negative because an income payment is no longer in the source. Only deposits are allowed until it's positive again."
       },
       "showMore": "Show more",
       "count_one": "{{shown}} of {{count}} entry",
@@ -701,7 +720,9 @@
       "totals": {
         "cash": "Cash",
         "positions": "In assets",
-        "total": "Total"
+        "total": "Total",
+        "income": "Income received",
+        "pending": "To receive"
       },
       "columns": {
         "asset": "Asset",
@@ -715,16 +736,20 @@
       "closeOf": "Close of {{date}}",
       "noPrice": "No price",
       "changeNote": "Change over the average price, without trading costs or dividends.",
-      "dividendsNote": "Dividends and splits don't enter this portfolio yet.",
+      "dividendsNote": "Income enters cash on the payment date, for whoever held the asset at the end of the record date (interest on equity already net of tax); splits, reverse splits and bonus issues adjust the quantity and the average price. Income source: Investidor10.",
+      "incomeDisabled": "Income is off: cash doesn't include dividends. Splits, reverse splits and bonus issues still adjust the quantity.",
+      "incomeReceived": "Income received: {{amount}}",
+      "incomeNotLoaded": "Income for this asset not loaded yet.",
+      "nextPayment": "Next: {{amount}} on {{date}}",
+      "eventApplied": "{{event}} on {{date}}: {{before}} → {{after}}",
       "bought": "Purchase saved: {{quantity}} {{ticker}}.",
       "sold": "Sale saved: {{quantity}} {{ticker}}.",
       "at": "at {{time}}",
       "priceNote": "Last price: the trading-session quote, delayed up to {{delay}} minutes; without it, the last close.",
-      "eventWarning": "Had a {{event}} on {{date}}: the current value doesn't account for it yet.",
       "event": {
-        "split": "split",
-        "reverse_split": "reverse split",
-        "bonus": "bonus issue"
+        "split": "Split",
+        "reverse_split": "Reverse split",
+        "bonus": "Bonus issue"
       }
     },
     "trade": {

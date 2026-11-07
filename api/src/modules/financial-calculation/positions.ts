@@ -1,5 +1,5 @@
 import { centsToAmount, type IsoDate } from '@simulador/shared';
-import { compareMovements, toCents, type LedgerMovement } from './cash-ledger.js';
+import { compareMovements, credits, toCents, type LedgerMovement } from './cash-ledger.js';
 import { divideHalfUp, isDecimalText } from './decimal.js';
 
 /** Uma compra ou venda do livro-razão (SPEC-014), para a conta das posições. */
@@ -27,7 +27,7 @@ export interface Holding {
 /** O preço médio anda em milionésimos de real: arredondar a cada compra não acumula erro. */
 const MICROS_PER_CENT = 10_000n;
 
-function formatMicros(micros: bigint): string {
+export function formatMicros(micros: bigint): string {
   const text = micros.toString().padStart(7, '0');
   return `${text.slice(0, -6)}.${text.slice(-6)}`;
 }
@@ -108,7 +108,7 @@ export function firstBreak(movements: readonly CheckedMovement[]): LedgerBreak |
   const held = new Map<string, number>();
   for (const movement of [...movements].sort(compareMovements)) {
     const value = toCents(movement.amount);
-    if (movement.type === 'deposit' || movement.type === 'sell') cash += value;
+    if (credits(movement.type)) cash += value;
     else cash -= value;
     if (movement.type === 'buy' || movement.type === 'sell') {
       const assetId = movement.assetId ?? '';

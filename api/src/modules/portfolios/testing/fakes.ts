@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { PositionEvent } from '@simulador/shared';
+import type { EventInput, IncomeInput } from '../../financial-calculation/corporate-actions.js';
 import type {
   LedgerRepository,
   MarketAsset,
@@ -132,8 +132,13 @@ export class FakePortfolioMarket implements PortfolioMarket {
   readonly closes = new Map<string, { date: string; close: string }>();
   /** SPEC-016: fechamentos da B3 por ativo e dia ("AAAA-MM-DD" → preço). */
   readonly dailyCloses = new Map<string, Map<string, string>>();
-  /** SPEC-016: eventos corporativos por ativo. */
-  readonly events = new Map<string, PositionEvent[]>();
+  /** SPEC-016/043: eventos corporativos por ativo (o `close` vem de `dailyCloses`). */
+  readonly events = new Map<string, Array<Omit<EventInput, 'id' | 'assetId' | 'close'>>>();
+  /** SPEC-043: proventos por ativo. */
+  readonly dividends = new Map<string, Array<Omit<IncomeInput, 'id' | 'assetId'>>>();
+  /** SPEC-043: os ativos já visitados no Investidor10. */
+  readonly visited = new Set<string>();
+  incomeEnabled = true;
 
   asset(assetId: string): Promise<MarketAsset | null> {
     return Promise.resolve(this.assets.get(assetId) ?? null);
@@ -163,10 +168,30 @@ export class FakePortfolioMarket implements PortfolioMarket {
     return Promise.resolve(days.sort().at(-1) ?? null);
   }
 
-  eventsFrom(assetId: string, date: string): Promise<PositionEvent[]> {
+  corporateEvents(assetId: string, from: string): Promise<EventInput[]> {
     return Promise.resolve(
-      (this.events.get(assetId) ?? []).filter((event) => event.exDate >= date),
+      (this.events.get(assetId) ?? [])
+        .filter((event) => event.exDate >= from)
+        .map((event) => ({
+          ...event,
+          id: `${event.kind}:${event.exDate}`,
+          assetId,
+          close: this.dailyCloses.get(assetId)?.get(event.exDate) ?? null,
+        })),
     );
+  }
+
+  income(assetId: string, from: string): Promise<IncomeInput[]> {
+    if (!this.incomeEnabled) return Promise.resolve([]);
+    return Promise.resolve(
+      (this.dividends.get(assetId) ?? [])
+        .filter((income) => income.exDate >= from)
+        .map((income, index) => ({ ...income, id: `${assetId}:${index}`, assetId })),
+    );
+  }
+
+  incomeLoaded(assetIds: readonly string[]): Promise<Set<string>> {
+    return Promise.resolve(new Set(assetIds.filter((id) => this.visited.has(id))));
   }
 }
 

@@ -166,9 +166,15 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
           change: '135.00',
           changePercent: '4.76',
           events: [],
+          income: '0.00',
+          incomeLoaded: false,
         },
       ],
       lastEntryDate: '2026-11-05',
+      income: '0.00',
+      pendingIncome: '0.00',
+      nextPayment: null,
+      incomeEnabled: true,
     });
   });
 

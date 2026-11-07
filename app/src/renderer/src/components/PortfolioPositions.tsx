@@ -130,6 +130,29 @@ export function PortfolioPositions({
             <dt>{t('portfolios.positions.totals.total')}</dt>
             <dd>{formatMoney(data.total, language)}</dd>
           </div>
+          {/* SPEC-043: proventos pagos (já no caixa) e a receber. */}
+          {data.incomeEnabled && (
+            <div>
+              <dt>{t('portfolios.positions.totals.income')}</dt>
+              <dd>{formatMoney(data.income, language)}</dd>
+            </div>
+          )}
+          {data.incomeEnabled && data.pendingIncome !== '0.00' && (
+            <div>
+              <dt>{t('portfolios.positions.totals.pending')}</dt>
+              <dd>
+                {formatMoney(data.pendingIncome, language)}
+                {data.nextPayment && (
+                  <span className="position-when">
+                    {t('portfolios.positions.nextPayment', {
+                      amount: formatMoney(data.nextPayment.amount, language),
+                      date: formatCalendarDay(data.nextPayment.date, language),
+                    })}
+                  </span>
+                )}
+              </dd>
+            </div>
+          )}
         </dl>
       )}
 
@@ -203,6 +226,7 @@ export function PortfolioPositions({
                 <PositionRow
                   key={position.assetId}
                   position={position}
+                  incomeEnabled={data.incomeEnabled}
                   onOpenAsset={() => onOpenAsset(position.assetId)}
                   onSell={(opener) =>
                     open(
@@ -233,7 +257,13 @@ export function PortfolioPositions({
       )}
       <p className="assets-note">
         <Info weight="fill" aria-hidden="true" />
-        <span>{t('portfolios.positions.dividendsNote')}</span>
+        <span>
+          {t(
+            data?.incomeEnabled === false
+              ? 'portfolios.positions.incomeDisabled'
+              : 'portfolios.positions.dividendsNote',
+          )}
+        </span>
       </p>
     </section>
   );
@@ -241,11 +271,13 @@ export function PortfolioPositions({
 
 function PositionRow({
   position,
+  incomeEnabled,
   onOpenAsset,
   onSell,
   sellDisabled,
 }: {
   position: Position;
+  incomeEnabled: boolean;
   onOpenAsset: () => void;
   onSell: (opener: HTMLElement) => void;
   sellDisabled: boolean;
@@ -278,15 +310,27 @@ function PositionRow({
           {position.ticker}
         </button>
         <span className="position-name">{position.name}</span>
-        {/* SPEC-016: evento depois da compra, até a SPEC-043 corrigir a quantidade. */}
+        {/* SPEC-043: eventos já aplicados na quantidade e no preço médio. */}
         {position.events.map((event) => (
           <span key={event.kind + event.exDate} className="position-event">
-            {t('portfolios.positions.eventWarning', {
+            {t('portfolios.positions.eventApplied', {
               event: t(`portfolios.positions.event.${event.kind}`),
               date: formatCalendarDay(event.exDate, language),
+              before: new Intl.NumberFormat(language).format(event.quantityBefore),
+              after: new Intl.NumberFormat(language).format(event.quantityAfter),
             })}
           </span>
         ))}
+        {position.income !== '0.00' && (
+          <span className="position-event">
+            {t('portfolios.positions.incomeReceived', {
+              amount: formatMoney(position.income, language),
+            })}
+          </span>
+        )}
+        {incomeEnabled && !position.incomeLoaded && (
+          <span className="position-event">{t('portfolios.positions.incomeNotLoaded')}</span>
+        )}
       </td>
       <td data-label={t(`${columns}.quantity`)} className="cash-number">
         {new Intl.NumberFormat(language).format(position.quantity)}

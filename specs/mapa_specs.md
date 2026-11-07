@@ -46,6 +46,8 @@
 | 1.36 | SPEC-016 detalhada ([SPEC-016.md](SPEC-016.md)) para a Nicoly implementar, aguardando a aprovação: compra e venda na carteira histórica com o fechamento da B3 do dia; recomendações para a OPEN-24 ("% do caixa" no "Calcular por valor") e para a OPEN-06 (aviso no lugar do valor quando houve evento depois da compra, até a SPEC-043) esperando a resposta do Luís |
 | 1.37 | SPEC-016 aprovada (Luís, 06/11/2026) com as recomendações; OPEN-24 resolvida ("% do caixa" no "Calcular por valor") |
 | 1.38 | SPEC-016 implementada: compra e venda na carteira histórica com o fechamento da B3 do dia, "% do caixa", aviso de evento corporativo até a SPEC-043 e a exportação na versão 6. Fase 3 completa, faltando só a SPEC-043 |
+| 1.39 | SPEC-043 detalhada ([SPEC-043.md](SPEC-043.md)) pela Nicoly, aguardando a aprovação: proventos no caixa na data de pagamento para quem tinha o ativo na data com, JCP líquido, amortização de FII no preço médio, desdobramento, grupamento e bonificação na quantidade e no preço médio, calculados sobre o livro sem tabela nova; recomendações para a OPEN-06 esperando a resposta |
+| 1.40 | SPEC-043 aprovada (Nicoly, 06/11/2026) com as recomendações e implementada: proventos no caixa das carteiras ao vivo e histórica, JCP líquido (17,5% desde 2026, LC 224/2025), eventos corrigindo quantidade e preço médio, frações vendidas; OPEN-06 resolvida. Fase 3 completa. Limitação: eventos da B3 incompletos em alguns ativos (ex.: MGLU3 2017 e 2019) |
 ---
 
 ## 0. Como ler este documento
@@ -781,7 +783,7 @@ Visão geral por fase:
 
 #### SPEC-043 — Proventos e eventos corporativos na carteira
 
-Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalhada.
+Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); detalhada em [SPEC-043.md](SPEC-043.md), aprovada e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -794,7 +796,7 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 | ADRs | DA09, DA10, DA17 |
 | Depende de | SPEC-014, SPEC-042 |
 | Posição | Mexe no caixa e na posição, então entra na mesma conta das SPECs 013 e 014, e não só na rentabilidade (SPEC-019). Vale para a carteira histórica quando a SPEC-016 for entregue |
-| Em aberto | OPEN-06 (regras: data com, data de pagamento, IR do JCP, amortização de FII) |
+| Em aberto | ✅ OPEN-06 resolvida (data com, data de pagamento, IR do JCP, amortização de FII) |
 | Prioridade derivada | Should |
 
 ### Fase 4 — Renda fixa

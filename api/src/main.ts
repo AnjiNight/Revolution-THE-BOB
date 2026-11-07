@@ -156,6 +156,12 @@ async function main(): Promise<void> {
       history: quotes,
       // SPEC-016: desdobramentos, grupamentos e bonificações (SPEC-042).
       events,
+      // SPEC-043: proventos do Investidor10, só com o interruptor ligado.
+      income: {
+        enabled: config.investidor10.enabled,
+        dividends: (assetId, since) => fundamentalsRepo.dividends(assetId, since),
+        visitedAssets: () => fundamentalsRepo.visitedAssets(),
+      },
     });
     const portfolios = new PortfolioService({
       portfolios: portfolioRepository,

@@ -11,7 +11,7 @@ import {
   type IsoDate,
   type Portfolio,
 } from '@simulador/shared';
-import { ArrowDown, ArrowUp } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, Info } from '@phosphor-icons/react';
 import { Fragment, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
@@ -116,8 +116,9 @@ export function PortfolioCash({
     onChanged();
   };
 
-  // Histórica (RB25): do início da carteira ou do último lançamento, o que vier depois.
-  const lastDate = data?.entries[0]?.date;
+  // Histórica (RB25): do início da carteira ou do último lançamento, o que vier depois. Os
+  // proventos (SPEC-043) não são lançamentos do usuário e não contam.
+  const lastDate = data?.entries.find((entry) => entry.type !== 'income')?.date;
   const firstDay = lastDate && lastDate > portfolio.startDate ? lastDate : portfolio.startDate;
 
   return (
@@ -192,6 +193,40 @@ export function PortfolioCash({
         <p className="form-error" role="alert">
           {t(`authErrors.${state.error}`)}
         </p>
+      )}
+      {data && data.balance.startsWith('-') && (
+        <p className="form-error" role="alert">
+          {t('portfolios.cash.income.negative')}
+        </p>
+      )}
+      {data && !data.incomeEnabled && (
+        <p className="assets-note">
+          <Info weight="fill" aria-hidden="true" />
+          <span>{t('portfolios.cash.income.disabled')}</span>
+        </p>
+      )}
+      {data && data.pendingIncome.length > 0 && (
+        <div className="cash-pending">
+          <h3>{t('portfolios.cash.income.pendingTitle')}</h3>
+          <ul>
+            {data.pendingIncome.map((income) => (
+              <li key={`${income.assetId}${income.kind}${income.exDate}${income.paymentDate}`}>
+                {t(
+                  income.paymentDate
+                    ? 'portfolios.cash.income.pendingOn'
+                    : 'portfolios.cash.income.pendingNoDate',
+                  {
+                    kind: t(`portfolios.cash.income.kinds.${income.kind}`),
+                    ticker: income.ticker,
+                    amount: formatMoney(income.net, language),
+                    date: income.paymentDate ? formatCalendarDay(income.paymentDate, language) : '',
+                  },
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="field-hint">{t('portfolios.cash.income.source')}</p>
+        </div>
       )}
       {data && data.total === 0 && <p className="assets-empty">{t('portfolios.cash.empty')}</p>}
 
@@ -313,8 +348,15 @@ function StatementRow({
   const { t, i18n } = useTranslation();
   const language = i18n.language;
   const describe = useDescribe();
-  // Entra no caixa: aporte e venda; sai: retirada e compra.
-  const sign = entry.type === 'deposit' || entry.type === 'sell' ? '+' : '−';
+  // Entra no caixa: aporte, venda e provento; sai: retirada e compra.
+  const credit = entry.type === 'deposit' || entry.type === 'sell' || entry.type === 'income';
+  const sign = credit ? '+' : '−';
+  const money = (value: string) => formatMoney(value, language);
+  const typeLabel = entry.income
+    ? t(`portfolios.cash.income.kinds.${entry.income.kind}`)
+    : entry.fraction
+      ? t('portfolios.cash.income.fraction')
+      : t(`portfolios.cash.types.${entry.type}`);
   const reversedAt = entry.reversedAt
     ? new Intl.DateTimeFormat(language, {
         dateStyle: 'short',
@@ -328,7 +370,39 @@ function StatementRow({
       <td data-label={t('portfolios.cash.columns.type')}>
         {/* Um bloco só: no cartão (480 px), fica inteiro do lado direito do rótulo. */}
         <span className="cash-type-cell">
-          <span className="cash-type">{t(`portfolios.cash.types.${entry.type}`)}</span>
+          <span className="cash-type">{typeLabel}</span>
+          {/* SPEC-043: provento pago e fração vendida, com a fonte (autorização do Investidor10). */}
+          {entry.income && (
+            <span className="cash-trade">
+              {t('portfolios.cash.income.detail', {
+                quantity: new Intl.NumberFormat(language).format(entry.income.quantity),
+                ticker: entry.income.ticker,
+                perShare: new Intl.NumberFormat(language, {
+                  style: 'currency',
+                  currency: 'BRL',
+                  maximumFractionDigits: 8,
+                }).format(Number(entry.income.perShare)),
+                exDate: formatCalendarDay(entry.income.exDate, language),
+              })}
+              {entry.income.tax !== '0.00' &&
+                ` · ${t('portfolios.cash.income.tax', {
+                  gross: money(entry.income.gross),
+                  tax: money(entry.income.tax),
+                })}`}
+              {` · ${t('portfolios.cash.income.source')}`}
+            </span>
+          )}
+          {entry.fraction && (
+            <span className="cash-trade">
+              {t('portfolios.cash.income.fractionDetail', {
+                shares: new Intl.NumberFormat(language, { maximumFractionDigits: 6 }).format(
+                  Number(entry.fraction.shares),
+                ),
+                ticker: entry.fraction.ticker,
+                price: money(entry.fraction.price),
+              })}
+            </span>
+          )}
           {entry.trade && (
             <span className="cash-trade">
               {t('portfolios.cash.tradeDetail', {
@@ -348,7 +422,7 @@ function StatementRow({
       </td>
       <td
         data-label={t('portfolios.cash.columns.amount')}
-        className={`cash-number cash-${entry.type === 'sell' ? 'deposit' : entry.type}`}
+        className={`cash-number cash-${credit ? 'deposit' : entry.type}`}
       >
         <span className="cash-amount">
           {sign}

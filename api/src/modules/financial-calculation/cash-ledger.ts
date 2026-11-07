@@ -2,11 +2,12 @@ import { centsToAmount, type IsoDate } from '@simulador/shared';
 
 /**
  * Um lançamento do livro-razão do caixa (SPEC-013, DA09): aporte e retirada, e, desde a SPEC-014,
- * compra (tira o total do caixa) e venda (põe o total).
+ * compra (tira o total do caixa) e venda (põe o total). SPEC-043: `income` é um provento ou a venda
+ * de uma fração, calculados (não gravados), que põem dinheiro.
  */
 export interface LedgerMovement {
   id: string;
-  type: 'deposit' | 'withdrawal' | 'buy' | 'sell';
+  type: 'deposit' | 'withdrawal' | 'buy' | 'sell' | 'income';
   /** Decimal positivo com até 2 casas; na compra e na venda, o total da negociação. */
   amount: string;
   date: IsoDate;
@@ -52,7 +53,12 @@ function signedCents(movement: LedgerMovement): bigint {
   if (value <= 0n) {
     throw new RangeError(`valor inválido no lançamento ${movement.id}: "${movement.amount}"`);
   }
-  return movement.type === 'deposit' || movement.type === 'sell' ? value : -value;
+  return credits(movement.type) ? value : -value;
+}
+
+/** Aporte, venda e provento põem dinheiro no caixa; retirada e compra tiram. */
+export function credits(type: LedgerMovement['type']): boolean {
+  return type === 'deposit' || type === 'sell' || type === 'income';
 }
 
 /**

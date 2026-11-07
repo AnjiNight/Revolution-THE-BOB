@@ -7,6 +7,7 @@ import {
   type NewTradeInput,
   type PortfolioPositions,
   type Position,
+  type PositionEvent,
   type QuoteLevelCode,
   type Trade,
   type TradeBlockReason,
@@ -14,9 +15,9 @@ import {
   type TradeResult,
 } from '@simulador/shared';
 import { canSpend, cashLedger, toCents } from '../../financial-calculation/cash-ledger.js';
+import type { AppliedEvent, Timeline } from '../../financial-calculation/corporate-actions.js';
 import {
   displayPrice,
-  holdings,
   roundToCents,
   tradeTotal,
   valuate,
@@ -36,7 +37,14 @@ import {
   QuoteChangedError,
   TradeAssetNotFoundError,
 } from '../domain/errors.js';
-import { activeLedger, ledgerItems, ownedPortfolio, tradeMovements } from './ledger.js';
+import {
+  activeLedger,
+  cashMovements,
+  corporateData,
+  ledgerItems,
+  ledgerTimeline,
+  ownedPortfolio,
+} from './ledger.js';
 import type {
   LedgerRepository,
   MarketAsset,
@@ -49,6 +57,13 @@ import type {
   StoredPortfolio,
   StoredTrade,
 } from './ports.js';
+
+/** SPEC-043: o tipo do evento (SPEC-042) como a carteira mostra. */
+const EVENT_KIND: Record<AppliedEvent['kind'], PositionEvent['kind']> = {
+  desdobramento: 'split',
+  grupamento: 'reverse_split',
+  bonificacao: 'bonus',
+};
 
 /** Até a SPEC-026 (assinatura), todo usuário vê o nível gratuito (DA16). */
 const USER_LEVEL: QuoteLevelCode = 'free';
@@ -92,29 +107,51 @@ export class TradingService {
     this.clock = deps.clock ?? (() => new Date());
   }
 
-  /** SPEC-014 §5.1: posições em ordem de ticker, com o caixa, o valor em ativos e o total. */
+  /**
+   * SPEC-014 §5.1: posições em ordem de ticker, com o caixa, o valor em ativos e o total. SPEC-043:
+   * com os proventos pagos no caixa e a quantidade e o preço médio corrigidos pelos eventos.
+   */
   async positions(userId: string, id: string): Promise<PortfolioPositions> {
     await ownedPortfolio(this.deps.portfolios, userId, id);
     // SPEC-015: as negociações e lançamentos estornados não contam.
     const ledger = activeLedger(await this.deps.ledger.ledger(id));
-    const cash = cashLedger(ledgerItems(ledger)).balance;
+    const data = await corporateData(this.deps.market, ledger);
+    const line = ledgerTimeline(ledger, data, isoDateInBrasilia(this.clock()));
+    const cash = cashLedger(cashMovements(ledger, line)).balance;
+    const holdingList = [...line.holdings.values()];
+    const loaded = await this.deps.market.incomeLoaded(holdingList.map((h) => h.assetId));
     const positions = (
-      await Promise.all(
-        [...holdings(tradeMovements(ledger.trades)).values()].map((holding) =>
-          this.position(holding),
-        ),
-      )
+      await Promise.all(holdingList.map((holding) => this.position(holding, line, loaded)))
     ).sort((a, b) => a.ticker.localeCompare(b.ticker));
     const value = positions.reduce(
       (sum, position) => sum + (position.marketValue ? toCents(position.marketValue) : 0n),
       0n,
     );
+    const received = [...line.received.values()].reduce((sum, cents) => sum + cents, 0n);
+    const pending = line.pending.reduce((sum, credit) => sum + toCents(credit.net), 0n);
+    const next = line.pending
+      .filter((credit) => credit.paymentDate !== null)
+      .sort((a, b) => (a.paymentDate ?? '').localeCompare(b.paymentDate ?? ''));
+    const nextDate = next[0]?.paymentDate ?? null;
     return {
       cash,
       positionsValue: centsToAmount(value),
       total: centsToAmount(toCents(cash) + value),
       positions,
       lastEntryDate: lastDate(ledger),
+      income: centsToAmount(received),
+      pendingIncome: centsToAmount(pending),
+      nextPayment: nextDate
+        ? {
+            date: nextDate,
+            amount: centsToAmount(
+              next
+                .filter((credit) => credit.paymentDate === nextDate)
+                .reduce((sum, credit) => sum + toCents(credit.net), 0n),
+            ),
+          }
+        : null,
+      incomeEnabled: this.deps.market.incomeEnabled,
     };
   }
 
@@ -131,9 +168,13 @@ export class TradingService {
     const portfolio = await ownedPortfolio(this.deps.portfolios, userId, id);
     const asset = await this.asset(assetId);
     const ledger = activeLedger(await this.deps.ledger.ledger(id));
+    // SPEC-043: na histórica, o caixa e a posição naquela data, com os proventos pagos até ela e os
+    // eventos já aplicados; na ao vivo, os de hoje.
+    const until = portfolio.type === 'historical' && date ? date : isoDateInBrasilia(this.clock());
+    const line = ledgerTimeline(ledger, await corporateData(this.deps.market, ledger), until);
     const common = {
-      cash: cashLedger(ledgerItems(ledger)).balance,
-      held: holdings(tradeMovements(ledger.trades)).get(assetId)?.quantity ?? 0,
+      cash: cashLedger(cashMovements(ledger, line)).balance,
+      held: line.holdings.get(assetId)?.quantity ?? 0,
       // SPEC-016: na histórica, o ativo desativado pode ser comprado (estava na bolsa naquele dia).
       buyable: portfolio.type === 'historical' || asset.active,
     };
@@ -184,6 +225,11 @@ export class TradingService {
     }
     const total = tradeTotal(input.quantity, priced.price);
     const now = this.clock();
+    // SPEC-043: proventos e eventos lidos antes da trava (a conta, com o livro travado).
+    const data = await corporateData(this.deps.market, await this.deps.ledger.ledger(id), {
+      assetId: asset.id,
+      from: priced.date,
+    });
 
     let after: PortfolioLedger = { cash: [], trades: [], reversals: [] };
     const stored = await this.deps.ledger.appendTradeLocked(id, (locked): NewStoredTrade => {
@@ -193,11 +239,13 @@ export class TradingService {
       if (priced.kind === 'historical' && last && priced.date < last) {
         throw new PortfolioValidationError({ date: 'before_last_entry' });
       }
-      // Na histórica não há nada depois da data (RB25): o caixa e a posição de agora são os dela.
-      const cash = cashLedger(ledgerItems(current)).balance;
+      // Na histórica não há lançamento do usuário depois da data (RB25): o caixa e a posição são
+      // os do livro até ela, com os proventos pagos e os eventos até ela (SPEC-043).
+      const line = ledgerTimeline(current, data, priced.date);
+      const cash = cashLedger(cashMovements(current, line)).balance;
       if (input.type === 'buy' && !canSpend(cash, total)) throw new InsufficientCashError(cash);
       if (input.type === 'sell') {
-        const held = holdings(tradeMovements(current.trades)).get(asset.id)?.quantity ?? 0;
+        const held = line.holdings.get(asset.id)?.quantity ?? 0;
         if (held < input.quantity) throw new InsufficientPositionError(held);
       }
       const trade: NewStoredTrade = {
@@ -220,11 +268,13 @@ export class TradingService {
       return trade;
     });
 
-    const holding = holdings(tradeMovements(after.trades)).get(asset.id);
+    const line = ledgerTimeline(after, data, priced.date);
+    const holding = line.holdings.get(asset.id);
+    const loaded = await this.deps.market.incomeLoaded([asset.id]);
     return {
       trade: toPublicTrade(stored, asset.ticker),
-      cash: cashLedger(ledgerItems(after)).balance,
-      position: holding ? await this.position(holding) : null,
+      cash: cashLedger(cashMovements(after, line)).balance,
+      position: holding ? await this.position(holding, line, loaded) : null,
     };
   }
 
@@ -336,10 +386,14 @@ export class TradingService {
 
   /**
    * A posição com o último preço conhecido: a cotação do pregão; sem ela, o último fechamento.
-   * SPEC-016: com desdobramento, grupamento ou bonificação desde a primeira compra em posição, o
-   * valor atual e a variação ficam de fora até a SPEC-043 (a quantidade ainda não é corrigida).
+   * SPEC-043: a quantidade e o preço médio já vêm corrigidos pelos eventos (os desde a primeira
+   * compra em posição aparecem em `events`), com os proventos pagos do ativo.
    */
-  private async position(holding: Holding): Promise<Position> {
+  private async position(
+    holding: Holding,
+    line: Timeline,
+    loaded: ReadonlySet<string>,
+  ): Promise<Position> {
     const asset = (await this.deps.market.asset(holding.assetId)) ?? {
       id: holding.assetId,
       ticker: '',
@@ -347,8 +401,21 @@ export class TradingService {
       assetClass: 'stock' as const,
       active: false,
     };
-    const events = await this.deps.market.eventsFrom(holding.assetId, holding.since);
-    const base = { ...basePosition(holding, asset), events };
+    const events = line.events
+      .filter((event) => event.assetId === holding.assetId && event.exDate >= holding.since)
+      .map((event) => ({
+        kind: EVENT_KIND[event.kind],
+        exDate: event.exDate,
+        multiplier: event.multiplier,
+        quantityBefore: event.quantityBefore,
+        quantityAfter: event.quantityAfter,
+      }));
+    const base = {
+      ...basePosition(holding, asset),
+      events,
+      income: centsToAmount(line.received.get(holding.assetId) ?? 0n),
+      incomeLoaded: loaded.has(holding.assetId),
+    };
     const quote = await this.deps.market.latestQuote(holding.assetId, USER_LEVEL);
     const close = quote ? null : await this.deps.market.lastClose(holding.assetId);
     const price = quote?.price ?? close?.close;
@@ -360,7 +427,6 @@ export class TradingService {
         ? { lastPriceKind: 'intraday', lastPriceAt: quote.at.toISOString() }
         : { lastPriceKind: 'close', lastPriceDate: close?.date ?? null }),
     };
-    if (events.length > 0) return priced;
     const valuation = valuate(holding, price);
     return {
       ...priced,
@@ -394,6 +460,8 @@ function basePosition(holding: Holding, asset: MarketAsset): Position {
     change: null,
     changePercent: null,
     events: [],
+    income: '0.00',
+    incomeLoaded: false,
   };
 }
 

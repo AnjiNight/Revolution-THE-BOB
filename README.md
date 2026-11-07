@@ -104,6 +104,8 @@ npm run investidor10:apagar --workspace api
 
 O gráfico da ficha passa a abrir **ajustado** por desdobramentos, grupamentos e bonificações, pelos eventos da página de cada empresa no site da B3 (domingo às 04:00), com a opção "Como a B3 publicou".
 
+**Proventos e eventos na carteira** ([SPEC-043](specs/SPEC-043.md)): nas carteiras ao vivo e históricas, os proventos entram no caixa na data de pagamento para quem tinha o ativo no fim da data com. O JCP entra sem o IR: 15% até 2025 e 17,5% desde 2026. Desdobramentos, grupamentos e bonificações corrigem a quantidade e o preço médio, e a fração que sobra é vendida pelo fechamento ajustado. Nada disso é gravado: a conta é refeita cada vez que a carteira é aberta. Com `INVESTIDOR10_ENABLED=false`, nenhum provento entra e os eventos da B3 continuam. Depois de apagar os dados do Investidor10, uma carteira que gastou proventos pode ficar com o caixa negativo, e a tela avisa.
+
 ### Token da brapi (opcional)
 
 As cotações do pregão e a lista de ativos ([SPEC-009](specs/SPEC-009.md) e [SPEC-040](specs/SPEC-040.md)) vêm da [brapi](https://brapi.dev). Desde a SPEC-040, o app usa a **lista** da brapi, que responde sem token e não desconta da cota: **o token é opcional**. Se você quiser usar um (para o caso de a brapi mudar a regra), **gere o seu**: a cota de 15 mil consultas por mês é por chave, então dois computadores com o mesmo token gastam a mesma cota.

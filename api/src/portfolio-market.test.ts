@@ -80,6 +80,30 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
             : [],
         ),
     },
+    income: {
+      enabled: true,
+      dividends: (assetId, since) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [
+                {
+                  kind: 'jcp' as const,
+                  exDate: '2026-08-21',
+                  paymentDate: '2026-12-21',
+                  value: '0.2',
+                },
+                {
+                  kind: 'jcp' as const,
+                  exDate: '2026-08-21',
+                  paymentDate: '2026-12-21',
+                  value: '0.2',
+                },
+                { kind: 'dividendo' as const, exDate: '2019-01-02', paymentDate: null, value: '1' },
+              ].filter((row) => !since || row.exDate >= since)
+            : [],
+        ),
+      visitedAssets: () => Promise.resolve(new Set(['a1'])),
+    },
   });
 
   it('SPEC-016: fechamento do dia, último dia com negócio e eventos a partir da compra', async () => {
@@ -88,12 +112,36 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
     expect(await market.closeOn('a1', '2019-03-15')).toBe('25.3');
     expect(await market.closeOn('a1', '2019-03-14')).toBeNull();
     expect(await market.lastTradingDayBefore('a1', '2019-03-14')).toBe('2019-03-13');
-    // A data com no dia da compra conta.
-    expect(await market.eventsFrom('a1', '2019-03-15')).toEqual([
-      { kind: 'split', exDate: '2019-03-15' },
-      { kind: 'reverse_split', exDate: '2021-06-01' },
+    // A data com no dia da compra conta; SPEC-043: com o fechamento da data com.
+    expect(await market.corporateEvents('a1', '2019-03-15')).toEqual([
+      {
+        id: 'desdobramento:2019-03-15',
+        assetId: 'a1',
+        kind: 'desdobramento',
+        exDate: '2019-03-15',
+        factor: '2',
+        close: '25.3',
+      },
+      {
+        id: 'grupamento:2021-06-01',
+        assetId: 'a1',
+        kind: 'grupamento',
+        exDate: '2021-06-01',
+        factor: '0.1',
+        close: null,
+      },
     ]);
-    expect(await market.eventsFrom('a1', '2021-06-02')).toEqual([]);
+    expect(await market.corporateEvents('a1', '2021-06-02')).toEqual([]);
+  });
+
+  it('SPEC-043: proventos com id estável (iguais ganham número) e ativos visitados', async () => {
+    const income = await market.income('a1', '2020-01-01');
+    expect(income.map((row) => row.id)).toEqual([
+      'a1:jcp:2026-08-21:2026-12-21:0.2',
+      'a1:jcp:2026-08-21:2026-12-21:0.2:2',
+    ]);
+    expect(market.incomeEnabled).toBe(true);
+    expect(await market.incomeLoaded(['a1', 'a2'])).toEqual(new Set(['a1']));
   });
 
   it('o ativo com a situação; o desativado vem com active false; o que não existe, null', async () => {

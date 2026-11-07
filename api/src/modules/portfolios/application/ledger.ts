@@ -1,8 +1,16 @@
+import type { IsoDate } from '@simulador/shared';
 import type { LedgerMovement } from '../../financial-calculation/cash-ledger.js';
+import {
+  timeline,
+  type EventInput,
+  type IncomeInput,
+  type Timeline,
+} from '../../financial-calculation/corporate-actions.js';
 import type { TradeMovement } from '../../financial-calculation/positions.js';
 import { PortfolioNotFoundError } from '../domain/errors.js';
 import type {
   PortfolioLedger,
+  PortfolioMarket,
   PortfolioRepository,
   StoredCashEntry,
   StoredPortfolio,
@@ -65,6 +73,61 @@ export function tradeMovements(trades: readonly StoredTrade[]): TradeMovement[] 
     date: trade.date,
     recordedAt: trade.recordedAt,
   }));
+}
+
+/** SPEC-043: os proventos e eventos dos ativos que a carteira negociou. */
+export interface CorporateData {
+  income: IncomeInput[];
+  events: EventInput[];
+}
+
+/**
+ * SPEC-043: lê os proventos e eventos de cada ativo negociado, da primeira negociação dele em
+ * diante (as estornadas também: não muda a conta e evita ler de novo). `extra` acrescenta um ativo
+ * que vai ser negociado agora, a partir da data dele. Fica fora da trava do livro.
+ */
+export async function corporateData(
+  market: Pick<PortfolioMarket, 'corporateEvents' | 'income'>,
+  ledger: PortfolioLedger,
+  extra?: { assetId: string; from: IsoDate },
+): Promise<CorporateData> {
+  const from = new Map<string, IsoDate>();
+  for (const trade of ledger.trades) {
+    const current = from.get(trade.assetId);
+    if (!current || trade.date < current) from.set(trade.assetId, trade.date);
+  }
+  if (extra) {
+    const current = from.get(extra.assetId);
+    if (!current || extra.from < current) from.set(extra.assetId, extra.from);
+  }
+  const loaded = await Promise.all(
+    [...from].map(([assetId, date]) =>
+      Promise.all([market.income(assetId, date), market.corporateEvents(assetId, date)]),
+    ),
+  );
+  return {
+    income: loaded.flatMap(([income]) => income),
+    events: loaded.flatMap(([, events]) => events),
+  };
+}
+
+/** SPEC-043: a linha do tempo do livro que vale (sem estornados) até o dia pedido. */
+export function ledgerTimeline(
+  ledger: PortfolioLedger,
+  data: CorporateData,
+  until: IsoDate,
+): Timeline {
+  return timeline({
+    trades: tradeMovements(ledger.trades),
+    income: data.income,
+    events: data.events,
+    until,
+  });
+}
+
+/** Os lançamentos do usuário e os da linha do tempo, para o saldo e a conferência do livro. */
+export function cashMovements(ledger: PortfolioLedger, line: Timeline): LedgerMovement[] {
+  return [...ledgerItems(ledger), ...line.movements];
 }
 
 /**

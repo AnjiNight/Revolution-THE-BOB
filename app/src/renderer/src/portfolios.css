@@ -575,12 +575,26 @@ button.link.position-ticker {
 }
 
 /* SPEC-016: evento corporativo depois da compra (até a SPEC-043). */
+/* SPEC-043: evento já aplicado e proventos recebidos; informação, não alerta. */
 .position-event {
   display: block;
   margin-top: 0.2rem;
-  color: var(--warn);
+  color: var(--muted);
   font-size: 0.8rem;
-  font-weight: 600;
+}
+
+.cash-pending {
+  margin-top: 1rem;
+}
+
+.cash-pending h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.cash-pending ul {
+  margin: 0;
+  padding-left: 1.2rem;
 }
 
 /* "Calcular por valor": em reais ou em % do caixa. */

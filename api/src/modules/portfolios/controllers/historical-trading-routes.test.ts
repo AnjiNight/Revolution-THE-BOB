@@ -50,7 +50,7 @@ describe('compra e venda na carteira histórica (SPEC-016)', () => {
     );
     t.market.dailyCloses.set(MGLU3, new Map([['2019-03-15', '40.00']]));
     t.market.dailyCloses.set(VVAR3, new Map([['2019-03-15', '5.00']]));
-    t.market.events.set(MGLU3, [{ kind: 'split', exDate: '2020-10-05' }]);
+    t.market.events.set(MGLU3, [{ kind: 'desdobramento', exDate: '2020-10-05', factor: '300' }]);
     // O preço de hoje, para avaliar as posições (DA17).
     t.market.quotes.set(PETR4, {
       price: '31.20',
@@ -202,19 +202,26 @@ describe('compra e venda na carteira histórica (SPEC-016)', () => {
     expect(res.statusCode).toBe(201);
   });
 
-  it('evento depois da compra: aviso e sem valor atual até a SPEC-043 (CA05)', async () => {
+  it('evento depois da compra: quantidade corrigida e valor atual (CA05, SPEC-043)', async () => {
     await trade({ type: 'buy', assetId: MGLU3, quantity: 10, date: '2019-03-15' });
     t.market.closes.set(MGLU3, { date: '2026-11-05', close: '9.00' });
     const result = await positions();
     expect(result.positions[0]).toMatchObject({
       ticker: 'MGLU3',
+      quantity: 40,
       lastPrice: '9.00',
-      marketValue: null,
-      change: null,
-      changePercent: null,
-      events: [{ kind: 'split', exDate: '2020-10-05' }],
+      marketValue: '360.00',
+      events: [
+        {
+          kind: 'split',
+          exDate: '2020-10-05',
+          multiplier: '4',
+          quantityBefore: 10,
+          quantityAfter: 40,
+        },
+      ],
     });
-    expect(result.positionsValue).toBe('0.00');
+    expect(result.positionsValue).toBe('360.00');
   });
 
   it('estorno de negociação da histórica sem prazo (CA06)', async () => {

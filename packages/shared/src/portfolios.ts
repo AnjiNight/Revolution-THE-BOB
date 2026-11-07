@@ -2,6 +2,7 @@ import type { FieldErrorCode, FieldErrors, ValidationResult } from './auth.js';
 import { isIsoDate, type IsoDate } from './calendar.js';
 
 import type { AssetClass } from './assets.js';
+import type { DividendKind } from './fundamentals.js';
 
 /**
  * Rotas das carteiras (SPEC-012 §5.1), do caixa (SPEC-013 §5.1) e da compra e venda (SPEC-014
@@ -114,10 +115,20 @@ export const CASH_PAGE_SIZE = 100;
  */
 export interface CashEntry {
   id: string;
-  type: CashEntryType | TradeType;
-  /** Na compra e na venda, o total da negociação. */
+  /** SPEC-043: `income` é um provento pago (com `income`) ou a venda de uma fração (`fraction`). */
+  type: CashEntryType | TradeType | 'income';
+  /** Na compra e na venda, o total da negociação; no provento, o líquido. */
   amount: string;
   trade?: { assetId: string; ticker: string; quantity: number; price: string };
+  income?: IncomeDetail;
+  fraction?: {
+    assetId: string;
+    ticker: string;
+    /** A fração de ação, com até 6 casas ("0.5"). */
+    shares: string;
+    /** O fechamento da data com dividido pelo multiplicador. */
+    price: string;
+  };
   /** AAAA-MM-DD: na ao vivo, o dia do registro em Brasília; na histórica, o dia escolhido. */
   date: IsoDate;
   /** ISO 8601: quando o servidor registrou. */
@@ -136,6 +147,29 @@ export interface CashStatement {
   entries: CashEntry[];
   hasMore: boolean;
   total: number;
+  /** SPEC-043: data com já passou, pagamento ainda não (ou sem data); fora do saldo. */
+  pendingIncome: IncomeDetail[];
+  /** SPEC-043: o interruptor do Investidor10; desligado, nenhum provento entra. */
+  incomeEnabled: boolean;
+}
+
+/**
+ * SPEC-043: um provento de quem tinha o ativo no fim da data com: quantidade × valor por ação, em
+ * centavos para baixo; no JCP, o IR retido (15% até 2025, 17,5% desde 2026). Fonte: Investidor10.
+ */
+export interface IncomeDetail {
+  assetId: string;
+  ticker: string;
+  kind: DividendKind;
+  quantity: number;
+  /** Valor por ação ou cota, com até 10 casas. */
+  perShare: string;
+  gross: string;
+  tax: string;
+  net: string;
+  exDate: IsoDate;
+  paymentDate: IsoDate | null;
+  source: 'investidor10';
 }
 
 export interface NewCashEntryInput {
@@ -352,10 +386,17 @@ export interface Trade {
   source: 'brapi' | 'b3';
 }
 
-/** Desdobramento, grupamento ou bonificação (SPEC-042), com a data com. */
+/**
+ * Desdobramento, grupamento ou bonificação (SPEC-042), com a data com. SPEC-043: já aplicado na
+ * posição, com a quantidade antes e depois.
+ */
 export interface PositionEvent {
   kind: 'split' | 'reverse_split' | 'bonus';
   exDate: IsoDate;
+  /** Quantas ações passou a valer uma ("4", "0.1", "1.02"). */
+  multiplier: string;
+  quantityBefore: number;
+  quantityAfter: number;
 }
 
 /**
@@ -381,16 +422,20 @@ export interface Position {
   change: string | null;
   changePercent: string | null;
   /**
-   * SPEC-016: eventos corporativos desde a primeira compra ainda em posição. Até a SPEC-043, com
-   * algum, `marketValue`, `change` e `changePercent` vêm `null` (a quantidade não foi corrigida).
+   * SPEC-016: eventos corporativos desde a primeira compra ainda em posição. SPEC-043: já aplicados
+   * na quantidade e no preço médio.
    */
   events: PositionEvent[];
+  /** SPEC-043: total líquido de proventos pagos por este ativo nesta carteira. */
+  income: string;
+  /** SPEC-043: `false` se o processador ainda não visitou o ativo no Investidor10. */
+  incomeLoaded: boolean;
 }
 
 /** Corpo de `GET /api/portfolios/:id/positions`. */
 export interface PortfolioPositions {
   cash: string;
-  /** Soma do valor atual das posições com preço (sem as que têm evento). */
+  /** Soma do valor atual das posições com preço. */
   positionsValue: string;
   /** Caixa + posições. */
   total: string;
@@ -398,6 +443,12 @@ export interface PortfolioPositions {
   positions: Position[];
   /** SPEC-016: dia do último lançamento que vale, para a data mínima na histórica (RB25). */
   lastEntryDate: IsoDate | null;
+  /** SPEC-043: proventos pagos (líquidos) e a receber, somados. */
+  income: string;
+  pendingIncome: string;
+  /** O próximo pagamento a receber, ou `null`. */
+  nextPayment: { date: IsoDate; amount: string } | null;
+  incomeEnabled: boolean;
 }
 
 /** Por que não dá para negociar agora (SPECs 014 e 016). */

@@ -654,7 +654,26 @@
         "deposit": "Aporte",
         "withdrawal": "Retirada",
         "buy": "Compra",
-        "sell": "Venda"
+        "sell": "Venda",
+        "income": "Provento"
+      },
+      "income": {
+        "kinds": {
+          "dividendo": "Dividendo",
+          "jcp": "JCP",
+          "rendimento": "Rendimento",
+          "amortizacao": "Amortização"
+        },
+        "fraction": "Venda de fração",
+        "detail": "{{quantity}} {{ticker}} × {{perShare}} (data com {{exDate}})",
+        "tax": "bruto {{gross}}, IR {{tax}}",
+        "fractionDetail": "{{shares}} {{ticker}} a {{price}}",
+        "source": "Fonte: Investidor10",
+        "pendingTitle": "A receber",
+        "pendingOn": "{{kind}} {{ticker}}: {{amount}} em {{date}}",
+        "pendingNoDate": "{{kind}} {{ticker}}: {{amount}}, sem data de pagamento",
+        "disabled": "Proventos desligados: o caixa não conta os dividendos.",
+        "negative": "O caixa ficou negativo porque um provento deixou de constar da fonte. Só dá para aportar até ele voltar ao positivo."
       },
       "showMore": "Mostrar mais",
       "count_one": "{{shown}} de {{count}} lançamento",
@@ -701,7 +720,9 @@
       "totals": {
         "cash": "Caixa",
         "positions": "Em ativos",
-        "total": "Total"
+        "total": "Total",
+        "income": "Proventos recebidos",
+        "pending": "A receber"
       },
       "columns": {
         "asset": "Ativo",
@@ -715,16 +736,20 @@
       "closeOf": "Fechamento de {{date}}",
       "noPrice": "Sem preço",
       "changeNote": "Variação sobre o preço médio, sem custos de operação nem proventos.",
-      "dividendsNote": "Proventos e desdobramentos ainda não entram nesta carteira.",
+      "dividendsNote": "Proventos entram no caixa na data de pagamento, para quem tinha o ativo no fim da data com (JCP já sem o IR); desdobramentos, grupamentos e bonificações corrigem a quantidade e o preço médio. Fonte dos proventos: Investidor10.",
+      "incomeDisabled": "Proventos desligados: o caixa não conta os dividendos. Desdobramentos, grupamentos e bonificações continuam corrigindo a quantidade.",
+      "incomeReceived": "Proventos recebidos: {{amount}}",
+      "incomeNotLoaded": "Proventos deste ativo ainda não carregados.",
+      "nextPayment": "Próximo: {{amount}} em {{date}}",
+      "eventApplied": "{{event}} em {{date}}: {{before}} → {{after}}",
       "bought": "Compra registrada: {{quantity}} {{ticker}}.",
       "sold": "Venda registrada: {{quantity}} {{ticker}}.",
       "at": "às {{time}}",
       "priceNote": "Último preço: a cotação do pregão, com atraso de até {{delay}} minutos; sem ela, o último fechamento.",
-      "eventWarning": "Teve {{event}} em {{date}}: o valor atual ainda não considera isso.",
       "event": {
-        "split": "desdobramento",
-        "reverse_split": "grupamento",
-        "bonus": "bonificação"
+        "split": "Desdobramento",
+        "reverse_split": "Grupamento",
+        "bonus": "Bonificação"
       }
     },
     "trade": {

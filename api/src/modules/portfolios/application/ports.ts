@@ -3,10 +3,10 @@ import type {
   CashEntryType,
   IsoDate,
   PortfolioType,
-  PositionEvent,
   QuoteLevelCode,
   TradeType,
 } from '@simulador/shared';
+import type { EventInput, IncomeInput } from '../../financial-calculation/corporate-actions.js';
 import type { TradingCalendar } from '../../financial-calculation/trading-calendar.js';
 
 /** Aporte ou retirada como fica guardado (SPEC-013 §6). Valor em decimal com 2 casas. */
@@ -129,8 +129,20 @@ export interface PortfolioMarket {
   closeOn(assetId: string, date: IsoDate): Promise<string | null>;
   /** SPEC-016: o último dia com negócio antes da data, ou `null`. */
   lastTradingDayBefore(assetId: string, date: IsoDate): Promise<IsoDate | null>;
-  /** SPEC-016: desdobramentos, grupamentos e bonificações com data com a partir da data. */
-  eventsFrom(assetId: string, date: IsoDate): Promise<PositionEvent[]>;
+  /**
+   * SPEC-043: desdobramentos, grupamentos e bonificações (SPEC-042) com data com a partir da data,
+   * com o fechamento da B3 da data com (para vender as frações).
+   */
+  corporateEvents(assetId: string, from: IsoDate): Promise<EventInput[]>;
+  /**
+   * SPEC-043: proventos (SPEC-042) com data com a partir da data; vazio com o interruptor do
+   * Investidor10 desligado.
+   */
+  income(assetId: string, from: IsoDate): Promise<IncomeInput[]>;
+  /** SPEC-043: o interruptor `INVESTIDOR10_ENABLED` (SPEC-041). */
+  readonly incomeEnabled: boolean;
+  /** SPEC-043: dos ativos pedidos, os que o processador já visitou no Investidor10. */
+  incomeLoaded(assetIds: readonly string[]): Promise<Set<string>>;
 }
 
 /** Carteira como fica guardada (SPEC-012 §6). */
