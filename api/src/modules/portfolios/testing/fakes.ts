@@ -190,6 +190,15 @@ export class FakePortfolioMarket implements PortfolioMarket {
     );
   }
 
+  closesFrom(assetId: string, from: string): Promise<Array<{ date: string; close: string }>> {
+    return Promise.resolve(
+      [...(this.dailyCloses.get(assetId) ?? [])]
+        .filter(([date]) => date >= from)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, close]) => ({ date, close })),
+    );
+  }
+
   incomeLoaded(assetIds: readonly string[]): Promise<Set<string>> {
     return Promise.resolve(new Set(assetIds.filter((id) => this.visited.has(id))));
   }

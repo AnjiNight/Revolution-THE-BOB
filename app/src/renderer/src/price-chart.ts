@@ -109,6 +109,8 @@ export function chartLayout(
   points: readonly PricePoint[],
   width: number,
   height: number,
+  /** SPEC-019: valores de outra linha do mesmo gráfico, para o eixo caber os dois. */
+  extra: readonly number[] = [],
 ): ChartLayout {
   const box: ChartBox = {
     left: PADDING,
@@ -117,7 +119,7 @@ export function chartLayout(
     bottom: Math.max(PADDING + 1, height - DATES_HEIGHT),
   };
   const values = points.map((point) => Number(point.close));
-  const axis = valueAxis(Math.min(...values), Math.max(...values));
+  const axis = valueAxis(Math.min(...values, ...extra), Math.max(...values, ...extra));
   const count = points.length;
   const x = (index: number) =>
     count <= 1

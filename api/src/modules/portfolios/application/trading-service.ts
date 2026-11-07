@@ -1,10 +1,14 @@
 import {
+  addDays,
   centsToAmount,
   FREE_QUOTE_DELAY_MINUTES,
   isoDateInBrasilia,
   yearOf,
   type IsoDate,
   type NewTradeInput,
+  type PerformancePeriod,
+  type PerformanceQuery,
+  type PortfolioPerformance,
   type PortfolioPositions,
   type Position,
   type PositionEvent,
@@ -16,6 +20,8 @@ import {
 } from '@simulador/shared';
 import { canSpend, cashLedger, toCents } from '../../financial-calculation/cash-ledger.js';
 import type { AppliedEvent, Timeline } from '../../financial-calculation/corporate-actions.js';
+import { performance } from '../../financial-calculation/performance.js';
+import { periodStart } from '../../financial-calculation/price-history.js';
 import {
   displayPrice,
   roundToCents,
@@ -44,6 +50,7 @@ import {
   ledgerItems,
   ledgerTimeline,
   ownedPortfolio,
+  tradeMovements,
 } from './ledger.js';
 import type {
   LedgerRepository,
@@ -378,6 +385,113 @@ export class TradingService {
     };
   }
 
+  /**
+   * SPEC-019: rentabilidade da cota, resultado em R$ e a evolução do patrimônio no período, do
+   * livro que vale (RB09), com os proventos e eventos da SPEC-043 e os fechamentos da B3. Nas duas
+   * carteiras, até hoje com a cotação do pregão (DA17).
+   */
+  async performance(
+    userId: string,
+    id: string,
+    query: PerformanceQuery,
+  ): Promise<PortfolioPerformance> {
+    const portfolio = await ownedPortfolio(this.deps.portfolios, userId, id);
+    const now = this.clock();
+    const today = isoDateInBrasilia(now);
+    let from: IsoDate;
+    let to: IsoDate;
+    if ('period' in query) {
+      to = today;
+      from = performanceStart(query.period, today, portfolio.startDate);
+    } else {
+      if (query.to > today) throw new PortfolioValidationError({ to: 'future' });
+      ({ from, to } = query);
+    }
+
+    const ledger = activeLedger(await this.deps.ledger.ledger(id));
+    const items = ledgerItems(ledger).filter((item) => item.date <= to);
+    const first = items.map((item) => item.date).sort()[0];
+    if (!first) return emptyPerformance(from, to);
+    const start = from > first ? from : first;
+
+    const calendar = await this.deps.calendar.tradingCalendar(yearOf(first), yearOf(to));
+    const days: IsoDate[] = [];
+    for (let day = first; day <= to; day = addDays(day, 1)) {
+      if (calendar.isTradingDay(day)) days.push(day);
+    }
+    // Lançamento depois do último pregão (aporte de sábado na ao vivo): o dia dele fecha a conta.
+    const lastItem = items
+      .map((item) => item.date)
+      .sort()
+      .at(-1) as IsoDate;
+    if (days.length === 0 || lastItem > (days.at(-1) as IsoDate)) days.push(lastItem);
+
+    const active: PortfolioLedger = {
+      cash: ledger.cash.filter((entry) => entry.date <= to),
+      trades: ledger.trades.filter((trade) => trade.date <= to),
+      reversals: [],
+    };
+    const data = await corporateData(this.deps.market, active);
+    const firstTrade = new Map<string, IsoDate>();
+    for (const trade of active.trades) {
+      const current = firstTrade.get(trade.assetId);
+      if (!current || trade.date < current) firstTrade.set(trade.assetId, trade.date);
+    }
+    const closes = new Map(
+      await Promise.all(
+        [...firstTrade].map(
+          async ([assetId, date]) =>
+            [assetId, await this.deps.market.closesFrom(assetId, date)] as const,
+        ),
+      ),
+    );
+    // Hoje: a cotação do pregão de cada ativo em posição, como nas posições.
+    const live = new Map<string, string>();
+    if (to === today) {
+      const held = ledgerTimeline(active, data, today).holdings;
+      for (const assetId of held.keys()) {
+        const quote = await this.deps.market.latestQuote(assetId, USER_LEVEL);
+        if (quote && isoDateInBrasilia(quote.at) === today) live.set(assetId, quote.price);
+      }
+    }
+
+    const result = performance({
+      movements: ledgerItems(active),
+      trades: tradeMovements(active.trades),
+      income: data.income,
+      events: data.events,
+      closes,
+      days,
+      from: start,
+      live: { date: today, prices: live },
+    });
+    const weekly = daysBetween(start, to) > WEEKLY_AFTER_DAYS;
+    const tickers = new Map(
+      await Promise.all(
+        [...firstTrade.keys()].map(
+          async (assetId) =>
+            [assetId, (await this.deps.market.asset(assetId))?.ticker ?? ''] as const,
+        ),
+      ),
+    );
+    return {
+      from: start,
+      to,
+      startValue: result.startValue,
+      endValue: result.endValue,
+      netFlows: result.netFlows,
+      result: result.result,
+      return: result.return,
+      series: weekly ? lastOfEachWeek(result.points) : result.points,
+      weekly,
+      warnings: result.warnings.map((warning) => ({
+        ...warning,
+        ticker: tickers.get(warning.assetId) ?? '',
+      })),
+      empty: false,
+    };
+  }
+
   private async asset(assetId: string): Promise<MarketAsset> {
     const asset = await this.deps.market.asset(assetId);
     if (!asset) throw new TradeAssetNotFoundError();
@@ -435,6 +549,49 @@ export class TradingService {
       changePercent: valuation.changePercent,
     };
   }
+}
+
+/** SPEC-019, decisão 4: acima de 2 anos, um ponto por semana. */
+const WEEKLY_AFTER_DAYS = 730;
+
+/** Início do período: o mesmo dia N meses antes (como a ficha, SPEC-010), 1º de janeiro, ou tudo. */
+function performanceStart(period: PerformancePeriod, today: IsoDate, start: IsoDate): IsoDate {
+  if (period === 'all') return start;
+  if (period === 'ytd') return `${today.slice(0, 4)}-01-01`;
+  return periodStart(today, period === '12m' ? '1y' : period) ?? start;
+}
+
+function daysBetween(from: IsoDate, to: IsoDate): number {
+  return (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
+}
+
+/** O último ponto de cada semana (de segunda a domingo); o último ponto sempre fica. */
+function lastOfEachWeek<T extends { date: IsoDate }>(points: readonly T[]): T[] {
+  const week = (date: IsoDate) => {
+    const day = new Date(`${date}T00:00:00Z`);
+    const monday = new Date(day.getTime() - ((day.getUTCDay() + 6) % 7) * 86_400_000);
+    return monday.toISOString().slice(0, 10);
+  };
+  return points.filter((point, index) => {
+    const next = points[index + 1];
+    return !next || week(next.date) !== week(point.date);
+  });
+}
+
+function emptyPerformance(from: IsoDate, to: IsoDate): PortfolioPerformance {
+  return {
+    from,
+    to,
+    startValue: '0.00',
+    endValue: '0.00',
+    netFlows: '0.00',
+    result: '0.00',
+    return: '0.00',
+    series: [],
+    weekly: false,
+    warnings: [],
+    empty: true,
+  };
 }
 
 /** O dia do último lançamento que vale (caixa ou negociação), ou `null`. */

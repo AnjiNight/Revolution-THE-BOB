@@ -743,3 +743,52 @@ button.link.position-ticker {
     content: none;
   }
 }
+
+/* SPEC-019: rentabilidade e evolução patrimonial. */
+.performance-panel .period-buttons {
+  margin: 0.75rem 0;
+}
+
+.performance-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.performance-custom .field {
+  margin: 0;
+}
+
+.chart-invested {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.performance-legend {
+  display: flex;
+  gap: 1.25rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.performance-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 1.25rem;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  border-top: 2px solid var(--accent);
+}
+
+.performance-legend .legend-invested::before {
+  border-top: 2px dashed var(--muted);
+}
+
+.assets-note.is-warning svg {
+  color: var(--warn);
+}

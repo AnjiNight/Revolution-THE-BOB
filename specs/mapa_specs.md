@@ -48,6 +48,8 @@
 | 1.38 | SPEC-016 implementada: compra e venda na carteira histórica com o fechamento da B3 do dia, "% do caixa", aviso de evento corporativo até a SPEC-043 e a exportação na versão 6. Fase 3 completa, faltando só a SPEC-043 |
 | 1.39 | SPEC-043 detalhada ([SPEC-043.md](SPEC-043.md)) pela Nicoly, aguardando a aprovação: proventos no caixa na data de pagamento para quem tinha o ativo na data com, JCP líquido, amortização de FII no preço médio, desdobramento, grupamento e bonificação na quantidade e no preço médio, calculados sobre o livro sem tabela nova; recomendações para a OPEN-06 esperando a resposta |
 | 1.40 | SPEC-043 aprovada (Nicoly, 06/11/2026) com as recomendações e implementada: proventos no caixa das carteiras ao vivo e histórica, JCP líquido (17,5% desde 2026, LC 224/2025), eventos corrigindo quantidade e preço médio, frações vendidas; OPEN-06 resolvida. Fase 3 completa. Limitação: eventos da B3 incompletos em alguns ativos (ex.: MGLU3 2017 e 2019) |
+| 1.41 | SPEC-019 detalhada ([SPEC-019.md](SPEC-019.md)) pela Nicoly, aguardando a aprovação: rentabilidade pela cota e resultado em R$ num período, gráfico da evolução patrimonial nas carteiras ao vivo e histórica, aviso de salto de preço sem evento conhecido e cálculo sem Redis (RNF03) |
+| 1.42 | SPEC-019 aprovada (Nicoly, 06/11/2026) com as recomendações e implementada: painel Rentabilidade com períodos, rentabilidade da cota, resultado, patrimônio, gráfico do patrimônio e do total aportado e avisos de salto sem evento; 50 ativos desde 2016 em menos de 1 s (RNF06) |
 ---
 
 ## 0. Como ler este documento
@@ -808,6 +810,8 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); detalhada em [SPEC
 ### Fase 5 — Acompanhamento da carteira
 
 #### SPEC-019 — Rentabilidade e evolução patrimonial
+
+Detalhada em [SPEC-019.md](SPEC-019.md), aprovada e implementada.
 
 | Campo | Conteúdo |
 |---|---|

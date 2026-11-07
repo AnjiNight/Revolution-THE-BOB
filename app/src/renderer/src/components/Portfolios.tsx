@@ -17,6 +17,7 @@ import '../portfolios.css';
 import { formatCalendarDay } from '../format';
 import { MoneyField } from './MoneyField';
 import { PortfolioCash } from './PortfolioCash';
+import { PortfolioPerformance } from './PortfolioPerformance';
 import { PortfolioPositions } from './PortfolioPositions';
 import type { TradeAsset } from './TradeForm';
 import { TextField } from './TextField';
@@ -512,6 +513,12 @@ export function PortfolioPage({
               </span>
             </p>
           </header>
+          {/* SPEC-019: rentabilidade e evolução patrimonial, acima do caixa. */}
+          <PortfolioPerformance
+            portfolio={state.portfolio}
+            version={version}
+            onSessionExpired={onSessionExpired}
+          />
           <PortfolioCash
             portfolio={state.portfolio}
             version={version}

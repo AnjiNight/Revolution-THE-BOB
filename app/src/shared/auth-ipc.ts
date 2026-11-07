@@ -109,6 +109,8 @@ export const PORTFOLIO_CHANNELS = {
   trade: 'portfolios:trade',
   // SPEC-015: estorno de um lançamento.
   reverse: 'portfolios:reverse',
+  // SPEC-019: rentabilidade e evolução patrimonial.
+  performance: 'portfolios:performance',
 } as const;
 
 /** Erros que a interface sabe traduzir. */

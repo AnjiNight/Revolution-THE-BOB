@@ -208,7 +208,9 @@ export type FieldErrorCode =
   | 'before_start'
   | 'before_last_entry'
   // SPEC-014: compra e venda.
-  | 'invalid_quantity';
+  | 'invalid_quantity'
+  // SPEC-019: período da rentabilidade.
+  | 'after_end';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 

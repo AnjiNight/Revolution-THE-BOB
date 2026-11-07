@@ -6,6 +6,8 @@ import type {
   CalendarSuggestion,
   CashEntryResult,
   CashStatement,
+  PerformanceQuery,
+  PortfolioPerformance,
   PortfolioPositions,
   ReversalResult,
   TradeQuote,
@@ -118,6 +120,8 @@ export interface DesktopApi {
     trade(id: string, input: NewTradeInput): Promise<ClientResult<TradeResult>>;
     /** SPEC-015: estorna um lançamento; a recusa traz em details o lançamento que quebraria. */
     reverse(id: string, entryId: string): Promise<ClientResult<ReversalResult>>;
+    /** SPEC-019: rentabilidade e evolução patrimonial no período (`period` ou `from` e `to`). */
+    performance(id: string, query: PerformanceQuery): Promise<ClientResult<PortfolioPerformance>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

@@ -8,6 +8,7 @@ import {
   validateNewPortfolio,
   validateNewReversal,
   validateNewTrade,
+  validatePerformanceQuery,
   validateRenamePortfolio,
   validateTradeQuoteQuery,
 } from './portfolios.js';
@@ -197,6 +198,36 @@ describe('compra e venda: validação (SPEC-014)', () => {
     expect(validateTradeQuoteQuery({ assetId: ok.assetId.toUpperCase() })).toEqual({
       success: true,
       data: { assetId: ok.assetId },
+    });
+  });
+});
+
+describe('rentabilidade: validação do período (SPEC-019)', () => {
+  it('período conhecido, vazio é desde o início; ou duas datas em ordem', () => {
+    expect(validatePerformanceQuery({})).toEqual({ success: true, data: { period: 'all' } });
+    expect(validatePerformanceQuery({ period: '6m' })).toEqual({
+      success: true,
+      data: { period: '6m' },
+    });
+    expect(validatePerformanceQuery({ period: '2y' })).toEqual({
+      success: false,
+      fields: { period: 'invalid_option' },
+    });
+    expect(validatePerformanceQuery({ from: '2020-01-01', to: '2020-01-01' })).toEqual({
+      success: true,
+      data: { from: '2020-01-01', to: '2020-01-01' },
+    });
+    expect(validatePerformanceQuery({ from: '2020-02-01', to: '2020-01-01' })).toEqual({
+      success: false,
+      fields: { from: 'after_end' },
+    });
+    expect(validatePerformanceQuery({ from: '2020-01-01' })).toEqual({
+      success: false,
+      fields: { to: 'required' },
+    });
+    expect(validatePerformanceQuery({ period: '1m', from: 'x', to: '2020-01-01' })).toEqual({
+      success: false,
+      fields: { from: 'invalid_date', period: 'not_allowed' },
     });
   });
 });

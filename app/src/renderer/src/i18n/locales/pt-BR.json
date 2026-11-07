@@ -204,7 +204,8 @@
     "not_allowed": "Na carteira ao vivo, a data é sempre a de agora.",
     "before_start": "Escolha um dia a partir do início da carteira.",
     "before_last_entry": "Escolha o dia do último lançamento ou depois: na carteira histórica, os lançamentos seguem a ordem das datas.",
-    "invalid_quantity": "Informe uma quantidade inteira, a partir de 1."
+    "invalid_quantity": "Informe uma quantidade inteira, a partir de 1.",
+    "after_end": "A data de início precisa vir antes da data final."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -709,6 +710,37 @@
         "breaksCash": "Esse estorno deixaria o caixa negativo {{at}}. Estorne {{that}} antes.",
         "breaksPosition": "Esse estorno deixaria a venda de {{quantity}} {{ticker}} de {{date}} maior que a posição. Estorne essa venda antes."
       }
+    },
+    "performance": {
+      "title": "Rentabilidade",
+      "periodLabel": "Período",
+      "periods": {
+        "1m": "1 mês",
+        "6m": "6 meses",
+        "12m": "12 meses",
+        "ytd": "No ano",
+        "all": "Desde o início",
+        "custom": "Personalizado"
+      },
+      "from": "De",
+      "to": "Até",
+      "apply": "Aplicar",
+      "loading": "Calculando a rentabilidade…",
+      "empty": "Faça um aporte para ver a rentabilidade.",
+      "range": "De {{from}} a {{to}}",
+      "return": "Rentabilidade",
+      "result": "Resultado",
+      "equity": "Patrimônio",
+      "flows": "Patrimônio no início: {{start}}; aportes menos retiradas no período: {{flows}}.",
+      "chartLabel": "Evolução do patrimônio",
+      "legendEquity": "Patrimônio",
+      "legendInvested": "Total aportado",
+      "tooltipInvested": "Aportado: {{amount}}",
+      "cursor": "{{date}}: patrimônio {{equity}}, aportado {{invested}}, rentabilidade {{return}}",
+      "weekly": "Um ponto por semana.",
+      "note": "Rentabilidade pela cota: aportes e retiradas não mudam a %, e os proventos contam como ganho. Preços: fechamento da B3 e, hoje, a cotação do pregão; sem custos de operação.",
+      "jump": "{{ticker}} teve um salto de preço em {{date}} sem desdobramento ou grupamento conhecido: o resultado pode estar errado.",
+      "noClose": "{{ticker}} não tem fechamento até {{date}}: até lá, vale o preço da compra."
     },
     "positions": {
       "title": "Posições",

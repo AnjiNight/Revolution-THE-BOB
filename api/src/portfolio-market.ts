@@ -19,6 +19,8 @@ export interface PortfolioMarketSources {
     quoteRange(assetId: string): Promise<QuoteRange | null>;
     closeOn(assetId: string, date: IsoDate): Promise<string | null>;
     lastTradingDayBefore(assetId: string, date: IsoDate): Promise<IsoDate | null>;
+    /** SPEC-019. */
+    closes(assetId: string, from: IsoDate | null): Promise<Array<{ date: IsoDate; close: string }>>;
   };
   /** SPEC-042: desdobramentos, grupamentos e bonificações. */
   events: { forAsset(assetId: string): Promise<PriceEventInput[]> };
@@ -89,6 +91,7 @@ export function portfolioMarket(sources: PortfolioMarketSources): PortfolioMarke
         return { ...row, id: count === 1 ? key : `${key}:${count}`, assetId };
       });
     },
+    closesFrom: (assetId, from) => sources.history.closes(assetId, from),
     async incomeLoaded(assetIds) {
       if (!sources.income.enabled || assetIds.length === 0) return new Set();
       const visited = await sources.income.visitedAssets();

@@ -204,7 +204,8 @@
     "not_allowed": "In a live portfolio, the date is always now.",
     "before_start": "Choose a day on or after the portfolio's start.",
     "before_last_entry": "Choose the day of the last entry or later: a historical portfolio's entries follow date order.",
-    "invalid_quantity": "Enter a whole quantity, 1 or more."
+    "invalid_quantity": "Enter a whole quantity, 1 or more.",
+    "after_end": "The start date must come before the end date."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -709,6 +710,37 @@
         "breaksCash": "This reversal would make cash negative {{at}}. Reverse {{that}} first.",
         "breaksPosition": "This reversal would make the sale of {{quantity}} {{ticker}} on {{date}} larger than the position. Reverse that sale first."
       }
+    },
+    "performance": {
+      "title": "Performance",
+      "periodLabel": "Period",
+      "periods": {
+        "1m": "1 month",
+        "6m": "6 months",
+        "12m": "12 months",
+        "ytd": "Year to date",
+        "all": "Since inception",
+        "custom": "Custom"
+      },
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "loading": "Calculating the performance…",
+      "empty": "Make a deposit to see the performance.",
+      "range": "From {{from}} to {{to}}",
+      "return": "Return",
+      "result": "Result",
+      "equity": "Net worth",
+      "flows": "Net worth at the start: {{start}}; deposits minus withdrawals in the period: {{flows}}.",
+      "chartLabel": "Net worth over time",
+      "legendEquity": "Net worth",
+      "legendInvested": "Total deposited",
+      "tooltipInvested": "Deposited: {{amount}}",
+      "cursor": "{{date}}: net worth {{equity}}, deposited {{invested}}, return {{return}}",
+      "weekly": "One point per week.",
+      "note": "Time-weighted return: deposits and withdrawals don't change the %, and income counts as gain. Prices: B3 close and, today, the trading-session quote; no trading costs.",
+      "jump": "{{ticker}} had a price jump on {{date}} with no known split or reverse split: the result may be wrong.",
+      "noClose": "{{ticker}} has no close until {{date}}: until then, the purchase price is used."
     },
     "positions": {
       "title": "Positions",

@@ -5,6 +5,7 @@ import {
   validateNewPortfolio,
   validateNewReversal,
   validateNewTrade,
+  validatePerformanceQuery,
   validateRenamePortfolio,
   validateTradeQuoteQuery,
 } from '@simulador/shared';
@@ -180,6 +181,16 @@ export function registerPortfolioRoutes(
       trading.trade(requireAuth(request).userId, id, input),
     );
     return reply.status(201).send(result);
+  });
+
+  // SPEC-019 §5.1: rentabilidade e evolução patrimonial no período.
+  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.performance, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const query = ensureValid(validatePerformanceQuery(request.query));
+    const result = await owned(request, () =>
+      trading.performance(requireAuth(request).userId, id, query),
+    );
+    return reply.send(result);
   });
 
   // SPEC-015 §5.1: estorno de um lançamento. Nada é alterado nem apagado.

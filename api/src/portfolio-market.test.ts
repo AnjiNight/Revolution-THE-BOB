@@ -52,6 +52,12 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
         Promise.resolve(assetId === 'a1' && date === '2019-03-15' ? '25.3' : null),
       lastTradingDayBefore: (assetId, date) =>
         Promise.resolve(assetId === 'a1' && date > '2019-03-13' ? '2019-03-13' : null),
+      closes: (assetId, from) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [{ date: '2019-03-15', close: '25.3' }].filter((c) => !from || c.date >= from)
+            : [],
+        ),
       sessions: (assetId) =>
         Promise.resolve(
           assetId === 'a1'

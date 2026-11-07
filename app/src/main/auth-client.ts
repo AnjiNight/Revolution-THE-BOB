@@ -49,6 +49,7 @@ import {
   type CashStatement,
   type NewCashEntryInput,
   type NewTradeInput,
+  type PortfolioPerformance,
   type PortfolioPositions,
   type ReversalResult,
   type TradeQuote,
@@ -389,6 +390,27 @@ export class AuthClient {
         portfolioRouteUrl(PORTFOLIO_PATHS.positions, id),
       ),
     );
+  }
+
+  /**
+   * SPEC-019: rentabilidade no período. Só um período conhecido ou duas datas AAAA-MM-DD vão para a
+   * query string; o resto é o servidor que confere.
+   */
+  portfolioPerformance(id: string, query: unknown): Promise<ClientResult<PortfolioPerformance>> {
+    return this.call(() => {
+      const record = (query ?? {}) as Record<string, unknown>;
+      const params = new URLSearchParams();
+      const day = /^\d{4}-\d{2}-\d{2}$/;
+      if (typeof record.period === 'string' && /^[a-z0-9]{1,4}$/.test(record.period)) {
+        params.set('period', record.period);
+      }
+      for (const key of ['from', 'to'] as const) {
+        const value = record[key];
+        if (typeof value === 'string' && day.test(value)) params.set(key, value);
+      }
+      const path = portfolioRouteUrl(PORTFOLIO_PATHS.performance, id);
+      return this.authorizedRequest<PortfolioPerformance>('GET', `${path}?${params.toString()}`);
+    });
   }
 
   /** SPEC-014: o preço que a negociação usaria agora, ou o motivo de não dar. */

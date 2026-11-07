@@ -7,6 +7,7 @@ import type {
   TradeType,
 } from '@simulador/shared';
 import type { EventInput, IncomeInput } from '../../financial-calculation/corporate-actions.js';
+import type { DailyClose } from '../../financial-calculation/performance.js';
 import type { TradingCalendar } from '../../financial-calculation/trading-calendar.js';
 
 /** Aporte ou retirada como fica guardado (SPEC-013 §6). Valor em decimal com 2 casas. */
@@ -143,6 +144,8 @@ export interface PortfolioMarket {
   readonly incomeEnabled: boolean;
   /** SPEC-043: dos ativos pedidos, os que o processador já visitou no Investidor10. */
   incomeLoaded(assetIds: readonly string[]): Promise<Set<string>>;
+  /** SPEC-019: os fechamentos da B3 do ativo (como publicados) desde a data, em ordem. */
+  closesFrom(assetId: string, from: IsoDate): Promise<DailyClose[]>;
 }
 
 /** Carteira como fica guardada (SPEC-012 §6). */

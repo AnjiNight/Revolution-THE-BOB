@@ -16,6 +16,7 @@ export const PORTFOLIO_PATHS = {
   tradeQuote: '/api/portfolios/:id/trade-quote',
   trades: '/api/portfolios/:id/trades',
   reversals: '/api/portfolios/:id/reversals',
+  performance: '/api/portfolios/:id/performance',
 } as const;
 
 export function portfolioPath(id: string): string {
@@ -621,4 +622,81 @@ export function validateNewReversal(input: unknown): ValidationResult<NewReversa
     return { success: false, fields: { entryId: 'invalid_option' } };
   }
   return { success: true, data: { entryId: raw.toLowerCase() } };
+}
+
+// --- Rentabilidade (SPEC-019) ---
+
+/** 1 mês, 6 meses, 12 meses, no ano, desde o início. */
+export const PERFORMANCE_PERIODS = ['1m', '6m', '12m', 'ytd', 'all'] as const;
+export type PerformancePeriod = (typeof PERFORMANCE_PERIODS)[number];
+
+export type PerformanceQuery = { period: PerformancePeriod } | { from: IsoDate; to: IsoDate };
+
+/** Um ponto do gráfico: o fechamento de um pregão (ou de uma semana, com `weekly`). */
+export interface PerformancePoint {
+  date: IsoDate;
+  /** Caixa + ativos no fechamento. */
+  equity: string;
+  /** Aportes − retiradas desde o início da carteira. */
+  invested: string;
+  /** Rentabilidade da cota desde o início do período, em % com 2 casas. */
+  return: string;
+}
+
+export type PerformanceWarning =
+  /** Salto de preço (SPEC-010) sem evento da B3 que o explique, com o ativo em posição. */
+  | { kind: 'unexplained_jump'; assetId: string; ticker: string; date: IsoDate }
+  /** Ativo sem fechamento até a data: até lá, vale o preço da compra. */
+  | { kind: 'no_close'; assetId: string; ticker: string; until: IsoDate };
+
+/**
+ * Corpo de `GET /api/portfolios/:id/performance` (SPEC-019 §5.1). `null` nos números quando a
+ * carteira ainda não tem lançamento no período.
+ */
+export interface PortfolioPerformance {
+  from: IsoDate;
+  to: IsoDate;
+  /** Patrimônio no fechamento do pregão antes do período (0 se a carteira começou nele). */
+  startValue: string;
+  endValue: string;
+  /** Aportes − retiradas no período. */
+  netFlows: string;
+  /** Patrimônio final − inicial − aportes líquidos. */
+  result: string;
+  /** Rentabilidade da cota no período, em % com 2 casas. */
+  return: string;
+  series: PerformancePoint[];
+  /** Acima de 2 anos, um ponto por semana (o último pregão de cada). */
+  weekly: boolean;
+  warnings: PerformanceWarning[];
+  /** A carteira não tem lançamento até o fim do período. */
+  empty: boolean;
+}
+
+export function validatePerformanceQuery(input: unknown): ValidationResult<PerformanceQuery> {
+  const record = asRecord(input);
+  const { period, from, to } = record;
+  if (from === undefined && to === undefined) {
+    if (period === undefined || period === '') return { success: true, data: { period: 'all' } };
+    if (
+      typeof period !== 'string' ||
+      !(PERFORMANCE_PERIODS as readonly string[]).includes(period)
+    ) {
+      return { success: false, fields: { period: 'invalid_option' } };
+    }
+    return { success: true, data: { period: period as PerformancePeriod } };
+  }
+  const fields: FieldErrors = {};
+  const date = (value: unknown, key: 'from' | 'to') => {
+    if (value === undefined || value === '') fields[key] = 'required';
+    else if (typeof value !== 'string' || !isIsoDate(value)) fields[key] = 'invalid_date';
+  };
+  date(from, 'from');
+  date(to, 'to');
+  if (period !== undefined) fields.period = 'not_allowed';
+  if (Object.keys(fields).length === 0 && (from as string) > (to as string)) {
+    fields.from = 'after_end';
+  }
+  if (Object.keys(fields).length > 0) return { success: false, fields };
+  return { success: true, data: { from: from as IsoDate, to: to as IsoDate } };
 }

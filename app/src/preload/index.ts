@@ -6,6 +6,7 @@ import type {
   CalendarSuggestion,
   CashEntryResult,
   CashStatement,
+  PortfolioPerformance,
   PortfolioPositions,
   ReversalResult,
   TradeQuote,
@@ -96,6 +97,8 @@ const api: DesktopApi = {
     trade: (id, input) => invoke<ClientResult<TradeResult>>(PORTFOLIO_CHANNELS.trade, id, input),
     reverse: (id, entryId) =>
       invoke<ClientResult<ReversalResult>>(PORTFOLIO_CHANNELS.reverse, id, entryId),
+    performance: (id, query) =>
+      invoke<ClientResult<PortfolioPerformance>>(PORTFOLIO_CHANNELS.performance, id, query),
   },
   fundamentals: {
     get: (id) => invoke<ClientResult<AssetFundamentals>>(FUNDAMENTALS_CHANNELS.fundamentals, id),
