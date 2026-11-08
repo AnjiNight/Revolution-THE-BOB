@@ -33,6 +33,7 @@ import {
   type CatalogListResult,
   type CatalogQuery,
   type CdiStatus,
+  type MarketIndexStatus,
   type ChangeEmailInput,
   type ChangePasswordInput,
   type ConfirmEmailChangeInput,
@@ -458,6 +459,13 @@ export class AuthClient {
   /** Colaborador (SPEC-007): até que dia a série do CDI está carregada e a última atualização. */
   cdiStatus(): Promise<ClientResult<CdiStatus>> {
     return this.call(() => this.authorizedRequest<CdiStatus>('GET', INDEX_PATHS.cdi));
+  }
+
+  /** Colaborador (SPEC-020): até que dia o Ibovespa e o IFIX estão carregados. */
+  marketIndexStatus(): Promise<ClientResult<MarketIndexStatus>> {
+    return this.call(() =>
+      this.authorizedRequest<MarketIndexStatus>('GET', INDEX_PATHS.marketIndexes),
+    );
   }
 
   getCalendar(year: number): Promise<ClientResult<TradingCalendarYear>> {

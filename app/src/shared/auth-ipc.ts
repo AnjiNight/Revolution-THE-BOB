@@ -84,6 +84,8 @@ export const ASSET_CHANNELS = {
 /** Canais IPC dos indexadores (SPEC-007): situação da série do CDI, só para colaborador. */
 export const INDEX_CHANNELS = {
   cdi: 'indexes:cdi',
+  /** SPEC-020: Ibovespa e IFIX. */
+  marketIndexes: 'indexes:market',
 } as const;
 
 /** Canais IPC dos indicadores e proventos (SPECs 041 e 042); a situação da coleta é do colaborador. */

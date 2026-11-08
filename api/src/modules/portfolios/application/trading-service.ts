@@ -6,7 +6,9 @@ import {
   yearOf,
   type IsoDate,
   type NewTradeInput,
+  type BenchmarkSummary,
   type PerformancePeriod,
+  type PerformancePoint,
   type PerformanceQuery,
   type PortfolioPerformance,
   type PortfolioPositions,
@@ -24,7 +26,14 @@ import {
   type AppliedEvent,
   type Timeline,
 } from '../../financial-calculation/corporate-actions.js';
-import { performance } from '../../financial-calculation/performance.js';
+import {
+  cdiBenchmark,
+  cdiShare,
+  indexBenchmark,
+  sameMoney,
+  type BenchmarkSeries,
+} from '../../financial-calculation/benchmarks.js';
+import { performance, type PerformanceResult } from '../../financial-calculation/performance.js';
 import { periodStart } from '../../financial-calculation/price-history.js';
 import {
   displayPrice,
@@ -480,14 +489,22 @@ export class TradingService {
       live: { date: days.at(-1) as IsoDate, prices: live },
     });
     const weekly = daysBetween(start, to) > WEEKLY_AFTER_DAYS;
-    const tickers = new Map(
+    const assets = new Map(
       await Promise.all(
         [...firstTrade.keys()].map(
-          async (assetId) =>
-            [assetId, (await this.deps.market.asset(assetId))?.ticker ?? ''] as const,
+          async (assetId) => [assetId, await this.deps.market.asset(assetId)] as const,
         ),
       ),
     );
+    // SPEC-020: o IFIX aparece se algum FII esteve em posição no período.
+    const hadFii = [...result.heldAssets].some(
+      (assetId) => assets.get(assetId)?.assetClass === 'fii',
+    );
+    const references = await this.benchmarks(result, to, hadFii);
+    const series = result.points.map((point, index) => ({
+      ...point,
+      ...references.at(index),
+    }));
     return {
       from: start,
       to,
@@ -496,13 +513,84 @@ export class TradingService {
       netFlows: result.netFlows,
       result: result.result,
       return: result.return,
-      series: weekly ? lastOfEachWeek(result.points) : result.points,
+      series: weekly ? lastOfEachWeek(series) : series,
       weekly,
       warnings: result.warnings.map((warning) => ({
         ...warning,
-        ticker: tickers.get(warning.assetId) ?? '',
+        ticker: assets.get(warning.assetId)?.ticker ?? '',
       })),
       empty: false,
+      baseDate: result.baseDate,
+      benchmarks: references.summary,
+      cdiShare: cdiShare(result.return, references.cdiReturn),
+    };
+  }
+
+  /**
+   * SPEC-020: CDI, Ibovespa e, com FII no período, IFIX, desde o dia-base da cota, em cada ponto
+   * (antes de escolher um por semana). Cada referência vai até o último dia que já tem dado.
+   */
+  private async benchmarks(result: PerformanceResult, to: IsoDate, withIfix: boolean) {
+    const base = result.baseDate;
+    const days = result.points.map((point) => point.date);
+    const none = { cdi: null, ibov: null, ifix: null };
+    if (base === null || days.length === 0) {
+      return {
+        summary: [],
+        cdiReturn: null,
+        at: () => ({ benchmarks: none, benchmarkValues: none }),
+      };
+    }
+    // Uns dias antes do dia-base: o índice usa o último fechamento até ele.
+    const lookback = addDays(base, -10);
+    const [rates, ibovCloses, ifixCloses] = await Promise.all([
+      this.deps.market.cdiRates(base, to),
+      this.deps.market.indexCloses('IBOV', lookback, to),
+      withIfix ? this.deps.market.indexCloses('IFIX', lookback, to) : Promise.resolve([]),
+    ]);
+    const cdi = cdiBenchmark({ base, days, rates });
+    const ibov = indexBenchmark({ base, days, closes: ibovCloses });
+    const ifix = withIfix ? indexBenchmark({ base, days, closes: ifixCloses }) : null;
+    // Decisão 3 (atualizada): os aportes e retiradas de cada ponto, para "o mesmo dinheiro".
+    const last = result.points.at(-1);
+    let invested = (last ? toCents(last.invested) : 0n) - toCents(result.netFlows);
+    const flows = result.points.map((point) => {
+      const flow = toCents(point.invested) - invested;
+      invested = toCents(point.invested);
+      return centsToAmount(flow);
+    });
+    const money = (series: BenchmarkSeries) =>
+      sameMoney({ startValue: result.startValue, flows, factors: series.factors });
+    const values = { cdi: money(cdi), ibov: money(ibov), ifix: ifix ? money(ifix) : null };
+    const summarize = (
+      code: BenchmarkSummary['code'],
+      series: BenchmarkSeries,
+      source: BenchmarkSummary['source'],
+    ): BenchmarkSummary => {
+      const until = series.until ? days.lastIndexOf(series.until) : -1;
+      const endValue = until >= 0 ? (values[code]?.[until] ?? null) : null;
+      return { code, return: series.return, until: series.until, endValue, source };
+    };
+    const summary: BenchmarkSummary[] = [
+      summarize('cdi', cdi, 'bcb'),
+      summarize('ibov', ibov, 'b3'),
+      ...(ifix ? [summarize('ifix', ifix, 'b3')] : []),
+    ];
+    return {
+      summary,
+      cdiReturn: cdi.return,
+      at: (index: number): Pick<PerformancePoint, 'benchmarks' | 'benchmarkValues'> => ({
+        benchmarks: {
+          cdi: cdi.points[index] ?? null,
+          ibov: ibov.points[index] ?? null,
+          ifix: ifix?.points[index] ?? null,
+        },
+        benchmarkValues: {
+          cdi: values.cdi[index] ?? null,
+          ibov: values.ibov[index] ?? null,
+          ifix: values.ifix?.[index] ?? null,
+        },
+      }),
     };
   }
 
@@ -619,6 +707,9 @@ function emptyPerformance(from: IsoDate, to: IsoDate): PortfolioPerformance {
     weekly: false,
     warnings: [],
     empty: true,
+    baseDate: null,
+    benchmarks: [],
+    cdiShare: null,
   };
 }
 

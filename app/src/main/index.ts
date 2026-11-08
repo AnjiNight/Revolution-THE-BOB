@@ -234,6 +234,8 @@ app.whenReady().then(() => {
 
   // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.
   ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());
+  // Ibovespa e IFIX (SPEC-020): também só colaborador.
+  ipcMain.handle(INDEX_CHANNELS.marketIndexes, () => auth.marketIndexStatus());
 
   // Indicadores e proventos (SPECs 041 e 042); o cliente confere o período antes do servidor.
   ipcMain.handle(FUNDAMENTALS_CHANNELS.fundamentals, (_event, id: string) =>

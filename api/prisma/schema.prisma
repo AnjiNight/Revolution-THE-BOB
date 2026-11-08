@@ -397,6 +397,8 @@ enum TarefaIngestao {
   cdi_diario
   investidor10
   eventos_b3
+  /// SPEC-020: Ibovespa e IFIX pelas estatísticas históricas da B3.
+  indices_b3
 
   @@map("tarefa_ingestao")
 }
@@ -453,6 +455,53 @@ model CargaIndexador {
 
   @@id([indexadorId, ano])
   @@map("carga_indexador")
+}
+
+enum FonteIndice {
+  b3_estatisticas
+
+  @@map("fonte_indice")
+}
+
+/// Índice da B3 usado como referência (SPEC-020): IBOV e IFIX, cadastrados pela migração. Fica fora
+/// de "indexador" (SPEC-007), que guarda taxas do Banco Central.
+model IndiceBolsa {
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sigla String @unique @db.VarChar(10)
+  nome  String @db.VarChar(100)
+
+  fechamentos FechamentoIndice[]
+  cargas      CargaIndice[]
+
+  @@map("indice_bolsa")
+}
+
+/// Fechamento do índice num pregão, como a B3 publica (SPEC-020): pontos com 2 casas, maior que
+/// zero, nunca em fim de semana (CHECK na migração).
+model FechamentoIndice {
+  indiceId  String      @map("indice_id") @db.Uuid
+  data      DateTime    @db.Date
+  valor     Decimal     @db.Decimal(12, 2)
+  fonte     FonteIndice
+  gravadoEm DateTime    @map("gravado_em") @db.Timestamptz(3)
+
+  indice IndiceBolsa @relation(fields: [indiceId], references: [id], onDelete: Restrict)
+
+  @@id([indiceId, data])
+  @@map("fechamento_indice")
+}
+
+/// Ano fechado do índice já carregado (SPEC-020): não é pedido de novo à B3.
+model CargaIndice {
+  indiceId    String   @map("indice_id") @db.Uuid
+  ano         Int      @db.SmallInt
+  carregadaEm DateTime @map("carregada_em") @db.Timestamptz(3)
+  registros   Int
+
+  indice IndiceBolsa @relation(fields: [indiceId], references: [id], onDelete: Restrict)
+
+  @@id([indiceId, ano])
+  @@map("carga_indice")
 }
 
 enum SituacaoExecucao {

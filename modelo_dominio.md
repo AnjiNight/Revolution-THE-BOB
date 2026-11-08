@@ -132,6 +132,22 @@ Série histórica de valores do indexador.
 | data | date | Data de referência |
 | valor | decimal | Valor da taxa no dia |
 
+### INDICE_BOLSA
+Índice da B3 usado como referência (benchmark) da carteira ([SPEC-020](specs/SPEC-020.md)): **Ibovespa** e **IFIX**. Fica separado do INDEXADOR, que guarda taxas do Banco Central; o índice é uma pontuação.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| sigla | string | Sigla da B3 (IBOV, IFIX) |
+| nome | string | Nome do índice |
+
+### FECHAMENTO_INDICE
+Série histórica do índice: o fechamento de cada pregão, como a B3 publica.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| data | date | Pregão |
+| valor | decimal | Pontos no fechamento |
+
 ## Relacionamentos
 
 | Origem | Cardinalidade | Destino | Nome |
@@ -148,6 +164,7 @@ Série histórica de valores do indexador.
 | ATIVO | 1 : N | NOTICIA_ATIVO | mencionado_em |
 | NOTICIA | 1 : N | NOTICIA_ATIVO | cita |
 | INDEXADOR | 1 : N | TAXA_DIARIA | registra |
+| INDICE_BOLSA | 1 : N | FECHAMENTO_INDICE | registra |
 
 O par ATIVO → NOTICIA_ATIVO ← NOTICIA representa o N:N entre ativos e notícias.
 
@@ -155,7 +172,7 @@ O par ATIVO → NOTICIA_ATIVO ← NOTICIA representa o N:N entre ativos e notíc
 
 - O modelo conceitual acima não traz chaves; na passagem para o lógico cada entidade recebe uma PK própria (`id`) e as FKs correspondentes aos relacionamentos.
 - `NOTICIA_ATIVO` pode ter chave primária composta (`ativo_id`, `noticia_id`).
-- `COTACAO` e `TAXA_DIARIA` são séries temporais: a combinação (ativo/indexador + data) tende a ser única, o que justifica um índice único nesses pares.
+- `COTACAO`, `TAXA_DIARIA` e `FECHAMENTO_INDICE` são séries temporais: a combinação (ativo/indexador/índice + data) tende a ser única, o que justifica um índice único nesses pares.
 - *(Fase de renda fixa)* `vencimento` só se aplica a ativos de renda fixa, então aceita nulo — alternativa é especializar `ATIVO` em subtipos por `classe`.
 - Ações são classificadas por **setor** e FIIs por **segmento** ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); as duas classificações entram junto com SETOR, prevista na arquitetura §9.
 - `sentimento` está como string; se os valores forem fechados (positivo/neutro/negativo), vale usar um enum ou uma tabela de domínio.

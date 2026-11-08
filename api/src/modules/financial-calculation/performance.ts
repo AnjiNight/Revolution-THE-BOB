@@ -56,6 +56,13 @@ export interface PerformanceResult {
   /** Um ponto por dia do período. */
   points: PerformancePointValue[];
   warnings: PerformanceAlert[];
+  /**
+   * SPEC-020 §4.2: o dia-base das referências: o dia anterior ao primeiro ponto, se a carteira já
+   * tinha patrimônio nele; senão, o primeiro ponto. `null` sem pontos.
+   */
+  baseDate: IsoDate | null;
+  /** SPEC-020: os ativos em posição em algum dia do período (o IFIX aparece se um deles é FII). */
+  heldAssets: Set<string>;
 }
 
 /** A cota anda com 12 casas: 10 anos de pregões sem acumular erro na % de 2 casas. */
@@ -72,6 +79,8 @@ export function performance(input: PerformanceInput): PerformanceResult {
       return: '0.00',
       points: [],
       warnings: [],
+      baseDate: null,
+      heldAssets: new Set(),
     };
   }
   const line = timeline({
@@ -94,6 +103,8 @@ export function performance(input: PerformanceInput): PerformanceResult {
   let quota = QUOTA_ONE;
   const points: PerformancePointValue[] = [];
   const warnings: PerformanceAlert[] = [];
+  let baseDate: IsoDate | null = null;
+  const heldAssets = new Set<string>();
 
   for (const day of input.days) {
     // Aportes e retiradas desde o dia anterior da conta (fim de semana entra no pregão seguinte).
@@ -114,7 +125,13 @@ export function performance(input: PerformanceInput): PerformanceResult {
     }
 
     if (day >= input.from) {
-      if (points.length === 0) startValue = previousEquity;
+      if (points.length === 0) {
+        startValue = previousEquity;
+        baseDate = previousDay && previousEquity > 0n ? previousDay : day;
+        if (previousDay)
+          for (const assetId of snapshots.at(previousDay).keys()) heldAssets.add(assetId);
+      }
+      for (const assetId of holdings.keys()) heldAssets.add(assetId);
       netFlows += flow;
       // Decisão 1: o aporte do dia conta como feito antes do fechamento.
       const base = previousEquity + flow;
@@ -143,6 +160,8 @@ export function performance(input: PerformanceInput): PerformanceResult {
     return: points.at(-1)?.return ?? '0.00',
     points,
     warnings,
+    baseDate,
+    heldAssets,
   };
 }
 

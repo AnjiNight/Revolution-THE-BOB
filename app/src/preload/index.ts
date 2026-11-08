@@ -14,6 +14,7 @@ import type {
   CatalogAsset,
   CatalogListResult,
   CdiStatus,
+  MarketIndexStatus,
   ConsentList,
   Investidor10Status,
   Portfolio,
@@ -81,6 +82,7 @@ const api: DesktopApi = {
   },
   indexes: {
     cdi: () => invoke<ClientResult<CdiStatus>>(INDEX_CHANNELS.cdi),
+    market: () => invoke<ClientResult<MarketIndexStatus>>(INDEX_CHANNELS.marketIndexes),
   },
   portfolios: {
     list: () => invoke<ClientResult<PortfolioList>>(PORTFOLIO_CHANNELS.list),

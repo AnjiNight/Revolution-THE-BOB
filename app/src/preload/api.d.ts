@@ -15,6 +15,7 @@ import type {
   CatalogAsset,
   CatalogListResult,
   CdiStatus,
+  MarketIndexStatus,
   ConsentList,
   DividendPeriod,
   Investidor10Status,
@@ -95,9 +96,13 @@ export interface DesktopApi {
     /** Substitui a lista inteira do ano. */
     publish(year: number, input: CalendarPublication): Promise<ClientResult<TradingCalendarYear>>;
   };
-  /** Indexadores (SPEC-007): situação da série do CDI, só colaborador (403 para usuário). */
+  /**
+   * Indexadores (SPEC-007) e índices da B3 (SPEC-020): situação das séries, só colaborador (403
+   * para usuário).
+   */
   indexes: {
     cdi(): Promise<ClientResult<CdiStatus>>;
+    market(): Promise<ClientResult<MarketIndexStatus>>;
   };
   /** Carteiras (SPEC-012): só a conta de usuário; carteira de outra pessoa é `portfolio_not_found`. */
   portfolios: {

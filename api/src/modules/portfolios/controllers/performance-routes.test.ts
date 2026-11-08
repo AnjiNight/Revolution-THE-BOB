@@ -111,6 +111,9 @@ describe('rentabilidade e evolução patrimonial (SPEC-019)', () => {
       equity: '10590.00',
       invested: '10000.00',
       return: '5.90',
+      // Sem CDI nem índices carregados: as referências ficam sem dado (SPEC-020).
+      benchmarks: { cdi: null, ibov: null, ifix: null },
+      benchmarkValues: { cdi: null, ibov: null, ifix: null },
     });
     // Um ponto por semana: nenhuma semana repetida.
     expect(body.series.length).toBeLessThan(420);
@@ -127,7 +130,14 @@ describe('rentabilidade e evolução patrimonial (SPEC-019)', () => {
       weekly: false,
     });
     expect(body.series).toEqual([
-      { date: '2019-03-18', equity: '10070.00', invested: '10000.00', return: '0.70' },
+      {
+        date: '2019-03-18',
+        equity: '10070.00',
+        invested: '10000.00',
+        return: '0.70',
+        benchmarks: { cdi: null, ibov: null, ifix: null },
+        benchmarkValues: { cdi: null, ibov: null, ifix: null },
+      },
     ]);
   });
 

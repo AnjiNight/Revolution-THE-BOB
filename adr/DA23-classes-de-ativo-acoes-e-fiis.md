@@ -37,7 +37,7 @@ Regras:
 - A classe **nunca** é deduzida do ticker.
 - **Units** são tratadas como ação, como fazem as corretoras: representam ações da mesma empresa.
 - Ações são classificadas por **setor**; FIIs por **segmento**. Busca (RF07) e distribuição da carteira (RF18) mostram as duas classes separadas.
-- No escopo atual, carteiras com FIIs são comparadas com **CDI e Ibovespa** (RF16). O **IFIX** fica como evolução, pela mesma pendência de fonte histórica do Ibovespa (PE06).
+- No escopo atual, carteiras com FIIs são comparadas com **CDI e Ibovespa** (RF16). O **IFIX** ficava como evolução, pela mesma pendência de fonte histórica do Ibovespa (PE06). **Atualização de 08/11/2026 ([SPEC-020](../specs/SPEC-020.md), aprovada pelo Luís):** a fonte do Ibovespa (as estatísticas históricas da B3) também traz o IFIX desde 2016; ele entra na comparação das carteiras que tiveram FII no período.
 
 ## Consequências
 

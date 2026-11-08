@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { EventInput, IncomeInput } from '../../financial-calculation/corporate-actions.js';
+import type { DailyClose } from '../../financial-calculation/performance.js';
 import type {
   LedgerRepository,
   MarketAsset,
@@ -138,6 +139,9 @@ export class FakePortfolioMarket implements PortfolioMarket {
   readonly dividends = new Map<string, Array<Omit<IncomeInput, 'id' | 'assetId'>>>();
   /** SPEC-043: os ativos já visitados no Investidor10. */
   readonly visited = new Set<string>();
+  /** SPEC-020: taxas do CDI por dia (% ao dia) e fechamentos dos índices da B3 por sigla e dia. */
+  readonly cdi = new Map<string, string>();
+  readonly indexes = new Map<string, Map<string, string>>();
   incomeEnabled = true;
 
   asset(assetId: string): Promise<MarketAsset | null> {
@@ -194,6 +198,24 @@ export class FakePortfolioMarket implements PortfolioMarket {
     return Promise.resolve(
       [...(this.dailyCloses.get(assetId) ?? [])]
         .filter(([date]) => date >= from)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, close]) => ({ date, close })),
+    );
+  }
+
+  cdiRates(from: string, to: string): Promise<Array<{ date: string; rate: string }>> {
+    return Promise.resolve(
+      [...this.cdi]
+        .filter(([date]) => date >= from && date <= to)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, rate]) => ({ date, rate })),
+    );
+  }
+
+  indexCloses(code: string, from: string, to: string): Promise<DailyClose[]> {
+    return Promise.resolve(
+      [...(this.indexes.get(code) ?? [])]
+        .filter(([date]) => date >= from && date <= to)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([date, close]) => ({ date, close })),
     );

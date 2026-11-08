@@ -110,6 +110,30 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
         ),
       visitedAssets: () => Promise.resolve(new Set(['a1'])),
     },
+    benchmarks: {
+      cdiRates: (from, to) =>
+        Promise.resolve(
+          [{ date: '2026-11-05', rate: '0.055131' }].filter((r) => r.date >= from && r.date <= to),
+        ),
+      indexCloses: (code, from, to) =>
+        Promise.resolve(
+          code === 'IBOV'
+            ? [{ date: '2026-11-06', close: '168498.45' }].filter(
+                (c) => c.date >= from && c.date <= to,
+              )
+            : [],
+        ),
+    },
+  });
+
+  it('SPEC-020: o CDI e os índices da B3 entre as datas', async () => {
+    expect(await market.cdiRates('2026-11-01', '2026-11-06')).toEqual([
+      { date: '2026-11-05', rate: '0.055131' },
+    ]);
+    expect(await market.indexCloses('IBOV', '2026-11-06', '2026-11-06')).toEqual([
+      { date: '2026-11-06', close: '168498.45' },
+    ]);
+    expect(await market.indexCloses('IFIX', '2026-11-01', '2026-11-06')).toEqual([]);
   });
 
   it('SPEC-016: fechamento do dia, último dia com negócio e eventos a partir da compra', async () => {

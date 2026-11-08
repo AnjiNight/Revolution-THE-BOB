@@ -21,6 +21,9 @@ import {
   type FundamentalsAsset,
   type FundamentalsRepository,
   type Investidor10Source,
+  type MarketIndexRepository,
+  type MarketIndexSource,
+  type StoredMarketIndex,
   type StoredFundamentals,
   type AutomaticChange,
   type B3Trade,
@@ -852,4 +855,84 @@ export class FakeLogoSource implements LogoSource {
     }
     return Promise.resolve(this.images.get(url) ?? svgLogo(url));
   }
+}
+
+/** Índices da B3 em memória (SPEC-020): fechamento guardado por índice e data, como a coluna. */
+export class InMemoryMarketIndexes implements MarketIndexRepository {
+  readonly indexes: StoredMarketIndex[] = [
+    { id: 'idx-ibov', code: 'IBOV' },
+    { id: 'idx-ifix', code: 'IFIX' },
+  ];
+  readonly closes = new Map<string, Map<IsoDate, string>>();
+  readonly loaded = new Map<string, Map<number, number>>();
+
+  findIndex(code: string): Promise<StoredMarketIndex | null> {
+    return Promise.resolve(this.indexes.find((index) => index.code === code) ?? null);
+  }
+
+  closeDates(indexId: string): Promise<IsoDate[]> {
+    return Promise.resolve([...(this.closes.get(indexId)?.keys() ?? [])].sort());
+  }
+
+  loadedYears(indexId: string): Promise<Set<number>> {
+    return Promise.resolve(new Set(this.loaded.get(indexId)?.keys() ?? []));
+  }
+
+  save(indexId: string, closes: ReadonlyArray<{ date: IsoDate; value: string }>): Promise<number> {
+    const stored = this.closes.get(indexId) ?? new Map<IsoDate, string>();
+    this.closes.set(indexId, stored);
+    let changed = 0;
+    for (const { date, value } of closes) {
+      const [integer, fraction = ''] = value.split('.');
+      const text = `${integer}.${fraction.padEnd(2, '0')}`;
+      if (stored.get(date) === text) continue;
+      stored.set(date, text);
+      changed += 1;
+    }
+    return Promise.resolve(changed);
+  }
+
+  markYearLoaded(indexId: string, year: number, records: number): Promise<void> {
+    const years = this.loaded.get(indexId) ?? new Map<number, number>();
+    years.set(year, records);
+    this.loaded.set(indexId, years);
+    return Promise.resolve();
+  }
+}
+
+/**
+ * Estatísticas da B3 em memória (SPEC-020): fechamentos por índice e data, devolvidos no formato do
+ * site (dia × mês, "168.498,45"). `failures` faz os próximos pedidos falharem, um por item.
+ */
+export class FakeMarketIndexSource implements MarketIndexSource {
+  readonly closes = new Map<string, Map<IsoDate, string>>();
+  readonly requests: Array<{ code: string; year: number }> = [];
+  failures: Error[] = [];
+  /** Resposta trocada por inteiro num ano ("IBOV:2025"). */
+  readonly bodies = new Map<string, unknown>();
+
+  year(code: string, year: number): Promise<unknown> {
+    this.requests.push({ code, year });
+    const failure = this.failures.shift();
+    if (failure) return Promise.reject(failure);
+    const body = this.bodies.get(`${code}:${year}`);
+    if (body !== undefined) return Promise.resolve(body);
+    const results = Array.from({ length: 31 }, (_, index) => {
+      const row: Record<string, unknown> = { day: index + 1 };
+      for (let month = 1; month <= 12; month += 1) row[`rateValue${month}`] = null;
+      return row;
+    });
+    for (const [date, value] of this.closes.get(code) ?? []) {
+      if (Number(date.slice(0, 4)) !== year) continue;
+      const row = results[Number(date.slice(8, 10)) - 1];
+      if (row) row[`rateValue${Number(date.slice(5, 7))}`] = b3Number(value);
+    }
+    return Promise.resolve({ min: {}, max: {}, results });
+  }
+}
+
+/** "168498.45" como a B3 mostra: "168.498,45". */
+export function b3Number(value: string): string {
+  const [integer = '0', fraction = ''] = value.split('.');
+  return `${integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${fraction.padEnd(2, '0')}`;
 }

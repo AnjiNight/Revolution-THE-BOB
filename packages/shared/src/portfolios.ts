@@ -632,6 +632,10 @@ export type PerformancePeriod = (typeof PERFORMANCE_PERIODS)[number];
 
 export type PerformanceQuery = { period: PerformancePeriod } | { from: IsoDate; to: IsoDate };
 
+/** SPEC-020: as referências do mercado (CDI, Ibovespa e IFIX). */
+export const BENCHMARK_CODES = ['cdi', 'ibov', 'ifix'] as const;
+export type BenchmarkCode = (typeof BENCHMARK_CODES)[number];
+
 /** Um ponto do gráfico: o fechamento de um pregão (ou de uma semana, com `weekly`). */
 export interface PerformancePoint {
   date: IsoDate;
@@ -641,6 +645,28 @@ export interface PerformancePoint {
   invested: string;
   /** Rentabilidade da cota desde o início do período, em % com 2 casas. */
   return: string;
+  /**
+   * SPEC-020: rentabilidade acumulada de cada referência desde o dia-base, em % com 2 casas;
+   * `null` sem dado até esse dia (ou, no IFIX, quando ele não aparece).
+   */
+  benchmarks: Record<BenchmarkCode, string | null>;
+  /**
+   * SPEC-020: "o mesmo dinheiro" em cada referência, em reais (o patrimônio do dia-base com os
+   * aportes e retiradas da carteira nos mesmos dias), para o gráfico em reais.
+   */
+  benchmarkValues: Record<BenchmarkCode, string | null>;
+}
+
+/** SPEC-020: uma referência no período. */
+export interface BenchmarkSummary {
+  code: BenchmarkCode;
+  /** Rentabilidade acumulada até `until`, em % com 2 casas; `null` se ainda não foi carregada. */
+  return: string | null;
+  /** O último dia com dado; antes do fim do período, a tela diz "até". */
+  until: IsoDate | null;
+  /** "O mesmo dinheiro" na referência em `until` ("No CDI, você teria R$ 26.654,53"). */
+  endValue: string | null;
+  source: 'bcb' | 'b3';
 }
 
 export type PerformanceWarning =
@@ -671,6 +697,15 @@ export interface PortfolioPerformance {
   warnings: PerformanceWarning[];
   /** A carteira não tem lançamento até o fim do período. */
   empty: boolean;
+  /**
+   * SPEC-020: o dia em que as referências começam a contar (0%): o pregão antes do primeiro ponto,
+   * se a carteira já tinha patrimônio, ou o dia do primeiro ponto. `null` sem lançamentos.
+   */
+  baseDate: IsoDate | null;
+  /** SPEC-020: CDI e Ibovespa sempre; IFIX se a carteira teve FII no período. */
+  benchmarks: BenchmarkSummary[];
+  /** SPEC-020: "% do CDI" sem casas ("61"), só com a carteira e o CDI acima de 0%. */
+  cdiShare: string | null;
 }
 
 export function validatePerformanceQuery(input: unknown): ValidationResult<PerformanceQuery> {

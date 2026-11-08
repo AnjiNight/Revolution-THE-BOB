@@ -98,6 +98,16 @@
       "missing_one": "Há {{count}} pregão sem CDI na série.",
       "missing_other": "Há {{count}} pregões sem CDI na série."
     },
+    "indexes": {
+      "range": "{{name}}: de {{from}} a {{to}}",
+      "loadingOne": "{{name}}: carregando",
+      "loading": "Ibovespa e IFIX: carregando (o processador busca na B3)",
+      "updated": "atualizados em {{at}}",
+      "stale": "O {{name}} está parado em {{date}}. Confira se o processador está ligado.",
+      "failed": "A última atualização do Ibovespa e do IFIX terminou com falha ({{at}}).",
+      "missing_one": "Há {{count}} pregão sem fechamento do {{name}}.",
+      "missing_other": "Há {{count}} pregões sem fechamento do {{name}}."
+    },
     "investidor10": {
       "summary": "Indicadores (Investidor10): última coleta em {{at}} · {{collected}} de {{total}} ativos",
       "never": "Indicadores (Investidor10): ainda não coletados (o processador visita as páginas aos poucos)",
@@ -741,7 +751,38 @@
       "weekly": "Um ponto por semana.",
       "note": "Rentabilidade pela cota: aportes e retiradas não mudam a %, e os proventos contam como ganho. Preços: fechamento da B3 e, hoje, a cotação do pregão; sem custos de operação.",
       "jump": "{{ticker}} teve um salto de preço em {{date}} sem desdobramento ou grupamento conhecido: o resultado pode estar errado.",
-      "noClose": "{{ticker}} não tem fechamento até {{date}}: até lá, vale o preço da compra."
+      "noClose": "{{ticker}} não tem fechamento até {{date}}: até lá, vale o preço da compra.",
+      "chartMode": "Gráfico",
+      "chartModes": {
+        "money": "Em reais",
+        "percent": "Em %"
+      },
+      "legendPortfolio": "Carteira",
+      "returnChartLabel": "Rentabilidade da carteira e das referências",
+      "returnCursor": "{{date}}: {{values}}",
+      "noData": "sem dado",
+      "benchmarks": {
+        "title": "No mesmo período",
+        "cdi": "CDI",
+        "ibov": "Ibovespa",
+        "ifix": "IFIX",
+        "until": "até {{date}}",
+        "notLoaded": {
+          "bcb": "ainda não carregado: o processador busca no Banco Central",
+          "b3": "ainda não carregado: o processador busca na B3"
+        },
+        "share": "Sua carteira rendeu {{share}}% do CDI.",
+        "note": "Rentabilidade acumulada de cada referência desde o fechamento de {{date}}, na mesma régua da carteira. Fontes: CDI, Banco Central; Ibovespa, B3.",
+        "noteIfix": "Rentabilidade acumulada de cada referência desde o fechamento de {{date}}, na mesma régua da carteira. Fontes: CDI, Banco Central; Ibovespa e IFIX, B3.",
+        "wouldHave": "teria {{amount}}"
+      },
+      "compare": "Comparar com os índices",
+      "sameMoney": {
+        "cdi": "No CDI",
+        "ibov": "No Ibovespa",
+        "ifix": "No IFIX"
+      },
+      "sameMoneyNote": "Linhas dos índices: o mesmo dinheiro da carteira (o patrimônio no início do período, com os aportes e retiradas nos mesmos dias) aplicado em cada índice."
     },
     "positions": {
       "title": "Posições",

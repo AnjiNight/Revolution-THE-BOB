@@ -5,6 +5,8 @@ import {
   type CdiStatus,
   type ConsentList,
   type Investidor10Status,
+  type MarketIndexCode,
+  type MarketIndexStatus,
   type PublicUser,
 } from '@simulador/shared';
 import {
@@ -109,6 +111,7 @@ export function Home({
       )}
       {user.role === 'collaborator' && <CalendarReminder onOpen={onOpenCalendar} />}
       {user.role === 'collaborator' && <CdiStatusPanel />}
+      {user.role === 'collaborator' && <MarketIndexStatusPanel />}
       {user.role === 'collaborator' && <Investidor10Panel />}
       {user.role === 'user' && <FirstPortfolio onCreate={() => onOpenPortfolios(true)} />}
 
@@ -190,6 +193,83 @@ export function Home({
           ))}
         </ul>
       </section>
+    </div>
+  );
+}
+
+/** Nome dos índices da B3 na tela (SPEC-020). */
+const INDEX_NAMES: Record<MarketIndexCode, string> = { IBOV: 'Ibovespa', IFIX: 'IFIX' };
+
+/**
+ * SPEC-020 (§5.3): até que dia o Ibovespa e o IFIX estão carregados e a última atualização, como o
+ * CDI. Os problemas (índice parado, falha, pregões sem fechamento) aparecem em âmbar.
+ */
+function MarketIndexStatusPanel() {
+  const { t, i18n } = useTranslation();
+  const [status, setStatus] = useState<MarketIndexStatus | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    void window.api.indexes
+      .market()
+      .then((result) => current && result.ok && setStatus(result.data));
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  if (!status) return null;
+  const day = (date: string) => formatCalendarDay(date, i18n.language);
+  const loaded = status.indexes.filter((index) => index.from && index.to);
+  const summary =
+    loaded.length === 0
+      ? t('home.indexes.loading')
+      : status.indexes
+          .map((index) =>
+            index.from && index.to
+              ? t('home.indexes.range', {
+                  name: INDEX_NAMES[index.code],
+                  from: day(index.from),
+                  to: day(index.to),
+                })
+              : t('home.indexes.loadingOne', { name: INDEX_NAMES[index.code] }),
+          )
+          .join(' · ') +
+        (status.lastRun
+          ? ` · ${t('home.indexes.updated', { at: formatDate(status.lastRun.at, i18n.language, true) })}`
+          : '');
+  const warnings = [
+    ...status.indexes.flatMap((index) => [
+      index.stale && index.to
+        ? t('home.indexes.stale', { name: INDEX_NAMES[index.code], date: day(index.to) })
+        : null,
+      index.missingTradingDays > 0
+        ? t('home.indexes.missing', {
+            name: INDEX_NAMES[index.code],
+            count: index.missingTradingDays,
+          })
+        : null,
+    ]),
+    status.lastRun?.status === 'falha'
+      ? t('home.indexes.failed', { at: formatDate(status.lastRun.at, i18n.language, true) })
+      : null,
+  ].filter((warning): warning is string => warning !== null);
+
+  if (warnings.length === 0) {
+    return (
+      <p className="cdi-status" role="status">
+        {summary}
+      </p>
+    );
+  }
+  return (
+    <div className="calendar-reminder" role="status">
+      <ul>
+        <li>{summary}</li>
+        {warnings.map((warning) => (
+          <li key={warning}>{warning}</li>
+        ))}
+      </ul>
     </div>
   );
 }

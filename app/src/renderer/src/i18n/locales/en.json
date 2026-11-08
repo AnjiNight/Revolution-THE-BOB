@@ -98,6 +98,16 @@
       "missing_one": "{{count}} trading day has no CDI in the series.",
       "missing_other": "{{count}} trading days have no CDI in the series."
     },
+    "indexes": {
+      "range": "{{name}}: {{from}} to {{to}}",
+      "loadingOne": "{{name}}: loading",
+      "loading": "Ibovespa and IFIX: loading (the worker fetches them from B3)",
+      "updated": "updated {{at}}",
+      "stale": "{{name}} stopped at {{date}}. Check that the worker is running.",
+      "failed": "The last Ibovespa and IFIX update failed ({{at}}).",
+      "missing_one": "{{count}} trading day without a {{name}} close.",
+      "missing_other": "{{count}} trading days without a {{name}} close."
+    },
     "investidor10": {
       "summary": "Indicators (Investidor10): last collected on {{at}} · {{collected}} of {{total}} assets",
       "never": "Indicators (Investidor10): not collected yet (the processor visits the pages gradually)",
@@ -741,7 +751,38 @@
       "weekly": "One point per week.",
       "note": "Time-weighted return: deposits and withdrawals don't change the %, and income counts as gain. Prices: B3 close and, today, the trading-session quote; no trading costs.",
       "jump": "{{ticker}} had a price jump on {{date}} with no known split or reverse split: the result may be wrong.",
-      "noClose": "{{ticker}} has no close until {{date}}: until then, the purchase price is used."
+      "noClose": "{{ticker}} has no close until {{date}}: until then, the purchase price is used.",
+      "chartMode": "Chart",
+      "chartModes": {
+        "money": "In reais",
+        "percent": "In %"
+      },
+      "legendPortfolio": "Portfolio",
+      "returnChartLabel": "Portfolio and benchmark returns",
+      "returnCursor": "{{date}}: {{values}}",
+      "noData": "no data",
+      "benchmarks": {
+        "title": "Same period",
+        "cdi": "CDI",
+        "ibov": "Ibovespa",
+        "ifix": "IFIX",
+        "until": "through {{date}}",
+        "notLoaded": {
+          "bcb": "not loaded yet: the worker fetches it from the Central Bank",
+          "b3": "not loaded yet: the worker fetches it from B3"
+        },
+        "share": "Your portfolio returned {{share}}% of the CDI.",
+        "note": "Each benchmark's cumulative return since the close of {{date}}, on the same basis as the portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa, B3.",
+        "noteIfix": "Each benchmark's cumulative return since the close of {{date}}, on the same basis as the portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa and IFIX, B3.",
+        "wouldHave": "would be {{amount}}"
+      },
+      "compare": "Compare with indexes",
+      "sameMoney": {
+        "cdi": "In the CDI",
+        "ibov": "In the Ibovespa",
+        "ifix": "In the IFIX"
+      },
+      "sameMoneyNote": "Index lines: the portfolio's same money (its value at the start of the period, with deposits and withdrawals on the same days) invested in each index."
     },
     "positions": {
       "title": "Positions",

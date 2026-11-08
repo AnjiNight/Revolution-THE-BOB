@@ -22,8 +22,10 @@ import {
   InMemoryCalendarRepository,
   InMemoryFundamentals,
   InMemoryIndexRates,
+  InMemoryMarketIndexes,
   InMemoryTaskRuns,
 } from '../../market-data/testing/fakes.js';
+import { MarketIndexStatusService } from '../../market-data/application/market-index-status-service.js';
 import { AssetCatalogService } from '../../asset-catalog/application/asset-catalog-service.js';
 import { InMemoryAssetRepository } from '../../asset-catalog/testing/fakes.js';
 import { BackgroundTasks, FakeEmailSender } from '../testing/fakes.js';
@@ -129,6 +131,11 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
       catalog: new AssetCatalogService({ assets: new InMemoryAssetRepository() }),
       cdi: new CdiStatusService({
         rates: new InMemoryIndexRates(),
+        runs: new InMemoryTaskRuns(),
+        calendars: new InMemoryCalendarRepository(),
+      }),
+      marketIndexes: new MarketIndexStatusService({
+        indexes: new InMemoryMarketIndexes(),
         runs: new InMemoryTaskRuns(),
         calendars: new InMemoryCalendarRepository(),
       }),

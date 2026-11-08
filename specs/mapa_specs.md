@@ -50,6 +50,9 @@
 | 1.40 | SPEC-043 aprovada (Nicoly, 06/11/2026) com as recomendações e implementada: proventos no caixa das carteiras ao vivo e histórica, JCP líquido (17,5% desde 2026, LC 224/2025), eventos corrigindo quantidade e preço médio, frações vendidas; OPEN-06 resolvida. Fase 3 completa. Limitação: eventos da B3 incompletos em alguns ativos (ex.: MGLU3 2017 e 2019) |
 | 1.41 | SPEC-019 detalhada ([SPEC-019.md](SPEC-019.md)) pela Nicoly, aguardando a aprovação: rentabilidade pela cota e resultado em R$ num período, gráfico da evolução patrimonial nas carteiras ao vivo e histórica, aviso de salto de preço sem evento conhecido e cálculo sem Redis (RNF03) |
 | 1.42 | SPEC-019 aprovada (Nicoly, 06/11/2026) com as recomendações e implementada: painel Rentabilidade com períodos, rentabilidade da cota, resultado, patrimônio, gráfico do patrimônio e do total aportado e avisos de salto sem evento; 50 ativos desde 2016 em menos de 1 s (RNF06) |
+| 1.43 | SPEC-020 detalhada ([SPEC-020.md](SPEC-020.md)), aguardando a aprovação: CDI, Ibovespa e IFIX ao lado da rentabilidade da cota, "% do CDI", gráfico em %; Ibovespa e IFIX pelas estatísticas históricas da B3 (proposta para a OPEN-21) |
+| 1.44 | SPEC-020 aprovada (Luís, 08/11/2026) com as recomendações ("% do CDI" só com a carteira positiva: o CDI nunca é negativo) e implementada: CDI, Ibovespa e IFIX ao lado da cota, "% do CDI", gráfico "Em %", Ibovespa e IFIX pelas estatísticas históricas da B3 desde 2016; OPEN-21 e PE06 resolvidas; IFIX na comparação (DA23 atualizada) |
+| 1.45 | SPEC-020 ajustada a pedido do Luís (08/11/2026): botão "Comparar com os índices" nos gráficos em reais e em %; no gráfico em reais, "o mesmo dinheiro" em cada índice (com os aportes e retiradas nos mesmos dias) e o "teria R$ …" de cada referência; a régua principal continua a cota |
 ---
 
 ## 0. Como ler este documento
@@ -299,7 +302,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-18 | ⏸ **Adiada com a renda fixa (DA22).** Valorização e resgate do Tesouro Direto (preço publicado × curva); confirmar a fonte (hoje "Sugerida") | Decisões técnicas §3 | 024 |
 | OPEN-19 | ⏸ **Adiada com a renda fixa (DA22).** Significado do caso de uso "Projetar renda fixa" | INC-16 | 017 |
 | OPEN-20 | ⏸ **Adiada com a renda fixa (DA22).** Renda fixa na carteira histórica | DA17 PO4 | 016, 017 |
-| OPEN-21 | Fonte do histórico do Ibovespa | PE06 | 020 |
+| OPEN-21 | ✅ **Resolvida na [SPEC-020](SPEC-020.md):** Ibovespa e IFIX pelas estatísticas históricas da B3, desde 2016. Original: fonte do histórico do Ibovespa | PE06 | 020 |
 | OPEN-22 | Significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
 | OPEN-23 | Comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
 | OPEN-24 | ✅ **Resolvida nas SPECs [014](SPEC-014.md) e [016](SPEC-016.md):** a API registra por quantidade (RF12); a tela tem "Calcular por valor", em reais ou em "% do caixa" (o "50% em PETR4" da P01); montar vários ativos de uma vez fica fora. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
@@ -831,20 +834,22 @@ Detalhada em [SPEC-019.md](SPEC-019.md), aprovada e implementada.
 
 #### SPEC-020 — Comparação com benchmarks (CDI e Ibovespa)
 
+Detalhada em [SPEC-020.md](SPEC-020.md), aprovada e implementada (com o IFIX nas carteiras com FII).
+
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Exibir a rentabilidade da carteira lado a lado com CDI e Ibovespa no mesmo período, inclusive para carteiras com FIIs (IFIX como evolução, DA23) |
+| Objetivo | Exibir a rentabilidade da carteira lado a lado com CDI e Ibovespa no mesmo período e, nas carteiras com FIIs, com o IFIX (DA23, atualizada na SPEC-020) |
 | Valor | **Usuário:** sabe se a estratégia superou referências do mercado (P02) |
 | RF | RF16 |
 | RB | RB13 |
 | RNF | RNF12, RNF16 |
 | Caso de uso / fluxo | UC: Acompanhar rentabilidade; P02 passo 4 |
-| Entidades | INDEXADOR, TAXA_DIARIA, COTACAO (Ibovespa — representação não definida, OPEN-21) |
+| Entidades | INDEXADOR, TAXA_DIARIA, INDICE_BOLSA, FECHAMENTO_INDICE (SPEC-020) |
 | Drivers | OBJ02, QA01 |
 | ADRs | DA06, DA10, DA18 (Proposta), DA23 |
 | Depende de | SPEC-007, SPEC-019 |
 | Posição | Compara com a rentabilidade já estabelecida em 019 |
-| Em aberto | OPEN-21 |
+| Em aberto | ✅ OPEN-21 resolvida |
 | Prioridade derivada | Should |
 
 #### SPEC-021 — Distribuição da carteira por classe e setor

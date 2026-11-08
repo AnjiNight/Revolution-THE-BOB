@@ -2,10 +2,12 @@ import type {
   AssetClass,
   CashEntryType,
   IsoDate,
+  MarketIndexCode,
   PortfolioType,
   QuoteLevelCode,
   TradeType,
 } from '@simulador/shared';
+import type { CdiRate } from '../../financial-calculation/benchmarks.js';
 import type { EventInput, IncomeInput } from '../../financial-calculation/corporate-actions.js';
 import type { DailyClose } from '../../financial-calculation/performance.js';
 import type { TradingCalendar } from '../../financial-calculation/trading-calendar.js';
@@ -146,6 +148,10 @@ export interface PortfolioMarket {
   incomeLoaded(assetIds: readonly string[]): Promise<Set<string>>;
   /** SPEC-019: os fechamentos da B3 do ativo (como publicados) desde a data, em ordem. */
   closesFrom(assetId: string, from: IsoDate): Promise<DailyClose[]>;
+  /** SPEC-020: as taxas do CDI (SPEC-007) entre as datas (inclusive), em ordem. */
+  cdiRates(from: IsoDate, to: IsoDate): Promise<CdiRate[]>;
+  /** SPEC-020: os fechamentos do índice da B3 entre as datas (inclusive), em ordem. */
+  indexCloses(code: MarketIndexCode, from: IsoDate, to: IsoDate): Promise<DailyClose[]>;
 }
 
 /** Carteira como fica guardada (SPEC-012 §6). */

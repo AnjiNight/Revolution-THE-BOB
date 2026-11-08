@@ -141,7 +141,9 @@ export type IngestionTask =
   | 'calendario_b3'
   | 'cdi_diario'
   | 'investidor10'
-  | 'eventos_b3';
+  | 'eventos_b3'
+  /** SPEC-020: Ibovespa e IFIX pela B3. */
+  | 'indices_b3';
 export type RunStatus = 'sucesso' | 'parcial' | 'falha' | 'aguardando_publicacao' | 'cota_esgotada';
 
 export interface RunError {
@@ -439,6 +441,36 @@ export interface IndexRateRepository {
     at: Date,
   ): Promise<number>;
   markYearLoaded(indexerId: string, year: number, records: number, at: Date): Promise<void>;
+}
+
+/**
+ * Estatísticas históricas de um índice da B3 (SPEC-020, DA06): a resposta de um ano inteiro, como o
+ * site devolve. Falha lança IndexSourceError (a mesma classificação do SGS).
+ */
+export interface MarketIndexSource {
+  year(code: string, year: number): Promise<unknown>;
+}
+
+/** Índice da B3 cadastrado (SPEC-020 §6): IBOV e IFIX. */
+export interface StoredMarketIndex {
+  id: string;
+  code: string;
+}
+
+export interface MarketIndexRepository {
+  /** Pela sigla (`IBOV`); `null` se a migração não o cadastrou. */
+  findIndex(code: string): Promise<StoredMarketIndex | null>;
+  /** Todas as datas guardadas, em ordem. */
+  closeDates(indexId: string): Promise<IsoDate[]>;
+  /** Anos fechados já carregados. */
+  loadedYears(indexId: string): Promise<Set<number>>;
+  /** Insere ou atualiza (a B3 pode corrigir um dia). Devolve quantas linhas mudaram. */
+  save(
+    indexId: string,
+    closes: ReadonlyArray<{ date: IsoDate; value: string }>,
+    at: Date,
+  ): Promise<number>;
+  markYearLoaded(indexId: string, year: number, records: number, at: Date): Promise<void>;
 }
 
 /**

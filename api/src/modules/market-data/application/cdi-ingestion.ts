@@ -17,12 +17,12 @@ import {
   type NonBusinessDay,
 } from '../domain/cdi.js';
 import { RETRY_DELAYS_MS } from './history-ingestion.js';
+import { SeriesRunLog } from './series-run-log.js';
 import {
   IndexSourceError,
   type CalendarRepository,
   type IndexRateRepository,
   type IndexSource,
-  type RunError,
   type RunResult,
   type StoredCalendarYear,
   type TaskRunRepository,
@@ -30,8 +30,6 @@ import {
 
 /** Código do CDI no cadastro de indexadores (a migração cadastra, com a série 12 do SGS). */
 export const CDI_CODE = 'CDI';
-/** Erros guardados por execução; o resto vira um resumo (mesmo limite da SPEC-008). */
-const MAX_STORED_ERRORS = 100;
 
 export interface CdiIngestionDeps {
   source: IndexSource;
@@ -111,7 +109,7 @@ export class CdiIngestion {
     if (queries.length === 0) return null;
 
     const runId = await this.deps.runs.start('cdi_diario', this.clock());
-    const log = new CdiRunLog();
+    const log = new SeriesRunLog();
     try {
       for (const query of queries)
         await this.read(indexer.id, indexer.sgsSeries, query, today, log);
@@ -130,7 +128,7 @@ export class CdiIngestion {
     series: number,
     query: Query,
     today: IsoDate,
-    log: CdiRunLog,
+    log: SeriesRunLog,
   ): Promise<void> {
     const label = query.closed ? `CDI de ${query.year}` : `CDI de ${query.from} a ${query.to}`;
     let rows: unknown[] | null;
@@ -166,7 +164,11 @@ export class CdiIngestion {
   }
 
   /** §4.2: pregão publicado, com mais de 3 dias úteis, sem CDI vira erro (sem impedir a gravação). */
-  private async checkTradingDays(indexerId: string, today: IsoDate, log: CdiRunLog): Promise<void> {
+  private async checkTradingDays(
+    indexerId: string,
+    today: IsoDate,
+    log: SeriesRunLog,
+  ): Promise<void> {
     const published = await this.deps.calendars.findYears(HISTORY_START_YEAR, yearOf(today));
     const until = businessDaysBefore(today, CDI_STALE_BUSINESS_DAYS, nonBusinessDays(published));
     const dates = new Set(await this.deps.rates.rateDates(indexerId));
@@ -183,7 +185,7 @@ export class CdiIngestion {
   }
 
   /** As novas tentativas da SPEC-008, só para o que pode mudar na próxima (rede, 5xx, 429). */
-  private async withRetries<T>(log: CdiRunLog, fn: () => Promise<T>): Promise<T> {
+  private async withRetries<T>(log: SeriesRunLog, fn: () => Promise<T>): Promise<T> {
     for (let attempt = 0; ; attempt += 1) {
       log.requests += 1;
       try {
@@ -202,54 +204,6 @@ export class CdiIngestion {
 export function nonBusinessDays(published: readonly StoredCalendarYear[]): NonBusinessDay {
   const closed = new Set(published.flatMap((stored) => stored.nonTradingDays.map((d) => d.date)));
   return (date) => closed.has(date);
-}
-
-class CdiRunLog {
-  readonly errors: RunError[] = [];
-  private hiddenErrors = 0;
-  records = 0;
-  requests = 0;
-  read = 0;
-  failed = 0;
-  waiting = false;
-  private periodStart: IsoDate | null = null;
-  private periodEnd: IsoDate | null = null;
-
-  error(message: string, date: IsoDate | null = null): void {
-    if (this.errors.length < MAX_STORED_ERRORS) this.errors.push({ message, date });
-    else this.hiddenErrors += 1;
-  }
-
-  saved(rates: CdiRate[], changed: number): void {
-    this.records += changed;
-    for (const { date } of rates) {
-      if (this.periodStart === null || date < this.periodStart) this.periodStart = date;
-      if (this.periodEnd === null || date > this.periodEnd) this.periodEnd = date;
-    }
-  }
-
-  result(): RunResult {
-    const errors =
-      this.hiddenErrors > 0
-        ? [...this.errors, { message: `mais ${this.hiddenErrors} erros não guardados` }]
-        : this.errors;
-    return {
-      status:
-        this.failed > 0 && this.read === 0
-          ? 'falha'
-          : errors.length > 0 || this.failed > 0
-            ? 'parcial'
-            : this.waiting && this.records === 0
-              ? 'aguardando_publicacao'
-              : 'sucesso',
-      records: this.records,
-      affectedAssets: 0,
-      periodStart: this.periodStart,
-      periodEnd: this.periodEnd,
-      errors,
-      requests: this.requests,
-    };
-  }
 }
 
 function maxDate(a: IsoDate, b: IsoDate): IsoDate {

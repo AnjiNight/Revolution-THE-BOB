@@ -523,7 +523,7 @@ Como as funcionalidades futuras da [Visão de produto](Visão%20de%20produto.md)
 | Lançamentos offline | Fila local de comandos no cliente, validados no servidor ao reconectar (DA08) |
 | Integração com corretoras | Novo adaptador que gera lançamentos na carteira real |
 | Envio ativo de cotações ao cliente (push) | Substitui a consulta periódica do cliente, sem mudar os módulos (DA16) |
-| Novas classes de ativo (ETFs, BDRs) e IFIX como benchmark de FIIs | Novos valores na lista de classes e nova série de benchmark ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)) |
+| Novas classes de ativo (ETFs, BDRs) | Novos valores na lista de classes ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)). O IFIX como benchmark de FIIs já entrou na [SPEC-020](specs/SPEC-020.md); outro índice da B3 (SMLL, IDIV) é só uma sigla nova na mesma tarefa |
 | **Renda fixa** (CDB, LCI/LCA, Tesouro Direto) — adiada por [DA22](adr/DA22-escopo-acoes-fiis-renda-fixa-adiada.md) | Novos tipos de lançamento (aplicação e resgate) no livro-razão (DA09); regras de IR, IOF e base 252 no núcleo de cálculo (DA10); novos adaptadores para Selic, IPCA e Tesouro (DA06); notificação de vencimento (RF34). Requisitos preservados em [Requisitos §9](requisições.md) |
 
 ---
@@ -557,7 +557,7 @@ Consolidação do que ainda depende de decisão da equipe. O detalhe de cada ite
 | PE03 | Compra com a bolsa fechada: último fechamento ou ordem na abertura | DA16 |
 | PE04 | Limite de data inicial da carteira histórica | DA17 |
 | PE05 | Fonte de proventos e eventos corporativos (**prioritário para FIIs**, cujos rendimentos mensais são parte importante do retorno) | DA17, DA18, DA22 |
-| PE06 | Fonte do histórico do Ibovespa | DA18 |
+| PE06 | ✅ Resolvido na [SPEC-020](specs/SPEC-020.md): Ibovespa e IFIX pelas estatísticas históricas da B3, desde 2016 | DA18 |
 | PE07 | **Autorização do Investidor10 ou troca da fonte pai** | DA19 |
 | PE08 | Limite de fontes por usuário e conversão da prioridade em peso | DA19 |
 | PE09 | Janela de treino (6 anos?), móvel ou fixa | DA20 |
@@ -565,7 +565,7 @@ Consolidação do que ainda depende de decisão da equipe. O detalhe de cada ite
 | PE11 | Fonte do histórico de notícias para treino | DA20 |
 | PE12 | Horizontes, limite de estabilidade e n mínimo dos cenários | DA21 |
 | PE13 | Hospedagem e serviço de e-mail em camada gratuita | [Decisões Técnicas](decisoes_tecnicas.md) |
-| PE14 | ✅ Resolvido: FIIs comparados com CDI e Ibovespa; IFIX como evolução | DA22, DA23 |
+| PE14 | ✅ Resolvido: FIIs comparados com CDI e Ibovespa e, desde a [SPEC-020](specs/SPEC-020.md), com o IFIX | DA22, DA23 |
 | PE15 | ✅ Resolvido: ações por setor, FIIs por segmento | DA22, DA23 |
 | PE16 | Confirmar cobertura dos FIIs nas fontes de cotação | DA22 |
 

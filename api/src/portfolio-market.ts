@@ -1,4 +1,4 @@
-import type { IsoDate } from '@simulador/shared';
+import type { IsoDate, MarketIndexCode } from '@simulador/shared';
 import type { StoredAsset } from './modules/asset-catalog/domain/asset.js';
 import type { PriceEventInput } from './modules/financial-calculation/price-adjustment.js';
 import type { ParsedDividend } from './modules/market-data/domain/investidor10-page.js';
@@ -24,6 +24,15 @@ export interface PortfolioMarketSources {
   };
   /** SPEC-042: desdobramentos, grupamentos e bonificações. */
   events: { forAsset(assetId: string): Promise<PriceEventInput[]> };
+  /** SPEC-020: o CDI (SPEC-007) e os índices da B3, para as referências da rentabilidade. */
+  benchmarks: {
+    cdiRates(from: IsoDate, to: IsoDate): Promise<Array<{ date: IsoDate; rate: string }>>;
+    indexCloses(
+      code: MarketIndexCode,
+      from: IsoDate,
+      to: IsoDate,
+    ): Promise<Array<{ date: IsoDate; close: string }>>;
+  };
   /** SPEC-043: proventos do Investidor10 (SPEC-042), só com o interruptor ligado. */
   income: {
     enabled: boolean;
@@ -92,6 +101,8 @@ export function portfolioMarket(sources: PortfolioMarketSources): PortfolioMarke
       });
     },
     closesFrom: (assetId, from) => sources.history.closes(assetId, from),
+    cdiRates: (from, to) => sources.benchmarks.cdiRates(from, to),
+    indexCloses: (code, from, to) => sources.benchmarks.indexCloses(code, from, to),
     async incomeLoaded(assetIds) {
       if (!sources.income.enabled || assetIds.length === 0) return new Set();
       const visited = await sources.income.visitedAssets();

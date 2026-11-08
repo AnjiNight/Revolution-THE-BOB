@@ -1,6 +1,7 @@
 import {
   isoDateInBrasilia,
   PERFORMANCE_PERIODS,
+  type BenchmarkCode,
   type FieldErrors,
   type PerformancePeriod,
   type PerformancePoint,
@@ -8,7 +9,7 @@ import {
   type Portfolio,
   type PortfolioPerformance as PerformanceData,
 } from '@simulador/shared';
-import { Warning } from '@phosphor-icons/react';
+import { ChartLine, Warning } from '@phosphor-icons/react';
 import {
   useEffect,
   useId,
@@ -64,6 +65,10 @@ export function PortfolioPerformance({
   const [from, setFrom] = useState(portfolio.startDate);
   const [to, setTo] = useState(today);
   const [state, setState] = useState<PerformanceState>({ status: 'loading' });
+  // SPEC-020: o gráfico em reais (o da SPEC-019, o padrão) ou em % com as referências.
+  const [chartMode, setChartMode] = useState<'money' | 'percent'>('money');
+  // SPEC-020: as linhas dos índices nos dois gráficos, ligadas pelo botão "Comparar".
+  const [compare, setCompare] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -102,6 +107,7 @@ export function PortfolioPerformance({
   const data = state.status === 'ready' ? state.data : null;
   const fields = state.status === 'failed' ? state.fields : undefined;
   const selected = 'period' in query && !custom ? query.period : null;
+  const shown = compare && data ? data.benchmarks.map((benchmark) => benchmark.code) : [];
 
   return (
     <section className="profile-panel performance-panel" aria-labelledby={titleId}>
@@ -207,15 +213,79 @@ export function PortfolioPerformance({
             })}
           </p>
 
+          <Benchmarks data={data} />
+
           {data.series.length > 1 && (
             <>
-              <EquityChart points={data.series} label={t('portfolios.performance.chartLabel')} />
-              <p className="performance-legend">
-                <span className="legend-equity">{t('portfolios.performance.legendEquity')}</span>
-                <span className="legend-invested">
-                  {t('portfolios.performance.legendInvested')}
-                </span>
-              </p>
+              <div className="chart-toolbar">
+                <div
+                  className="period-buttons chart-mode"
+                  role="group"
+                  aria-label={t('portfolios.performance.chartMode')}
+                >
+                  {(['money', 'percent'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      className="period-button"
+                      aria-pressed={chartMode === mode}
+                      onClick={() => setChartMode(mode)}
+                    >
+                      {t(`portfolios.performance.chartModes.${mode}`)}
+                    </button>
+                  ))}
+                </div>
+                {data.benchmarks.length > 0 && (
+                  <button
+                    type="button"
+                    className="period-button compare-toggle"
+                    aria-pressed={compare}
+                    onClick={() => setCompare((current) => !current)}
+                  >
+                    <ChartLine aria-hidden="true" />
+                    {t('portfolios.performance.compare')}
+                  </button>
+                )}
+              </div>
+              {chartMode === 'money' ? (
+                <>
+                  <EquityChart
+                    points={data.series}
+                    label={t('portfolios.performance.chartLabel')}
+                    codes={shown}
+                  />
+                  <p className="performance-legend">
+                    <span className="legend-equity">
+                      {t('portfolios.performance.legendEquity')}
+                    </span>
+                    <span className="legend-invested">
+                      {t('portfolios.performance.legendInvested')}
+                    </span>
+                    {shown.map((code) => (
+                      <span key={code} className={`legend-${code}`}>
+                        {t(`portfolios.performance.sameMoney.${code}`)}
+                      </span>
+                    ))}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <ReturnChart points={data.series} codes={shown} />
+                  <p className="performance-legend">
+                    <span className="legend-equity">
+                      {t('portfolios.performance.legendPortfolio')}
+                    </span>
+                    {shown.map((code) => (
+                      <span key={code} className={`legend-${code}`}>
+                        {t(`portfolios.performance.benchmarks.${code}`)}
+                      </span>
+                    ))}
+                  </p>
+                </>
+              )}
+              {chartMode === 'money' && compare && (
+                <p className="field-hint">{t('portfolios.performance.sameMoneyNote')}</p>
+              )}
             </>
           )}
           <p className="field-hint">
@@ -253,16 +323,78 @@ function signed(value: string): string {
 }
 
 /**
- * Patrimônio (linha cheia, com área) e total aportado (tracejada), no mesmo eixo. Como o gráfico
- * da ficha (SPEC-010): mouse, toque e teclado (setas, Page Up/Down, Home e End).
+ * SPEC-020: as referências no mesmo período (CDI, Ibovespa e, com FII, IFIX), o "% do CDI" e as
+ * fontes. A referência que para antes do último ponto diz até quando; a que ainda não foi carregada
+ * diz isso, sem quebrar o painel.
  */
-function EquityChart({ points, label }: { points: PerformancePoint[]; label: string }) {
+function Benchmarks({ data }: { data: PerformanceData }) {
   const { t, i18n } = useTranslation();
   const language = i18n.language;
-  const hintId = useId();
+  if (data.benchmarks.length === 0) return null;
+  const lastPoint = data.series.at(-1)?.date ?? data.to;
+  return (
+    <div className="performance-benchmarks">
+      <h3>{t('portfolios.performance.benchmarks.title')}</h3>
+      <ul>
+        {data.benchmarks.map((benchmark) => (
+          <li key={benchmark.code}>
+            <span className="benchmark-name">
+              {t(`portfolios.performance.benchmarks.${benchmark.code}`)}
+            </span>
+            {benchmark.return === null ? (
+              <span className="benchmark-missing">
+                {t(`portfolios.performance.benchmarks.notLoaded.${benchmark.source}`)}
+              </span>
+            ) : (
+              <>
+                <span className={`quote-change is-${changeDirection(benchmark.return)}`}>
+                  {formatChange(benchmark.return, language)}
+                </span>
+                {benchmark.endValue && (
+                  <span className="benchmark-value">
+                    {t('portfolios.performance.benchmarks.wouldHave', {
+                      amount: formatMoney(benchmark.endValue, language),
+                    })}
+                  </span>
+                )}
+                {benchmark.until && benchmark.until < lastPoint && (
+                  <span className="benchmark-until">
+                    {t('portfolios.performance.benchmarks.until', {
+                      date: formatCalendarDay(benchmark.until, language),
+                    })}
+                  </span>
+                )}
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+      {data.cdiShare && (
+        <p className="benchmark-share">
+          {t('portfolios.performance.benchmarks.share', {
+            share: new Intl.NumberFormat(language).format(Number(data.cdiShare)),
+          })}
+        </p>
+      )}
+      <p className="field-hint">
+        {t(
+          data.benchmarks.some((benchmark) => benchmark.code === 'ifix')
+            ? 'portfolios.performance.benchmarks.noteIfix'
+            : 'portfolios.performance.benchmarks.note',
+          {
+            date: data.baseDate ? formatCalendarDay(data.baseDate, language) : '',
+          },
+        )}
+      </p>
+    </div>
+  );
+}
+
+/** Largura do gráfico e cursor pelo mouse, pelo toque e pelo teclado (como o da ficha, SPEC-010). */
+function useChartCursor<T>(points: readonly T[]) {
   const wrapper = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
-  const [cursor, setCursor] = useState<{ points: PerformancePoint[]; index: number } | null>(null);
+  const [cursor, setCursor] = useState<{ points: readonly T[]; index: number } | null>(null);
 
   useEffect(() => {
     const element = wrapper.current;
@@ -274,20 +406,73 @@ function EquityChart({ points, label }: { points: PerformancePoint[]; label: str
     return () => observer.disconnect();
   }, []);
 
+  const last = points.length - 1;
+  const index = cursor?.points === points ? cursor.index : null;
+  const handlers = (box: Parameters<typeof nearestIndex>[2]) => ({
+    onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+      const next = cursorAfterKey(event.key, index, points.length);
+      if (next === null) return;
+      event.preventDefault();
+      setCursor({ points, index: next });
+    },
+    onFocus: () => {
+      if (index === null) setCursor({ points, index: last });
+    },
+    onBlur: () => setCursor(null),
+    onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      setCursor({ points, index: nearestIndex(event.clientX - rect.left, points.length, box) });
+    },
+    onPointerLeave: (event: PointerEvent<HTMLDivElement>) => {
+      if (document.activeElement !== event.currentTarget) setCursor(null);
+    },
+  });
+  return { wrapper, width, index, last, handlers };
+}
+
+/**
+ * Patrimônio (linha cheia, com área) e total aportado (tracejada), no mesmo eixo. Como o gráfico
+ * da ficha (SPEC-010): mouse, toque e teclado (setas, Page Up/Down, Home e End).
+ */
+function EquityChart({
+  points,
+  label,
+  codes,
+}: {
+  points: PerformancePoint[];
+  label: string;
+  /** SPEC-020: "o mesmo dinheiro" nos índices, com o botão "Comparar" ligado. */
+  codes: BenchmarkCode[];
+}) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
+  const hintId = useId();
+  const { wrapper, width, index, last, handlers } = useChartCursor(points);
+
   const invested = points.map((point) => Number(point.invested));
+  const benchmarkValues = codes.flatMap((code) =>
+    points.flatMap((point) => {
+      const value = point.benchmarkValues[code];
+      return value === null ? [] : [Number(value)];
+    }),
+  );
   const layout = chartLayout(
     points.map((point) => ({ date: point.date, close: point.equity })),
     width,
     HEIGHT,
-    invested,
+    [...invested, ...benchmarkValues],
   );
+  const sameMoney = (point: PerformancePoint, code: BenchmarkCode) => {
+    const value = point.benchmarkValues[code];
+    const amount =
+      value === null ? t('portfolios.performance.noData') : formatMoney(value, language);
+    return `${t(`portfolios.performance.sameMoney.${code}`)} ${amount}`;
+  };
   const { box, axis, x, y } = layout;
   const investedLine = invested
     .map((value, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)} ${y(value).toFixed(1)}`)
     .join('');
   const ticks = spaceTicks(timeTicks(points.map((point) => point.date)), x, MIN_TICK_GAP);
-  const last = points.length - 1;
-  const index = cursor?.points === points ? cursor.index : null;
   const describe = (point: PerformancePoint | undefined) =>
     point
       ? t('portfolios.performance.cursor', {
@@ -295,25 +480,14 @@ function EquityChart({ points, label }: { points: PerformancePoint[]; label: str
           equity: formatMoney(point.equity, language),
           invested: formatMoney(point.invested, language),
           return: formatChange(point.return, language),
-        })
+        }) + codes.map((code) => `, ${sameMoney(point, code)}`).join('')
       : undefined;
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const next = cursorAfterKey(event.key, index, points.length);
-    if (next === null) return;
-    event.preventDefault();
-    setCursor({ points, index: next });
-  };
-
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    setCursor({ points, index: nearestIndex(event.clientX - rect.left, points.length, box) });
-  };
 
   const point = index !== null ? points[index] : undefined;
   const pointX = index !== null ? x(index) : 0;
   const pointY = point ? y(Number(point.equity)) : 0;
-  const tooltipTop = pointY > TOOLTIP_HEIGHT + 12 ? pointY - TOOLTIP_HEIGHT - 10 : pointY + 12;
+  const tooltipHeight = TOOLTIP_HEIGHT + 16 * codes.length;
+  const tooltipTop = pointY > tooltipHeight + 12 ? pointY - tooltipHeight - 10 : pointY + 12;
 
   return (
     <div className="price-chart" ref={wrapper}>
@@ -327,15 +501,7 @@ function EquityChart({ points, label }: { points: PerformancePoint[]; label: str
         aria-valuemax={last}
         aria-valuenow={index ?? last}
         aria-valuetext={describe(points[index ?? last])}
-        onKeyDown={onKeyDown}
-        onFocus={() => {
-          if (index === null) setCursor({ points, index: last });
-        }}
-        onBlur={() => setCursor(null)}
-        onPointerMove={onPointerMove}
-        onPointerLeave={(event) => {
-          if (document.activeElement !== event.currentTarget) setCursor(null);
-        }}
+        {...handlers(box)}
       >
         <svg
           width={width}
@@ -371,6 +537,17 @@ function EquityChart({ points, label }: { points: PerformancePoint[]; label: str
           ))}
           <path className="chart-area" d={layout.area} />
           <path className="chart-invested" d={investedLine} />
+          {codes.map((code) => (
+            <path
+              key={code}
+              className={`chart-benchmark is-${code}`}
+              d={pathOf(
+                points.map((item) => item.benchmarkValues[code]),
+                x,
+                y,
+              )}
+            />
+          ))}
           <path className="chart-line" d={layout.line} />
           {point && (
             <g>
@@ -394,9 +571,174 @@ function EquityChart({ points, label }: { points: PerformancePoint[]; label: str
                 amount: formatMoney(point.invested, language),
               })}
             </span>
+            {codes.map((code) => (
+              <span key={code}>{sameMoney(point, code)}</span>
+            ))}
             <span>
               {formatCalendarDay(point.date, language)} · {formatChange(point.return, language)}
             </span>
+          </div>
+        )}
+      </div>
+      <p id={hintId} className="visually-hidden">
+        {t('detail.history.chartHint')}
+      </p>
+    </div>
+  );
+}
+
+/** Caminho de uma linha que pode ter buracos (`null`: a referência sem dado naquele ponto). */
+function pathOf(
+  values: ReadonlyArray<string | null>,
+  x: (index: number) => number,
+  y: (value: number) => number,
+): string {
+  let path = '';
+  let drawing = false;
+  values.forEach((value, index) => {
+    if (value === null) {
+      drawing = false;
+      return;
+    }
+    path += `${drawing ? 'L' : 'M'}${x(index).toFixed(1)} ${y(Number(value)).toFixed(1)}`;
+    drawing = true;
+  });
+  return path;
+}
+
+/** Eixo em %: "+12%", "−3,5%". */
+function formatAxisPercent(value: number, step: number, language: string): string {
+  return new Intl.NumberFormat(language, {
+    style: 'percent',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: step >= 1 ? 0 : 1,
+    signDisplay: 'exceptZero',
+  }).format(value / 100);
+}
+
+/**
+ * SPEC-020: a rentabilidade da cota (linha cheia, na cor de destaque) e as referências (traços
+ * diferentes, não só cores), na mesma régua desde o dia-base, com a linha do zero. O cursor lê
+ * todas no leitor de tela.
+ */
+function ReturnChart({ points, codes }: { points: PerformancePoint[]; codes: BenchmarkCode[] }) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
+  const hintId = useId();
+  const { wrapper, width, index, last, handlers } = useChartCursor(points);
+
+  const extra = codes.flatMap((code) =>
+    points.flatMap((point) => {
+      const value = point.benchmarks[code];
+      return value === null ? [] : [Number(value)];
+    }),
+  );
+  const layout = chartLayout(
+    points.map((point) => ({ date: point.date, close: point.return })),
+    width,
+    HEIGHT,
+    [0, ...extra],
+  );
+  const { box, axis, x, y } = layout;
+  const ticks = spaceTicks(timeTicks(points.map((point) => point.date)), x, MIN_TICK_GAP);
+  const name = (code: BenchmarkCode) => t(`portfolios.performance.benchmarks.${code}`);
+  const value = (change: string | null) =>
+    change === null ? t('portfolios.performance.noData') : formatChange(change, language);
+  const describe = (point: PerformancePoint | undefined) =>
+    point
+      ? t('portfolios.performance.returnCursor', {
+          date: formatCalendarDay(point.date, language),
+          values: [
+            `${t('portfolios.performance.legendPortfolio')} ${formatChange(point.return, language)}`,
+            ...codes.map((code) => `${name(code)} ${value(point.benchmarks[code])}`),
+          ].join(', '),
+        })
+      : undefined;
+
+  const point = index !== null ? points[index] : undefined;
+  const pointX = index !== null ? x(index) : 0;
+  const pointY = point ? y(Number(point.return)) : 0;
+  const tooltipHeight = TOOLTIP_HEIGHT + 16 * codes.length;
+  const tooltipTop = pointY > tooltipHeight + 12 ? pointY - tooltipHeight - 10 : pointY + 12;
+
+  return (
+    <div className="price-chart" ref={wrapper}>
+      <div
+        className="price-chart-surface"
+        role="slider"
+        tabIndex={0}
+        aria-label={t('portfolios.performance.returnChartLabel')}
+        aria-describedby={hintId}
+        aria-valuemin={0}
+        aria-valuemax={last}
+        aria-valuenow={index ?? last}
+        aria-valuetext={describe(points[index ?? last])}
+        {...handlers(box)}
+      >
+        <svg
+          width={width}
+          height={HEIGHT}
+          viewBox={`0 0 ${width} ${HEIGHT}`}
+          aria-hidden="true"
+          focusable="false"
+        >
+          {axis.ticks.map((tick) => (
+            <g key={tick}>
+              <line className="chart-grid" x1={box.left} x2={box.right} y1={y(tick)} y2={y(tick)} />
+              <text className="chart-axis" x={box.right + 8} y={y(tick)} dominantBaseline="middle">
+                {formatAxisPercent(tick, axis.step, language)}
+              </text>
+            </g>
+          ))}
+          <line className="chart-zero" x1={box.left} x2={box.right} y1={y(0)} y2={y(0)} />
+          {ticks.map((tick) => (
+            <text
+              key={tick.index}
+              className="chart-axis"
+              x={x(tick.index)}
+              y={HEIGHT - 6}
+              textAnchor={x(tick.index) - box.left < 24 ? 'start' : 'middle'}
+            >
+              {formatTickDate(tick.date, tick.unit, language)}
+            </text>
+          ))}
+          {codes.map((code) => (
+            <path
+              key={code}
+              className={`chart-benchmark is-${code}`}
+              d={pathOf(
+                points.map((item) => item.benchmarks[code]),
+                x,
+                y,
+              )}
+            />
+          ))}
+          <path className="chart-line" d={layout.line} />
+          {point && (
+            <g>
+              <line className="chart-cursor" x1={pointX} x2={pointX} y1={box.top} y2={box.bottom} />
+              <circle className="chart-dot" cx={pointX} cy={pointY} r={4.5} />
+            </g>
+          )}
+        </svg>
+        {point && (
+          <div
+            className="chart-tooltip"
+            aria-hidden="true"
+            style={{
+              left: Math.min(Math.max(pointX, TOOLTIP_HALF), width - TOOLTIP_HALF),
+              top: tooltipTop,
+            }}
+          >
+            <strong>
+              {t('portfolios.performance.legendPortfolio')} {formatChange(point.return, language)}
+            </strong>
+            {codes.map((code) => (
+              <span key={code}>
+                {name(code)} {value(point.benchmarks[code])}
+              </span>
+            ))}
+            <span>{formatCalendarDay(point.date, language)}</span>
           </div>
         )}
       </div>
