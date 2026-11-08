@@ -19,7 +19,11 @@ import {
   type TradeResult,
 } from '@simulador/shared';
 import { canSpend, cashLedger, toCents } from '../../financial-calculation/cash-ledger.js';
-import type { AppliedEvent, Timeline } from '../../financial-calculation/corporate-actions.js';
+import {
+  priceAfterEvents,
+  type AppliedEvent,
+  type Timeline,
+} from '../../financial-calculation/corporate-actions.js';
 import { performance } from '../../financial-calculation/performance.js';
 import { periodStart } from '../../financial-calculation/price-history.js';
 import {
@@ -122,7 +126,7 @@ export class TradingService {
     await ownedPortfolio(this.deps.portfolios, userId, id);
     // SPEC-015: as negociações e lançamentos estornados não contam.
     const ledger = activeLedger(await this.deps.ledger.ledger(id));
-    const data = await corporateData(this.deps.market, ledger);
+    const data = await corporateData(this.deps.market, this.deps.calendar, ledger);
     const line = ledgerTimeline(ledger, data, isoDateInBrasilia(this.clock()));
     const cash = cashLedger(cashMovements(ledger, line)).balance;
     const holdingList = [...line.holdings.values()];
@@ -178,7 +182,11 @@ export class TradingService {
     // SPEC-043: na histórica, o caixa e a posição naquela data, com os proventos pagos até ela e os
     // eventos já aplicados; na ao vivo, os de hoje.
     const until = portfolio.type === 'historical' && date ? date : isoDateInBrasilia(this.clock());
-    const line = ledgerTimeline(ledger, await corporateData(this.deps.market, ledger), until);
+    const line = ledgerTimeline(
+      ledger,
+      await corporateData(this.deps.market, this.deps.calendar, ledger),
+      until,
+    );
     const common = {
       cash: cashLedger(cashMovements(ledger, line)).balance,
       held: line.holdings.get(assetId)?.quantity ?? 0,
@@ -233,10 +241,15 @@ export class TradingService {
     const total = tradeTotal(input.quantity, priced.price);
     const now = this.clock();
     // SPEC-043: proventos e eventos lidos antes da trava (a conta, com o livro travado).
-    const data = await corporateData(this.deps.market, await this.deps.ledger.ledger(id), {
-      assetId: asset.id,
-      from: priced.date,
-    });
+    const data = await corporateData(
+      this.deps.market,
+      this.deps.calendar,
+      await this.deps.ledger.ledger(id),
+      {
+        assetId: asset.id,
+        from: priced.date,
+      },
+    );
 
     let after: PortfolioLedger = { cash: [], trades: [], reversals: [] };
     const stored = await this.deps.ledger.appendTradeLocked(id, (locked): NewStoredTrade => {
@@ -404,7 +417,7 @@ export class TradingService {
       to = today;
       from = performanceStart(query.period, today, portfolio.startDate);
     } else {
-      if (query.to > today) throw new PortfolioValidationError({ to: 'future' });
+      if (query.to > today) throw new PortfolioValidationError({ to: 'after_today' });
       ({ from, to } = query);
     }
 
@@ -431,7 +444,7 @@ export class TradingService {
       trades: ledger.trades.filter((trade) => trade.date <= to),
       reversals: [],
     };
-    const data = await corporateData(this.deps.market, active);
+    const data = await corporateData(this.deps.market, this.deps.calendar, active);
     const firstTrade = new Map<string, IsoDate>();
     for (const trade of active.trades) {
       const current = firstTrade.get(trade.assetId);
@@ -445,13 +458,14 @@ export class TradingService {
         ),
       ),
     );
-    // Hoje: a cotação do pregão de cada ativo em posição, como nas posições.
+    // Até hoje: o último dia da conta usa o mesmo último preço das posições (a cotação do pregão;
+    // sem ela, o último fechamento), para o patrimônio bater com o total delas (CA03).
     const live = new Map<string, string>();
     if (to === today) {
-      const held = ledgerTimeline(active, data, today).holdings;
-      for (const assetId of held.keys()) {
-        const quote = await this.deps.market.latestQuote(assetId, USER_LEVEL);
-        if (quote && isoDateInBrasilia(quote.at) === today) live.set(assetId, quote.price);
+      const line = ledgerTimeline(active, data, today);
+      for (const assetId of line.holdings.keys()) {
+        const { price } = await this.lastKnownPrice(assetId, line);
+        if (price !== undefined) live.set(assetId, price);
       }
     }
 
@@ -463,7 +477,7 @@ export class TradingService {
       closes,
       days,
       from: start,
-      live: { date: today, prices: live },
+      live: { date: days.at(-1) as IsoDate, prices: live },
     });
     const weekly = daysBetween(start, to) > WEEKLY_AFTER_DAYS;
     const tickers = new Map(
@@ -499,6 +513,22 @@ export class TradingService {
   }
 
   /**
+   * O último preço conhecido do ativo: a cotação do pregão; sem ela, o último fechamento. SPEC-043:
+   * se ele é de antes de um evento já aplicado à quantidade (a cotação de sexta na segunda, antes da
+   * primeira do dia), vem dividido pelo multiplicador, para não inflar o valor da posição.
+   */
+  private async lastKnownPrice(assetId: string, line: Timeline) {
+    const quote = await this.deps.market.latestQuote(assetId, USER_LEVEL);
+    const close = quote ? null : await this.deps.market.lastClose(assetId);
+    const raw = quote?.price ?? close?.close;
+    const date = quote ? isoDateInBrasilia(quote.at) : close?.date;
+    const events = line.events.filter((event) => event.assetId === assetId);
+    const price =
+      raw !== undefined && date !== undefined ? priceAfterEvents(raw, date, events) : raw;
+    return { quote, close, price };
+  }
+
+  /**
    * A posição com o último preço conhecido: a cotação do pregão; sem ela, o último fechamento.
    * SPEC-043: a quantidade e o preço médio já vêm corrigidos pelos eventos (os desde a primeira
    * compra em posição aparecem em `events`), com os proventos pagos do ativo.
@@ -530,9 +560,7 @@ export class TradingService {
       income: centsToAmount(line.received.get(holding.assetId) ?? 0n),
       incomeLoaded: loaded.has(holding.assetId),
     };
-    const quote = await this.deps.market.latestQuote(holding.assetId, USER_LEVEL);
-    const close = quote ? null : await this.deps.market.lastClose(holding.assetId);
-    const price = quote?.price ?? close?.close;
+    const { quote, close, price } = await this.lastKnownPrice(holding.assetId, line);
     if (price === undefined) return base;
     const priced: Position = {
       ...base,

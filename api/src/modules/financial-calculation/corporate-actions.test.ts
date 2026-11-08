@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cashLedger } from './cash-ledger.js';
 import {
   firstTimelineBreak,
+  priceAfterEvents,
   timeline,
   type EventInput,
   type IncomeInput,
@@ -185,8 +186,36 @@ describe('eventos corporativos na carteira (SPEC-043, decisão 5)', () => {
         multiplier: '4',
         quantityBefore: 100,
         quantityAfter: 400,
+        effectiveDate: '2020-10-14',
+        ratio: expect.anything() as unknown,
       },
     ]);
+  });
+
+  it('data com na sexta: vale no pregão seguinte (a segunda), não no sábado', () => {
+    const trades = [buy('t1', 'mglu', 100, '4000.00', '2026-11-03')];
+    const friday = { ...split, exDate: '2026-11-06', effectiveDate: '2026-11-09' };
+    const saturday = timeline({ trades, income: [], events: [friday], until: '2026-11-07' });
+    expect(saturday.holdings.get('mglu')).toMatchObject({ quantity: 100 });
+    expect(saturday.events).toEqual([]);
+    const monday = timeline({ trades, income: [], events: [friday], until: '2026-11-09' });
+    expect(monday.holdings.get('mglu')).toMatchObject({ quantity: 400 });
+  });
+
+  it('preço de antes do evento é dividido pelo multiplicador; o de depois fica', () => {
+    const trades = [buy('t1', 'mglu', 100, '4000.00', '2026-11-03')];
+    const friday = { ...split, exDate: '2026-11-06', effectiveDate: '2026-11-09' };
+    const { events } = timeline({ trades, income: [], events: [friday], until: '2026-11-09' });
+    expect(priceAfterEvents('31.20', '2026-11-06', events)).toBe('7.800000');
+    expect(priceAfterEvents('7.95', '2026-11-09', events)).toBe('7.950000');
+    // Grupamento de 10 para 1: o preço de antes vale 10 vezes mais.
+    const { events: grouped } = timeline({
+      trades,
+      income: [],
+      events: [{ ...reverse, exDate: '2026-11-06', effectiveDate: '2026-11-09' }],
+      until: '2026-11-09',
+    });
+    expect(priceAfterEvents('1.32', '2026-11-06', grouped)).toBe('13.200000');
   });
 
   it('grupamento de 10 para 1 com 405: 40 ações e a fração de 0,5 vendida por R$ 6,60', () => {

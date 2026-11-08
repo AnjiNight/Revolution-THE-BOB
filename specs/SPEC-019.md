@@ -136,7 +136,8 @@ As do §4.2, em português e inglês, pelo teclado (os períodos são botões; o
 | Onde fica | Núcleo `financial-calculation/performance.ts` (puro). O serviço é o `TradingService.performance`, que já tinha o livro, o calendário e o mercado. A porta `PortfolioMarket` ganhou só `closesFrom` (os fechamentos da SPEC-010). Os saltos são conferidos no núcleo, com o `isPriceJump` da SPEC-010 e o `eventBetween` da SPEC-042, sem uma porta `jumps` |
 | Posições de cada dia | Mudam só nos dias de negociação e no dia seguinte à data com de um evento: em cada um, a linha do tempo da SPEC-043 até ele |
 | Cota | 12 casas na conta (o §4.2 dizia 10); 2.500 pregões de +0,01% ficam a menos de 0,01 ponto do valor exato |
-| Período | 1m, 6m e 12m como a ficha (o mesmo dia, N meses antes); "No ano" a partir de 1º de janeiro; sem `period`, desde o início. `from` depois de `to` é `after_end`; `to` no futuro é `future` |
+| Período | 1m, 6m e 12m como a ficha (o mesmo dia, N meses antes); "No ano" a partir de 1º de janeiro; sem `period`, desde o início. `from` depois de `to` é `after_end`; `to` depois de hoje é `after_today` (revisão de 08/11: antes reaproveitava o `future` da SPEC-016, cuja mensagem pede um dia antes de hoje) |
+| Último preço (revisão de 08/11) | No período que vai até hoje, o último dia da conta usa o mesmo último preço das posições (a cotação do pregão; sem ela, o último fechamento). Antes, só a cotação do próprio dia valia: no fim de semana ou antes da abertura, o patrimônio podia ficar diferente do total das posições |
 | Lançamento depois do último pregão | Um aporte de sábado na ao vivo entra no pregão seguinte; se ainda não houve pregão depois dele, o dia do aporte fecha a conta |
 | "Calculando…" | Aparece ao trocar o período; ao recarregar por um lançamento novo, os números de antes ficam até chegarem os novos |
 | Telas | Painel **Rentabilidade** acima do Caixa, com os botões de período (os da ficha), o formulário "Personalizado", os três números, o patrimônio no início e os aportes do período, o gráfico (patrimônio em linha cheia e total aportado tracejado, cursor pelo mouse e pelo teclado com o texto para leitor de tela) e os avisos |
@@ -145,7 +146,7 @@ As do §4.2, em português e inglês, pelo teclado (os períodos são botões; o
 |---|---|
 | CA01 | ✅ Exemplos do §4.3 em `performance.test.ts`: +0,70% com PETR4, aporte de R$ 5.000,00 e retirada de R$ 2.000,00 sem mudar a %, a cota de +80% contra −1,8% da conta simples, dividendo como ganho |
 | CA02 | ✅ Resultado = fim − início − aportes líquidos (ex.: R$ 13.070,00 − 0 − R$ 13.000,00 = R$ 70,00) |
-| CA03 | ✅ Fechamento do dia ou o último antes; desdobramento sem salto falso; hoje com a cotação do pregão. Com dados reais: a conta de teste (histórica de 2019 com PETR4, MXRF11, ITSA4 e MGLU3) fecha em R$ 25.345,87, igual ao total das posições |
+| CA03 | ✅ Fechamento do dia ou o último antes; desdobramento sem salto falso; hoje com a cotação do pregão. Com dados reais: a conta de teste (histórica de 2019 com PETR4, MXRF11, ITSA4 e MGLU3) fecha em R$ 25.345,87, igual ao total das posições. Revisão de 08/11: também no sábado, com a cotação de sexta (`performance-routes.test.ts`) |
 | CA04 | ✅ Períodos e validação (`performance-routes.test.ts` e o pacote compartilhado); com dados reais, 12 meses: +8,68% (R$ 23.321,46 → R$ 25.345,87) |
 | CA05 | ✅ Desde 2019: 410 pontos semanais; 12 meses: 248 pregões |
 | CA06 | ✅ MGLU3 de 2019 no teste de rota; com dados reais, o aviso apareceu para a queda da MGLU3 em 26/10/2026 (de R$ 12,69 para R$ 5,30, sem evento na B3) e para 9 saltos nos 50 ativos mais negociados desde 2016 |

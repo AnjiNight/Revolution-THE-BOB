@@ -66,7 +66,7 @@ Com isso some o aviso da SPEC-016 ("o valor atual ainda não considera isso") e 
 | Tema | Proposta | Motivo |
 |---|---|---|
 | **Ordem no livro** | No mesmo dia, os eventos vêm **antes** das negociações e os proventos **antes** de aportes e negociações (eles contam do início do dia) | Uma compra no dia do pagamento já pode usar o provento; uma compra no dia ex já é em ações novas |
-| **Conferência do livro** (`firstBreak`, SPEC-015) | Conta os proventos pagos e as frações. Uma retirada ou compra que só cabe com um provento é aceita; um estorno de compra que faria um gasto posterior ficar sem caixa (porque o provento dela some) é recusado com `ledger_break`, como já é | Regra única: o livro sem o lançamento continua válido |
+| **Conferência do livro** (`firstBreak`, SPEC-015) | Conta os proventos pagos e as frações. Uma retirada ou compra que só cabe com um provento é aceita; um estorno de compra que faria um gasto posterior ficar sem caixa (porque o provento dela some) é recusado com `reversal_breaks_cash`, como já é | Regra única: o livro sem o lançamento continua válido |
 | **Proventos que somem** | Se a fonte é desligada ou corrige um provento já gasto, o caixa pode ficar **negativo**. A carteira não apaga nada: mostra "O caixa ficou negativo porque um provento deixou de constar da fonte" e só aceita aporte até voltar ao positivo | Não dá para desfazer lançamentos (DA09); avisar é melhor que esconder |
 | **Data do pagamento depois de hoje** | Na histórica e na ao vivo, igual: só entra quando a data chega (hoje, 409 proventos no banco estão nesse caso) | A histórica é avaliada até hoje (DA17) |
 | **Caixa "naquela data"** (SPEC-016) | O `cash` da cotação da histórica conta os proventos pagos até a data escolhida | O que o investidor tinha naquele dia |
@@ -89,7 +89,7 @@ Hoje = 06/11/2026.
 | Histórica: 100 MGLU3 compradas em 2019 a R$ 40,00; desdobramento de 300% com data com 13/10/2020 | Em 14/10/2020: 400 ações a R$ 10,00 (custo R$ 4.000,00 igual); o valor atual volta a aparecer |
 | Depois, 405 MGLU3 no grupamento de 10 para 1 (data com 24/05/2024) | 40 ações; a fração de 0,5 é vendida pelo fechamento de 24/05/2024 (R$ 1,32) × 10 × 0,5 = R$ 6,60 |
 | 120 ITSA4 na bonificação de 2% (data com 18/12/2025) | 122 ações (custo igual); fração 0,4 vendida em dinheiro |
-| Estorno da compra de MXRF11 de 01/09/2026 | Os R$ 10,00 de outubro somem junto; se já tinham sido gastos, o estorno é recusado (`ledger_break`) |
+| Estorno da compra de MXRF11 de 01/09/2026 | Os R$ 10,00 de outubro somem junto; se já tinham sido gastos, o estorno é recusado (`reversal_breaks_cash`) |
 | Interruptor do Investidor10 desligado | Sem proventos no caixa nem no extrato; desdobramento de MGLU3 continua corrigido |
 
 ## 5. Comportamento esperado
@@ -145,8 +145,9 @@ As do §4.2, em português e inglês, pelo teclado, a 480 px, com "Fonte: Invest
 | Onde fica | `financial-calculation/corporate-actions.ts` (`timeline`, `firstTimelineBreak`), pura. A porta `PortfolioMarket` trocou `eventsFrom` por `corporateEvents` (com o fechamento da data com), `income`, `incomeEnabled` e `incomeLoaded`, ligados no `api/src/portfolio-market.ts`. O `cashLedger` ganhou o tipo `income` (põe dinheiro) |
 | Eventos no extrato | O extrato é do caixa: o evento aparece na **posição** ("Desdobramento em 13/10/2020: 100 → 400"), e no extrato só a **venda de fração**, que mexe no caixa |
 | Preço médio no evento | Dividido pelo multiplicador (6 casas, meio para cima). Com fração vendida, o custo das ações que ficam cai na parte da fração, que sai com o dinheiro dela |
-| Venda maior que a posição | Uma venda gravada antes desta Spec, depois de um grupamento, pode passar da posição já corrigida. A conta vende tudo e segue; o estorno aponta essa venda (`ledger_break`, `position`) |
+| Venda maior que a posição | Uma venda gravada antes desta Spec, depois de um grupamento, pode passar da posição já corrigida. A conta vende tudo e segue; o estorno aponta essa venda (`reversal_breaks_position`) |
 | Ordem no mesmo dia | Eventos e pagamentos no começo do dia, o "quem tinha" da data com no fim; no extrato, o provento tem a hora de meia-noite de Brasília |
+| Quando o evento vale (revisão de 08/11) | No **pregão seguinte** à data com, pelo calendário (SPEC-005), e não no dia seguinte: com a data com numa sexta, no sábado a posição ainda é a de antes, como o último preço. Na segunda, antes da primeira cotação do dia, o último preço (o de sexta) vem dividido pelo multiplicador, nas posições e na rentabilidade. Ano seguinte sem calendário publicado: o dia seguinte, como antes |
 | Proventos iguais | A SPEC-042 não dá id ao provento: a chave é ativo, tipo, data com, pagamento e valor; dois iguais (parcelas do mesmo JCP) ganham um número e entram os dois |
 | JCP sem data de pagamento | Fica a receber com o IR de 17,5% (a alíquota de agora) |
 | "Ainda não carregados" | Vale para o ativo que o processador ainda não visitou no Investidor10; o visitado sem página conta como carregado (não há proventos) |

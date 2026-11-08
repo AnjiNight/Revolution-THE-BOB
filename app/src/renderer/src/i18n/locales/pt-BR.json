@@ -205,7 +205,8 @@
     "before_start": "Escolha um dia a partir do início da carteira.",
     "before_last_entry": "Escolha o dia do último lançamento ou depois: na carteira histórica, os lançamentos seguem a ordem das datas.",
     "invalid_quantity": "Informe uma quantidade inteira, a partir de 1.",
-    "after_end": "A data de início precisa vir antes da data final."
+    "after_end": "A data de início não pode ser depois da data final.",
+    "after_today": "Escolha uma data final até hoje."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",

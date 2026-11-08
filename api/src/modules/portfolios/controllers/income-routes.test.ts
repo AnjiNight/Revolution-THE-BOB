@@ -199,4 +199,36 @@ describe('proventos e eventos na carteira (SPEC-043)', () => {
     });
     expect((await positions(live)).positions[0]).toMatchObject({ incomeLoaded: false });
   });
+
+  it('desdobramento com data com na sexta vale no pregão seguinte, sem inflar o valor (CA05)', async () => {
+    const live = await newPortfolio({ name: 'Ações', type: 'live', initialAmount: '5000' });
+    await trade(
+      { type: 'buy', assetId: PETR4, quantity: 100, quotedAt: '2026-11-06T14:30:00.000Z' },
+      live,
+    );
+    t.market.events.set(PETR4, [{ kind: 'desdobramento', exDate: '2026-11-06', factor: '300' }]);
+
+    // Sábado: ainda não houve pregão depois da data com; a posição é a de antes, com o preço de sexta.
+    now = new Date('2026-11-07T15:00:00Z');
+    const saturday = await positions(live);
+    expect(saturday.positions[0]).toMatchObject({
+      quantity: 100,
+      lastPrice: '31.20',
+      marketValue: '3120.00',
+    });
+    expect(saturday.total).toBe('5000.00');
+
+    // Segunda, 08:00, antes da primeira cotação do dia: o desdobramento já vale, e o preço de sexta
+    // vem dividido por 4.
+    now = new Date('2026-11-09T11:00:00Z');
+    const monday = await positions(live);
+    expect(monday.positions[0]).toMatchObject({
+      quantity: 400,
+      lastPrice: '7.80',
+      marketValue: '3120.00',
+    });
+    expect(monday.total).toBe('5000.00');
+    const performance = await call('GET', portfolioSubPath(PORTFOLIO_PATHS.performance, live));
+    expect(performance.json<{ endValue: string }>().endValue).toBe('5000.00');
+  });
 });

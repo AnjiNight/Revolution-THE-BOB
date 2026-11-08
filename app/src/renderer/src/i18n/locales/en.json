@@ -205,7 +205,8 @@
     "before_start": "Choose a day on or after the portfolio's start.",
     "before_last_entry": "Choose the day of the last entry or later: a historical portfolio's entries follow date order.",
     "invalid_quantity": "Enter a whole quantity, 1 or more.",
-    "after_end": "The start date must come before the end date."
+    "after_end": "The start date can't be after the end date.",
+    "after_today": "Choose an end date no later than today."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",

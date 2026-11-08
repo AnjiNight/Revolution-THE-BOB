@@ -210,7 +210,8 @@ export type FieldErrorCode =
   // SPEC-014: compra e venda.
   | 'invalid_quantity'
   // SPEC-019: período da rentabilidade.
-  | 'after_end';
+  | 'after_end'
+  | 'after_today';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 

@@ -1,6 +1,6 @@
 import { addDays, centsToAmount, type IsoDate } from '@simulador/shared';
 import { compareMovements, credits, toCents, type LedgerMovement } from './cash-ledger.js';
-import { timeline, type EventInput, type IncomeInput } from './corporate-actions.js';
+import { effectiveDate, timeline, type EventInput, type IncomeInput } from './corporate-actions.js';
 import { divideHalfUp } from './decimal.js';
 import { roundToCents, type Holding, type TradeMovement } from './positions.js';
 import { eventBetween } from './price-adjustment.js';
@@ -29,7 +29,10 @@ export interface PerformanceInput {
   days: readonly IsoDate[];
   /** Primeiro dia do período (os anteriores só formam o patrimônio inicial). */
   from: IsoDate;
-  /** Carteira ao vivo: a cotação do pregão de hoje, que vale no lugar do fechamento nesse dia. */
+  /**
+   * Período até hoje: o último preço de cada ativo (o mesmo das posições), que vale no lugar do
+   * fechamento no último dia da conta.
+   */
   live?: { date: IsoDate; prices: ReadonlyMap<string, string> };
 }
 
@@ -149,14 +152,14 @@ function percent(quota: bigint): string {
 }
 
 /**
- * As posições de cada dia: mudam só nos dias de negociação e no dia seguinte à data com de um
+ * As posições de cada dia: mudam só nos dias de negociação e no pregão seguinte à data com de um
  * evento. Em cada um desses dias, a linha do tempo da SPEC-043 até ele.
  */
 function holdingSnapshots(input: PerformanceInput, to: IsoDate) {
   const changes = [
     ...new Set([
       ...input.trades.map((trade) => trade.date),
-      ...input.events.map((event) => addDays(event.exDate, 1)),
+      ...input.events.map((event) => effectiveDate(event)),
     ]),
   ]
     .filter((date) => date <= to)

@@ -143,13 +143,25 @@ describe('rentabilidade e evolução patrimonial (SPEC-019)', () => {
     expect(body.series.length).toBeGreaterThan(20);
   });
 
+  it('no sábado, o patrimônio bate com o total das posições (a cotação de sexta) (CA03)', async () => {
+    now = new Date('2026-11-07T15:00:00Z');
+    const body = (await performance()).json<PortfolioPerformance>();
+    const positions = (
+      await call('GET', portfolioSubPath(PORTFOLIO_PATHS.positions, historical))
+    ).json<{ total: string }>();
+    // Sem fechamento de sexta guardado: vale a cotação de sexta (R$ 31,20), como nas posições.
+    expect(positions.total).toBe('10590.00');
+    expect(body.endValue).toBe(positions.total);
+    expect(body.series.at(-1)).toMatchObject({ date: '2026-11-06', equity: '10590.00' });
+  });
+
   it('validação do período (CA04)', async () => {
     const fields = async (query: string) =>
       (await performance(query)).json<{ fields?: Record<string, string> }>().fields;
     expect(await fields('?period=2y')).toEqual({ period: 'invalid_option' });
     expect(await fields('?from=2020-02-01&to=2020-01-01')).toEqual({ from: 'after_end' });
     expect(await fields('?from=2020-02-30&to=2020-03-01')).toEqual({ from: 'invalid_date' });
-    expect(await fields('?from=2026-11-01&to=2026-11-09')).toEqual({ to: 'future' });
+    expect(await fields('?from=2026-11-01&to=2026-11-09')).toEqual({ to: 'after_today' });
   });
 
   it('salto sem evento conhecido com o ativo em posição vira aviso (CA06)', async () => {

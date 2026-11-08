@@ -2,7 +2,12 @@ import { addDays, centsToAmount, type DividendKind, type IsoDate } from '@simula
 import { compareMovements, credits, toCents, type LedgerMovement } from './cash-ledger.js';
 import { divideHalfUp, toMicros } from './decimal.js';
 import { formatMicros, type Holding, type LedgerBreak, type TradeMovement } from './positions.js';
-import { multiplierText, shareMultiplier, type PriceEventInput } from './price-adjustment.js';
+import {
+  multiplierText,
+  shareMultiplier,
+  type PriceEventInput,
+  type Ratio,
+} from './price-adjustment.js';
 
 /**
  * Proventos e eventos corporativos na carteira (SPEC-043), em inteiros (RNF12). Nada disso é
@@ -27,6 +32,16 @@ export interface EventInput extends PriceEventInput {
   id: string;
   assetId: string;
   close: string | null;
+  /**
+   * O primeiro pregão depois da data com ("data ex"), em que o evento passa a valer. Sem ele (ano
+   * seguinte sem calendário publicado), o dia seguinte à data com.
+   */
+  effectiveDate?: IsoDate;
+}
+
+/** O dia em que o evento passa a valer na carteira: o pregão seguinte à data com. */
+export function effectiveDate(event: Pick<EventInput, 'exDate' | 'effectiveDate'>): IsoDate {
+  return event.effectiveDate ?? addDays(event.exDate, 1);
 }
 
 /** Um provento de quem tinha o ativo na data com, com o IR do JCP já tirado (decisão 3). */
@@ -62,6 +77,9 @@ export interface AppliedEvent {
   multiplier: string;
   quantityBefore: number;
   quantityAfter: number;
+  /** O pregão em que passou a valer, e o multiplicador exato (para corrigir um preço de antes). */
+  effectiveDate: IsoDate;
+  ratio: Ratio;
 }
 
 /** Movimento do caixa que a linha do tempo cria: provento pago ou fração vendida. */
@@ -125,8 +143,9 @@ export function timeline(input: TimelineInput): Timeline {
       .map((event) => ({
         kind: 'event' as const,
         id: `event:${event.id}`,
-        // Vale do dia seguinte à data com ("data ex") em diante.
-        date: addDays(event.exDate, 1),
+        // Vale do pregão seguinte à data com ("data ex") em diante: num sábado depois da data com,
+        // a posição ainda é a de antes, como o último preço.
+        date: effectiveDate(event),
         recordedAt: START_OF_DAY,
         event,
       })),
@@ -230,6 +249,8 @@ function event(positions: Map<string, State>, input: EventInput, result: Timelin
     multiplier: multiplierText(input),
     quantityBefore: Number(current.quantity),
     quantityAfter: Number(quantity),
+    effectiveDate: effectiveDate(input),
+    ratio: { num, den },
   });
   if (quantity === 0n) positions.delete(input.assetId);
   else {
@@ -247,7 +268,7 @@ function event(positions: Map<string, State>, input: EventInput, result: Timelin
     id: `fraction:${input.id}`,
     type: 'income',
     amount: centsToAmount(cents),
-    date: addDays(input.exDate, 1),
+    date: effectiveDate(input),
     recordedAt: START_OF_DAY,
     kind: 'fraction',
     fraction: {
@@ -307,6 +328,25 @@ function income(
     const reduced = current.average - divideHalfUp(value, VALUE_SCALE / 1_000_000n);
     positions.set(input.assetId, { ...current, average: reduced > 0n ? reduced : 0n });
   }
+}
+
+/**
+ * Um preço de antes de eventos já aplicados à quantidade (a cotação de sexta, na segunda antes da
+ * primeira cotação do dia), dividido pelo multiplicador de cada um, para valer com a quantidade
+ * corrigida. Em milionésimos, meio para cima.
+ */
+export function priceAfterEvents(
+  price: string,
+  priceDate: IsoDate,
+  events: readonly Pick<AppliedEvent, 'effectiveDate' | 'ratio'>[],
+): string {
+  let micros = toMicros(price);
+  for (const event of events) {
+    if (event.effectiveDate > priceDate) {
+      micros = divideHalfUp(micros * event.ratio.den, event.ratio.num);
+    }
+  }
+  return formatMicros(micros);
 }
 
 function jcpTax(gross: bigint, paymentDate: IsoDate): bigint {

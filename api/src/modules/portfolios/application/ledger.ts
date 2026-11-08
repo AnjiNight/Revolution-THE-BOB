@@ -1,4 +1,4 @@
-import type { IsoDate } from '@simulador/shared';
+import { yearOf, type IsoDate } from '@simulador/shared';
 import type { LedgerMovement } from '../../financial-calculation/cash-ledger.js';
 import {
   timeline,
@@ -7,8 +7,13 @@ import {
   type Timeline,
 } from '../../financial-calculation/corporate-actions.js';
 import type { TradeMovement } from '../../financial-calculation/positions.js';
+import {
+  CalendarNotPublishedError,
+  type TradingCalendar,
+} from '../../financial-calculation/trading-calendar.js';
 import { PortfolioNotFoundError } from '../domain/errors.js';
 import type {
+  PortfolioCalendar,
   PortfolioLedger,
   PortfolioMarket,
   PortfolioRepository,
@@ -84,10 +89,12 @@ export interface CorporateData {
 /**
  * SPEC-043: lê os proventos e eventos de cada ativo negociado, da primeira negociação dele em
  * diante (as estornadas também: não muda a conta e evita ler de novo). `extra` acrescenta um ativo
- * que vai ser negociado agora, a partir da data dele. Fica fora da trava do livro.
+ * que vai ser negociado agora, a partir da data dele. Fica fora da trava do livro. Cada evento sai
+ * com o pregão em que passa a valer (o seguinte à data com), pelo calendário (SPEC-005).
  */
 export async function corporateData(
   market: Pick<PortfolioMarket, 'corporateEvents' | 'income'>,
+  calendar: PortfolioCalendar,
   ledger: PortfolioLedger,
   extra?: { assetId: string; from: IsoDate },
 ): Promise<CorporateData> {
@@ -107,8 +114,56 @@ export async function corporateData(
   );
   return {
     income: loaded.flatMap(([income]) => income),
-    events: loaded.flatMap(([, events]) => events),
+    events: await withEffectiveDates(
+      calendar,
+      loaded.flatMap(([, events]) => events),
+    ),
   };
+}
+
+/**
+ * O pregão seguinte à data com de cada evento. Com o ano (ou o seguinte) sem calendário publicado,
+ * o evento fica sem a data, e a conta usa o dia seguinte à data com.
+ */
+async function withEffectiveDates(
+  calendar: PortfolioCalendar,
+  events: readonly EventInput[],
+): Promise<EventInput[]> {
+  const byYear = new Map<number, Promise<TradingCalendar | null>>();
+  const load = (year: number) => {
+    let found = byYear.get(year);
+    if (!found) {
+      found = publishedOrNull(() => calendar.tradingCalendar(year, year + 1)).then(
+        (days) => days ?? publishedOrNull(() => calendar.tradingCalendar(year, year)),
+      );
+      byYear.set(year, found);
+    }
+    return found;
+  };
+  return Promise.all(
+    events.map(async (event) => {
+      const days = await load(yearOf(event.exDate));
+      if (!days) return event;
+      try {
+        return { ...event, effectiveDate: days.nextTradingDay(event.exDate) };
+      } catch (error) {
+        if (error instanceof CalendarNotPublishedError) return event;
+        throw error;
+      }
+    }),
+  );
+}
+
+/** O calendário dos anos pedidos; `null` se algum deles não foi publicado. */
+async function publishedOrNull(
+  load: () => Promise<TradingCalendar>,
+): Promise<TradingCalendar | null> {
+  try {
+    return await load();
+  } catch (error) {
+    if (error instanceof CalendarNotPublishedError) return null;
+    throw error;
+  }
 }
 
 /** SPEC-043: a linha do tempo do livro que vale (sem estornados) até o dia pedido. */

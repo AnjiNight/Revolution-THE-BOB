@@ -165,7 +165,11 @@ export class PortfolioService {
     // SPEC-043: com os proventos pagos e as frações vendidas, que não se estornam.
     const reversed = reversalTimes(full);
     const active = activeLedger(full);
-    const line = ledgerTimeline(active, await corporateData(this.deps.market, full), today);
+    const line = ledgerTimeline(
+      active,
+      await corporateData(this.deps.market, this.deps.calendar, full),
+      today,
+    );
     const book = cashLedger(cashMovements(active, line));
     const balanceAfter = new Map(book.lines.map((entry) => [entry.id, entry.balanceAfter]));
     const newestFirst: StatementItem[] = [...ledgerItems(full), ...line.movements]
@@ -207,7 +211,7 @@ export class PortfolioService {
     const before = await this.deps.ledger.ledger(id);
     const tickers = await this.tickers(before.trades.map((trade) => trade.assetId));
     // SPEC-043: proventos e eventos lidos antes da trava; a conferência conta com eles.
-    const data = await corporateData(this.deps.market, before);
+    const data = await corporateData(this.deps.market, this.deps.calendar, before);
 
     let reversedType: LedgerItem['type'] | null = null;
     const stored = await this.deps.ledger.appendReversalLocked(id, (current) => {
@@ -261,7 +265,11 @@ export class PortfolioService {
     const now = this.clock();
     const date = await this.entryDate(portfolio, input.date, isoDateInBrasilia(now));
     // SPEC-043: proventos e eventos lidos antes da trava.
-    const data = await corporateData(this.deps.market, await this.deps.ledger.ledger(id));
+    const data = await corporateData(
+      this.deps.market,
+      this.deps.calendar,
+      await this.deps.ledger.ledger(id),
+    );
 
     let balance = '0.00';
     const stored = await this.deps.ledger.appendCashLocked(id, (current): NewStoredCashEntry => {
