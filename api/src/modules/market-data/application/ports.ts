@@ -545,6 +545,49 @@ export interface FundamentalsRepository {
  */
 export interface B3CompanySource {
   company(code: string): Promise<unknown>;
+  /** SPEC-021: a página de detalhe da empresa (classificação setorial), pelo código CVM. */
+  detail(codeCvm: string): Promise<unknown>;
+}
+
+/** SPEC-021: classificação setorial da B3 de uma empresa (código de 4 letras do ticker). */
+export interface StoredB3Classification {
+  code: string;
+  codeCvm: string;
+  sector: string | null;
+  subsector: string | null;
+  segment: string | null;
+  collectedAt: Date;
+}
+
+/** SPEC-021: ativo que a equipe ainda não conferiu, com o setor de agora e, se FII, o Investidor10. */
+export interface UnreviewedAsset {
+  id: string;
+  ticker: string;
+  assetClass: AssetClass;
+  sector: SectorCode;
+  /** Tipo e segmento do fundo no Investidor10 (SPEC-041); `null` sem a página coletada. */
+  fundType: string | null;
+  fundSegment: string | null;
+}
+
+/** SPEC-021: troca da classificação sugerida, com a fonte. */
+export interface SectorSuggestion {
+  assetId: string;
+  ticker: string;
+  from: SectorCode;
+  to: SectorCode;
+  source: 'b3' | 'investidor10';
+}
+
+export interface ClassificationRepository {
+  b3Classifications(): Promise<Map<string, StoredB3Classification>>;
+  saveB3Classification(row: StoredB3Classification): Promise<void>;
+  unreviewed(): Promise<UnreviewedAsset[]>;
+  /**
+   * Troca o setor de cada ativo que continua a revisar e com o setor de antes, com o registro de
+   * auditoria sem colaborador na mesma transação. Devolve quantos mudaram.
+   */
+  suggest(changes: readonly SectorSuggestion[], at: Date): Promise<number>;
 }
 
 export interface CorporateEventRepository {

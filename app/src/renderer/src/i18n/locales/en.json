@@ -826,6 +826,28 @@
         "bonus": "Bonus issue"
       }
     },
+    "allocation": {
+      "title": "Allocation",
+      "classes": {
+        "stock": "Stocks",
+        "fii": "REITs (FIIs)",
+        "cash": "Cash"
+      },
+      "byClass": {
+        "stock": "Stocks by sector",
+        "fii": "REITs (FIIs) by segment"
+      },
+      "shares": {
+        "stock": "{{ofClass}} of stocks · {{ofTotal}} of the portfolio",
+        "fii": "{{ofClass}} of REITs · {{ofTotal}} of the portfolio"
+      },
+      "assetShare": "{{share}} of the portfolio",
+      "empty": "Buy an asset to see the allocation by sector.",
+      "negativeCash": "Negative cash: {{amount}}. The allocation considers only the assets.",
+      "atCost_one": "{{tickers}} is valued at cost: no price yet.",
+      "atCost_other": "{{tickers}} are valued at cost: no price yet.",
+      "note": "Today's values, as in the positions. Stock sectors from B3's classification; REIT segments suggested from Investidor10, reviewed by the team."
+    },
     "trade": {
       "buyTitle": "Buy",
       "sellTitle": "Sell {{ticker}}",

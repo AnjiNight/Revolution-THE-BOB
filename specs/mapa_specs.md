@@ -53,6 +53,9 @@
 | 1.43 | SPEC-020 detalhada ([SPEC-020.md](SPEC-020.md)), aguardando a aprovação: CDI, Ibovespa e IFIX ao lado da rentabilidade da cota, "% do CDI", gráfico em %; Ibovespa e IFIX pelas estatísticas históricas da B3 (proposta para a OPEN-21) |
 | 1.44 | SPEC-020 aprovada (Luís, 08/11/2026) com as recomendações ("% do CDI" só com a carteira positiva: o CDI nunca é negativo) e implementada: CDI, Ibovespa e IFIX ao lado da cota, "% do CDI", gráfico "Em %", Ibovespa e IFIX pelas estatísticas históricas da B3 desde 2016; OPEN-21 e PE06 resolvidas; IFIX na comparação (DA23 atualizada) |
 | 1.45 | SPEC-020 ajustada a pedido do Luís (08/11/2026): botão "Comparar com os índices" nos gráficos em reais e em %; no gráfico em reais, "o mesmo dinheiro" em cada índice (com os aportes e retiradas nos mesmos dias) e o "teria R$ …" de cada referência; a régua principal continua a cota |
+| 1.46 | SPEC-021 detalhada ([SPEC-021.md](SPEC-021.md)), aguardando a aprovação: distribuição de hoje por classe (Ações, FIIs e Caixa), setor ou segmento e ativo, em barras; classificação sugerida melhor para os ativos a revisar (setor econômico da B3 nas ações, segmento do Investidor10 nos FIIs) |
+| 1.47 | SPEC-021 aprovada (Luís, 09/11/2026), pedindo antes a revisão do setor de todos os ativos, e implementada: painel Distribuição (classes, setores e ativos), classificação setorial da B3 na tarefa dos eventos (tabela `classificacao_b3`) e sugestão melhor dos ativos a revisar, com auditoria `classificacao_sugerida` |
+| 1.48 | Tela da carteira reordenada a pedido do Luís (09/11/2026): Caixa (saldo, Aportar e Retirar) no topo, depois Rentabilidade, Posições e Distribuição, e o Extrato no fim (SPEC-021 §9) |
 ---
 
 ## 0. Como ler este documento
@@ -853,6 +856,8 @@ Detalhada em [SPEC-020.md](SPEC-020.md), aprovada e implementada (com o IFIX nas
 | Prioridade derivada | Should |
 
 #### SPEC-021 — Distribuição da carteira por classe e setor
+
+Detalhada em [SPEC-021.md](SPEC-021.md), aprovada e implementada.
 
 | Campo | Conteúdo |
 |---|---|

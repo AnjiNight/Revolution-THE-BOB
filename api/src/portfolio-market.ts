@@ -57,6 +57,7 @@ export function portfolioMarket(sources: PortfolioMarketSources): PortfolioMarke
         name: asset.name,
         assetClass: asset.assetClass,
         active: asset.deactivatedAt === null,
+        sector: asset.sector,
       };
     },
     async latestQuote(assetId, level) {

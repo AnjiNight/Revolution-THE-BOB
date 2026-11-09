@@ -20,6 +20,7 @@ import { CalendarService } from './modules/market-data/application/calendar-serv
 import { CatalogImport } from './modules/market-data/application/catalog-import.js';
 import { B3EventsCollection } from './modules/market-data/application/b3-events-collection.js';
 import { CdiIngestion } from './modules/market-data/application/cdi-ingestion.js';
+import { ClassificationSuggestions } from './modules/market-data/application/classification-suggestions.js';
 import { FundamentalsService } from './modules/market-data/application/fundamentals-service.js';
 import { Investidor10Collection } from './modules/market-data/application/investidor10-collection.js';
 import { CdiStatusService } from './modules/market-data/application/cdi-status-service.js';
@@ -41,6 +42,7 @@ import { PrismaIntradayQuoteRepository } from './modules/market-data/infrastruct
 import { PrismaB3TradeRepository } from './modules/market-data/infrastructure/prisma-b3-trade-repository.js';
 import { PrismaCalendarRepository } from './modules/market-data/infrastructure/prisma-calendar-repository.js';
 import { PrismaCatalogImportRepository } from './modules/market-data/infrastructure/prisma-catalog-import-repository.js';
+import { PrismaClassificationRepository } from './modules/market-data/infrastructure/prisma-classification-repository.js';
 import { PrismaIndexRateRepository } from './modules/market-data/infrastructure/prisma-index-rate-repository.js';
 import { PrismaLogoRepository } from './modules/market-data/infrastructure/prisma-logo-repository.js';
 import { PrismaMarketIndexRepository } from './modules/market-data/infrastructure/prisma-market-index-repository.js';
@@ -135,6 +137,12 @@ async function main(): Promise<void> {
   // corporativos da B3.
   const fundamentalsRepo = new PrismaFundamentalsRepository(prisma);
   const events = new PrismaEventRepository(prisma);
+  // SPEC-021: classificação setorial da B3 e sugestão melhor para os ativos a revisar.
+  const classifications = new PrismaClassificationRepository(prisma);
+  const suggestions = new ClassificationSuggestions({
+    classifications,
+    investidor10Enabled: config.investidor10.enabled,
+  });
   const investidor10 = new Investidor10Collection({
     enabled: config.investidor10.enabled,
     source: new Investidor10HttpSource({ baseUrl: config.investidor10.baseUrl }),
@@ -142,6 +150,7 @@ async function main(): Promise<void> {
     runs,
     // Os mais negociados primeiro: numa primeira coleta, o topo da lista Ativos sai logo.
     volumes: quotes,
+    suggestions,
   });
   const b3Events = new B3EventsCollection({
     source: new B3CompanyHttpSource({ baseUrl: config.b3ListedBaseUrl }),
@@ -149,6 +158,8 @@ async function main(): Promise<void> {
     trades,
     events,
     runs,
+    classifications,
+    suggestions,
   });
 
   if (mode === 'server') {

@@ -21,6 +21,10 @@ import {
   type FundamentalsAsset,
   type FundamentalsRepository,
   type Investidor10Source,
+  type ClassificationRepository,
+  type SectorSuggestion,
+  type StoredB3Classification,
+  type UnreviewedAsset,
   type MarketIndexRepository,
   type MarketIndexSource,
   type StoredMarketIndex,
@@ -194,6 +198,56 @@ export class FakeB3CompanySource implements B3CompanySource {
     const failure = this.failures.shift();
     if (failure) return Promise.reject(failure);
     return Promise.resolve(this.companies.get(code) ?? null);
+  }
+
+  /** SPEC-021: a página de detalhe, pelo código CVM (`details`). */
+  readonly details = new Map<string, unknown>();
+  detailFailures: Error[] = [];
+
+  detail(codeCvm: string): Promise<unknown> {
+    this.requests.push(`detalhe ${codeCvm}`);
+    const failure = this.detailFailures.shift();
+    if (failure) return Promise.reject(failure);
+    return Promise.resolve(this.details.get(codeCvm) ?? null);
+  }
+}
+
+/**
+ * Classificação em memória (SPEC-021): a da B3 por empresa e os ativos do catálogo, com o setor, se
+ * a equipe conferiu e, nos FIIs, o tipo e o segmento do Investidor10.
+ */
+export class InMemoryClassifications implements ClassificationRepository {
+  readonly b3 = new Map<string, StoredB3Classification>();
+  readonly assets: Array<UnreviewedAsset & { reviewed: boolean }> = [];
+  readonly audit: Array<SectorSuggestion & { at: Date }> = [];
+
+  b3Classifications(): Promise<Map<string, StoredB3Classification>> {
+    return Promise.resolve(new Map(this.b3));
+  }
+
+  saveB3Classification(row: StoredB3Classification): Promise<void> {
+    this.b3.set(row.code, { ...row });
+    return Promise.resolve();
+  }
+
+  unreviewed(): Promise<UnreviewedAsset[]> {
+    return Promise.resolve(
+      this.assets
+        .filter((asset) => !asset.reviewed)
+        .map(({ reviewed: _reviewed, ...asset }) => ({ ...asset })),
+    );
+  }
+
+  suggest(changes: readonly SectorSuggestion[], at: Date): Promise<number> {
+    let changed = 0;
+    for (const change of changes) {
+      const asset = this.assets.find((item) => item.id === change.assetId);
+      if (!asset || asset.reviewed || asset.sector !== change.from) continue;
+      asset.sector = change.to;
+      this.audit.push({ ...change, at });
+      changed += 1;
+    }
+    return Promise.resolve(changed);
   }
 }
 

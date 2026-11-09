@@ -30,11 +30,17 @@ type CashState =
  * o extrato também mostra as compras e vendas.
  */
 export function PortfolioCash({
+  part,
   portfolio,
   version,
   onChanged,
   onSessionExpired,
 }: {
+  /**
+   * Reordenação de 09/11/2026: `summary` é o saldo com Aportar e Retirar, no topo da carteira;
+   * `statement` é o extrato (com o que vai entrar e os estornos), no fim.
+   */
+  part: 'summary' | 'statement';
   portfolio: Portfolio;
   /** Muda a cada lançamento novo (aqui ou numa compra ou venda): o extrato é pedido de novo. */
   version: number;
@@ -121,69 +127,8 @@ export function PortfolioCash({
   const lastDate = data?.entries.find((entry) => entry.type !== 'income')?.date;
   const firstDay = lastDate && lastDate > portfolio.startDate ? lastDate : portfolio.startDate;
 
-  return (
-    <section className="profile-panel cash-panel" aria-labelledby={titleId}>
-      <div className="cash-head">
-        <div>
-          <h2 id={titleId}>{t('portfolios.cash.title')}</h2>
-          {data && (
-            <p className="cash-balance">
-              <span>{t('portfolios.cash.balance')}</span>
-              <strong>{formatMoney(data.balance, language)}</strong>
-            </p>
-          )}
-        </div>
-        {data && !mode && (
-          <div className="cash-actions">
-            <button
-              ref={depositButton}
-              type="button"
-              className="pill pill-primary"
-              onClick={() => {
-                setNotice(null);
-                setMode('deposit');
-              }}
-            >
-              {t('portfolios.cash.deposit')}
-              <span className="pill-icon" aria-hidden="true">
-                <ArrowDown weight="bold" />
-              </span>
-            </button>
-            <button
-              ref={withdrawButton}
-              type="button"
-              className="pill pill-ghost"
-              onClick={() => {
-                setNotice(null);
-                setMode('withdrawal');
-              }}
-            >
-              {t('portfolios.cash.withdraw')}
-              <span className="pill-icon" aria-hidden="true">
-                <ArrowUp weight="bold" />
-              </span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {mode && data && (
-        <CashEntryForm
-          portfolio={portfolio}
-          type={mode}
-          firstDay={firstDay}
-          onRegistered={(result) => registered(mode, result)}
-          onCancel={() => close(mode)}
-          onSessionExpired={onSessionExpired}
-        />
-      )}
-
-      {notice && (
-        <p ref={noticeRef} className="form-success" role="status" tabIndex={-1}>
-          {notice}
-        </p>
-      )}
-
+  const loadingOrFailed = (
+    <>
       {state.status === 'loading' && (
         <p className="loading" role="status">
           {t('portfolios.cash.loading')}
@@ -194,17 +139,95 @@ export function PortfolioCash({
           {t(`authErrors.${state.error}`)}
         </p>
       )}
-      {data && data.balance.startsWith('-') && (
-        <p className="form-error" role="alert">
-          {t('portfolios.cash.income.negative')}
-        </p>
-      )}
-      {data && !data.incomeEnabled && (
-        <p className="assets-note">
-          <Info weight="fill" aria-hidden="true" />
-          <span>{t('portfolios.cash.income.disabled')}</span>
-        </p>
-      )}
+    </>
+  );
+  const noticeLine = notice && (
+    <p ref={noticeRef} className="form-success" role="status" tabIndex={-1}>
+      {notice}
+    </p>
+  );
+
+  // Reordenação de 09/11/2026: no topo, o saldo com Aportar e Retirar e os avisos do saldo.
+  if (part === 'summary') {
+    return (
+      <section className="profile-panel cash-panel cash-summary" aria-labelledby={titleId}>
+        <div className="cash-head">
+          <div>
+            <h2 id={titleId}>{t('portfolios.cash.title')}</h2>
+            {data && (
+              <p className="cash-balance">
+                <span>{t('portfolios.cash.balance')}</span>
+                <strong>{formatMoney(data.balance, language)}</strong>
+              </p>
+            )}
+          </div>
+          {data && !mode && (
+            <div className="cash-actions">
+              <button
+                ref={depositButton}
+                type="button"
+                className="pill pill-primary"
+                onClick={() => {
+                  setNotice(null);
+                  setMode('deposit');
+                }}
+              >
+                {t('portfolios.cash.deposit')}
+                <span className="pill-icon" aria-hidden="true">
+                  <ArrowDown weight="bold" />
+                </span>
+              </button>
+              <button
+                ref={withdrawButton}
+                type="button"
+                className="pill pill-ghost"
+                onClick={() => {
+                  setNotice(null);
+                  setMode('withdrawal');
+                }}
+              >
+                {t('portfolios.cash.withdraw')}
+                <span className="pill-icon" aria-hidden="true">
+                  <ArrowUp weight="bold" />
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {mode && data && (
+          <CashEntryForm
+            portfolio={portfolio}
+            type={mode}
+            firstDay={firstDay}
+            onRegistered={(result) => registered(mode, result)}
+            onCancel={() => close(mode)}
+            onSessionExpired={onSessionExpired}
+          />
+        )}
+        {noticeLine}
+        {loadingOrFailed}
+        {data && data.balance.startsWith('-') && (
+          <p className="form-error" role="alert">
+            {t('portfolios.cash.income.negative')}
+          </p>
+        )}
+        {data && !data.incomeEnabled && (
+          <p className="assets-note">
+            <Info weight="fill" aria-hidden="true" />
+            <span>{t('portfolios.cash.income.disabled')}</span>
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  // No fim da página: o histórico (o que vai entrar e o extrato), o que menos se consulta.
+  return (
+    <section className="profile-panel cash-panel" aria-labelledby={statementId}>
+      <h2 id={statementId}>{t('portfolios.cash.statement')}</h2>
+      {noticeLine}
+      {loadingOrFailed}
       {data && data.pendingIncome.length > 0 && (
         <div className="cash-pending">
           <h3>{t('portfolios.cash.income.pendingTitle')}</h3>
@@ -232,7 +255,6 @@ export function PortfolioCash({
 
       {data && data.total > 0 && (
         <div className="cash-statement-block">
-          <h3 id={statementId}>{t('portfolios.cash.statement')}</h3>
           <table className="cash-statement" aria-labelledby={statementId}>
             <thead>
               <tr>

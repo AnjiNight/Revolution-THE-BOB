@@ -26,6 +26,7 @@ import {
   type AppliedEvent,
   type Timeline,
 } from '../../financial-calculation/corporate-actions.js';
+import { allocation } from '../../financial-calculation/allocation.js';
 import {
   cdiBenchmark,
   cdiShare,
@@ -147,6 +148,19 @@ export class TradingService {
       (sum, position) => sum + (position.marketValue ? toCents(position.marketValue) : 0n),
       0n,
     );
+    // SPEC-021: a distribuição de hoje, com as mesmas posições e o preço médio de 6 casas.
+    const distribution = allocation({
+      cash,
+      positions: positions.map((position) => ({
+        assetId: position.assetId,
+        ticker: position.ticker,
+        assetClass: position.class,
+        sector: position.sector,
+        quantity: position.quantity,
+        averagePrice: line.holdings.get(position.assetId)?.averagePrice ?? position.averagePrice,
+        marketValue: position.marketValue,
+      })),
+    });
     const received = [...line.received.values()].reduce((sum, cents) => sum + cents, 0n);
     const pending = line.pending.reduce((sum, credit) => sum + toCents(credit.net), 0n);
     const next = line.pending
@@ -172,6 +186,7 @@ export class TradingService {
           }
         : null,
       incomeEnabled: this.deps.market.incomeEnabled,
+      allocation: distribution,
     };
   }
 
@@ -738,6 +753,7 @@ function basePosition(holding: Holding, asset: MarketAsset): Position {
     events: [],
     income: '0.00',
     incomeLoaded: false,
+    sector: asset.sector ?? 'outros',
   };
 }
 

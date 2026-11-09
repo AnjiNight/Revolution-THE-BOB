@@ -826,6 +826,28 @@
         "bonus": "Bonificação"
       }
     },
+    "allocation": {
+      "title": "Distribuição",
+      "classes": {
+        "stock": "Ações",
+        "fii": "FIIs",
+        "cash": "Caixa"
+      },
+      "byClass": {
+        "stock": "Ações por setor",
+        "fii": "FIIs por segmento"
+      },
+      "shares": {
+        "stock": "{{ofClass}} das ações · {{ofTotal}} da carteira",
+        "fii": "{{ofClass}} dos FIIs · {{ofTotal}} da carteira"
+      },
+      "assetShare": "{{share}} da carteira",
+      "empty": "Compre um ativo para ver a distribuição por setor.",
+      "negativeCash": "Caixa negativo: {{amount}}. A distribuição considera só os ativos.",
+      "atCost_one": "{{tickers}} entrou pelo custo: ainda sem preço.",
+      "atCost_other": "{{tickers}} entraram pelo custo: ainda sem preço.",
+      "note": "Valores de hoje, como nas posições. Setores das ações pela classificação da B3; segmentos dos FIIs sugeridos a partir do Investidor10, conferidos pela equipe."
+    },
     "trade": {
       "buyTitle": "Comprar",
       "sellTitle": "Vender {{ticker}}",

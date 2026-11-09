@@ -3,6 +3,7 @@ import type {
   CashEntryType,
   IsoDate,
   MarketIndexCode,
+  SectorCode,
   PortfolioType,
   QuoteLevelCode,
   TradeType,
@@ -106,6 +107,8 @@ export interface MarketAsset {
   name: string;
   assetClass: AssetClass;
   active: boolean;
+  /** SPEC-021: setor (ação) ou segmento (FII) do catálogo; sem ele, "Outros". */
+  sector?: SectorCode;
 }
 
 /** Cotação do pregão (SPEC-009): preço com até 6 casas e o horário da coleta. */

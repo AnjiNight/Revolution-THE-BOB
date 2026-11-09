@@ -1,7 +1,7 @@
 import type { FieldErrorCode, FieldErrors, ValidationResult } from './auth.js';
 import { isIsoDate, type IsoDate } from './calendar.js';
 
-import type { AssetClass } from './assets.js';
+import type { AssetClass, SectorCode } from './assets.js';
 import type { DividendKind } from './fundamentals.js';
 
 /**
@@ -431,6 +431,46 @@ export interface Position {
   income: string;
   /** SPEC-043: `false` se o processador ainda não visitou o ativo no Investidor10. */
   incomeLoaded: boolean;
+  /** SPEC-021: setor (ação) ou segmento (FII) do catálogo. */
+  sector: SectorCode;
+}
+
+/** SPEC-021: um ativo dentro do setor, com a % da carteira. */
+export interface AllocationAsset {
+  assetId: string;
+  ticker: string;
+  value: string;
+  percent: string;
+}
+
+/** SPEC-021: um setor (ação) ou segmento (FII), com a % da carteira e a da classe. */
+export interface AllocationSector {
+  sector: SectorCode;
+  value: string;
+  percent: string;
+  percentOfClass: string;
+  assets: AllocationAsset[];
+}
+
+/** SPEC-021: Ações, FIIs ou Caixa, com a % do patrimônio. */
+export interface AllocationClass {
+  kind: AssetClass | 'cash';
+  value: string;
+  percent: string;
+  /** Só em Ações e FIIs, do maior para o menor, "Outros" no fim. */
+  sectors?: AllocationSector[];
+}
+
+/** SPEC-021: a distribuição de hoje (§5.1). */
+export interface PortfolioAllocation {
+  /** Caixa positivo + ativos (os sem preço pelo custo). */
+  total: string;
+  /** Só as classes com valor, na ordem Ações, FIIs, Caixa. */
+  classes: AllocationClass[];
+  /** Tickers dos ativos sem preço, que entraram pelo custo. */
+  atCost: string[];
+  /** O caixa negativo (fora das barras e das %), ou `null`. */
+  negativeCash: string | null;
 }
 
 /** Corpo de `GET /api/portfolios/:id/positions`. */
@@ -450,6 +490,8 @@ export interface PortfolioPositions {
   /** O próximo pagamento a receber, ou `null`. */
   nextPayment: { date: IsoDate; amount: string } | null;
   incomeEnabled: boolean;
+  /** SPEC-021: a distribuição por classe, setor e ativo. */
+  allocation: PortfolioAllocation;
 }
 
 /** Por que não dá para negociar agora (SPECs 014 e 016). */

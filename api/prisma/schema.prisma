@@ -597,6 +597,8 @@ enum AcaoAuditoria {
   classificacao_conferida
   /// SPEC-005 §10: ano fechado do calendário publicado pelo processador, sem colaborador.
   calendario_importado
+  /// SPEC-021: o processador trocou a classificação sugerida de um ativo a revisar.
+  classificacao_sugerida
 
   @@map("acao_auditoria")
 }
@@ -771,4 +773,17 @@ model LogoAtivo {
   ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
 
   @@map("logo_ativo")
+}
+
+/// Classificação setorial da B3 de cada empresa listada (SPEC-021), pelo código de 4 letras do
+/// ticker: setor econômico, subsetor e segmento, como a B3 publica na página de detalhe.
+model ClassificacaoB3 {
+  codigo     String   @id @db.VarChar(4)
+  codigoCvm  String   @map("codigo_cvm") @db.VarChar(10)
+  setor      String?  @db.VarChar(100)
+  subsetor   String?  @db.VarChar(100)
+  segmento   String?  @db.VarChar(100)
+  coletadaEm DateTime @map("coletada_em") @db.Timestamptz(3)
+
+  @@map("classificacao_b3")
 }

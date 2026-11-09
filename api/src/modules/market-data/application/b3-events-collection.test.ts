@@ -3,11 +3,13 @@ import { parseB3Events } from '../domain/b3-events.js';
 import {
   FakeB3CompanySource,
   InMemoryB3Trades,
+  InMemoryClassifications,
   InMemoryEvents,
   InMemoryFundamentals,
   InMemoryTaskRuns,
 } from '../testing/fakes.js';
 import { B3EventsCollection } from './b3-events-collection.js';
+import type { SuggestionResult } from './classification-suggestions.js';
 
 /** Resposta da página da empresa no formato da B3 (conferido em 04/11/2026). */
 const mglu = [
@@ -152,5 +154,105 @@ describe('coleta dos eventos da B3 (SPEC-042)', () => {
     trades = new InMemoryB3Trades();
     expect(await collection().run()).toBeNull();
     expect(runs.runs).toEqual([]);
+  });
+});
+
+describe('classificação setorial pela B3 na coleta dos eventos (SPEC-021)', () => {
+  const now = new Date('2026-11-08T07:00:00Z');
+  let source: FakeB3CompanySource;
+  let trades: InMemoryB3Trades;
+  let classifications: InMemoryClassifications;
+  let apply: ReturnType<typeof vi.fn<() => Promise<SuggestionResult>>>;
+  const assets = new InMemoryFundamentals([
+    { id: 'a-mglu3', ticker: 'MGLU3', assetClass: 'stock' },
+  ]);
+
+  beforeEach(async () => {
+    source = new FakeB3CompanySource();
+    trades = new InMemoryB3Trades();
+    classifications = new InMemoryClassifications();
+    apply = vi
+      .fn<() => Promise<SuggestionResult>>()
+      .mockResolvedValue({ stocks: 1, fiis: 0, changes: [] });
+    source.companies.set('MGLU', [{ ...mglu[0], codeCVM: '22470' }]);
+    source.details.set('22470', {
+      industryClassification: 'Consumo Cíclico / Comércio / Eletrodomésticos',
+    });
+    await trades.record(
+      [
+        {
+          ticker: 'MGLU3',
+          assetClass: 'stock',
+          lastTradingDay: '2026-11-03',
+          isin: 'BRMGLUACNOR2',
+        },
+      ],
+      new Date(),
+    );
+  });
+
+  const collection = () =>
+    new B3EventsCollection({
+      source,
+      assets,
+      trades,
+      events: new InMemoryEvents(),
+      runs: new InMemoryTaskRuns(),
+      classifications,
+      suggestions: { apply },
+      sleep: vi.fn<(ms: number) => Promise<void>>().mockResolvedValue(),
+      retryDelaysMs: [],
+      clock: () => now,
+    });
+
+  it('sem classificação: pede a página de detalhe pelo código CVM e guarda os três níveis (CA03)', async () => {
+    const result = await collection().run();
+    expect(source.requests).toEqual(['MGLU', 'detalhe 22470']);
+    expect(classifications.b3.get('MGLU')).toEqual({
+      code: 'MGLU',
+      codeCvm: '22470',
+      sector: 'Consumo Cíclico',
+      subsector: 'Comércio',
+      segment: 'Eletrodomésticos',
+      collectedAt: now,
+    });
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ requests: 2, totals: { classificacoes: 1, sugestoes: 1 } });
+  });
+
+  it('guardada há menos de 30 dias: não pede de novo; com mais, pede (CA03)', async () => {
+    const stored = (days: number) =>
+      classifications.b3.set('MGLU', {
+        code: 'MGLU',
+        codeCvm: '22470',
+        sector: 'Consumo Cíclico',
+        subsector: null,
+        segment: null,
+        collectedAt: new Date(now.getTime() - days * 86_400_000),
+      });
+    stored(29);
+    await collection().run();
+    expect(source.requests).toEqual(['MGLU']);
+
+    source.requests.length = 0;
+    stored(31);
+    await collection().run();
+    expect(source.requests).toEqual(['MGLU', 'detalhe 22470']);
+  });
+
+  it('sem código CVM ou com a página de detalhe falhando: erro e as outras seguem (CA03)', async () => {
+    source.companies.set('MGLU', mglu);
+    const withoutCvm = await collection().run();
+    expect(withoutCvm?.errors.map((error) => error.message)).toEqual([
+      'MGLU: sem código CVM na página da B3; sem classificação setorial',
+    ]);
+
+    source.companies.set('MGLU', [{ ...mglu[0], codeCVM: 22470 }]);
+    source.detailFailures = [new Error('B3 respondeu 500')];
+    const failed = await collection().run();
+    expect(failed?.errors.map((error) => error.message)).toEqual([
+      'MGLU (classificação): B3 respondeu 500',
+    ]);
+    expect(apply).toHaveBeenCalledTimes(2);
   });
 });

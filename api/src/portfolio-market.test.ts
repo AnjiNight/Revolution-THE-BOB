@@ -181,6 +181,8 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
       name: 'Petrobras PN',
       assetClass: 'stock',
       active: true,
+      // SPEC-021: o setor do catálogo, para a distribuição.
+      sector: 'petroleo_gas_biocombustiveis',
     });
     expect((await market.asset('a2'))?.active).toBe(false);
     expect(await market.asset('a3')).toBeNull();

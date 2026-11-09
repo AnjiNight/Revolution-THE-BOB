@@ -1,3 +1,4 @@
+import type { ClassificationSuggestions } from './classification-suggestions.js';
 import { isoDateInBrasilia, weekdayOf, type IndicatorCode } from '@simulador/shared';
 import {
   Investidor10LayoutError,
@@ -33,6 +34,8 @@ export interface Investidor10CollectionDeps {
    * lista Ativos (mudança de 05/11/2026). Sem ele, a ordem do repositório (por ticker).
    */
   volumes?: { lastVolumes(): Promise<Map<string, string>> };
+  /** SPEC-021: no fim, troca a classificação sugerida dos FIIs a revisar pelo segmento coletado. */
+  suggestions?: Pick<ClassificationSuggestions, 'apply'>;
   clock?: () => Date;
   sleep?: (ms: number) => Promise<void>;
   pauseMs?: number;
@@ -110,6 +113,15 @@ export class Investidor10Collection {
     } catch (error) {
       log.error(`erro inesperado: ${error instanceof Error ? error.message : String(error)}`);
       log.aborted = true;
+    }
+    if (this.deps.suggestions && !log.aborted) {
+      try {
+        await this.deps.suggestions.apply();
+      } catch (error) {
+        log.error(
+          `sugestão de classificação: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
     const result = log.result(this.requestsMade);
     await this.deps.runs.finish(runId, result, this.clock());

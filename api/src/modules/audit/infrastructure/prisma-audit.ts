@@ -24,6 +24,7 @@ const ACTION_TO_ACAO: Record<AuditAction, AcaoAuditoria> = {
   asset_auto_reactivated: 'ativo_reativado_automaticamente',
   classification_confirmed: 'classificacao_conferida',
   calendar_imported: 'calendario_importado',
+  classification_suggested: 'classificacao_sugerida',
 };
 const ACAO_TO_ACTION = Object.fromEntries(
   Object.entries(ACTION_TO_ACAO).map(([action, acao]) => [acao, action]),

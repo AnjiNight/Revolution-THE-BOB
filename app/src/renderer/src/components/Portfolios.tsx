@@ -513,16 +513,21 @@ export function PortfolioPage({
               </span>
             </p>
           </header>
-          {/* SPEC-019: rentabilidade e evolução patrimonial, acima do caixa. */}
-          <PortfolioPerformance
-            portfolio={state.portfolio}
-            version={version}
-            onSessionExpired={onSessionExpired}
-          />
+          {/*
+            Reordenação de 09/11/2026 (Luís): do que mais se consulta para o que menos se consulta.
+            No topo, o saldo com Aportar e Retirar; depois a rentabilidade (SPEC-019), as posições
+            com a distribuição (SPECs 014 e 021) e, no fim, o extrato (SPECs 013, 015 e 043).
+          */}
           <PortfolioCash
+            part="summary"
             portfolio={state.portfolio}
             version={version}
             onChanged={changed}
+            onSessionExpired={onSessionExpired}
+          />
+          <PortfolioPerformance
+            portfolio={state.portfolio}
+            version={version}
             onSessionExpired={onSessionExpired}
           />
           {/* SPEC-016: a histórica também compra e vende, com a data escolhida. */}
@@ -532,6 +537,13 @@ export function PortfolioPage({
             startBuying={buyAsset}
             onChanged={changed}
             onOpenAsset={onOpenAsset}
+            onSessionExpired={onSessionExpired}
+          />
+          <PortfolioCash
+            part="statement"
+            portfolio={state.portfolio}
+            version={version}
+            onChanged={changed}
             onSessionExpired={onSessionExpired}
           />
         </>

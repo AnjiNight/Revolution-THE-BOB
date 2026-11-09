@@ -930,3 +930,168 @@ button.period-button.compare-toggle[aria-pressed='true'] svg {
 .assets-note.is-warning svg {
   color: var(--warn);
 }
+
+/*
+ * SPEC-021: distribuição por classe e setor. Barras só de desenho (o texto ao lado diz tudo);
+ * Ações na cor de destaque, FIIs no mesmo tom mais claro e Caixa neutro.
+ */
+.allocation-bar {
+  display: flex;
+  height: 0.75rem;
+  margin: 0.75rem 0 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.allocation-segment + .allocation-segment {
+  border-left: 2px solid var(--surface);
+}
+
+.allocation-segment.is-stock,
+.allocation-swatch.is-stock {
+  background: var(--accent);
+}
+
+.allocation-segment.is-fii,
+.allocation-swatch.is-fii {
+  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+}
+
+.allocation-segment.is-cash,
+.allocation-swatch.is-cash {
+  background: var(--border-strong);
+}
+
+.allocation-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-classes li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.allocation-swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  align-self: center;
+}
+
+.allocation-muted {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.allocation-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem 2rem;
+  margin: 0.5rem 0;
+}
+
+.allocation-group h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.allocation-sectors,
+.allocation-assets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.allocation-sector + .allocation-sector {
+  margin-top: 0.35rem;
+}
+
+button.allocation-sector-button {
+  display: grid;
+  /* O estilo global dos botões centraliza; aqui a linha ocupa a coluna inteira. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  align-items: stretch;
+  gap: 0.3rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-weight: 400;
+}
+
+button.allocation-sector-button:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.allocation-sector-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-sector-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.allocation-caret {
+  align-self: center;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--muted);
+  transition: transform 150ms var(--ease-out);
+}
+
+.allocation-sector-button[aria-expanded='true'] .allocation-caret {
+  transform: rotate(180deg);
+}
+
+.allocation-sector-bar {
+  display: block;
+  height: 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.allocation-sector-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.allocation-assets {
+  margin: 0.15rem 0 0.4rem 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--border);
+}
+
+.allocation-assets li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.2rem 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-ticker {
+  min-width: 4.5rem;
+  font-weight: 600;
+}
