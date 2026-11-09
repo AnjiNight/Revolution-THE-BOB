@@ -56,6 +56,7 @@
 | 1.46 | SPEC-021 detalhada ([SPEC-021.md](SPEC-021.md)), aguardando a aprovação: distribuição de hoje por classe (Ações, FIIs e Caixa), setor ou segmento e ativo, em barras; classificação sugerida melhor para os ativos a revisar (setor econômico da B3 nas ações, segmento do Investidor10 nos FIIs) |
 | 1.47 | SPEC-021 aprovada (Luís, 09/11/2026), pedindo antes a revisão do setor de todos os ativos, e implementada: painel Distribuição (classes, setores e ativos), classificação setorial da B3 na tarefa dos eventos (tabela `classificacao_b3`) e sugestão melhor dos ativos a revisar, com auditoria `classificacao_sugerida` |
 | 1.48 | Tela da carteira reordenada a pedido do Luís (09/11/2026): Caixa (saldo, Aportar e Retirar) no topo, depois Rentabilidade, Posições e Distribuição, e o Extrato no fim (SPEC-021 §9) |
+| 1.49 | SPEC-022 detalhada ([SPEC-022.md](SPEC-022.md)), aguardando a aprovação: de 2 a 4 carteiras lado a lado no mesmo período ("Em comum" por padrão), rentabilidade da cota num gráfico em %, resumo em reais e composição de hoje; propostas para a OPEN-22 (cenário = carteira) e a OPEN-23 (ao vivo e histórica juntas, com o rótulo) |
 ---
 
 ## 0. Como ler este documento
@@ -876,6 +877,8 @@ Detalhada em [SPEC-021.md](SPEC-021.md), aprovada e implementada.
 | Prioridade derivada | Should |
 
 #### SPEC-022 — Comparação de carteiras
+
+Detalhada em [SPEC-022.md](SPEC-022.md), aguardando a aprovação.
 
 | Campo | Conteúdo |
 |---|---|
