@@ -318,7 +318,7 @@ export function PortfolioPerformance({
   );
 }
 
-function signed(value: string): string {
+export function signed(value: string): string {
   return !value.startsWith('-') && value !== '0.00' ? '+' : '';
 }
 
@@ -391,7 +391,7 @@ function Benchmarks({ data }: { data: PerformanceData }) {
 }
 
 /** Largura do gráfico e cursor pelo mouse, pelo toque e pelo teclado (como o da ficha, SPEC-010). */
-function useChartCursor<T>(points: readonly T[]) {
+export function useChartCursor<T>(points: readonly T[]) {
   const wrapper = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
   const [cursor, setCursor] = useState<{ points: readonly T[]; index: number } | null>(null);
@@ -588,7 +588,7 @@ function EquityChart({
 }
 
 /** Caminho de uma linha que pode ter buracos (`null`: a referência sem dado naquele ponto). */
-function pathOf(
+export function pathOf(
   values: ReadonlyArray<string | null>,
   x: (index: number) => number,
   y: (value: number) => number,
@@ -607,7 +607,7 @@ function pathOf(
 }
 
 /** Eixo em %: "+12%", "−3,5%". */
-function formatAxisPercent(value: number, step: number, language: string): string {
+export function formatAxisPercent(value: number, step: number, language: string): string {
   return new Intl.NumberFormat(language, {
     style: 'percent',
     minimumFractionDigits: 0,

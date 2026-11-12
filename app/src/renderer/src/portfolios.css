@@ -1095,3 +1095,255 @@ button.allocation-sector-button:hover {
   min-width: 4.5rem;
   font-weight: 600;
 }
+
+/*
+ * SPEC-022: comparação de carteiras. Cada carteira tem uma cor e um marcador (círculo, quadrado,
+ * triângulo, losango), para não depender só da cor (RNF18); os índices seguem tracejados, em tons
+ * neutros, como na SPEC-020.
+ */
+.portfolio-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.portfolio-row.is-chosen {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.portfolio-choice {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.portfolio-choice input {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0.2rem 0 0;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+
+.portfolio-choice:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.portfolio-choice-name {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.compare-bar {
+  position: sticky;
+  bottom: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 32px -20px color-mix(in srgb, var(--text) 45%, transparent);
+}
+
+.compare-bar .field-hint,
+.compare-bar .form-actions {
+  margin: 0;
+}
+
+.comparison-page {
+  --series-1: var(--accent);
+  --series-2: #2f5fb3;
+  --series-3: var(--warn);
+  --series-4: #7a3e9d;
+}
+
+@media (prefers-color-scheme: dark) {
+  .comparison-page {
+    --series-2: #7ea6f2;
+    --series-4: #c591e6;
+  }
+}
+
+.is-series-1 {
+  color: var(--series-1);
+}
+
+.is-series-2 {
+  color: var(--series-2);
+}
+
+.is-series-3 {
+  color: var(--series-3);
+}
+
+.is-series-4 {
+  color: var(--series-4);
+}
+
+.comparison-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.comparison-marker {
+  fill: currentColor;
+  stroke: var(--surface);
+  stroke-width: 1.25;
+}
+
+.series-badge {
+  flex: none;
+  overflow: visible;
+}
+
+.comparison-portfolios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-portfolios li {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.comparison-portfolios .portfolio-type {
+  font-size: 0.85rem;
+}
+
+.comparison-panel {
+  margin: 1.5rem 0;
+}
+
+/* Ao trocar o período, os números de antes ficam esmaecidos até chegarem os novos. */
+.is-stale {
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+.comparison-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.comparison-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.comparison-tooltip {
+  align-items: flex-start;
+}
+
+.comparison-tooltip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* A 480 px, a tabela rola na horizontal dentro do próprio quadro. */
+.comparison-scroll {
+  max-width: 100%;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.comparison-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  vertical-align: top;
+}
+
+.comparison-table thead th {
+  min-width: 8.5rem;
+  font-weight: 650;
+}
+
+/* Datas e valores numa linha só: a tabela rola, em vez de quebrar "2 de jan. de 2025". */
+.comparison-table td {
+  white-space: nowrap;
+}
+
+.comparison-table th[scope='row'] {
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.comparison-column {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.comparison-table .quote-change {
+  font-size: inherit;
+}
+
+.comparison-started,
+.comparison-empty {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.comparison-empty {
+  min-width: 8rem;
+  font-size: 0.85rem;
+  white-space: normal;
+}
+
+.comparison-table tr.is-class th[scope='row'] {
+  color: var(--text);
+}
+
+.comparison-table tr.is-class td {
+  font-weight: 650;
+}
+
+.comparison-table tr.is-sector th[scope='row'] {
+  padding-left: 1.75rem;
+  font-weight: 500;
+}

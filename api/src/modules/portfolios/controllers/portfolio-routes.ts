@@ -1,6 +1,7 @@
 import {
   PORTFOLIO_PATHS,
   validateCashStatementQuery,
+  validateComparisonQuery,
   validateNewCashEntry,
   validateNewPortfolio,
   validateNewReversal,
@@ -113,6 +114,16 @@ export function registerPortfolioRoutes(
     const input = ensureValid(validateNewPortfolio(request.body));
     const portfolio = await run(() => portfolios.create(requireAuth(request).userId, input));
     return reply.status(201).send({ portfolio });
+  });
+
+  // SPEC-022 §5.1: de 2 a 4 carteiras no mesmo período, só leitura. Uma delas de outra pessoa (ou
+  // que não existe) é o mesmo 404, sem dizer qual.
+  app.get(PORTFOLIO_PATHS.comparison, userOnly, async (request, reply) => {
+    const query = ensureValid(validateComparisonQuery(request.query));
+    const result = await owned(request, () =>
+      trading.comparison(requireAuth(request).userId, query),
+    );
+    return reply.send(result);
   });
 
   app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.item, userOnly, async (request, reply) => {

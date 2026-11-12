@@ -4,7 +4,9 @@ import {
   AUTH_PATHS,
   CALENDAR_PATHS,
   calendarPath,
+  PORTFOLIO_PATHS,
   PROFILE_PATHS,
+  type ComparisonQuery,
   type PriceHistoryPeriod,
 } from '@simulador/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -185,6 +187,9 @@ class FakeServer {
         return json(404, { error: 'logo_not_found', message: 'x' });
       case assetPath(ASSET_PATHS.logo, HTML_LOGO_ID):
         return new Response('<html>', { headers: { 'content-type': 'text/html' } });
+      // SPEC-022: devolve o que chegou, para conferir a query string.
+      case PORTFOLIO_PATHS.comparison:
+        return json(200, { ids: url.searchParams.get('ids') });
       default:
         return json(500, { error: 'internal_error', message: 'x' });
     }
@@ -673,5 +678,40 @@ describe('ficha do ativo (SPEC-010)', () => {
       client.assetHistory(ASSET.id, '1y&period=max' as PriceHistoryPeriod),
     ).resolves.toEqual({ ok: false, error: 'unexpected' });
     expect(server.calls).toHaveLength(before);
+  });
+});
+
+describe('comparação de carteiras (SPEC-022)', () => {
+  const A = '0d9e1f7a-1111-4222-8333-00000000000a';
+  const B = '0d9e1f7a-1111-4222-8333-00000000000b';
+
+  it('manda os ids na ordem, separados por vírgula, com o período ou as datas', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.portfolioComparison({ ids: [B, A], period: 'common' })).resolves.toEqual({
+      ok: true,
+      data: { ids: `${B},${A}` },
+    });
+    expect(server.calls.at(-1)).toMatchObject({
+      method: 'GET',
+      path: PORTFOLIO_PATHS.comparison,
+      search: `?ids=${B}%2C${A}&period=common`,
+    });
+    await client.portfolioComparison({ ids: [A, B], from: '2026-01-02', to: '2026-03-02' });
+    expect(server.calls.at(-1)?.search).toBe(`?ids=${A}%2C${B}&from=2026-01-02&to=2026-03-02`);
+  });
+
+  it('id que não é UUID nem chega ao servidor; período estranho fica de fora', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    const before = server.calls.length;
+    await expect(client.portfolioComparison({ ids: [A, '../me'] })).resolves.toEqual({
+      ok: false,
+      error: 'unexpected',
+    });
+    expect(server.calls).toHaveLength(before);
+    await client.portfolioComparison({
+      ids: [A, B],
+      period: 'all&ids=x',
+    } as unknown as ComparisonQuery);
+    expect(server.calls.at(-1)?.search).toBe(`?ids=${A}%2C${B}`);
   });
 });

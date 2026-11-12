@@ -57,6 +57,7 @@
 | 1.47 | SPEC-021 aprovada (Luís, 09/11/2026), pedindo antes a revisão do setor de todos os ativos, e implementada: painel Distribuição (classes, setores e ativos), classificação setorial da B3 na tarefa dos eventos (tabela `classificacao_b3`) e sugestão melhor dos ativos a revisar, com auditoria `classificacao_sugerida` |
 | 1.48 | Tela da carteira reordenada a pedido do Luís (09/11/2026): Caixa (saldo, Aportar e Retirar) no topo, depois Rentabilidade, Posições e Distribuição, e o Extrato no fim (SPEC-021 §9) |
 | 1.49 | SPEC-022 detalhada ([SPEC-022.md](SPEC-022.md)), aguardando a aprovação: de 2 a 4 carteiras lado a lado no mesmo período ("Em comum" por padrão), rentabilidade da cota num gráfico em %, resumo em reais e composição de hoje; propostas para a OPEN-22 (cenário = carteira) e a OPEN-23 (ao vivo e histórica juntas, com o rótulo) |
+| 1.50 | SPEC-022 aprovada (Luís, 11/11/2026) com as recomendações e implementada: botão "Comparar carteiras" na lista (de 2 a 4), tela Comparação com o período "Em comum", gráfico da cota em % com cor e marcador por carteira e "Comparar com os índices", resumo em reais e composição de hoje; números iguais aos da tela de cada carteira; 4 carteiras com 50 ativos no total em 1,05 s (RNF06). OPEN-23 resolvida e OPEN-22 em parte (cenário = carteira); a SPEC-023 deixa de estar bloqueada: o que ela vira fica para decidir ao detalhá-la |
 ---
 
 ## 0. Como ler este documento
@@ -307,8 +308,8 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-19 | ⏸ **Adiada com a renda fixa (DA22).** Significado do caso de uso "Projetar renda fixa" | INC-16 | 017 |
 | OPEN-20 | ⏸ **Adiada com a renda fixa (DA22).** Renda fixa na carteira histórica | DA17 PO4 | 016, 017 |
 | OPEN-21 | ✅ **Resolvida na [SPEC-020](SPEC-020.md):** Ibovespa e IFIX pelas estatísticas históricas da B3, desde 2016. Original: fonte do histórico do Ibovespa | PE06 | 020 |
-| OPEN-22 | Significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
-| OPEN-23 | Comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
+| OPEN-22 | ⏳ **Em parte resolvida na [SPEC-022](SPEC-022.md):** cada cenário é uma carteira, e "Comparar cenários" é a comparação de carteiras (RF19); a SIMULACAO do modelo (projeção) fica com a SPEC-031. Falta o RF20: decidir, ao detalhar a SPEC-023, se ela vira "Nova carteira a partir de outra" ou fica coberta pela SPEC-012. Original: significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
+| OPEN-23 | ✅ **Resolvida na [SPEC-022](SPEC-022.md):** pode misturar, com o rótulo do tipo sempre visível e a nota da DA17. Original: comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
 | OPEN-24 | ✅ **Resolvida nas SPECs [014](SPEC-014.md) e [016](SPEC-016.md):** a API registra por quantidade (RF12); a tela tem "Calcular por valor", em reais ou em "% do caixa" (o "50% em PETR4" da P01); montar vários ativos de uma vez fica fora. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
 | OPEN-26 | Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
@@ -878,7 +879,7 @@ Detalhada em [SPEC-021.md](SPEC-021.md), aprovada e implementada.
 
 #### SPEC-022 — Comparação de carteiras
 
-Detalhada em [SPEC-022.md](SPEC-022.md), aguardando a aprovação.
+Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -893,7 +894,7 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aguardando a aprovação.
 | ADRs | DA17 (rótulo do tipo sempre visível) |
 | Depende de | SPEC-019, SPEC-020, SPEC-021 |
 | Posição | Reúne as visões de 019–021 |
-| Em aberto | OPEN-22, OPEN-23 |
+| Em aberto | — (OPEN-23 resolvida; OPEN-22 resolvida na parte do RF19) |
 | Prioridade derivada | Could |
 
 #### SPEC-023 — Salvar e recuperar simulações
@@ -910,8 +911,8 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aguardando a aprovação.
 | Drivers | OBJ02 |
 | ADRs | DA09 |
 | Depende de | SPEC-012, SPEC-019 |
-| Posição | Depende do que for "simulação". **Não pode ser detalhada antes de OPEN-22** |
-| Em aberto | **OPEN-22 (bloqueante)** |
+| Posição | Com cenário = carteira (SPEC-022), as carteiras já ficam salvas (SPEC-012). Ao detalhar, decidir se ela vira "Nova carteira a partir de outra" (mesmo tipo, início e valor inicial, para montar o cenário B rápido) ou fica coberta pela SPEC-012 (SPEC-022 §8) |
+| Em aberto | OPEN-22 (a parte do RF20, decidida com a própria Spec) |
 | Prioridade derivada | Should |
 
 ---
@@ -1261,7 +1262,6 @@ Estas Specs **não devem ser detalhadas** antes de a equipe decidir os itens ind
 
 | Spec | Decisão bloqueante |
 |---|---|
-| SPEC-023 | OPEN-22 — significado de "simulação" |
 | SPEC-027 | OPEN-28 — autorização da fonte pai |
 | SPEC-030 | OPEN-32 — RFs das fontes do usuário |
 | SPEC-031 | OPEN-33, OPEN-34 — aprovar DA21 e escopo do cenário |

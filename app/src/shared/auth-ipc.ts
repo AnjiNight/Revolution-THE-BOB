@@ -113,6 +113,8 @@ export const PORTFOLIO_CHANNELS = {
   reverse: 'portfolios:reverse',
   // SPEC-019: rentabilidade e evolução patrimonial.
   performance: 'portfolios:performance',
+  // SPEC-022: comparação de 2 a 4 carteiras.
+  comparison: 'portfolios:comparison',
 } as const;
 
 /** Erros que a interface sabe traduzir. */

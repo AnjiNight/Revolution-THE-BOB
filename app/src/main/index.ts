@@ -227,6 +227,10 @@ app.whenReady().then(() => {
   ipcMain.handle(PORTFOLIO_CHANNELS.performance, (_event, id: string, query: unknown) =>
     auth.portfolioPerformance(id, query),
   );
+  // Comparação (SPEC-022): o servidor confere se todas são do usuário.
+  ipcMain.handle(PORTFOLIO_CHANNELS.comparison, (_event, query: unknown) =>
+    auth.portfolioComparison(query),
+  );
   // Estorno (SPEC-015): o servidor confere o prazo e se o livro continua válido.
   ipcMain.handle(PORTFOLIO_CHANNELS.reverse, (_event, id: string, entryId: string) =>
     auth.reverseEntry(id, entryId),

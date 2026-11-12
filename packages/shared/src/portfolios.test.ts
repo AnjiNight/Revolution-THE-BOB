@@ -4,6 +4,7 @@ import {
   centsToAmount,
   normalizePortfolioName,
   portfolioNameKey,
+  validateComparisonQuery,
   validateNewCashEntry,
   validateNewPortfolio,
   validateNewReversal,
@@ -243,6 +244,57 @@ describe('estorno: validação (SPEC-015)', () => {
     expect(validateNewReversal({ entryId: 'x' })).toEqual({
       success: false,
       fields: { entryId: 'invalid_option' },
+    });
+  });
+});
+
+describe('comparação: validação (SPEC-022)', () => {
+  const a = '11111111-1111-4111-8111-111111111111';
+  const b = '22222222-2222-4222-8222-222222222222';
+  const c = '33333333-3333-4333-8333-333333333333';
+  const d = '44444444-4444-4444-8444-444444444444';
+  const e = '55555555-5555-4555-8555-555555555555';
+
+  it('de 2 a 4 ids na ordem pedida; sem período é "Em comum"', () => {
+    expect(validateComparisonQuery({ ids: `${b},${a}` })).toEqual({
+      success: true,
+      data: { ids: [b, a], period: 'common' },
+    });
+    expect(validateComparisonQuery({ ids: ` ${a.toUpperCase()} , ${b},${c},${d}` })).toEqual({
+      success: true,
+      data: { ids: [a, b, c, d], period: 'common' },
+    });
+  });
+
+  it('menos de 2, mais de 4, repetidos ou que não são um id: invalid_selection (CA02)', () => {
+    const fields = (ids: unknown) =>
+      (validateComparisonQuery({ ids }) as { fields?: Record<string, string> }).fields;
+    for (const ids of [undefined, '', a, `${a},${b},${c},${d},${e}`, `${a},${a.toUpperCase()}`]) {
+      expect(fields(ids)).toEqual({ ids: 'invalid_selection' });
+    }
+    expect(fields(`${a},x`)).toEqual({ ids: 'invalid_selection' });
+    expect(fields([a, b])).toEqual({ ids: 'invalid_selection' });
+  });
+
+  it('os períodos da SPEC-019 e o "Em comum", ou duas datas em ordem', () => {
+    const ids = `${a},${b}`;
+    for (const period of ['common', '1m', '6m', '12m', 'ytd', 'all']) {
+      expect(validateComparisonQuery({ ids, period })).toEqual({
+        success: true,
+        data: { ids: [a, b], period },
+      });
+    }
+    expect(validateComparisonQuery({ ids, from: '2026-01-02', to: '2026-03-02' })).toEqual({
+      success: true,
+      data: { ids: [a, b], from: '2026-01-02', to: '2026-03-02' },
+    });
+    expect(validateComparisonQuery({ ids: a, period: '2y' })).toEqual({
+      success: false,
+      fields: { ids: 'invalid_selection', period: 'invalid_option' },
+    });
+    expect(validateComparisonQuery({ ids, from: '2026-03-02', to: '2026-01-02' })).toEqual({
+      success: false,
+      fields: { from: 'after_end' },
     });
   });
 });

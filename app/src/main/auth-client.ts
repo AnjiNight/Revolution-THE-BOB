@@ -50,6 +50,7 @@ import {
   type CashStatement,
   type NewCashEntryInput,
   type NewTradeInput,
+  type PortfolioComparison,
   type PortfolioPerformance,
   type PortfolioPositions,
   type ReversalResult,
@@ -411,6 +412,32 @@ export class AuthClient {
       }
       const path = portfolioRouteUrl(PORTFOLIO_PATHS.performance, id);
       return this.authorizedRequest<PortfolioPerformance>('GET', `${path}?${params.toString()}`);
+    });
+  }
+
+  /**
+   * SPEC-022: a comparação de 2 a 4 carteiras. Só ids de carteira, um período conhecido ou duas
+   * datas AAAA-MM-DD vão para a query string; quantos e quais, o servidor confere.
+   */
+  portfolioComparison(query: unknown): Promise<ClientResult<PortfolioComparison>> {
+    return this.call(() => {
+      const record = (query ?? {}) as Record<string, unknown>;
+      const ids = Array.isArray(record.ids) ? record.ids : [];
+      if (!ids.every((id) => typeof id === 'string' && UUID_PATTERN.test(id))) {
+        throw new RequestFailed('unexpected');
+      }
+      const params = new URLSearchParams({ ids: ids.join(',') });
+      if (typeof record.period === 'string' && /^[a-z0-9]{1,6}$/.test(record.period)) {
+        params.set('period', record.period);
+      }
+      for (const key of ['from', 'to'] as const) {
+        const value = record[key];
+        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) params.set(key, value);
+      }
+      return this.authorizedRequest<PortfolioComparison>(
+        'GET',
+        `${PORTFOLIO_PATHS.comparison}?${params.toString()}`,
+      );
     });
   }
 

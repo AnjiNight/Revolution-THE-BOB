@@ -6,7 +6,9 @@ import type {
   CalendarSuggestion,
   CashEntryResult,
   CashStatement,
+  ComparisonQuery,
   PerformanceQuery,
+  PortfolioComparison,
   PortfolioPerformance,
   PortfolioPositions,
   ReversalResult,
@@ -127,6 +129,8 @@ export interface DesktopApi {
     reverse(id: string, entryId: string): Promise<ClientResult<ReversalResult>>;
     /** SPEC-019: rentabilidade e evolução patrimonial no período (`period` ou `from` e `to`). */
     performance(id: string, query: PerformanceQuery): Promise<ClientResult<PortfolioPerformance>>;
+    /** SPEC-022: de 2 a 4 carteiras no mesmo período, na ordem escolhida. */
+    comparison(query: ComparisonQuery): Promise<ClientResult<PortfolioComparison>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

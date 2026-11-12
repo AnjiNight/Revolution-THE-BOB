@@ -216,7 +216,8 @@
     "before_last_entry": "Choose the day of the last entry or later: a historical portfolio's entries follow date order.",
     "invalid_quantity": "Enter a whole quantity, 1 or more.",
     "after_end": "The start date can't be after the end date.",
-    "after_today": "Choose an end date no later than today."
+    "after_today": "Choose an end date no later than today.",
+    "invalid_selection": "Choose 2 to 4 different portfolios."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -847,6 +848,55 @@
       "atCost_one": "{{tickers}} is valued at cost: no price yet.",
       "atCost_other": "{{tickers}} are valued at cost: no price yet.",
       "note": "Today's values, as in the positions. Stock sectors from B3's classification; REIT segments suggested from Investidor10, reviewed by the team."
+    },
+    "compare": {
+      "start": "Compare portfolios",
+      "intro": "Choose 2 to 4 portfolios to see side by side.",
+      "max": "Up to 4 portfolios",
+      "go": "Compare ({{count}})",
+      "cancel": "Cancel"
+    },
+    "comparison": {
+      "title": "Comparison",
+      "lead": "Your portfolios side by side, over the same period.",
+      "loading": "Comparing the portfolios…",
+      "listLabel": "Compared portfolios",
+      "open": "Open {{name}}",
+      "types": {
+        "live": "Live simulation",
+        "historical": "Historical simulation"
+      },
+      "returnTitle": "Performance",
+      "common": "In common",
+      "commonHint": "In common: since the newest portfolio started, the stretch in which all of them exist.",
+      "chartLabel": "Portfolio returns",
+      "cursor": "{{date}}: {{values}}",
+      "noChart": "The chart appears with at least two trading days in the period.",
+      "benchmarksNote": "Each benchmark since the close of {{date}}, the same day for every portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa, B3.",
+      "benchmarksNoteIfix": "Each benchmark since the close of {{date}}, the same day for every portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa and IFIX, B3.",
+      "note": "Each portfolio by time-weighted return, since it started in the period: deposits and withdrawals don't change the %, and income counts as gain. Prices: B3 close and, today, the trading-session quote; no trading costs.",
+      "summary": {
+        "title": "Summary",
+        "type": "Type",
+        "start": "Start",
+        "endValue": "Equity at the end",
+        "netFlows": "Net deposits in the period",
+        "result": "Result in the period",
+        "return": "Time-weighted return",
+        "cdiShare": "% of the CDI",
+        "cdiShareValue": "{{share}}% of the CDI",
+        "startedOn": "started on {{date}}",
+        "empty": "No entries in the period",
+        "none": "no value"
+      },
+      "composition": {
+        "title": "Composition today",
+        "note": "As a % of each portfolio's equity today, as in Allocation. \"—\": the portfolio has nothing there.",
+        "empty": "None of the portfolios has equity today.",
+        "none": "nothing"
+      },
+      "historicalNote": "Historical simulation: result calculated with data already known.",
+      "backToComparison": "Back to the comparison"
     },
     "trade": {
       "buyTitle": "Buy",

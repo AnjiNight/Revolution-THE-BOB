@@ -17,6 +17,8 @@ export const PORTFOLIO_PATHS = {
   trades: '/api/portfolios/:id/trades',
   reversals: '/api/portfolios/:id/reversals',
   performance: '/api/portfolios/:id/performance',
+  /** SPEC-022: o caminho fixo tem preferência sobre `item` no roteador. */
+  comparison: '/api/portfolios/comparison',
 } as const;
 
 export function portfolioPath(id: string): string {
@@ -751,17 +753,27 @@ export interface PortfolioPerformance {
 }
 
 export function validatePerformanceQuery(input: unknown): ValidationResult<PerformanceQuery> {
-  const record = asRecord(input);
+  const { query, fields } = periodQuery(asRecord(input), PERFORMANCE_PERIODS, 'all');
+  if (!query) return { success: false, fields };
+  return { success: true, data: query };
+}
+
+/**
+ * Um período conhecido (vazio é `fallback`) ou duas datas em ordem; o período junto com as datas é
+ * `not_allowed`. Se as datas passam de hoje, quem diz é o servidor (`after_today`).
+ */
+function periodQuery<P extends string>(
+  record: Record<string, unknown>,
+  periods: readonly P[],
+  fallback: P,
+): { query: { period: P } | { from: IsoDate; to: IsoDate } | null; fields: FieldErrors } {
   const { period, from, to } = record;
   if (from === undefined && to === undefined) {
-    if (period === undefined || period === '') return { success: true, data: { period: 'all' } };
-    if (
-      typeof period !== 'string' ||
-      !(PERFORMANCE_PERIODS as readonly string[]).includes(period)
-    ) {
-      return { success: false, fields: { period: 'invalid_option' } };
+    if (period === undefined || period === '') return { query: { period: fallback }, fields: {} };
+    if (typeof period !== 'string' || !(periods as readonly string[]).includes(period)) {
+      return { query: null, fields: { period: 'invalid_option' } };
     }
-    return { success: true, data: { period: period as PerformancePeriod } };
+    return { query: { period: period as P }, fields: {} };
   }
   const fields: FieldErrors = {};
   const date = (value: unknown, key: 'from' | 'to') => {
@@ -774,6 +786,105 @@ export function validatePerformanceQuery(input: unknown): ValidationResult<Perfo
   if (Object.keys(fields).length === 0 && (from as string) > (to as string)) {
     fields.from = 'after_end';
   }
-  if (Object.keys(fields).length > 0) return { success: false, fields };
-  return { success: true, data: { from: from as IsoDate, to: to as IsoDate } };
+  if (Object.keys(fields).length > 0) return { query: null, fields };
+  return { query: { from: from as IsoDate, to: to as IsoDate }, fields };
+}
+
+// --- Comparação de carteiras (SPEC-022) ---
+
+/** De 2 a 4 carteiras (SPEC-022 §4.1, decisão 3). */
+export const COMPARISON_MIN = 2;
+export const COMPARISON_MAX = 4;
+
+/**
+ * "Em comum" (o padrão: do início da carteira mais nova até hoje) e os períodos da SPEC-019
+ * (§4.1, decisão 4).
+ */
+export const COMPARISON_PERIODS = ['common', ...PERFORMANCE_PERIODS] as const;
+export type ComparisonPeriod = (typeof COMPARISON_PERIODS)[number];
+
+/** As carteiras na ordem da tela, com o período ou as duas datas. */
+export type ComparisonQuery = { ids: string[] } & (
+  { period: ComparisonPeriod } | { from: IsoDate; to: IsoDate }
+);
+
+/** Um ponto de uma carteira no gráfico: a rentabilidade da cota desde o início dela no período. */
+export interface ComparisonPoint {
+  date: IsoDate;
+  return: string;
+}
+
+/** A rentabilidade de uma carteira no período, com os mesmos números da tela dela (CA03). */
+export interface ComparedPerformance {
+  /**
+   * Onde a conta desta carteira começa: o início do período ou, se ela começou depois, o dia do
+   * primeiro lançamento ("começou em …").
+   */
+  from: IsoDate;
+  startValue: string;
+  endValue: string;
+  netFlows: string;
+  result: string;
+  return: string;
+  /** "% do CDI" pela regra da SPEC-020, com o CDI desde o dia-base desta carteira. */
+  cdiShare: string | null;
+  /** Sem lançamento até o fim do período: "Sem lançamentos no período", sem linha no gráfico. */
+  empty: boolean;
+  warnings: PerformanceWarning[];
+  series: ComparisonPoint[];
+}
+
+export interface ComparedPortfolio {
+  id: string;
+  name: string;
+  type: PortfolioType;
+  startDate: IsoDate;
+  performance: ComparedPerformance;
+  /** A distribuição de hoje (SPEC-021), qualquer que seja o período. */
+  allocation: PortfolioAllocation;
+}
+
+/** Uma referência no período (SPEC-020), sem "o mesmo dinheiro": cada carteira tem o seu. */
+export type ComparisonBenchmark = Omit<BenchmarkSummary, 'endValue'>;
+
+/** Corpo de `GET /api/portfolios/comparison` (SPEC-022 §5.1). */
+export interface PortfolioComparison {
+  from: IsoDate;
+  to: IsoDate;
+  /** O dia em que as referências valem 0%, o mesmo para todas; `null` sem nenhum lançamento. */
+  baseDate: IsoDate | null;
+  /** Acima de 2 anos, um ponto por semana. */
+  weekly: boolean;
+  /** CDI e Ibovespa; IFIX se alguma carteira teve FII no período. */
+  benchmarks: ComparisonBenchmark[];
+  /** Os dias do gráfico, com a rentabilidade de cada referência desde `baseDate`. */
+  benchmarkSeries: Array<{ date: IsoDate; benchmarks: Record<BenchmarkCode, string | null> }>;
+  /** Na ordem pedida. */
+  portfolios: ComparedPortfolio[];
+}
+
+const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * Valida a comparação (SPEC-022 §4.2): `ids` com 2 a 4 ids de carteira, separados por vírgula e
+ * sem repetir (`invalid_selection`), e o período (padrão "Em comum") ou as duas datas.
+ */
+export function validateComparisonQuery(input: unknown): ValidationResult<ComparisonQuery> {
+  const record = asRecord(input);
+  const fields: FieldErrors = {};
+  const raw = record.ids;
+  const ids = typeof raw === 'string' ? raw.split(',').map((id) => id.trim().toLowerCase()) : null;
+  if (
+    ids === null ||
+    ids.length < COMPARISON_MIN ||
+    ids.length > COMPARISON_MAX ||
+    ids.some((id) => !UUID_LIKE.test(id)) ||
+    new Set(ids).size !== ids.length
+  ) {
+    fields.ids = 'invalid_selection';
+  }
+  const period = periodQuery(record, COMPARISON_PERIODS, 'common');
+  Object.assign(fields, period.fields);
+  if (Object.keys(fields).length > 0 || !period.query) return { success: false, fields };
+  return { success: true, data: { ids: ids as string[], ...period.query } };
 }

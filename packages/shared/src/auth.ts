@@ -211,7 +211,9 @@ export type FieldErrorCode =
   | 'invalid_quantity'
   // SPEC-019: período da rentabilidade.
   | 'after_end'
-  | 'after_today';
+  | 'after_today'
+  // SPEC-022: de 2 a 4 carteiras, sem repetir.
+  | 'invalid_selection';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 

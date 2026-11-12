@@ -216,7 +216,8 @@
     "before_last_entry": "Escolha o dia do último lançamento ou depois: na carteira histórica, os lançamentos seguem a ordem das datas.",
     "invalid_quantity": "Informe uma quantidade inteira, a partir de 1.",
     "after_end": "A data de início não pode ser depois da data final.",
-    "after_today": "Escolha uma data final até hoje."
+    "after_today": "Escolha uma data final até hoje.",
+    "invalid_selection": "Escolha de 2 a 4 carteiras diferentes."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -847,6 +848,55 @@
       "atCost_one": "{{tickers}} entrou pelo custo: ainda sem preço.",
       "atCost_other": "{{tickers}} entraram pelo custo: ainda sem preço.",
       "note": "Valores de hoje, como nas posições. Setores das ações pela classificação da B3; segmentos dos FIIs sugeridos a partir do Investidor10, conferidos pela equipe."
+    },
+    "compare": {
+      "start": "Comparar carteiras",
+      "intro": "Escolha de 2 a 4 carteiras para ver lado a lado.",
+      "max": "Até 4 carteiras",
+      "go": "Comparar ({{count}})",
+      "cancel": "Cancelar"
+    },
+    "comparison": {
+      "title": "Comparação",
+      "lead": "As carteiras lado a lado, no mesmo período.",
+      "loading": "Comparando as carteiras…",
+      "listLabel": "Carteiras comparadas",
+      "open": "Abrir {{name}}",
+      "types": {
+        "live": "Simulação ao vivo",
+        "historical": "Simulação histórica"
+      },
+      "returnTitle": "Rentabilidade",
+      "common": "Em comum",
+      "commonHint": "Em comum: desde o início da carteira mais nova, o trecho em que todas existem.",
+      "chartLabel": "Rentabilidade das carteiras",
+      "cursor": "{{date}}: {{values}}",
+      "noChart": "O gráfico aparece com pelo menos dois pregões no período.",
+      "benchmarksNote": "Cada referência desde o fechamento de {{date}}, o mesmo dia para todas as carteiras. Fontes: CDI, Banco Central; Ibovespa, B3.",
+      "benchmarksNoteIfix": "Cada referência desde o fechamento de {{date}}, o mesmo dia para todas as carteiras. Fontes: CDI, Banco Central; Ibovespa e IFIX, B3.",
+      "note": "Cada carteira pela cota, desde o início dela no período: aportes e retiradas não mudam a %, e os proventos contam como ganho. Preços: fechamento da B3 e, hoje, a cotação do pregão; sem custos de operação.",
+      "summary": {
+        "title": "Resumo",
+        "type": "Tipo",
+        "start": "Início",
+        "endValue": "Patrimônio no fim",
+        "netFlows": "Aportes líquidos no período",
+        "result": "Resultado no período",
+        "return": "Rentabilidade da cota",
+        "cdiShare": "% do CDI",
+        "cdiShareValue": "{{share}}% do CDI",
+        "startedOn": "começou em {{date}}",
+        "empty": "Sem lançamentos no período",
+        "none": "sem valor"
+      },
+      "composition": {
+        "title": "Composição de hoje",
+        "note": "Em % do patrimônio de cada carteira hoje, como na Distribuição. \"—\": a carteira não tem nada ali.",
+        "empty": "Nenhuma das carteiras tem patrimônio hoje.",
+        "none": "nada"
+      },
+      "historicalNote": "Simulação histórica: resultado calculado com dados já conhecidos.",
+      "backToComparison": "Voltar para a comparação"
     },
     "trade": {
       "buyTitle": "Comprar",

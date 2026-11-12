@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../format';
 
 /** % com 2 casas, sem sinal: "38,79%". */
-function formatShare(percent: string, language: string): string {
+export function formatShare(percent: string, language: string): string {
   return new Intl.NumberFormat(language, {
     style: 'percent',
     minimumFractionDigits: 2,

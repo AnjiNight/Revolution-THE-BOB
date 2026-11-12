@@ -1,5 +1,7 @@
 import {
   addDays,
+  COMPARISON_MAX,
+  COMPARISON_MIN,
   isoDateInBrasilia,
   PORTFOLIO_HISTORY_START,
   PORTFOLIO_NAME_MAX,
@@ -8,7 +10,7 @@ import {
   type PortfolioList,
   type PortfolioType,
 } from '@simulador/shared';
-import { ArrowLeft, Plus } from '@phosphor-icons/react';
+import { ArrowLeft, ChartLine, Plus } from '@phosphor-icons/react';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
@@ -29,6 +31,8 @@ type ListState =
 
 interface PortfoliosProps {
   onOpen: (id: string) => void;
+  /** SPEC-022: as carteiras escolhidas para comparar, na ordem da escolha. */
+  onCompare: (ids: string[]) => void;
   onSessionExpired: () => void;
   /** O Início pede para abrir já com o formulário de nova carteira. */
   startCreating?: boolean;
@@ -38,12 +42,22 @@ interface PortfoliosProps {
  * Carteiras do usuário (SPEC-012 §5.2): lista da mais recente para a mais antiga, nova carteira
  * com a explicação dos dois tipos, renomear no lugar e excluir com confirmação.
  */
-export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: PortfoliosProps) {
+export function Portfolios({
+  onOpen,
+  onCompare,
+  onSessionExpired,
+  startCreating = false,
+}: PortfoliosProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<ListState>({ status: 'loading' });
   const [creating, setCreating] = useState(startCreating);
   const [notice, setNotice] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  // SPEC-022: escolher de 2 a 4 carteiras para comparar, na ordem em que foram marcadas.
+  const [selecting, setSelecting] = useState(false);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const compareButton = useRef<HTMLButtonElement>(null);
+  const limitId = useId();
 
   const load = useCallback(() => {
     void window.api.portfolios.list().then((result) => {
@@ -74,6 +88,22 @@ export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: 
 
   const list = state.status === 'ready' ? state.data : null;
   const full = list !== null && list.portfolios.length >= list.limit;
+  const canCompare = list !== null && list.portfolios.length >= COMPARISON_MIN;
+
+  const toggle = (id: string) =>
+    setChosen((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : current.length < COMPARISON_MAX
+          ? [...current, id]
+          : current,
+    );
+
+  const stopSelecting = () => {
+    setSelecting(false);
+    setChosen([]);
+    requestAnimationFrame(() => compareButton.current?.focus());
+  };
 
   return (
     <div className="portfolios">
@@ -87,21 +117,39 @@ export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: 
             {t('portfolios.count', { count: list.portfolios.length, limit: list.limit })}
           </p>
         )}
-        {!creating && list && (
-          <button
-            type="button"
-            className="pill pill-primary"
-            disabled={full}
-            onClick={() => {
-              setNotice(null);
-              setCreating(true);
-            }}
-          >
-            {t('portfolios.new')}
-            <span className="pill-icon" aria-hidden="true">
-              <Plus weight="bold" />
-            </span>
-          </button>
+        {!creating && !selecting && list && (
+          <div className="portfolio-hero-actions">
+            <button
+              type="button"
+              className="pill pill-primary"
+              disabled={full}
+              onClick={() => {
+                setNotice(null);
+                setCreating(true);
+              }}
+            >
+              {t('portfolios.new')}
+              <span className="pill-icon" aria-hidden="true">
+                <Plus weight="bold" />
+              </span>
+            </button>
+            {canCompare && (
+              <button
+                ref={compareButton}
+                type="button"
+                className="pill pill-ghost"
+                onClick={() => {
+                  setNotice(null);
+                  setSelecting(true);
+                }}
+              >
+                {t('portfolios.compare.start')}
+                <span className="pill-icon" aria-hidden="true">
+                  <ChartLine weight="bold" />
+                </span>
+              </button>
+            )}
+          </div>
         )}
         {full && <p className="field-hint">{t('authErrors.portfolio_limit_reached')}</p>}
       </header>
@@ -135,17 +183,54 @@ export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: 
       )}
       {list && list.portfolios.length > 0 && (
         <ul className="portfolio-list">
-          {list.portfolios.map((portfolio) => (
-            <PortfolioRow
-              key={portfolio.id}
-              portfolio={portfolio}
-              onOpen={() => onOpen(portfolio.id)}
-              onChanged={load}
-              onDeleted={() => deleted(portfolio.name)}
-              onSessionExpired={onSessionExpired}
-            />
-          ))}
+          {list.portfolios.map((portfolio, index) => {
+            const checked = chosen.includes(portfolio.id);
+            return (
+              <PortfolioRow
+                key={portfolio.id}
+                portfolio={portfolio}
+                onOpen={() => onOpen(portfolio.id)}
+                onChanged={load}
+                onDeleted={() => deleted(portfolio.name)}
+                onSessionExpired={onSessionExpired}
+                {...(selecting
+                  ? {
+                      choice: {
+                        checked,
+                        disabled: !checked && chosen.length >= COMPARISON_MAX,
+                        first: index === 0,
+                        describedBy: limitId,
+                        onToggle: () => toggle(portfolio.id),
+                      },
+                    }
+                  : {})}
+              />
+            );
+          })}
         </ul>
+      )}
+
+      {selecting && list && (
+        <div className="compare-bar" role="group" aria-label={t('portfolios.compare.start')}>
+          <p id={limitId} className="field-hint" aria-live="polite">
+            {chosen.length >= COMPARISON_MAX
+              ? t('portfolios.compare.max')
+              : t('portfolios.compare.intro')}
+          </p>
+          <div className="form-actions">
+            <button
+              type="button"
+              className="pill pill-primary"
+              disabled={chosen.length < COMPARISON_MIN}
+              onClick={() => onCompare(chosen)}
+            >
+              {t('portfolios.compare.go', { count: chosen.length })}
+            </button>
+            <button type="button" className="pill pill-ghost" onClick={stopSelecting}>
+              {t('portfolios.compare.cancel')}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -278,18 +363,32 @@ function NewPortfolioForm({
   );
 }
 
+/** SPEC-022: a caixa de seleção da carteira, na escolha para comparar. */
+interface RowChoice {
+  checked: boolean;
+  /** Já há 4 marcadas e esta não é uma delas. */
+  disabled: boolean;
+  /** A primeira da lista recebe o foco ao começar a escolha. */
+  first: boolean;
+  /** O aviso "Até 4 carteiras". */
+  describedBy: string;
+  onToggle: () => void;
+}
+
 function PortfolioRow({
   portfolio,
   onOpen,
   onChanged,
   onDeleted,
   onSessionExpired,
+  choice,
 }: {
   portfolio: Portfolio;
   onOpen: () => void;
   onChanged: () => void;
   onDeleted: () => void;
   onSessionExpired: () => void;
+  choice?: RowChoice;
 }) {
   const { t, i18n } = useTranslation();
   const [mode, setMode] = useState<'view' | 'rename' | 'delete'>('view');
@@ -331,6 +430,34 @@ function PortfolioRow({
     if (result.error === 'unauthorized') return onSessionExpired();
     setError(result.error);
   };
+
+  if (choice) {
+    return (
+      <li className={`portfolio-row${choice.checked ? ' is-chosen' : ''}`}>
+        <label className="portfolio-choice">
+          <input
+            type="checkbox"
+            checked={choice.checked}
+            disabled={choice.disabled}
+            autoFocus={choice.first}
+            aria-describedby={choice.describedBy}
+            onChange={choice.onToggle}
+          />
+          <span>
+            <span className="portfolio-choice-name">{portfolio.name}</span>
+            <span className="portfolio-meta">
+              <TypeLabel type={portfolio.type} />
+              <span>
+                {t('portfolios.since', {
+                  date: formatCalendarDay(portfolio.startDate, i18n.language),
+                })}
+              </span>
+            </span>
+          </span>
+        </label>
+      </li>
+    );
+  }
 
   return (
     <li className="portfolio-row">
@@ -440,11 +567,14 @@ function PortfolioRow({
 export function PortfolioPage({
   portfolioId,
   buyAsset = null,
+  backLabel,
   onBack,
   onOpenAsset,
   onSessionExpired,
 }: {
   portfolioId: string;
+  /** SPEC-022: aberta pela comparação, o Voltar leva de volta a ela. */
+  backLabel?: string;
   /** SPEC-014: a ficha do ativo pediu para comprar este ativo aqui. */
   buyAsset?: TradeAsset | null;
   onBack: () => void;
@@ -486,7 +616,7 @@ export function PortfolioPage({
     <div className="portfolio-page">
       <button type="button" className="link asset-detail-back" onClick={onBack}>
         <ArrowLeft weight="bold" aria-hidden="true" />
-        {t('portfolios.back')}
+        {backLabel ?? t('portfolios.back')}
       </button>
       {state.status === 'loading' && (
         <p className="loading" role="status">

@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | ⏳ Escrita em 09/11/2026, a pedido do Luís; aguardando a aprovação (recomendações do §4.1 e propostas do §4.2) |
+| Status | ✅ Escrita em 09/11/2026, a pedido do Luís; aprovada por ele em 11/11/2026 com as recomendações do §4.1 e as propostas do §4.2 ("pode implementar com as recomendações") e implementada (§9) |
 | Fase | 5 — Acompanhamento da carteira ([mapa de specs](mapa_specs.md)), depois da SPEC-021 |
 | Prioridade | Could (RF19) |
 | Depende de | [SPEC-012](SPEC-012.md) (carteiras ao vivo e históricas), [SPEC-019](SPEC-019.md) (rentabilidade da cota e evolução), [SPEC-020](SPEC-020.md) (CDI, Ibovespa, IFIX e "% do CDI"), [SPEC-021](SPEC-021.md) (distribuição por classe e setor) |
@@ -130,5 +130,32 @@ Nenhuma mudança e nenhuma migração: a comparação é calculada a cada pedido
 
 | ID | Situação |
 |---|---|
-| OPEN-22 | ⏳ A decisão 1 do §4.1, se aprovada, resolve a parte "Comparar cenários × RF19". Fica a parte da SPEC-023 (RF20, "salvar e recuperar simulações"). Com cenário = carteira, as carteiras já ficam salvas (SPEC-012). Recomendação para decidir com a SPEC-023: transformá-la em **"Nova carteira a partir de outra"** (mesmo tipo, mesmo início e mesmo valor inicial, para montar o cenário B rápido), ou marcá-la como coberta pela SPEC-012 |
-| OPEN-23 | ⏳ Resolvida pela decisão 2 do §4.1, se aprovada. Fecha junto o ponto em aberto 3 da DA17 |
+| OPEN-22 | ⏳ **Em parte resolvida** (decisão 1, aprovada em 11/11/2026): cenário = carteira, e "Comparar cenários" é esta tela (RF19). Fica a parte da SPEC-023 (RF20, "salvar e recuperar simulações"). Com cenário = carteira, as carteiras já ficam salvas (SPEC-012). Recomendação para decidir com a SPEC-023: transformá-la em **"Nova carteira a partir de outra"** (mesmo tipo, mesmo início e mesmo valor inicial, para montar o cenário B rápido), ou marcá-la como coberta pela SPEC-012 |
+| OPEN-23 | ✅ **Resolvida** (decisão 2, aprovada em 11/11/2026): pode misturar, com o rótulo do tipo sempre visível e a nota da DA17. Fecha junto o ponto em aberto 3 da DA17 |
+
+## 9. Verificação (11/11/2026)
+
+**Ajustes da implementação:**
+
+| Tema | Ajuste |
+|---|---|
+| Onde fica | Núcleo `financial-calculation/comparison.ts`, puro: `commonStart` ("Em comum"), `comparisonStart` (o início do período para todas), `sharedBaseDate` (o dia-base das referências) e `chartDays` (os dias do gráfico); o `performanceStart` da SPEC-019 mudou para lá, sem mudar. O serviço é o `TradingService.comparison`. A conta de uma carteira ficou num método só (`measure`), que a rentabilidade da carteira e a comparação usam, e as posições num `positionsOf`: os números são os mesmos por construção (CA03) |
+| Leituras uma vez | `MarketReads` (portfolios/application) guarda, por pedido, as leituras do mercado: ativo, cotação, último fechamento, proventos, eventos e calendário. Antes das contas, a comparação reserva os fechamentos de cada ativo desde a primeira negociação dele em qualquer carteira e o calendário de todos os anos; cada carteira recebe só os fechamentos desde a data dela, para a conta e os avisos serem os da tela dela. A rentabilidade e as posições de uma carteira também passaram a usá-lo, sem mudar o comportamento |
+| Corpo da rota | Além do §5.1: `performance.from`, onde a conta da carteira começa (o início do período ou, depois dele, o primeiro lançamento), para o "começou em"; `benchmarks` sem o `endValue` da SPEC-020, porque "o mesmo dinheiro" é de cada carteira. Os dias do gráfico são os de `benchmarkSeries`: os de todas as carteiras e, acima de 2 anos, os pontos semanais de cada uma; as referências são calculadas dia a dia antes de escolher os pontos |
+| "% do CDI" | Com o CDI desde o dia-base de cada carteira, como na tela dela (CA03), das taxas lidas uma vez desde o dia-base comum |
+| Tela | Componente `PortfolioComparison`; a tabela da composição e os marcadores do gráfico ficam em `comparison.ts` do app (puro, com testes). A carteira aberta pela comparação volta para ela ("Voltar para a comparação"). Ao trocar o período, os números de antes ficam esmaecidos até chegarem os novos. Cores das linhas: verde (a de destaque), azul, âmbar e roxo, com contraste de 5,1:1 a 6,9:1 no tema claro e de 7,1:1 a 7,8:1 no escuro. O "—" tem texto para o leitor de tela ("sem valor", "nada") |
+| Rótulo do tipo | Ao lado de cada nome, o curto ("Simulação histórica", "Simulação ao vivo"); a frase inteira da DA17 aparece uma vez, no fim da tela, quando há uma histórica |
+| Escolha na lista | A primeira caixa recebe o foco ao começar; a barra com "Comparar (n)" e "Cancelar" fica presa embaixo da tela; durante a escolha, "Nova carteira", "Renomear" e "Excluir" somem |
+
+| Critério | Resultado |
+|---|---|
+| CA01 | ✅ `comparison.test.ts` (núcleo): o início mais recente, a carteira criada hoje (período só hoje), os exemplos do §4.3 (02/01/2025; 03/11/2026; "Desde o início" na mais antiga), os outros períodos, o dia-base comum e os dias do gráfico |
+| CA02 | ✅ `comparison-routes.test.ts`: a ordem pedida; 400 `invalid_selection` com 1 id, 5, repetidos e inválido (e, no pacote compartilhado, vazio e em lista); 404 `portfolio_not_found` com a carteira de outro usuário e com uma que não existe, sem o nome nem o id no corpo; "Em comum", 1 mês, no ano, duas datas e `after_today`; referências uma vez, do dia-base comum, com o IFIX só com FII; "% do CDI" pela regra da SPEC-020 (zero, negativo e com o CDI desde o dia-base de cada carteira) |
+| CA03 | ✅ No teste de rota, a rentabilidade (início, patrimônio, aportes, resultado, %, "% do CDI", avisos e pontos) e a distribuição de cada carteira são iguais às das rotas dela. Com dados reais, as 4 carteiras de 50 ativos da medição do CA05 dão a mesma % e o mesmo patrimônio da tela de cada uma |
+| CA04 | ✅ "Desde o início": a carteira que começou depois conta desde o próprio início (03/11/2026), com "começou em 3 de nov. de 2026" na tabela; a sem lançamento vem com `empty`, sem pontos, e aparece como "Sem lançamentos no período" |
+| CA05 | ✅ Medido no banco de desenvolvimento (só leitura), com os ativos mais negociados que têm fechamento no começo de 2016, comprados no início: uma carteira com 50 ativos, 0,74 s; **4 carteiras com 50 ativos no total, 1,05 s** ("Em comum", desde 2016) e 0,66 s (12 meses), com 50 leituras de fechamentos, uma por ativo. **4 carteiras com 50 ativos cada (200 diferentes): 2,64 s**, acima dos 2 s (a estimativa do §4.4 era de uns 4 s): a conta de cada carteira é a da SPEC-019 e não se repete, então o tempo cresce com o número de ativos diferentes. O teste de rota confere que o fechamento repetido, a cotação e o calendário são lidos uma vez |
+| CA06 | ✅ Pré-visualização das telas com as respostas do serviço de verdade, calculadas com os dados do banco de desenvolvimento (as carteiras A e B da P02, uma ao vivo e uma sem lançamento): a escolha na lista ("Comparar (4)", as outras caixas desativadas com "Até 4 carteiras") pelo mouse e pelo teclado (Tab, espaço e Enter); o gráfico com cores e marcadores, "Comparar com os índices" e o cursor ("2 de jan. de 2025: Mais petróleo 0,00%, Mais FIIs 0,00%, Dividendos sem dado, Reserva sem dado"); a tabela do resumo, a composição, "começou em", "Sem lançamentos no período", o rótulo e a nota da DA17; em inglês; a 480 px sem rolagem lateral (as tabelas rolam dentro do quadro); a carteira aberta pela comparação volta para ela. ⏳ Abrir no Electron, com a ponte real |
+
+Total: **1.000 testes** passando (126 com o banco de teste), mais lint, tipos e formatação.
+
+**Dado a notar:** no banco de desenvolvimento, a taxa do CDI vai até 04/11/2026 (conta até o ponto de 05/11) e o Ibovespa e o IFIX ainda não foram carregados: a carga da SPEC-020 rodou no banco de teste, e no de desenvolvimento quem carrega é o processador, que estava desligado. A comparação mostra "ainda não carregado", como a tela de cada carteira; com o processador ligado, as linhas aparecem.

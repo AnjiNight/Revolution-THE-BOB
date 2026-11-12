@@ -7,9 +7,13 @@ import {
   type IsoDate,
   type NewTradeInput,
   type BenchmarkSummary,
-  type PerformancePeriod,
+  type ComparedPerformance,
+  type ComparisonBenchmark,
+  type ComparisonQuery,
   type PerformancePoint,
   type PerformanceQuery,
+  type PerformanceWarning,
+  type PortfolioComparison,
   type PortfolioPerformance,
   type PortfolioPositions,
   type Position,
@@ -33,9 +37,15 @@ import {
   indexBenchmark,
   sameMoney,
   type BenchmarkSeries,
+  type CdiRate,
 } from '../../financial-calculation/benchmarks.js';
+import {
+  chartDays,
+  comparisonStart,
+  performanceStart,
+  sharedBaseDate,
+} from '../../financial-calculation/comparison.js';
 import { performance, type PerformanceResult } from '../../financial-calculation/performance.js';
-import { periodStart } from '../../financial-calculation/price-history.js';
 import {
   displayPrice,
   roundToCents,
@@ -66,6 +76,7 @@ import {
   ownedPortfolio,
   tradeMovements,
 } from './ledger.js';
+import { MarketReads } from './market-reads.js';
 import type {
   LedgerRepository,
   MarketAsset,
@@ -95,6 +106,16 @@ export interface TradingServiceDeps {
   calendar: PortfolioCalendar;
   market: PortfolioMarket;
   clock?: () => Date;
+}
+
+/** SPEC-019 (e SPEC-022): a conta de uma carteira no período, antes das referências. */
+interface Measured {
+  /** O primeiro dia da conta: o início do período ou, depois dele, o primeiro lançamento. */
+  start: IsoDate;
+  result: PerformanceResult;
+  /** SPEC-020: algum FII esteve em posição no período (o IFIX aparece). */
+  hadFii: boolean;
+  warnings: PerformanceWarning[];
 }
 
 /** O preço da negociação e de onde veio: na ao vivo, a cotação do pregão; na histórica, o fechamento. */
@@ -136,13 +157,22 @@ export class TradingService {
     await ownedPortfolio(this.deps.portfolios, userId, id);
     // SPEC-015: as negociações e lançamentos estornados não contam.
     const ledger = activeLedger(await this.deps.ledger.ledger(id));
-    const data = await corporateData(this.deps.market, this.deps.calendar, ledger);
-    const line = ledgerTimeline(ledger, data, isoDateInBrasilia(this.clock()));
+    return this.positionsOf(ledger, isoDateInBrasilia(this.clock()), this.reads());
+  }
+
+  /** As posições de hoje do livro que vale; a comparação (SPEC-022) usa a mesma conta. */
+  private async positionsOf(
+    ledger: PortfolioLedger,
+    today: IsoDate,
+    reads: MarketReads,
+  ): Promise<PortfolioPositions> {
+    const data = await corporateData(reads, reads, ledger);
+    const line = ledgerTimeline(ledger, data, today);
     const cash = cashLedger(cashMovements(ledger, line)).balance;
     const holdingList = [...line.holdings.values()];
     const loaded = await this.deps.market.incomeLoaded(holdingList.map((h) => h.assetId));
     const positions = (
-      await Promise.all(holdingList.map((holding) => this.position(holding, line, loaded)))
+      await Promise.all(holdingList.map((holding) => this.position(holding, line, loaded, reads)))
     ).sort((a, b) => a.ticker.localeCompare(b.ticker));
     const value = positions.reduce(
       (sum, position) => sum + (position.marketValue ? toCents(position.marketValue) : 0n),
@@ -318,7 +348,7 @@ export class TradingService {
     return {
       trade: toPublicTrade(stored, asset.ticker),
       cash: cashLedger(cashMovements(after, line)).balance,
-      position: holding ? await this.position(holding, line, loaded) : null,
+      position: holding ? await this.position(holding, line, loaded, this.reads()) : null,
     };
   }
 
@@ -433,8 +463,7 @@ export class TradingService {
     query: PerformanceQuery,
   ): Promise<PortfolioPerformance> {
     const portfolio = await ownedPortfolio(this.deps.portfolios, userId, id);
-    const now = this.clock();
-    const today = isoDateInBrasilia(now);
+    const today = isoDateInBrasilia(this.clock());
     let from: IsoDate;
     let to: IsoDate;
     if ('period' in query) {
@@ -446,12 +475,162 @@ export class TradingService {
     }
 
     const ledger = activeLedger(await this.deps.ledger.ledger(id));
+    const measured = await this.measure(ledger, from, to, today, this.reads());
+    if (!measured) return emptyPerformance(from, to);
+    const { start, result } = measured;
+    const weekly = daysBetween(start, to) > WEEKLY_AFTER_DAYS;
+    const references = await this.benchmarks(result, to, measured.hadFii);
+    const series = result.points.map((point, index) => ({
+      ...point,
+      ...references.at(index),
+    }));
+    return {
+      from: start,
+      to,
+      startValue: result.startValue,
+      endValue: result.endValue,
+      netFlows: result.netFlows,
+      result: result.result,
+      return: result.return,
+      series: weekly ? lastOfEachWeek(series) : series,
+      weekly,
+      warnings: measured.warnings,
+      empty: false,
+      baseDate: result.baseDate,
+      benchmarks: references.summary,
+      cdiShare: cdiShare(result.return, references.cdiReturn),
+    };
+  }
+
+  /**
+   * SPEC-022: de 2 a 4 carteiras do usuário no mesmo período, cada uma com a mesma conta da tela
+   * dela (rentabilidade, SPECs 019 e 020; distribuição de hoje, SPEC-021). Num pedido só: o mesmo
+   * "hoje" e as mesmas cotações para todas, e o que se repete entre elas (fechamentos, cotações,
+   * calendário) lido uma vez.
+   */
+  async comparison(userId: string, query: ComparisonQuery): Promise<PortfolioComparison> {
+    // RB03: todas do usuário antes de qualquer conta; a de outra pessoa é o mesmo 404, sem dizer qual.
+    const portfolios: StoredPortfolio[] = [];
+    for (const id of query.ids) {
+      portfolios.push(await ownedPortfolio(this.deps.portfolios, userId, id));
+    }
+    const today = isoDateInBrasilia(this.clock());
+    let from: IsoDate;
+    let to: IsoDate;
+    if ('period' in query) {
+      to = today;
+      from = comparisonStart(
+        query.period,
+        today,
+        portfolios.map((portfolio) => portfolio.startDate),
+      );
+    } else {
+      if (query.to > today) throw new PortfolioValidationError({ to: 'after_today' });
+      ({ from, to } = query);
+    }
+
+    const ledgers = await Promise.all(
+      portfolios.map(async (portfolio) =>
+        activeLedger(await this.deps.ledger.ledger(portfolio.id)),
+      ),
+    );
+    // §4.2: o fechamento de um ativo em mais de uma carteira é lido uma vez, desde a primeira
+    // negociação dele em qualquer uma; o calendário de todos os anos, também uma vez.
+    const reads = this.reads();
+    let first: IsoDate | null = null;
+    for (const ledger of ledgers) {
+      for (const item of ledgerItems(ledger)) {
+        if (item.date <= to && (first === null || item.date < first)) first = item.date;
+      }
+      for (const trade of ledger.trades) {
+        if (trade.date <= to) reads.reserveCloses(trade.assetId, trade.date);
+      }
+    }
+    if (first !== null) await reads.loadCalendar(yearOf(first), yearOf(to));
+
+    const [measured, positions] = await Promise.all([
+      Promise.all(ledgers.map((ledger) => this.measure(ledger, from, to, today, reads))),
+      Promise.all(ledgers.map((ledger) => this.positionsOf(ledger, today, reads))),
+    ]);
+    const present = measured.flatMap((item) => (item ? [item] : []));
+    const daily = chartDays(present.map((item) => item.result.points.map((point) => point.date)));
+    const base = sharedBaseDate(present.map((item) => item.result.baseDate));
+    const chartStart = daily[0];
+    const weekly = chartStart !== undefined && daysBetween(chartStart, to) > WEEKLY_AFTER_DAYS;
+    // §4.2: as referências uma vez, do mesmo dia-base para todas; o IFIX se alguma teve FII.
+    const references =
+      base === null
+        ? null
+        : await this.referenceSeries(
+            base,
+            daily,
+            to,
+            present.some((item) => item.hadFii),
+          );
+
+    const compared = portfolios.map((portfolio, index) => {
+      const item = measured[index];
+      return {
+        id: portfolio.id,
+        name: portfolio.name,
+        type: portfolio.type,
+        startDate: portfolio.startDate,
+        performance: item
+          ? comparedPerformance(item, references?.rates ?? [], weekly)
+          : emptyComparedPerformance(from),
+        allocation: (positions[index] as PortfolioPositions).allocation,
+      };
+    });
+
+    // Os dias do gráfico; acima de 2 anos, os pontos semanais das carteiras.
+    const axis = weekly
+      ? chartDays(compared.map((item) => item.performance.series.map((point) => point.date)))
+      : daily;
+    const position = new Map(daily.map((date, index) => [date, index]));
+    const at = (series: BenchmarkSeries | null | undefined, date: IsoDate) =>
+      series?.points[position.get(date) ?? -1] ?? null;
+    return {
+      from,
+      to,
+      baseDate: base,
+      weekly,
+      benchmarks: references
+        ? [
+            comparisonBenchmark('cdi', references.cdi, 'bcb'),
+            comparisonBenchmark('ibov', references.ibov, 'b3'),
+            ...(references.ifix ? [comparisonBenchmark('ifix', references.ifix, 'b3')] : []),
+          ]
+        : [],
+      benchmarkSeries: axis.map((date) => ({
+        date,
+        benchmarks: {
+          cdi: at(references?.cdi, date),
+          ibov: at(references?.ibov, date),
+          ifix: at(references?.ifix, date),
+        },
+      })),
+      portfolios: compared,
+    };
+  }
+
+  /**
+   * A conta de uma carteira no período (SPEC-019), sem as referências: a tela da carteira e a
+   * comparação (SPEC-022) usam a mesma, para os números baterem (CA03). `null` sem lançamento até
+   * o fim do período.
+   */
+  private async measure(
+    ledger: PortfolioLedger,
+    from: IsoDate,
+    to: IsoDate,
+    today: IsoDate,
+    reads: MarketReads,
+  ): Promise<Measured | null> {
     const items = ledgerItems(ledger).filter((item) => item.date <= to);
     const first = items.map((item) => item.date).sort()[0];
-    if (!first) return emptyPerformance(from, to);
+    if (!first) return null;
     const start = from > first ? from : first;
 
-    const calendar = await this.deps.calendar.tradingCalendar(yearOf(first), yearOf(to));
+    const calendar = await reads.tradingCalendar(yearOf(first), yearOf(to));
     const days: IsoDate[] = [];
     for (let day = first; day <= to; day = addDays(day, 1)) {
       if (calendar.isTradingDay(day)) days.push(day);
@@ -468,7 +647,7 @@ export class TradingService {
       trades: ledger.trades.filter((trade) => trade.date <= to),
       reversals: [],
     };
-    const data = await corporateData(this.deps.market, this.deps.calendar, active);
+    const data = await corporateData(reads, reads, active);
     const firstTrade = new Map<string, IsoDate>();
     for (const trade of active.trades) {
       const current = firstTrade.get(trade.assetId);
@@ -477,8 +656,7 @@ export class TradingService {
     const closes = new Map(
       await Promise.all(
         [...firstTrade].map(
-          async ([assetId, date]) =>
-            [assetId, await this.deps.market.closesFrom(assetId, date)] as const,
+          async ([assetId, date]) => [assetId, await reads.closesFrom(assetId, date)] as const,
         ),
       ),
     );
@@ -488,7 +666,7 @@ export class TradingService {
     if (to === today) {
       const line = ledgerTimeline(active, data, today);
       for (const assetId of line.holdings.keys()) {
-        const { price } = await this.lastKnownPrice(assetId, line);
+        const { price } = await this.lastKnownPrice(assetId, line, reads);
         if (price !== undefined) live.set(assetId, price);
       }
     }
@@ -503,41 +681,22 @@ export class TradingService {
       from: start,
       live: { date: days.at(-1) as IsoDate, prices: live },
     });
-    const weekly = daysBetween(start, to) > WEEKLY_AFTER_DAYS;
     const assets = new Map(
       await Promise.all(
         [...firstTrade.keys()].map(
-          async (assetId) => [assetId, await this.deps.market.asset(assetId)] as const,
+          async (assetId) => [assetId, await reads.asset(assetId)] as const,
         ),
       ),
     );
-    // SPEC-020: o IFIX aparece se algum FII esteve em posição no período.
-    const hadFii = [...result.heldAssets].some(
-      (assetId) => assets.get(assetId)?.assetClass === 'fii',
-    );
-    const references = await this.benchmarks(result, to, hadFii);
-    const series = result.points.map((point, index) => ({
-      ...point,
-      ...references.at(index),
-    }));
     return {
-      from: start,
-      to,
-      startValue: result.startValue,
-      endValue: result.endValue,
-      netFlows: result.netFlows,
-      result: result.result,
-      return: result.return,
-      series: weekly ? lastOfEachWeek(series) : series,
-      weekly,
+      start,
+      result,
+      // SPEC-020: o IFIX aparece se algum FII esteve em posição no período.
+      hadFii: [...result.heldAssets].some((assetId) => assets.get(assetId)?.assetClass === 'fii'),
       warnings: result.warnings.map((warning) => ({
         ...warning,
         ticker: assets.get(warning.assetId)?.ticker ?? '',
       })),
-      empty: false,
-      baseDate: result.baseDate,
-      benchmarks: references.summary,
-      cdiShare: cdiShare(result.return, references.cdiReturn),
     };
   }
 
@@ -556,16 +715,7 @@ export class TradingService {
         at: () => ({ benchmarks: none, benchmarkValues: none }),
       };
     }
-    // Uns dias antes do dia-base: o índice usa o último fechamento até ele.
-    const lookback = addDays(base, -10);
-    const [rates, ibovCloses, ifixCloses] = await Promise.all([
-      this.deps.market.cdiRates(base, to),
-      this.deps.market.indexCloses('IBOV', lookback, to),
-      withIfix ? this.deps.market.indexCloses('IFIX', lookback, to) : Promise.resolve([]),
-    ]);
-    const cdi = cdiBenchmark({ base, days, rates });
-    const ibov = indexBenchmark({ base, days, closes: ibovCloses });
-    const ifix = withIfix ? indexBenchmark({ base, days, closes: ifixCloses }) : null;
+    const { cdi, ibov, ifix } = await this.referenceSeries(base, days, to, withIfix);
     // Decisão 3 (atualizada): os aportes e retiradas de cada ponto, para "o mesmo dinheiro".
     const last = result.points.at(-1);
     let invested = (last ? toCents(last.invested) : 0n) - toCents(result.netFlows);
@@ -609,6 +759,33 @@ export class TradingService {
     };
   }
 
+  /** SPEC-020: as séries das referências desde o dia-base, nos dias pedidos, com as taxas do CDI. */
+  private async referenceSeries(
+    base: IsoDate,
+    days: readonly IsoDate[],
+    to: IsoDate,
+    withIfix: boolean,
+  ) {
+    // Uns dias antes do dia-base: o índice usa o último fechamento até ele.
+    const lookback = addDays(base, -10);
+    const [rates, ibovCloses, ifixCloses] = await Promise.all([
+      this.deps.market.cdiRates(base, to),
+      this.deps.market.indexCloses('IBOV', lookback, to),
+      withIfix ? this.deps.market.indexCloses('IFIX', lookback, to) : Promise.resolve([]),
+    ]);
+    return {
+      rates,
+      cdi: cdiBenchmark({ base, days, rates }),
+      ibov: indexBenchmark({ base, days, closes: ibovCloses }),
+      ifix: withIfix ? indexBenchmark({ base, days, closes: ifixCloses }) : null,
+    };
+  }
+
+  /** As leituras do mercado de um pedido, cada uma feita uma vez (SPEC-022). */
+  private reads(): MarketReads {
+    return new MarketReads(this.deps.market, this.deps.calendar);
+  }
+
   private async asset(assetId: string): Promise<MarketAsset> {
     const asset = await this.deps.market.asset(assetId);
     if (!asset) throw new TradeAssetNotFoundError();
@@ -620,9 +797,9 @@ export class TradingService {
    * se ele é de antes de um evento já aplicado à quantidade (a cotação de sexta na segunda, antes da
    * primeira do dia), vem dividido pelo multiplicador, para não inflar o valor da posição.
    */
-  private async lastKnownPrice(assetId: string, line: Timeline) {
-    const quote = await this.deps.market.latestQuote(assetId, USER_LEVEL);
-    const close = quote ? null : await this.deps.market.lastClose(assetId);
+  private async lastKnownPrice(assetId: string, line: Timeline, reads: MarketReads) {
+    const quote = await reads.latestQuote(assetId, USER_LEVEL);
+    const close = quote ? null : await reads.lastClose(assetId);
     const raw = quote?.price ?? close?.close;
     const date = quote ? isoDateInBrasilia(quote.at) : close?.date;
     const events = line.events.filter((event) => event.assetId === assetId);
@@ -640,8 +817,9 @@ export class TradingService {
     holding: Holding,
     line: Timeline,
     loaded: ReadonlySet<string>,
+    reads: MarketReads,
   ): Promise<Position> {
-    const asset = (await this.deps.market.asset(holding.assetId)) ?? {
+    const asset = (await reads.asset(holding.assetId)) ?? {
       id: holding.assetId,
       ticker: '',
       name: '',
@@ -663,7 +841,7 @@ export class TradingService {
       income: centsToAmount(line.received.get(holding.assetId) ?? 0n),
       incomeLoaded: loaded.has(holding.assetId),
     };
-    const { quote, close, price } = await this.lastKnownPrice(holding.assetId, line);
+    const { quote, close, price } = await this.lastKnownPrice(holding.assetId, line, reads);
     if (price === undefined) return base;
     const priced: Position = {
       ...base,
@@ -684,13 +862,6 @@ export class TradingService {
 
 /** SPEC-019, decisão 4: acima de 2 anos, um ponto por semana. */
 const WEEKLY_AFTER_DAYS = 730;
-
-/** Início do período: o mesmo dia N meses antes (como a ficha, SPEC-010), 1º de janeiro, ou tudo. */
-function performanceStart(period: PerformancePeriod, today: IsoDate, start: IsoDate): IsoDate {
-  if (period === 'all') return start;
-  if (period === 'ytd') return `${today.slice(0, 4)}-01-01`;
-  return periodStart(today, period === '12m' ? '1y' : period) ?? start;
-}
 
 function daysBetween(from: IsoDate, to: IsoDate): number {
   return (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
@@ -726,6 +897,61 @@ function emptyPerformance(from: IsoDate, to: IsoDate): PortfolioPerformance {
     benchmarks: [],
     cdiShare: null,
   };
+}
+
+/**
+ * SPEC-022: a rentabilidade de uma carteira na comparação, com os números da tela dela (CA03). O
+ * "% do CDI" usa o CDI desde o dia-base desta carteira (SPEC-020), das taxas já lidas.
+ */
+function comparedPerformance(
+  measured: Measured,
+  rates: readonly CdiRate[],
+  weekly: boolean,
+): ComparedPerformance {
+  const { result } = measured;
+  const days = result.points.map((point) => point.date);
+  const cdi =
+    result.baseDate === null || days.length === 0
+      ? null
+      : cdiBenchmark({ base: result.baseDate, days, rates }).return;
+  const series = result.points.map((point) => ({ date: point.date, return: point.return }));
+  return {
+    from: measured.start,
+    startValue: result.startValue,
+    endValue: result.endValue,
+    netFlows: result.netFlows,
+    result: result.result,
+    return: result.return,
+    cdiShare: cdiShare(result.return, cdi),
+    empty: false,
+    warnings: measured.warnings,
+    series: weekly ? lastOfEachWeek(series) : series,
+  };
+}
+
+/** Carteira sem lançamento até o fim do período: "Sem lançamentos no período", sem linha. */
+function emptyComparedPerformance(from: IsoDate): ComparedPerformance {
+  return {
+    from,
+    startValue: '0.00',
+    endValue: '0.00',
+    netFlows: '0.00',
+    result: '0.00',
+    return: '0.00',
+    cdiShare: null,
+    empty: true,
+    warnings: [],
+    series: [],
+  };
+}
+
+/** SPEC-020: a referência no período, sem "o mesmo dinheiro" (cada carteira tem o seu). */
+function comparisonBenchmark(
+  code: ComparisonBenchmark['code'],
+  series: BenchmarkSeries,
+  source: ComparisonBenchmark['source'],
+): ComparisonBenchmark {
+  return { code, return: series.return, until: series.until, source };
 }
 
 /** O dia do último lançamento que vale (caixa ou negociação), ou `null`. */
