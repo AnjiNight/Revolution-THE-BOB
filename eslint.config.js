@@ -30,6 +30,13 @@ export default tseslint.config(
     },
   },
   {
+    // Os mocks da validação visual rodam dentro da página (window.api falso).
+    files: ['mocks/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.browser },
+    },
+  },
+  {
     files: ['app/src/renderer/**/*.{ts,tsx}'],
     languageOptions: {
       globals: { ...globals.browser },

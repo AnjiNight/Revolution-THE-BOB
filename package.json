@@ -16,6 +16,7 @@
     "build": "npm run build --workspace packages/shared && npm run build --workspace api && npm run build --workspace app",
     "typecheck": "npm run build --workspace packages/shared && npm run typecheck --workspaces --if-present",
     "test": "npm run build --workspace packages/shared && npm run db:generate --workspace api && vitest run",
+    "test:e2e": "npm run build --workspace packages/shared && playwright test",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.0",
     "@types/node": "22.20.5",
     "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",

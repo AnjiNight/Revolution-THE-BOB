@@ -35,6 +35,11 @@ import { B3IndexHttpSource } from './modules/market-data/infrastructure/b3-index
 import { BcbSgsSource } from './modules/market-data/infrastructure/bcb-sgs-source.js';
 import { Investidor10HttpSource } from './modules/market-data/infrastructure/investidor10-source.js';
 import { PrismaEventRepository } from './modules/market-data/infrastructure/prisma-event-repository.js';
+import { NewsCollection } from './modules/news/application/news-collection.js';
+import { NewsSourcesService } from './modules/news/application/news-sources-service.js';
+import { HttpFeedFetcher } from './modules/news/infrastructure/http-feed-fetcher.js';
+import { Investidor10NewsHttpSource } from './modules/news/infrastructure/investidor10-news-source.js';
+import { PrismaNewsRepository } from './modules/news/infrastructure/prisma-news-repository.js';
 import { PrismaFundamentalsRepository } from './modules/market-data/infrastructure/prisma-fundamentals-repository.js';
 import { BrapiLogoSource } from './modules/market-data/infrastructure/brapi-logo-source.js';
 import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
@@ -161,6 +166,16 @@ async function main(): Promise<void> {
     classifications,
     suggestions,
   });
+  // SPEC-027: notícias da fonte pai (Investidor10, com o interruptor) e das fontes curadas (RSS).
+  const newsRepo = new PrismaNewsRepository(prisma);
+  const feedFetcher = new HttpFeedFetcher();
+  const news = new NewsCollection({
+    parentEnabled: config.investidor10.enabled,
+    parent: new Investidor10NewsHttpSource({ baseUrl: config.investidor10.baseUrl }),
+    feeds: feedFetcher,
+    news: newsRepo,
+    runs,
+  });
 
   if (mode === 'server') {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
@@ -246,6 +261,11 @@ async function main(): Promise<void> {
         fundamentals: fundamentalsRepo,
         runs,
       }),
+      newsSources: new NewsSourcesService({
+        news: newsRepo,
+        feeds: feedFetcher,
+        parentEnabled: config.investidor10.enabled,
+      }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -321,6 +341,23 @@ async function main(): Promise<void> {
           name: 'eventos corporativos (B3)',
           run: async () => (await b3Events.scheduled())?.records ?? 0,
           dailyAtHour: 4,
+        },
+        // SPEC-027: notícias novas e feeds a cada 30 minutos; o arquivo do Investidor10 aos poucos
+        // (cerca de 30 minutos de páginas por vez), na mesma fila de uma página a cada 3 segundos.
+        {
+          name: 'notícias novas (Investidor10)',
+          run: async () => (await news.latest())?.collected ?? 0,
+          everyMinutes: 30,
+        },
+        {
+          name: 'arquivo de notícias (Investidor10)',
+          run: async () => (await news.archive())?.collected ?? 0,
+          everyMinutes: 35,
+        },
+        {
+          name: 'notícias das fontes curadas',
+          run: async () => (await news.feeds())?.collected ?? 0,
+          everyMinutes: 30,
         },
         // SPEC-009: confere a cada 5 minutos se chegou a hora de uma coleta do pregão.
         {

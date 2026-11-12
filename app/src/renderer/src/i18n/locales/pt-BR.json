@@ -217,7 +217,11 @@
     "invalid_quantity": "Informe uma quantidade inteira, a partir de 1.",
     "after_end": "A data de início não pode ser depois da data final.",
     "after_today": "Escolha uma data final até hoje.",
-    "invalid_selection": "Escolha de 2 a 4 carteiras diferentes."
+    "invalid_selection": "Escolha de 2 a 4 carteiras diferentes.",
+    "not_https": "Use um endereço que comece com https://.",
+    "private_address": "Use um endereço https público (não da rede interna).",
+    "not_a_feed": "Não foi possível ler um feed RSS ou Atom neste endereço.",
+    "invalid_url": "Endereço inválido."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -265,7 +269,10 @@
     "reversal_breaks_cash": "Esse estorno deixaria o caixa negativo.",
     "reversal_breaks_position": "Esse estorno deixaria uma venda maior que a posição.",
     "no_close_that_day": "O ativo não tem fechamento da B3 nesse dia.",
-    "history_pending": "O histórico de preços deste ativo ainda está sendo carregado."
+    "history_pending": "O histórico de preços deste ativo ainda está sendo carregado.",
+    "news_source_not_found": "Fonte de notícias não encontrada.",
+    "source_exists": "Já existe uma fonte com este endereço.",
+    "parent_source": "A fonte pai não pode ser alterada pela tela."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -401,7 +408,8 @@
     "calendar": "Calendário",
     "assets": "Ativos",
     "logoutLabel": "Sair da conta",
-    "portfolios": "Carteiras"
+    "portfolios": "Carteiras",
+    "news": "Notícias"
   },
   "calendar": {
     "title": "Calendário de pregão",
@@ -1247,5 +1255,58 @@
       "failed": "A última importação falhou: a lista da brapi não respondeu. O catálogo não mudou; ela roda de novo no próximo horário.",
       "b3Behind": "Os arquivos da B3 estavam atrasados: ninguém foi desativado nesta importação."
     }
+  },
+  "news": {
+    "title": "Fontes de notícias",
+    "subtitle": "A fonte pai (Investidor10) e as fontes curadas por RSS ou Atom. O processador coleta as notícias novas a cada 30 minutos.",
+    "loading": "Carregando as fontes…",
+    "parentDisabled": "A coleta do Investidor10 está desligada (INVESTIDOR10_ENABLED=false); as fontes curadas continuam.",
+    "archiveRunning": "Arquivo do Investidor10: {{done}} de {{total}} notícias (atualizado em {{date}}).",
+    "archiveDone": "Arquivo do Investidor10 completo: {{done}} de {{total}} notícias (conferido em {{date}}).",
+    "columns": {
+      "source": "Fonte",
+      "category": "Categoria",
+      "reliability": "Confiabilidade",
+      "lastRun": "Última coleta",
+      "news": "Notícias",
+      "actions": "Ações"
+    },
+    "categories": {
+      "economia": "Economia",
+      "mercado": "Mercado",
+      "empresas": "Empresas",
+      "internacional": "Internacional"
+    },
+    "reliabilityValue": "{{value}} de 5",
+    "parentNote": "Fonte pai: não pode ser desativada",
+    "inactive": "Desativada",
+    "never": "Ainda não coletada",
+    "ok": "Com sucesso",
+    "failed": "Com erro",
+    "problem_one": "Com problema: {{count}} falha seguida",
+    "problem_other": "Com problema: {{count}} falhas seguidas",
+    "activate": "Ativar",
+    "deactivate": "Desativar",
+    "activateLabel": "Ativar a fonte {{name}}",
+    "deactivateLabel": "Desativar a fonte {{name}}",
+    "activated": "Fonte {{name}} ativada.",
+    "deactivated": "Fonte {{name}} desativada.",
+    "new": "Nova fonte",
+    "newTitle": "Nova fonte curada",
+    "fields": {
+      "name": "Nome",
+      "url": "Endereço do feed (RSS ou Atom)",
+      "urlHint": "Só endereços https públicos. O feed é testado antes de gravar.",
+      "category": "Categoria",
+      "reliability": "Confiabilidade",
+      "reliabilityHint": "De 1 (pouco confiável) a 5 (muito confiável), pelo critério da equipe.",
+      "choose": "Escolha",
+      "license": "Conferi que a licença da fonte permite o uso neste projeto"
+    },
+    "save": "Testar e cadastrar",
+    "testing": "Testando o feed…",
+    "cancel": "Cancelar",
+    "created_one": "Fonte {{name}} cadastrada: {{count}} notícia no feed.",
+    "created_other": "Fonte {{name}} cadastrada: {{count}} notícias no feed."
   }
 }

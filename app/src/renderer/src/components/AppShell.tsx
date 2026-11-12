@@ -8,7 +8,7 @@ import { ServerStatusPanel } from './ServerStatusPanel';
 
 interface AppShellProps {
   user: PublicUser;
-  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios';
+  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'news';
   onHome: () => void;
   /** SPEC-012: só para o usuário. */
   onPortfolios: () => void;
@@ -17,6 +17,8 @@ interface AppShellProps {
   onCalendar: () => void;
   /** SPEC-006: busca (usuário) ou catálogo (colaborador). */
   onAssets: () => void;
+  /** SPEC-027: fontes de notícias, só na Área do colaborador. */
+  onNews: () => void;
   onLogout: () => void;
   children: ReactNode;
 }
@@ -34,6 +36,7 @@ export function AppShell({
   onProfile,
   onCalendar,
   onAssets,
+  onNews,
   onLogout,
   children,
 }: AppShellProps) {
@@ -84,6 +87,13 @@ export function AppShell({
                 {t('shell.assets')}
               </button>
             </li>
+            {user.role === 'collaborator' && (
+              <li>
+                <button type="button" aria-current={ariaCurrent('news')} onClick={onNews}>
+                  {t('shell.news')}
+                </button>
+              </li>
+            )}
             <li>
               <button type="button" aria-current={ariaCurrent('profile')} onClick={onProfile}>
                 {t('home.profile')}

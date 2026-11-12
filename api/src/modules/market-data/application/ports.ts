@@ -143,7 +143,11 @@ export type IngestionTask =
   | 'investidor10'
   | 'eventos_b3'
   /** SPEC-020: Ibovespa e IFIX pela B3. */
-  | 'indices_b3';
+  | 'indices_b3'
+  /** SPEC-027: notícias (o módulo Notícias usa o mesmo registro de execuções). */
+  | 'noticias_novas'
+  | 'noticias_arquivo'
+  | 'noticias_feeds';
 export type RunStatus = 'sucesso' | 'parcial' | 'falha' | 'aguardando_publicacao' | 'cota_esgotada';
 
 export interface RunError {

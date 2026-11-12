@@ -18,6 +18,9 @@ import type {
   MarketIndexStatus,
   ConsentList,
   Investidor10Status,
+  NewsSource,
+  NewsSourceCreated,
+  NewsSourcesStatus,
   Portfolio,
   PortfolioList,
   PriceHistory,
@@ -30,6 +33,7 @@ import {
   AUTH_CHANNELS,
   CALENDAR_CHANNELS,
   FUNDAMENTALS_CHANNELS,
+  NEWS_CHANNELS,
   INDEX_CHANNELS,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
@@ -110,6 +114,13 @@ const api: DesktopApi = {
     dividends: (id, period) =>
       invoke<ClientResult<AssetDividends>>(FUNDAMENTALS_CHANNELS.dividends, id, period),
     collection: () => invoke<ClientResult<Investidor10Status>>(FUNDAMENTALS_CHANNELS.collection),
+  },
+  news: {
+    sources: () => invoke<ClientResult<NewsSourcesStatus>>(NEWS_CHANNELS.sources),
+    createSource: (input) =>
+      invoke<ClientResult<NewsSourceCreated>>(NEWS_CHANNELS.createSource, input),
+    updateSource: (id, input) =>
+      invoke<ClientResult<{ source: NewsSource }>>(NEWS_CHANNELS.updateSource, id, input),
   },
   assets: {
     search: (query) => invoke<ClientResult<AssetSearchResult>>(ASSET_CHANNELS.search, query),

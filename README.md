@@ -112,6 +112,12 @@ O gráfico da ficha passa a abrir **ajustado** por desdobramentos, grupamentos e
 
 **Distribuição** ([SPEC-021](specs/SPEC-021.md)): depois das posições, a carteira mostra como o patrimônio está dividido hoje: Ações, FIIs e Caixa, cada classe por setor (ações) ou segmento (FIIs) e os ativos de cada setor. Para a divisão fazer sentido, o processador melhora a classificação sugerida dos ativos que a equipe ainda não conferiu: o setor econômico da B3 nas ações (na tarefa semanal dos eventos, que passa a consultar também a página de detalhe da empresa) e o segmento do Investidor10 nos FIIs. O que a equipe conferiu nunca muda, e cada troca fica na auditoria.
 
+**Notícias** ([SPEC-027](specs/SPEC-027.md)): o processador (`npm run dev:worker`) coleta as notícias de duas fontes.
+- **Investidor10, a fonte pai:** autorizado para fins universitários (por telefone, em 12/11/2026), nas mesmas condições dos dados. As notícias novas vêm a cada 30 minutos, pelo sitemap de notícias do site. O arquivo desde setembro de 2023 (cerca de 22.500 notícias) é carregado aos poucos, uma página a cada 3 segundos (umas 19 horas no total, divididas em partes de meia hora). Só com `INVESTIDOR10_ENABLED=true`, e o `investidor10:apagar` apaga as notícias também.
+- **Fontes curadas:** feeds RSS ou Atom, a cada 30 minutos. A primeira é a Agência Brasil – Economia.
+
+Na Área do colaborador, **Notícias** mostra as fontes, a última coleta de cada uma, quantas notícias há e o andamento do arquivo. Por lá também se cadastra uma fonte curada (o feed é testado antes de gravar; só `https` público) e se ativa ou desativa uma fonte. As notícias ainda não aparecem para o usuário: o vínculo com os ativos e o sentimento vêm na SPEC-028, e a ficha na SPEC-029.
+
 ### Token da brapi (opcional)
 
 As cotações do pregão e a lista de ativos ([SPEC-009](specs/SPEC-009.md) e [SPEC-040](specs/SPEC-040.md)) vêm da [brapi](https://brapi.dev). Desde a SPEC-040, o app usa a **lista** da brapi, que responde sem token e não desconta da cota: **o token é opcional**. Se você quiser usar um (para o caso de a brapi mudar a regra), **gere o seu**: a cota de 15 mil consultas por mês é por chave, então dois computadores com o mesmo token gastam a mesma cota.
@@ -163,6 +169,14 @@ npm run build
 ```
 
 Migrações: toda pasta em `api/prisma/migrations/` tem um `down.sql` escrito à mão; `npm run db:rollback` desfaz a última migração aplicada.
+
+**Testes de ponta a ponta (validação visual):** desde a SPEC-027, cada Spec termina testada como usuário, numa janela visível, e o roteiro fica salvo em `tests/e2e/` (Playwright).
+
+```bash
+npm run test:e2e
+```
+
+O comando sobe o renderer do app (`http://localhost:5173`) se ele ainda não estiver rodando e abre o Edge do Windows, devagar, para dar para acompanhar. As telas usam o `window.api` falso de [`mocks/window-api.js`](mocks/README.md), com dados fictícios: não precisa do servidor, do Electron nem de login. Os testes E2E não fazem parte do `npm test` nem do GitHub Actions.
 
 ## Aviso legal
 

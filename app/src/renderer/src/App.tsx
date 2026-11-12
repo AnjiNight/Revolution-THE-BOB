@@ -8,6 +8,7 @@ import { AssetDetailPage } from './components/AssetDetailPage';
 import { AssetSearch } from './components/AssetSearch';
 import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
+import { NewsSources } from './components/NewsSources';
 import { ConfirmEmailForm } from './components/ConfirmEmailForm';
 import { ForgotPasswordForm } from './components/ForgotPasswordForm';
 import { Home } from './components/Home';
@@ -35,6 +36,8 @@ type View =
   | { kind: 'home'; user: PublicUser }
   | { kind: 'profile'; user: PublicUser }
   | { kind: 'calendar'; user: PublicUser; year?: number }
+  /** SPEC-027: fontes de notícias (colaborador). */
+  | { kind: 'news'; user: PublicUser }
   /**
    * `assetId`: a ficha do ativo aberta por cima da lista (SPEC-010). `returnTo`: a ficha foi aberta
    * por uma carteira (SPEC-014), e o Voltar leva de volta a ela.
@@ -104,6 +107,7 @@ export function App() {
     view.kind === 'home' ||
     view.kind === 'profile' ||
     view.kind === 'calendar' ||
+    view.kind === 'news' ||
     view.kind === 'assets' ||
     view.kind === 'portfolios'
   ) {
@@ -123,8 +127,10 @@ export function App() {
         onProfile={() => setView({ kind: 'profile', user })}
         onCalendar={() => openCalendar()}
         onAssets={() => setView({ kind: 'assets', user })}
+        onNews={() => setView({ kind: 'news', user })}
         onLogout={logout}
       >
+        {view.kind === 'news' && <NewsSources onSessionExpired={sessionExpired} />}
         {view.kind === 'home' && (
           <Home
             user={user}

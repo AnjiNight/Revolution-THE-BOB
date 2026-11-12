@@ -25,6 +25,8 @@ import { registerIndexRoutes } from './modules/market-data/controllers/index-rou
 import type { PortfolioService } from './modules/portfolios/application/portfolio-service.js';
 import type { TradingService } from './modules/portfolios/application/trading-service.js';
 import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfolio-routes.js';
+import type { NewsSourcesService } from './modules/news/application/news-sources-service.js';
+import { registerNewsRoutes } from './modules/news/controllers/news-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { HttpError } from './shared/http/http-error.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
@@ -52,6 +54,8 @@ export interface AppDependencies {
   portfolios: PortfolioService;
   /** SPEC-014: compra e venda na carteira ao vivo. */
   trading: TradingService;
+  /** SPEC-027: fontes de notícias (colaborador). Sem ele, as rotas de notícias não existem. */
+  newsSources?: NewsSourcesService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -108,6 +112,9 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     trading: deps.trading,
     accessTokens: deps.accessTokens,
   });
+  if (deps.newsSources) {
+    registerNewsRoutes(app, { sources: deps.newsSources, accessTokens: deps.accessTokens });
+  }
 
   return app;
 }

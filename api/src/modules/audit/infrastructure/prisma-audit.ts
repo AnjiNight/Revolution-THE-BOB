@@ -25,6 +25,8 @@ const ACTION_TO_ACAO: Record<AuditAction, AcaoAuditoria> = {
   classification_confirmed: 'classificacao_conferida',
   calendar_imported: 'calendario_importado',
   classification_suggested: 'classificacao_sugerida',
+  news_source_created: 'fonte_noticia_cadastrada',
+  news_source_updated: 'fonte_noticia_editada',
 };
 const ACAO_TO_ACTION = Object.fromEntries(
   Object.entries(ACTION_TO_ACAO).map(([action, acao]) => [acao, action]),
@@ -33,6 +35,7 @@ const ACAO_TO_ACTION = Object.fromEntries(
 const ENTITY_TO_ENTIDADE: Record<AuditEntity, EntidadeAuditoria> = {
   asset: 'ativo',
   calendar_year: 'ano_calendario',
+  news_source: 'fonte_noticia',
 };
 const ENTIDADE_TO_ENTITY = Object.fromEntries(
   Object.entries(ENTITY_TO_ENTIDADE).map(([entity, entidade]) => [entidade, entity]),
