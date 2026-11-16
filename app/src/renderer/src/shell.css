@@ -783,3 +783,10 @@ button[aria-disabled='true']:active {
     justify-content: center;
   }
 }
+
+/* ---------- Troca de idioma no rodapé (SPEC-035) ---------- */
+
+.footer-language {
+  display: flex;
+  align-items: center;
+}

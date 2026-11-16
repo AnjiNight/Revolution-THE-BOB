@@ -417,6 +417,10 @@
     "back": "Conexão de volta. Os dados foram atualizados.",
     "searchNeedsConnection": "A busca precisa de conexão. Os ativos que você já abriu continuam nas posições das carteiras."
   },
+  "language": {
+    "switchTo": "Mudar o idioma do app para inglês",
+    "changed": "O app agora está em português."
+  },
   "calendar": {
     "title": "Calendário de pregão",
     "subtitle": "Os dias úteis em que a B3 não abre. Enquanto um ano não é publicado, o app não aceita datas dele.",

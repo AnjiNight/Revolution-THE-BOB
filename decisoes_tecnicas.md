@@ -79,7 +79,7 @@ Todos com status **Sugerida**.
 | Fila e agendador de tarefas | `BullMQ` (sobre o Redis) ou `pg-boss` (sobre o PostgreSQL) | [DA07](adr/DA07-ingestao-assincrona.md), [DA14](adr/DA14-registro-execucoes-logs.md) | O `pg-boss` evita depender do Redis para as tarefas |
 | Gráfico de preço com notícias | TradingView Lightweight Charts | Gráfico Notícias × Preço (Visão §19) | Permite marcadores no eixo do tempo |
 | Gráficos de carteira | Recharts | RF17, RF18 | — |
-| Internacionalização | `i18next` | RNF20, RF38 | — |
+| Internacionalização | `i18next` | RNF20, RF38 | ✅ Definida. Troca na hora pelo botão de idioma ([SPEC-035](specs/SPEC-035.md)); a escolha fica neste computador (armazenamento local do app, chave `simulador.idioma`), não na conta; sem escolha, o idioma do sistema |
 | Fonte da interface | Geist (`@fontsource-variable/geist`, licença OFL) | Legibilidade e identidade visual das telas (redesign do login, SPEC-002) | ✅ Definida. Empacotada no app: a CSP (`default-src 'self'`) bloqueia fontes externas e o app precisa funcionar sem internet |
 | Testes | Vitest | RNF16, QA10 | — |
 | Empacotamento | `electron-builder` | RNF05 | Um instalador por sistema operacional |

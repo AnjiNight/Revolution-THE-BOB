@@ -32,6 +32,7 @@ import type {
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  AppLanguage,
   AssetSearchQuery,
   AssetUpdateInput,
   AuthResult,
@@ -62,6 +63,8 @@ import type { ServerStatus } from '../shared/server-status.js';
 /** Funções que o processo principal expõe para a interface (window.api). */
 export interface DesktopApi {
   checkServerHealth(): Promise<ServerStatus>;
+  /** SPEC-035: avisa o processo principal do idioma da interface (ao abrir e a cada troca). */
+  setLanguage(language: AppLanguage): Promise<void>;
   /** SPEC-032: modo consulta (sem conexão) e a volta da conexão. */
   connection: {
     status(): Promise<{ offline: boolean }>;

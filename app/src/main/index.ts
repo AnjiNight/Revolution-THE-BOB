@@ -28,14 +28,17 @@ import type {
 } from '@simulador/shared';
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
 import {
+  APP_CHANNELS,
   ASSET_CHANNELS,
   AUTH_CHANNELS,
   CALENDAR_CHANNELS,
   CONNECTION_CHANNELS,
   FUNDAMENTALS_CHANNELS,
   INDEX_CHANNELS,
+  isAppLanguage,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
+  type AppLanguage,
   type ConnectionEvent,
 } from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL } from '../shared/server-status.js';
@@ -62,6 +65,12 @@ const osEncryption: OsEncryption = {
   decryptString: (encrypted) => safeStorage.decryptString(encrypted),
 };
 
+/**
+ * SPEC-035: o idioma da interface, que ela avisa ao abrir e a cada troca. Vale para o que o
+ * processo principal escreve; até o primeiro aviso, português.
+ */
+let uiLanguage: AppLanguage = 'pt-BR';
+
 /** Login com Google (DA24): só aparece quando o app foi configurado com o client ID. */
 function googleOAuth(): GoogleOAuthClient | null {
   const clientId =
@@ -71,7 +80,7 @@ function googleOAuth(): GoogleOAuthClient | null {
   if (!clientId || !clientSecret) return null;
   return new GoogleOAuthClient(
     { clientId, clientSecret },
-    { openExternal: (url) => shell.openExternal(url) },
+    { openExternal: (url) => shell.openExternal(url), language: () => uiLanguage },
   );
 }
 
@@ -117,6 +126,11 @@ app.whenReady().then(() => {
   ipcMain.handle(CHECK_SERVER_CHANNEL, () =>
     checkServerHealth(serverUrl(), { allowInsecureLocalhost }),
   );
+
+  // SPEC-035: só "pt-BR" ou "en" mudam o idioma; outro valor é ignorado.
+  ipcMain.handle(APP_CHANNELS.setLanguage, (_event, language: unknown) => {
+    if (isAppLanguage(language)) uiLanguage = language;
+  });
 
   // SPEC-032: cada janela fica sabendo quando o app entra ou sai do modo consulta.
   const broadcast = (event: ConnectionEvent) => {
@@ -206,6 +220,7 @@ app.whenReady().then(() => {
         writeFile: (path, contents) => writeFile(path, contents, 'utf8'),
       },
       app.getPath('downloads'),
+      uiLanguage,
     ),
   );
   ipcMain.handle(PROFILE_CHANNELS.requestDeletion, (_event, input: AccountDeletionRequestInput) =>

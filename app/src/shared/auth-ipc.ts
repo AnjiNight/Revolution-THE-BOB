@@ -119,6 +119,21 @@ export const PORTFOLIO_CHANNELS = {
   copy: 'portfolios:copy',
 } as const;
 
+/** SPEC-035: os idiomas do app. */
+export type AppLanguage = 'pt-BR' | 'en';
+
+export function isAppLanguage(value: unknown): value is AppLanguage {
+  return value === 'pt-BR' || value === 'en';
+}
+
+/**
+ * SPEC-035: a interface avisa o processo principal do idioma, ao abrir e a cada troca, para o que
+ * ele mesmo escreve (a página do login com Google e o nome do arquivo "Baixar meus dados").
+ */
+export const APP_CHANNELS = {
+  setLanguage: 'app:set-language',
+} as const;
+
 /**
  * SPEC-032: a situação da conexão. A interface pergunta (`status`), pede uma conferência agora
  * (`retry`) e é avisada quando muda (`changed`).

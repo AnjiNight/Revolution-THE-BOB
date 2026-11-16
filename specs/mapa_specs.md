@@ -62,6 +62,7 @@
 | 1.52 | SPEC-023 aprovada (Luís, 16/11/2026, como escrita) e implementada: botão Copiar na lista e na carteira, formulário com "Tudo" ou "Só o dinheiro" e "Copiar até" na histórica, cópia numa transação com a original travada mantendo o horário de cada lançamento, `copy_breaks_cash`, "Criada em … a partir de" com o link e "Comparar as duas"; `carteira.origem_id`, exportação na versão 7, requisitos 1.12 (RF20) e modelo de domínio. OPEN-22 resolvida. Fase 5 completa |
 | 1.53 | SPEC-032 detalhada ([SPEC-032.md](SPEC-032.md)) a pedido do Luís, fora da ordem das fases, aguardando a aprovação: cópia local cifrada pelo cofre do SO do que foi consultado, modo consulta sem conexão (servidor inalcançável, sessão renovada há menos de 30 dias), ETag e 304 nas leituras (RNF19) e limpeza no logout, na sessão recusada e na exclusão; propostas para a OPEN-10 (offline só leitura, RF37 reescrito na versão 1.13 dos requisitos), para trocar o SQLite das decisões técnicas por arquivos cifrados e para a SPEC-029 deixar de ser dependência (ela entrega a sua parte) |
 | 1.54 | SPEC-032 aprovada (Luís, 16/11/2026, como escrita) e implementada: ETag e 304 em todas as leituras do servidor, cópia local cifrada no processo principal (`offline-cache`), modo consulta com a faixa "Sem conexão", os botões de escrita desativados e a volta da conexão a cada 30 s ou no "Tentar agora"; reabrir uma histórica de 10 anos sem mudança: de 139 KB para 0 de corpo; requisitos 1.13 (RF37), decisões técnicas, DA08, drivers e SPEC-034 atualizados. OPEN-10 resolvida; a SPEC-029 entrega a sua parte |
+| 1.55 | SPEC-035 detalhada ([SPEC-035.md](SPEC-035.md)) a pedido do Luís, aprovada com as recomendações no próprio pedido ("vamo faze o md e implementar") e implementada: botão com o globo e o nome do outro idioma no topo da página de entrada e no rodapé das telas, troca na hora (textos, números, moeda, datas, `<html lang>` e título), escolha guardada neste computador e não na conta, e a página do login com Google e o nome do arquivo "Baixar meus dados" seguindo o idioma. OPEN-45 resolvida (o que vem das fontes fica como veio) |
 ---
 
 ## 0. Como ler este documento
@@ -335,7 +336,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
 | OPEN-44 | Aprovar no modelo conceitual as entidades previstas na arquitetura §9 | INC-05 | Várias (marcadas com `†`) |
-| OPEN-45 | Com interface em inglês, notícias (em português, PRE04) e textos gerados continuam em português? | RF38 × PRE04 | 035 |
+| OPEN-45 | ✅ **Resolvida na [SPEC-035](SPEC-035.md) (16/11/2026):** o que vem das fontes fica como veio (nomes de empresas e de fundos; as notícias em português, que a SPEC-029 marca com `lang="pt-BR"` e "Em português"); o que o app escreve é traduzido, inclusive os textos gerados dos cenários (SPEC-031). Original: com interface em inglês, notícias (em português, PRE04) e textos gerados continuam em português? | RF38 × PRE04 | 035 |
 | OPEN-46 | ✅ **Resolvida (DA23):** FIIs comparados com CDI e Ibovespa no escopo atual; IFIX como evolução | DA22, DA23 | 020 |
 | OPEN-47 | ✅ **Resolvida (DA23):** ações classificadas por setor e FIIs por segmento | DA22, DA23 | 006, 021 |
 | OPEN-48 | Confirmar que as fontes de cotação (atual e histórica) cobrem os FIIs do catálogo. Atual: ✅ a brapi devolve FII no plano gratuito ([SPEC-009](SPEC-009.md)) | DA22 | 008, 009 |
@@ -1099,6 +1100,8 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 
 #### SPEC-035 — Alternância de idioma
 
+📄 Detalhada em [SPEC-035.md](SPEC-035.md) — aprovada com as recomendações (Luís, 16/11/2026, no próprio pedido) e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário alterna a interface entre português e inglês; moeda e datas seguem o idioma |
@@ -1107,12 +1110,12 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 | RB | — |
 | RNF | RNF20 |
 | Caso de uso / fluxo | — |
-| Entidades | USUARIO (preferência de idioma, não modelada, OPEN-44) |
+| Entidades | Nenhuma: a escolha do idioma fica neste computador, não na conta (decisão 2 da SPEC-035) |
 | Drivers | QA15 |
 | ADRs | DA03 |
 | Depende de | SPEC-001 e as Specs com tela já entregues |
 | Posição | Os textos já ficam fora do código desde a SPEC-001 (RNF20); a tradução completa só faz sentido com as telas prontas |
-| Em aberto | OPEN-45 |
+| Em aberto | — (OPEN-45 resolvida) |
 | Prioridade derivada | Could |
 
 #### SPEC-036 — Desbloqueio por biometria

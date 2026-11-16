@@ -417,6 +417,10 @@
     "back": "Connection is back. The data was updated.",
     "searchNeedsConnection": "Search needs a connection. The assets you already opened are still in your portfolios' positions."
   },
+  "language": {
+    "switchTo": "Switch the app language to Portuguese",
+    "changed": "The app is now in English."
+  },
   "calendar": {
     "title": "Trading calendar",
     "subtitle": "The weekdays when B3 is closed. Until a year is published, the app doesn't accept dates in it.",

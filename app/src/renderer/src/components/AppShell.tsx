@@ -6,6 +6,7 @@ import type { ReconnectResult } from '../../../shared/auth-ipc';
 import { stopDisabledClick } from '../connection';
 import { initials } from '../format';
 import '../shell.css';
+import { LanguageSwitch } from './LanguageSwitch';
 import { OfflineBanner } from './OfflineBanner';
 import { ServerStatusPanel } from './ServerStatusPanel';
 
@@ -154,6 +155,10 @@ export function AppShell({
       <footer className="shell-footer">
         <div className="status-dock">
           <ServerStatusPanel />
+        </div>
+        {/* SPEC-035: em todas as telas; na barra do topo não cabe a 480 px. */}
+        <div className="footer-language">
+          <LanguageSwitch />
         </div>
         <p className="disclaimer">{t('disclaimer')}</p>
       </footer>

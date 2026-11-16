@@ -27,6 +27,7 @@ import type {
 } from '@simulador/shared';
 import { contextBridge, ipcRenderer } from 'electron';
 import {
+  APP_CHANNELS,
   ASSET_CHANNELS,
   AUTH_CHANNELS,
   CALENDAR_CHANNELS,
@@ -60,6 +61,7 @@ const read = <T>(channel: string, ...args: unknown[]) =>
 
 const api: DesktopApi = {
   checkServerHealth: () => invoke<ServerStatus>(CHECK_SERVER_CHANNEL),
+  setLanguage: (language) => invoke<void>(APP_CHANNELS.setLanguage, language),
   connection: {
     status: () => invoke<{ offline: boolean }>(CONNECTION_CHANNELS.status),
     retry: () => invoke<ReconnectResult>(CONNECTION_CHANNELS.retry),
