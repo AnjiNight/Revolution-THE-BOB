@@ -726,6 +726,19 @@
     padding-inline: 0.65rem;
   }
 
+  /* SPEC-027: com "Notícias", o menu do colaborador tem 5 itens e não cabe em 375 px. A lista
+     encolhe e rola de lado dentro da ilha; o Sair fica sempre visível. */
+  .shell .island-links {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .shell .island-links::-webkit-scrollbar {
+    display: none;
+  }
+
   .profile-panel-head {
     flex-wrap: wrap;
   }

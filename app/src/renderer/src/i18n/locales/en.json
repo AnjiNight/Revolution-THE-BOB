@@ -225,7 +225,11 @@
     "invalid_quantity": "Enter a whole quantity, 1 or more.",
     "after_end": "The start date can't be after the end date.",
     "after_today": "Choose an end date no later than today.",
-    "invalid_selection": "Choose 2 to 4 different portfolios."
+    "invalid_selection": "Choose 2 to 4 different portfolios.",
+    "not_https": "Use an address that starts with https://.",
+    "private_address": "Use a public https address (not an internal network one).",
+    "not_a_feed": "Could not read an RSS or Atom feed at this address.",
+    "invalid_url": "Invalid address."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -279,7 +283,10 @@
     "task_not_found": "Task not found.",
     "run_not_found": "Run not found (runs older than 90 days are deleted).",
     "run_already_requested": "This task already has a request waiting for the processor.",
-    "run_in_progress": "This task is running now. Request it again when it finishes."
+    "run_in_progress": "This task is running now. Request it again when it finishes.",
+    "news_source_not_found": "News source not found.",
+    "source_exists": "There is already a source with this address.",
+    "parent_source": "The parent source can't be changed here."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -415,7 +422,8 @@
     "calendar": "Calendar",
     "assets": "Assets",
     "logoutLabel": "Sign out of your account",
-    "portfolios": "Portfolios"
+    "portfolios": "Portfolios",
+    "news": "News"
   },
   "offline": {
     "title": "No connection to the server.",
@@ -1322,13 +1330,17 @@
       "indices_b3": "B3 indexes (Ibovespa and IFIX)",
       "investidor10": "Investidor10 (indicators and dividends)",
       "eventos_b3": "Corporate events and sectors",
-      "cotacao_pregao": "Trading session quotes"
+      "cotacao_pregao": "Trading session quotes",
+      "noticias_novas": "Latest news (Investidor10)",
+      "noticias_arquivo": "News archive (Investidor10)",
+      "noticias_feeds": "News from the curated sources"
     },
     "sources": {
       "b3": "B3",
       "brapi": "brapi",
       "bcb": "Central Bank of Brazil",
-      "investidor10": "Investidor10"
+      "investidor10": "Investidor10",
+      "feeds": "RSS feeds of the curated sources"
     },
     "source_one": "Source: {{sources}}",
     "source_other": "Sources: {{sources}}",
@@ -1386,7 +1398,10 @@
       "indices_b3": "No close missing.",
       "investidor10": "No new asset and none with an error on the last visit.",
       "eventos_b3": "Nothing to fetch right now.",
-      "cotacao_pregao": "Outside trading hours, or no quota left."
+      "cotacao_pregao": "Outside trading hours, or no quota left.",
+      "noticias_novas": "Nothing to fetch right now.",
+      "noticias_arquivo": "Nothing to fetch right now.",
+      "noticias_feeds": "No active curated source."
     },
     "processor": {
       "title": "Processor",
@@ -1441,7 +1456,79 @@
       "noPage": "No page",
       "layoutErrors": "Page without the table",
       "failed": "Failed",
-      "stopped": "Stopped midway (403 or 429)"
+      "stopped": "Stopped midway (403 or 429)",
+      "inSitemap": "New in the sitemap",
+      "archiveMissing": "Missing from the archive",
+      "changed": "Updated on the site",
+      "items": "Items in the feeds",
+      "saved": "Saved",
+      "gone": "Gone from the site (404)"
+    }
+  },
+  "news": {
+    "title": "News sources",
+    "subtitle": "The parent source (Investidor10) and the curated RSS or Atom sources. The worker collects new articles every 30 minutes.",
+    "loading": "Loading the sources…",
+    "parentDisabled": "Investidor10 collection is off (INVESTIDOR10_ENABLED=false); curated sources keep running.",
+    "archiveRunning": "Investidor10 archive: {{done}} of {{total}} articles (updated on {{date}}).",
+    "archiveDone": "Investidor10 archive complete: {{done}} of {{total}} articles (checked on {{date}}).",
+    "columns": {
+      "source": "Source",
+      "category": "Category",
+      "reliability": "Reliability",
+      "lastRun": "Last collection",
+      "news": "Articles",
+      "actions": "Actions"
+    },
+    "categories": {
+      "economia": "Economy",
+      "mercado": "Market",
+      "empresas": "Companies",
+      "internacional": "International"
+    },
+    "reliabilityValue": "{{value}} of 5",
+    "parentNote": "Parent source: can't be turned off",
+    "inactive": "Turned off",
+    "never": "Not collected yet",
+    "ok": "Succeeded",
+    "failed": "Failed",
+    "problem_one": "Problem: {{count}} failure in a row",
+    "problem_other": "Problem: {{count}} failures in a row",
+    "activate": "Turn on",
+    "deactivate": "Turn off",
+    "activateLabel": "Turn on the source {{name}}",
+    "deactivateLabel": "Turn off the source {{name}}",
+    "activated": "Source {{name}} turned on.",
+    "deactivated": "Source {{name}} turned off.",
+    "new": "New source",
+    "newTitle": "New curated source",
+    "fields": {
+      "name": "Name",
+      "url": "Feed address (RSS or Atom)",
+      "urlHint": "Public https addresses only. The feed is tested before saving.",
+      "category": "Category",
+      "reliability": "Reliability",
+      "reliabilityHint": "From 1 (barely reliable) to 5 (very reliable), by the team’s criteria.",
+      "choose": "Choose",
+      "license": "I checked that the source's license allows use in this project"
+    },
+    "save": "Test and save",
+    "testing": "Testing the feed…",
+    "cancel": "Cancel",
+    "created_one": "Source {{name}} saved: {{count}} article in the feed.",
+    "created_other": "Source {{name}} saved: {{count}} articles in the feed.",
+    "latest": {
+      "title": "Latest news",
+      "loading": "Loading the news…",
+      "linked": "Linked to an asset: {{linked}} of {{total}} articles.",
+      "empty": "No news collected yet.",
+      "assets": "Assets in the article",
+      "noLinks": "No linked asset",
+      "relevance": {
+        "principal": "Main",
+        "citado": "Mentioned",
+        "lista": "List"
+      }
     }
   }
 }

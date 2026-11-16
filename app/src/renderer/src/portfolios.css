@@ -1358,3 +1358,97 @@ button.allocation-sector-button:hover {
   flex-wrap: wrap;
   margin-bottom: 1rem;
 }
+
+/* SPEC-027: fontes de notícias (Área do colaborador). O endereço quebra em qualquer ponto para a
+   tabela caber na tela sem rolagem lateral. */
+.news-sources-table {
+  table-layout: auto;
+}
+
+.news-sources-table .position-name {
+  overflow-wrap: anywhere;
+}
+
+.news-sources-table td:first-child {
+  min-width: 12rem;
+}
+
+.news-source-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 34rem;
+  margin-top: 1rem;
+}
+
+.news-source-form h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.news-sources-page .profile-panel > .pill {
+  margin-top: 1rem;
+}
+
+/* SPEC-028: as últimas notícias com os ativos vinculados (tela Notícias do colaborador). */
+.latest-news {
+  margin-top: 1.5rem;
+}
+
+.latest-news-list {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.latest-news-list > li {
+  display: grid;
+  gap: 0.25rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.latest-news-list a {
+  color: var(--text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.news-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A relevância vai no texto também (para leitores de tela); a aparência só reforça. */
+.news-link {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.news-link.is-principal {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.news-link.is-lista {
+  border-style: dashed;
+}
+
+.news-links-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

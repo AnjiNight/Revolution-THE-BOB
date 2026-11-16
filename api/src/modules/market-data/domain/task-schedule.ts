@@ -35,6 +35,11 @@ export const INGESTION_SCHEDULE: Record<
     sources: ['brapi'],
     schedule: { kind: 'session', minutes: SESSION.slotMinutes },
   },
+  // SPEC-027: as notícias novas do Investidor10 e os feeds das fontes curadas a cada 30 minutos; o
+  // arquivo do Investidor10 aos poucos, a cada 35 minutos (uns 30 minutos de páginas por vez).
+  noticias_novas: { sources: ['investidor10'], schedule: { kind: 'every', minutes: 30 } },
+  noticias_arquivo: { sources: ['investidor10'], schedule: { kind: 'every', minutes: 35 } },
+  noticias_feeds: { sources: ['feeds'], schedule: { kind: 'every', minutes: 30 } },
 };
 
 /**

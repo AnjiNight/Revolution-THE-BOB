@@ -6,6 +6,8 @@ import {
   calendarPath,
   FUNDAMENTALS_PATHS,
   INDEX_PATHS,
+  NEWS_PATHS,
+  newsSourcePath,
   isDividendPeriod,
   isIngestionTask,
   isPriceHistoryPeriod,
@@ -50,6 +52,13 @@ import {
   type Investidor10Status,
   type LoginInput,
   type NewAssetInput,
+  type LatestNews,
+  type NewNewsSourceInput,
+  type NewsErrorCode,
+  type NewsSource,
+  type NewsSourceCreated,
+  type NewsSourcesStatus,
+  type UpdateNewsSourceInput,
   type CashEntryResult,
   type CashStatement,
   type NewCashEntryInput,
@@ -127,8 +136,13 @@ const KNOWN_ERRORS: ReadonlyArray<
   | FundamentalsErrorCode
   | PortfolioErrorCode
   | TaskErrorCode
+  | NewsErrorCode
 > = [
   'validation_error',
+  // SPEC-027
+  'news_source_not_found',
+  'source_exists',
+  'parent_source',
   'email_in_use',
   'invalid_credentials',
   'invalid_refresh_token',
@@ -705,6 +719,45 @@ export class AuthClient {
     return this.call(() =>
       this.authorizedRequest<Investidor10Status>('GET', FUNDAMENTALS_PATHS.collection),
     );
+  }
+
+  /** Colaborador (SPEC-027): fontes de notícias, última coleta e o andamento do arquivo. */
+  newsSources(): Promise<ClientResult<NewsSourcesStatus>> {
+    return this.call(() => this.authorizedRequest<NewsSourcesStatus>('GET', NEWS_PATHS.sources));
+  }
+
+  /** Colaborador (SPEC-028): as últimas notícias com os vínculos aos ativos. */
+  latestNews(): Promise<ClientResult<LatestNews>> {
+    return this.call(() => this.authorizedRequest<LatestNews>('GET', NEWS_PATHS.latest));
+  }
+
+  /** Colaborador (SPEC-027): nova fonte curada; o servidor testa o feed antes de gravar. */
+  createNewsSource(input: NewNewsSourceInput): Promise<ClientResult<NewsSourceCreated>> {
+    return this.call(() =>
+      this.authorizedRequest<NewsSourceCreated>('POST', NEWS_PATHS.sources, {
+        name: input.name,
+        url: input.url,
+        category: input.category,
+        reliability: input.reliability,
+        licenseChecked: input.licenseChecked,
+      }),
+    );
+  }
+
+  /** Colaborador (SPEC-027): edita, ativa ou desativa uma fonte curada. */
+  updateNewsSource(
+    id: string,
+    input: UpdateNewsSourceInput,
+  ): Promise<ClientResult<{ source: NewsSource }>> {
+    return this.call(() => {
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+      return this.authorizedRequest<{ source: NewsSource }>('PATCH', newsSourcePath(id), {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.category !== undefined ? { category: input.category } : {}),
+        ...(input.reliability !== undefined ? { reliability: input.reliability } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {}),
+      });
+    });
   }
 
   /** Colaborador: todos os ativos que passam nos filtros, inclusive desativados. */

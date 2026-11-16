@@ -225,7 +225,11 @@
     "invalid_quantity": "Informe uma quantidade inteira, a partir de 1.",
     "after_end": "A data de início não pode ser depois da data final.",
     "after_today": "Escolha uma data final até hoje.",
-    "invalid_selection": "Escolha de 2 a 4 carteiras diferentes."
+    "invalid_selection": "Escolha de 2 a 4 carteiras diferentes.",
+    "not_https": "Use um endereço que comece com https://.",
+    "private_address": "Use um endereço https público (não da rede interna).",
+    "not_a_feed": "Não foi possível ler um feed RSS ou Atom neste endereço.",
+    "invalid_url": "Endereço inválido."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -279,7 +283,10 @@
     "task_not_found": "Tarefa não encontrada.",
     "run_not_found": "Execução não encontrada (as execuções com mais de 90 dias são apagadas).",
     "run_already_requested": "Esta tarefa já tem um pedido aguardando o processador.",
-    "run_in_progress": "Esta tarefa está rodando agora. Peça de novo quando ela terminar."
+    "run_in_progress": "Esta tarefa está rodando agora. Peça de novo quando ela terminar.",
+    "news_source_not_found": "Fonte de notícias não encontrada.",
+    "source_exists": "Já existe uma fonte com este endereço.",
+    "parent_source": "A fonte pai não pode ser alterada pela tela."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -415,7 +422,8 @@
     "calendar": "Calendário",
     "assets": "Ativos",
     "logoutLabel": "Sair da conta",
-    "portfolios": "Carteiras"
+    "portfolios": "Carteiras",
+    "news": "Notícias"
   },
   "offline": {
     "title": "Sem conexão com o servidor.",
@@ -1322,13 +1330,17 @@
       "indices_b3": "Índices da B3 (Ibovespa e IFIX)",
       "investidor10": "Investidor10 (indicadores e proventos)",
       "eventos_b3": "Eventos corporativos e setores",
-      "cotacao_pregao": "Cotações do pregão"
+      "cotacao_pregao": "Cotações do pregão",
+      "noticias_novas": "Notícias novas (Investidor10)",
+      "noticias_arquivo": "Arquivo de notícias (Investidor10)",
+      "noticias_feeds": "Notícias das fontes curadas"
     },
     "sources": {
       "b3": "B3",
       "brapi": "brapi",
       "bcb": "Banco Central",
-      "investidor10": "Investidor10"
+      "investidor10": "Investidor10",
+      "feeds": "feeds RSS das fontes curadas"
     },
     "source_one": "Fonte: {{sources}}",
     "source_other": "Fontes: {{sources}}",
@@ -1386,7 +1398,10 @@
       "indices_b3": "Nenhum fechamento faltando.",
       "investidor10": "Nenhum ativo novo nem com erro na última visita.",
       "eventos_b3": "Nada a buscar agora.",
-      "cotacao_pregao": "Fora do horário do pregão, ou sem cota."
+      "cotacao_pregao": "Fora do horário do pregão, ou sem cota.",
+      "noticias_novas": "Nada a buscar agora.",
+      "noticias_arquivo": "Nada a buscar agora.",
+      "noticias_feeds": "Nenhuma fonte curada ativa."
     },
     "processor": {
       "title": "Processador",
@@ -1441,7 +1456,79 @@
       "noPage": "Sem página",
       "layoutErrors": "Página sem a tabela",
       "failed": "Com erro",
-      "stopped": "Parada no meio (403 ou 429)"
+      "stopped": "Parada no meio (403 ou 429)",
+      "inSitemap": "Novas no sitemap",
+      "archiveMissing": "Faltando no arquivo",
+      "changed": "Atualizadas no site",
+      "items": "Itens nos feeds",
+      "saved": "Guardadas",
+      "gone": "Sumiram do site (404)"
+    }
+  },
+  "news": {
+    "title": "Fontes de notícias",
+    "subtitle": "A fonte pai (Investidor10) e as fontes curadas por RSS ou Atom. O processador coleta as notícias novas a cada 30 minutos.",
+    "loading": "Carregando as fontes…",
+    "parentDisabled": "A coleta do Investidor10 está desligada (INVESTIDOR10_ENABLED=false); as fontes curadas continuam.",
+    "archiveRunning": "Arquivo do Investidor10: {{done}} de {{total}} notícias (atualizado em {{date}}).",
+    "archiveDone": "Arquivo do Investidor10 completo: {{done}} de {{total}} notícias (conferido em {{date}}).",
+    "columns": {
+      "source": "Fonte",
+      "category": "Categoria",
+      "reliability": "Confiabilidade",
+      "lastRun": "Última coleta",
+      "news": "Notícias",
+      "actions": "Ações"
+    },
+    "categories": {
+      "economia": "Economia",
+      "mercado": "Mercado",
+      "empresas": "Empresas",
+      "internacional": "Internacional"
+    },
+    "reliabilityValue": "{{value}} de 5",
+    "parentNote": "Fonte pai: não pode ser desativada",
+    "inactive": "Desativada",
+    "never": "Ainda não coletada",
+    "ok": "Com sucesso",
+    "failed": "Com erro",
+    "problem_one": "Com problema: {{count}} falha seguida",
+    "problem_other": "Com problema: {{count}} falhas seguidas",
+    "activate": "Ativar",
+    "deactivate": "Desativar",
+    "activateLabel": "Ativar a fonte {{name}}",
+    "deactivateLabel": "Desativar a fonte {{name}}",
+    "activated": "Fonte {{name}} ativada.",
+    "deactivated": "Fonte {{name}} desativada.",
+    "new": "Nova fonte",
+    "newTitle": "Nova fonte curada",
+    "fields": {
+      "name": "Nome",
+      "url": "Endereço do feed (RSS ou Atom)",
+      "urlHint": "Só endereços https públicos. O feed é testado antes de gravar.",
+      "category": "Categoria",
+      "reliability": "Confiabilidade",
+      "reliabilityHint": "De 1 (pouco confiável) a 5 (muito confiável), pelo critério da equipe.",
+      "choose": "Escolha",
+      "license": "Conferi que a licença da fonte permite o uso neste projeto"
+    },
+    "save": "Testar e cadastrar",
+    "testing": "Testando o feed…",
+    "cancel": "Cancelar",
+    "created_one": "Fonte {{name}} cadastrada: {{count}} notícia no feed.",
+    "created_other": "Fonte {{name}} cadastrada: {{count}} notícias no feed.",
+    "latest": {
+      "title": "Últimas notícias",
+      "loading": "Carregando as notícias…",
+      "linked": "Com ativo vinculado: {{linked}} de {{total}} notícias.",
+      "empty": "Nenhuma notícia coletada ainda.",
+      "assets": "Ativos da notícia",
+      "noLinks": "Sem ativo vinculado",
+      "relevance": {
+        "principal": "Principal",
+        "citado": "Citado",
+        "lista": "Lista"
+      }
     }
   }
 }

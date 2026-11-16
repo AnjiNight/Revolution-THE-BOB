@@ -75,7 +75,7 @@ describe('tarefas de ingestão (SPEC-011)', () => {
     await t.app.close();
   });
 
-  it('lista as 9 tarefas, as com falha ou parcial primeiro, com a fonte e quando rodam (CA01)', async () => {
+  it('lista as 12 tarefas, as com falha ou parcial primeiro, com a fonte e quando rodam (CA01)', async () => {
     await finished('fechamento_diario', '2026-11-16T11:00:00Z', 'sucesso', {
       records: 712,
       affectedAssets: 712,
@@ -97,7 +97,15 @@ describe('tarefas de ingestão (SPEC-011)', () => {
       'indices_b3',
       'eventos_b3',
       'cotacao_pregao',
+      // SPEC-027: as notícias gravam no mesmo registro de execuções.
+      'noticias_novas',
+      'noticias_arquivo',
+      'noticias_feeds',
     ]);
+    expect(body.tasks.find((task) => task.task === 'noticias_feeds')).toMatchObject({
+      sources: ['feeds'],
+      schedule: { kind: 'every', minutes: 30 },
+    });
     const daily = body.tasks.find((task) => task.task === 'fechamento_diario');
     expect(daily).toMatchObject({
       sources: ['b3'],
@@ -187,11 +195,20 @@ describe('tarefas de ingestão (SPEC-011)', () => {
     const res = await call('POST', taskPath(TASK_PATHS.requests, 'investidor10'));
     expect(res.statusCode).toBe(409);
     expect(res.json()).toMatchObject({ error: 'source_disabled' });
-    expect(
+    // SPEC-027: as notícias do Investidor10 também param; as das fontes curadas, não.
+    const news = await call('POST', taskPath(TASK_PATHS.requests, 'noticias_novas'));
+    expect(news.json()).toMatchObject({ error: 'source_disabled' });
+    const blocked = Object.fromEntries(
       (await call('GET', TASK_PATHS.list))
         .json<TaskList>()
-        .tasks.find((task) => task.task === 'investidor10')?.blockedReason,
-    ).toBe('source_disabled');
+        .tasks.map((task) => [task.task, task.blockedReason]),
+    );
+    expect(blocked).toMatchObject({
+      investidor10: 'source_disabled',
+      noticias_novas: 'source_disabled',
+      noticias_arquivo: 'source_disabled',
+      noticias_feeds: null,
+    });
   });
 
   it('histórico 50 por vez, com quem pediu; erros 100 por vez, com o ticker (CA02)', async () => {

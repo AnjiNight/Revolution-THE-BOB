@@ -52,7 +52,18 @@ const KNOWN_TOTALS = [
   'layoutErrors',
   'failed',
   'stopped',
+  // SPEC-027: as notícias.
+  'inSitemap',
+  'changed',
+  'items',
+  'saved',
+  'gone',
 ] as const;
+
+/** O mesmo total com outro sentido numa tarefa: no arquivo de notícias, "missing" é o que falta. */
+const TOTAL_LABELS: Partial<Record<IngestionTaskCode, Partial<Record<string, string>>>> = {
+  noticias_arquivo: { missing: 'tasks.totals.archiveMissing' },
+};
 
 /** "hoje às 08:00" ou "15/11 às 08:00", no horário de Brasília. */
 function useWhen() {
@@ -467,6 +478,7 @@ function TaskHistory({
               {state.runs.map((run) => (
                 <Fragment key={run.id}>
                   <RunRow
+                    task={task}
                     run={run}
                     errorsOpen={errorsOf === run.id}
                     onToggleErrors={() =>
@@ -508,10 +520,12 @@ function TaskHistory({
 }
 
 function RunRow({
+  task,
   run,
   errorsOpen,
   onToggleErrors,
 }: {
+  task: IngestionTaskCode;
   run: TaskRunDetail;
   errorsOpen: boolean;
   onToggleErrors: () => void;
@@ -552,7 +566,7 @@ function RunRow({
             ? value.slice(0, 10).join(', ') + (value.length > 10 ? '…' : '')
             : '—'
           : formatCount(value, language);
-    details.push(`${t(`tasks.totals.${key}`)}: ${shown}`);
+    details.push(`${t(TOTAL_LABELS[task]?.[key] ?? `tasks.totals.${key}`)}: ${shown}`);
   }
   if (run.request) {
     details.push(

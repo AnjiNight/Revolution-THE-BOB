@@ -9,6 +9,8 @@ import type { DatabaseProbe } from '../modules/health/application/get-health.js'
 import { EmailCodeHasher } from '../modules/identity/application/email-code.js';
 import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
+import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
+import { FakeFeedFetcher, InMemoryNewsRepository } from '../modules/news/testing/fakes.js';
 import { JwtAccessTokenService } from '../modules/identity/infrastructure/jwt-access-token-service.js';
 import {
   BackgroundTasks,
@@ -229,6 +231,15 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     investidor10Enabled: options.investidor10 !== false,
     clock,
   });
+  // SPEC-027: fontes de notícias em memória; o teste do feed usa o buscador falso.
+  const newsRepo = new InMemoryNewsRepository();
+  const feedFetcher = new FakeFeedFetcher();
+  const newsSources = new NewsSourcesService({
+    news: newsRepo,
+    feeds: feedFetcher,
+    parentEnabled: options.investidor10 !== false,
+    clock,
+  });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -251,6 +262,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     portfolios,
     trading,
     tasks,
+    newsSources,
     logStream: logs,
   });
 
@@ -286,6 +298,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   return {
     app,
     logs,
+    newsRepo,
+    feedFetcher,
     users,
     refreshTokens,
     emailCodes,

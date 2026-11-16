@@ -22,6 +22,12 @@ import type {
   ConsentList,
   DividendPeriod,
   Investidor10Status,
+  LatestNews,
+  NewNewsSourceInput,
+  NewsSource,
+  NewsSourceCreated,
+  NewsSourcesStatus,
+  UpdateNewsSourceInput,
   Portfolio,
   PortfolioList,
   PriceHistory,
@@ -175,6 +181,18 @@ export interface DesktopApi {
     get(id: string): Promise<ClientResult<AssetFundamentals>>;
     dividends(id: string, period: DividendPeriod): Promise<ClientResult<AssetDividends>>;
     collection(): Promise<ClientResult<Investidor10Status>>;
+  };
+  /** Fontes de notícias (SPEC-027): só colaborador (403 para usuário). */
+  news: {
+    sources(): Promise<ClientResult<NewsSourcesStatus>>;
+    /** SPEC-028: as últimas notícias com os vínculos aos ativos. */
+    latest(): Promise<ClientResult<LatestNews>>;
+    /** O servidor testa o feed antes de gravar; recusado, o motivo vem em `fields.url`. */
+    createSource(input: NewNewsSourceInput): Promise<ClientResult<NewsSourceCreated>>;
+    updateSource(
+      id: string,
+      input: UpdateNewsSourceInput,
+    ): Promise<ClientResult<{ source: NewsSource }>>;
   };
   /**
    * Catálogo de ativos (SPECs 006, 010 e 040). Busca, ficha e logos para todos; o resto só

@@ -22,7 +22,10 @@ export type AuditAction =
   /** SPEC-005 §10: ano fechado publicado pelo processador a partir do arquivo da B3. */
   | 'calendar_imported'
   /** SPEC-021: o processador trocou a classificação sugerida de um ativo a revisar. */
-  | 'classification_suggested';
+  | 'classification_suggested'
+  /** SPEC-027: o colaborador cadastrou ou editou (também ativou ou desativou) uma fonte curada. */
+  | 'news_source_created'
+  | 'news_source_updated';
 
 /** Ações que o processador faz sozinho: são as únicas sem colaborador (SPEC-040, SPEC-005 §10). */
 export const AUTOMATIC_ACTIONS: readonly AuditAction[] = [
@@ -33,7 +36,7 @@ export const AUTOMATIC_ACTIONS: readonly AuditAction[] = [
   'classification_suggested',
 ];
 
-export type AuditEntity = 'asset' | 'calendar_year';
+export type AuditEntity = 'asset' | 'calendar_year' | 'news_source';
 
 /** O que mudou: os campos antes e depois. Nunca dado pessoal (DA13). */
 export interface AuditDetails {
@@ -50,7 +53,7 @@ export interface AuditEntry {
   collaboratorId: string | null;
   action: AuditAction;
   entity: AuditEntity;
-  /** Id do ativo ou o ano do calendário. */
+  /** Id do ativo, o ano do calendário ou o id da fonte de notícias. */
   entityId: string;
   details: AuditDetails;
 }

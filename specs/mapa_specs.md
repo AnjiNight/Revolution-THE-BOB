@@ -65,6 +65,10 @@
 | 1.55 | SPEC-035 detalhada ([SPEC-035.md](SPEC-035.md)) a pedido do Luís, aprovada com as recomendações no próprio pedido ("vamo faze o md e implementar") e implementada: botão com o globo e o nome do outro idioma no topo da página de entrada e no rodapé das telas, troca na hora (textos, números, moeda, datas, `<html lang>` e título), escolha guardada neste computador e não na conta, e a página do login com Google e o nome do arquivo "Baixar meus dados" seguindo o idioma. OPEN-45 resolvida (o que vem das fontes fica como veio) |
 | 1.56 | SPEC-011 detalhada ([SPEC-011.md](SPEC-011.md)) a pedido do Luís, aguardando a aprovação: tela Tarefas aberta pelo Início do colaborador (as 9 tarefas, o histórico com os erros e o estado do processador), "Executar agora" por pedido gravado no banco e atendido pelo processador a cada 15 s, sinal de vida do processador, execução interrompida fechada como falha e limpeza das execuções com mais de 90 dias (proposta para a OPEN-40) |
 | 1.57 | SPEC-011 aprovada (Luís, 16/11/2026, como escrita) e implementada: tela Tarefas aberta pelo painel "Tarefas de dados" do Início do colaborador (as 9 tarefas com a última execução, o histórico 50 por vez com os erros 100 por vez e o estado do processador), "Executar agora" gravado em `pedido_execucao` e atendido pelo processador em até 15 s, sinal de vida em `estado_processador`, execução interrompida fechada como falha ao iniciar e limpeza diária das execuções com mais de 90 dias, guardando a última de cada tarefa; os horários das tarefas num lugar só do código. OPEN-40 resolvida; EXECUCAO_TAREFA e ERRO_EXECUCAO entram no modelo de domínio, com PEDIDO_EXECUCAO e ESTADO_PROCESSADOR |
+| 1.58 | SPEC-027 detalhada ([SPEC-027.md](SPEC-027.md)) pela Nicoly, aguardando a aprovação: notícias do Investidor10 (autorizadas por telefone em 12/11/2026) pelo sitemap de notícias a cada 30 min e o arquivo desde 22/09/2023 (22.491 notícias); fontes curadas por RSS ou Atom, a primeira a Agência Brasil; propostas para a OPEN-28 (notícias) e a OPEN-29 |
+| 1.59 | SPEC-027 aprovada (Nicoly, 12/11/2026; decisão 1 sem o pedido de e-mail) e implementada: módulo Notícias com a fonte pai (Investidor10, sitemap de notícias a cada 30 min e o arquivo aos poucos) e as fontes curadas por RSS ou Atom (Agência Brasil), tela Notícias do colaborador; coleta real de 251 notícias do Investidor10 e 10 da Agência Brasil. OPEN-28 resolvida e OPEN-29 em parte. Primeira Spec com a validação visual como usuária e o teste de ponta a ponta em `tests/e2e/` (Playwright), com os mocks em `mocks/` |
+| 1.60 | SPEC-028 detalhada ([SPEC-028.md](SPEC-028.md)) pela Nicoly, aguardando a aprovação: só o vínculo notícia–ativo (RF27), pelo ticker citado e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista; o sentimento (RF28, OPEN-30, OPEN-31) proposto para uma nova SPEC-044, para as notícias chegarem antes à ficha (SPEC-029) |
+| 1.61 | Junção, em 16/11/2026, do trabalho da Nicoly (SPECs 027 e 028, que ela tinha numerado 1.51 a 1.53, agora 1.58 a 1.60) com o do Luís (1.51 a 1.57): as 3 tarefas de notícias da SPEC-027 (`noticias_novas`, `noticias_arquivo` e `noticias_feeds`) entram na tela Tarefas da SPEC-011, que passa a mostrar 12 tarefas; as duas do Investidor10 ficam bloqueadas com a coleta desligada |
 ---
 
 ## 0. Como ler este documento
@@ -321,8 +325,8 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
 | OPEN-26 | Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
-| OPEN-28 | **[Crítico]** Autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta. **Parte de dados resolvida (04/11/2026):** autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)); a parte de **notícias** ainda precisa ser confirmada com eles | PE07 | 027, 041, 042 |
-| OPEN-29 | Lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
+| OPEN-28 | ✅ **Resolvida.** Dados (04/11/2026): autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)). Notícias (12/11/2026): autorizadas por telefone para fins universitários, nas mesmas condições ([SPEC-027 §4.1](SPEC-027.md)). Original: autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta | PE07 | 027, 041, 042 |
+| OPEN-29 | ⏳ **Em parte resolvida na [SPEC-027](SPEC-027.md):** fontes curadas por RSS ou Atom, cadastradas pelo colaborador com categoria, confiabilidade de 1 a 5 (critério da equipe) e licença conferida; a primeira é a Agência Brasil – Economia. As outras fontes ficam com a equipe. Original: lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
 | OPEN-30 | Implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 028 |
 | OPEN-31 | Fonte do histórico de notícias e janela de treino | PE09, PE11 | 028, 031 |
 | OPEN-32 | RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
@@ -972,6 +976,8 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 
 #### SPEC-027 — Fontes oficiais de notícias e coleta
 
+Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Cadastrar a fonte pai (fixa) e as fontes curadas (pelo colaborador, com categoria e confiabilidade) e coletar notícias periodicamente, sem duplicar, com registro de execução |
@@ -989,6 +995,8 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 | Prioridade derivada | Could |
 
 #### SPEC-028 — Vínculo notícia–ativo e classificação de sentimento
+
+Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de ficar só com o vínculo (RF27) e passar o sentimento (RF28) para uma nova SPEC-044.
 
 | Campo | Conteúdo |
 |---|---|

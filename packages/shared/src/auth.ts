@@ -216,7 +216,12 @@ export type FieldErrorCode =
   | 'after_end'
   | 'after_today'
   // SPEC-022: de 2 a 4 carteiras, sem repetir.
-  | 'invalid_selection';
+  | 'invalid_selection'
+  // SPEC-027: endereço do feed de notícias.
+  | 'not_https'
+  | 'private_address'
+  | 'not_a_feed'
+  | 'invalid_url';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 

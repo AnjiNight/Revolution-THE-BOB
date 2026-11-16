@@ -134,9 +134,9 @@ export interface QuoteRepository {
 }
 
 /**
- * Tarefas de ingestão (SPECs 008, 009 e 040, §5.1; as SPECs 005, 007, 020, 041 e 042 acrescentaram
- * as suas). SPEC-011: a lista fica em `@simulador/shared` (`INGESTION_TASKS`), porque a tela
- * Tarefas também usa.
+ * Tarefas de ingestão (SPECs 008, 009 e 040, §5.1; as SPECs 005, 007, 020, 027, 041 e 042
+ * acrescentaram as suas). SPEC-011: a lista fica em `@simulador/shared` (`INGESTION_TASKS`), porque a
+ * tela Tarefas também usa.
  */
 export type IngestionTask = IngestionTaskCode;
 export type RunStatus = 'sucesso' | 'parcial' | 'falha' | 'aguardando_publicacao' | 'cota_esgotada';

@@ -20,6 +20,7 @@ import type {
   NewCashEntryInput,
   NewPortfolioInput,
   NewTradeInput,
+  NewsErrorCode,
   PortfolioErrorCode,
   RenamePortfolioInput,
   TaskErrorCode,
@@ -96,6 +97,15 @@ export const FUNDAMENTALS_CHANNELS = {
   collection: 'fundamentals:collection',
 } as const;
 
+/** SPEC-027: fontes de notícias (só colaborador). */
+export const NEWS_CHANNELS = {
+  sources: 'news:sources',
+  createSource: 'news:create-source',
+  updateSource: 'news:update-source',
+  // SPEC-028: as últimas notícias com os vínculos.
+  latest: 'news:latest',
+} as const;
+
 /** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */
 export const PORTFOLIO_CHANNELS = {
   list: 'portfolios:list',
@@ -169,6 +179,7 @@ export type ClientAuthError =
   | CalendarErrorCode
   | CatalogErrorCode
   | FundamentalsErrorCode
+  | NewsErrorCode
   | PortfolioErrorCode
   | TaskErrorCode
   | 'server_unavailable'

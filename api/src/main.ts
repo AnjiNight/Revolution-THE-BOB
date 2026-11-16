@@ -42,6 +42,12 @@ import { B3IndexHttpSource } from './modules/market-data/infrastructure/b3-index
 import { BcbSgsSource } from './modules/market-data/infrastructure/bcb-sgs-source.js';
 import { Investidor10HttpSource } from './modules/market-data/infrastructure/investidor10-source.js';
 import { PrismaEventRepository } from './modules/market-data/infrastructure/prisma-event-repository.js';
+import { NewsCollection, type RunSummary } from './modules/news/application/news-collection.js';
+import { NewsLinker } from './modules/news/application/news-linker.js';
+import { NewsSourcesService } from './modules/news/application/news-sources-service.js';
+import { HttpFeedFetcher } from './modules/news/infrastructure/http-feed-fetcher.js';
+import { Investidor10NewsHttpSource } from './modules/news/infrastructure/investidor10-news-source.js';
+import { PrismaNewsRepository } from './modules/news/infrastructure/prisma-news-repository.js';
 import { PrismaFundamentalsRepository } from './modules/market-data/infrastructure/prisma-fundamentals-repository.js';
 import { BrapiLogoSource } from './modules/market-data/infrastructure/brapi-logo-source.js';
 import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
@@ -169,6 +175,19 @@ async function main(): Promise<void> {
     classifications,
     suggestions,
   });
+  // SPEC-027: notícias da fonte pai (Investidor10, com o interruptor) e das fontes curadas (RSS).
+  const newsRepo = new PrismaNewsRepository(prisma);
+  const feedFetcher = new HttpFeedFetcher();
+  // SPEC-028: vínculo notícia–ativo, depois de cada coleta e a cada 30 minutos.
+  const newsLinker = new NewsLinker({ news: newsRepo });
+  const news = new NewsCollection({
+    parentEnabled: config.investidor10.enabled,
+    parent: new Investidor10NewsHttpSource({ baseUrl: config.investidor10.baseUrl }),
+    feeds: feedFetcher,
+    news: newsRepo,
+    runs,
+    linker: newsLinker,
+  });
 
   // SPEC-011: o registro das execuções, os pedidos de "Executar agora" e o sinal de vida.
   const taskMonitor = new PrismaTaskMonitorRepository(prisma);
@@ -261,6 +280,11 @@ async function main(): Promise<void> {
         monitor: taskMonitor,
         investidor10Enabled: config.investidor10.enabled,
       }),
+      newsSources: new NewsSourcesService({
+        news: newsRepo,
+        feeds: feedFetcher,
+        parentEnabled: config.investidor10.enabled,
+      }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -275,41 +299,61 @@ async function main(): Promise<void> {
     if (interrupted > 0)
       logger.warn({ interrupted }, 'execuções interrompidas fechadas como falha');
 
+    // O número que vai para o log do processador: os registros; nas notícias, as que chegaram.
+    const records = async (run: Promise<RunResult | null>) => (await run)?.records ?? 0;
+    const collected = async (run: Promise<RunSummary | null>) => (await run)?.collected ?? 0;
+
     // Cada tarefa de ingestão: o que roda no horário e o que o "Executar agora" faz (SPEC-011 §4.2).
     const ingestion: Record<
       IngestionTaskCode,
-      {
-        name: string;
-        run: () => Promise<RunResult | null>;
-        runNow?: () => Promise<RunResult | null>;
-      }
+      { name: string; run: () => Promise<number>; runNow?: () => Promise<number> }
     > = {
-      calendario_b3: { name: 'calendário pelos arquivos da B3', run: () => calendarImport.run() },
-      historico_retroativo: { name: 'histórico retroativo', run: () => history.loadRetroactive() },
-      fechamento_diario: { name: 'fechamento diário', run: () => history.updateDaily() },
-      importacao_catalogo: { name: 'importação do catálogo', run: () => catalogImport.run() },
-      cdi_diario: { name: 'CDI', run: () => cdi.run() },
-      indices_b3: { name: 'índices da B3', run: () => marketIndexIngestion.run() },
+      calendario_b3: {
+        name: 'calendário pelos arquivos da B3',
+        run: () => records(calendarImport.run()),
+      },
+      historico_retroativo: {
+        name: 'histórico retroativo',
+        run: () => records(history.loadRetroactive()),
+      },
+      fechamento_diario: { name: 'fechamento diário', run: () => records(history.updateDaily()) },
+      importacao_catalogo: {
+        name: 'importação do catálogo',
+        run: () => records(catalogImport.run()),
+      },
+      cdi_diario: { name: 'CDI', run: () => records(cdi.run()) },
+      indices_b3: { name: 'índices da B3', run: () => records(marketIndexIngestion.run()) },
       // SPEC-041: no domingo, todos; nos outros dias, só os nunca visitados. Desligado sem a
       // autorização. "Executar agora": os nunca visitados e os que deram erro.
       investidor10: {
         name: 'indicadores e proventos (Investidor10)',
-        run: () => investidor10.scheduled(),
-        runNow: () => investidor10.run('retry'),
+        run: () => records(investidor10.scheduled()),
+        runNow: () => records(investidor10.run('retry')),
       },
       // SPEC-042: no domingo, ou se nunca rodou. "Executar agora": roda já.
       eventos_b3: {
         name: 'eventos corporativos (B3)',
-        run: () => b3Events.scheduled(),
-        runNow: () => b3Events.run(),
+        run: () => records(b3Events.scheduled()),
+        runNow: () => records(b3Events.run()),
       },
       // SPEC-009: confere a cada 5 minutos se chegou a vez da coleta. "Executar agora": coleta já,
       // só no horário do pregão e com a regra da cota.
       cotacao_pregao: {
         name: 'cotações do pregão',
-        run: () => intraday.collect(),
-        runNow: () => intraday.collect({ force: true }),
+        run: () => records(intraday.collect()),
+        runNow: () => records(intraday.collect({ force: true })),
       },
+      // SPEC-027: notícias novas e feeds a cada 30 minutos; o arquivo do Investidor10 aos poucos
+      // (cerca de 30 minutos de páginas por vez), na mesma fila de uma página a cada 3 segundos.
+      noticias_novas: {
+        name: 'notícias novas (Investidor10)',
+        run: () => collected(news.latest()),
+      },
+      noticias_arquivo: {
+        name: 'arquivo de notícias (Investidor10)',
+        run: () => collected(news.archive()),
+      },
+      noticias_feeds: { name: 'notícias das fontes curadas', run: () => collected(news.feeds()) },
     };
     const worker = startWorker({
       logger,
@@ -335,16 +379,21 @@ async function main(): Promise<void> {
             ),
         },
       ],
-      scheduledTasks: INGESTION_TASKS.map((task) => {
-        const entry = ingestion[task];
-        return {
-          key: task,
-          name: entry.name,
-          run: async () => (await entry.run())?.records ?? 0,
-          runNow: async () => (await (entry.runNow ?? entry.run)())?.records ?? 0,
-          ...workerTiming(INGESTION_SCHEDULE[task].schedule),
-        };
-      }),
+      scheduledTasks: [
+        ...INGESTION_TASKS.map((task) => {
+          const entry = ingestion[task];
+          return {
+            key: task,
+            name: entry.name,
+            run: entry.run,
+            runNow: entry.runNow ?? entry.run,
+            ...workerTiming(INGESTION_SCHEDULE[task].schedule),
+          };
+        }),
+        // SPEC-028: as notícias sem vínculo (o arquivo, as atualizadas, outra versão da regra). Não
+        // é tarefa de ingestão: não grava execução nem aparece na tela Tarefas.
+        { name: 'vínculo notícia–ativo', run: () => newsLinker.run(), everyMinutes: 30 },
+      ],
     });
     shutdown = async () => {
       worker.stop();

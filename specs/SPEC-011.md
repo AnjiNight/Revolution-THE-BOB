@@ -180,6 +180,7 @@ A migração tem `down.sql` (RNF17) e passa no `npm run db:check`. No `modelo_do
 | Início do colaborador | "Tarefas de dados" entra em "Disponível agora", e o bloco "O que vem por aí" do colaborador sai (ele só tinha o acompanhamento da coleta) |
 | Testes | Os ids das execuções falsas (`InMemoryTaskRuns`) viraram UUID, porque a rota dos erros confere o formato |
 | Pré-visualização | A ponte falsa (`app/.previa`, fora do Git) ganhou as tarefas: `?processor=stopped` e `?processor=never`, e o "Executar agora" passa por pedido enviado, em andamento e terminada (a cotação do pregão termina em "nada a fazer") |
+| Junção com a SPEC-027 (16/11/2026) | A coleta de notícias da Nicoly grava no mesmo registro de execuções, com 3 tarefas (`noticias_novas`, `noticias_arquivo` e `noticias_feeds`): elas entram na lista, que passa a ter **12 tarefas**, com a fonte `feeds` (os RSS das fontes curadas), a cada 30 ou 35 minutos, e o "Executar agora" faz o que elas fariam no horário. As duas do Investidor10 ficam bloqueadas com a coleta desligada, como a dos indicadores. No arquivo de notícias, o total `missing` aparece como "Faltando no arquivo". O vínculo notícia–ativo (SPEC-028) não grava execução e fica de fora. Depois da junção, 1.129 testes passando |
 
 | Critério | Resultado |
 |---|---|

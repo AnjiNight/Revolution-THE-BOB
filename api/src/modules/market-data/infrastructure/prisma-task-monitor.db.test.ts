@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { INGESTION_TASKS } from '@simulador/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
 import { uniqueTicker } from '../../../testing/unique-ticker.js';
@@ -77,7 +78,7 @@ describe.skipIf(!url)('monitoramento das tarefas no PostgreSQL (SPEC-011)', () =
     });
     await runs.start('cdi_diario', new Date('2026-11-16T21:00:00Z'));
     const latest = await monitor.latestRuns();
-    expect(latest.size).toBe(9);
+    expect(latest.size).toBe(INGESTION_TASKS.length); // 12, com as 3 de notícias (SPEC-027)
     expect(latest.get('cdi_diario')).toEqual({
       finished: {
         id: last,

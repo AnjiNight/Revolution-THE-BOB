@@ -6,4 +6,5 @@ export * from './fundamentals.js';
 export * from './health.js';
 export * from './indexes.js';
 export * from './portfolios.js';
+export * from './news.js';
 export * from './tasks.js';

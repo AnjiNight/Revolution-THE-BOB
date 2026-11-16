@@ -138,8 +138,11 @@ export class TaskMonitorService {
     return task;
   }
 
+  /** Sem a autorização, nada que venha do Investidor10 roda: indicadores e notícias (SPEC-027). */
   private disabled(task: IngestionTaskCode): boolean {
-    return task === 'investidor10' && !this.deps.investidor10Enabled;
+    return (
+      !this.deps.investidor10Enabled && INGESTION_SCHEDULE[task].sources.includes('investidor10')
+    );
   }
 }
 
