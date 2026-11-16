@@ -23,6 +23,7 @@ import {
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatDate } from '../format';
 import { isTermsOutdated, TermsUpdateNotice } from './Profile';
 
@@ -331,6 +332,7 @@ function CdiStatusPanel() {
 /** SPEC-012 (§4.2): o atalho "Criar carteira" enquanto a pessoa ainda não tem nenhuma. */
 function FirstPortfolio({ onCreate }: { onCreate: () => void }) {
   const { t } = useTranslation();
+  const needs = useNeedsConnection();
   const [empty, setEmpty] = useState(false);
 
   useEffect(() => {
@@ -347,7 +349,12 @@ function FirstPortfolio({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="first-portfolio" role="status">
       <p>{t('home.firstPortfolio.text')}</p>
-      <button type="button" className="pill pill-primary pill-small" onClick={onCreate}>
+      <button
+        type="button"
+        className="pill pill-primary pill-small"
+        onClick={onCreate}
+        {...needs.props}
+      >
         {t('home.firstPortfolio.create')}
         <span className="pill-icon" aria-hidden="true">
           <Plus weight="bold" />

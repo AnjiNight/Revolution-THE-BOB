@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Só as actions da CI: abre um PR na development quando sai uma versão nova delas (foi assim que
+  # o checkout e o setup-node ficaram na v4, com o aviso do Node 20 descontinuado). Os pacotes do
+  # npm ficam de fora por enquanto: muitos PRs e o package-lock do npm 11.
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: development
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

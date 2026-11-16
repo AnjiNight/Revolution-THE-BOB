@@ -27,6 +27,8 @@ Alternativa 3.
 
 A alternativa 2 fica como evolução: uma fila local de comandos pendentes, reenviados e validados pelo servidor ao reconectar.
 
+> **Atualização ([SPEC-032](../specs/SPEC-032.md), 16/11/2026):** o cache local guarda **o que foi aberto neste computador** (carteiras, caixa e extrato, posições, rentabilidade, comparação, ficha, gráfico, indicadores, proventos, logos e perfil), em arquivos **cifrados pelo cofre do SO**, no processo principal; sem cofre, só na memória. A sincronização incremental é **por resposta, com ETag**: o servidor manda a impressão digital do corpo de cada leitura, e o app pergunta "mudou?" com ela; se não mudou, a resposta é 304 sem corpo. O modo consulta abre com o servidor inalcançável (sem rede, tempo esgotado, 502, 503 ou 504), só para a conta de usuário e só se a sessão foi renovada há menos de 30 dias (a validade do token de renovação). A cópia é apagada no logout, na sessão recusada, na exclusão da conta e quando outra pessoa entra. O RF37 foi reescrito (requisitos 1.13): não há lançamento pendente; a fila continua como evolução.
+
 ## Consequências
 
 - (+) Atende QA03 e QA04 sem abrir mão do servidor como fonte da verdade.

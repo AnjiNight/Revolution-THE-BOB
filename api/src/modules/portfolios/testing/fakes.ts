@@ -7,6 +7,7 @@ import type {
   MarketQuote,
   NewStoredCashEntry,
   NewStoredPortfolio,
+  NewStoredPortfolioCopy,
   NewStoredReversal,
   NewStoredTrade,
   PortfolioLedger,
@@ -14,10 +15,11 @@ import type {
   PortfolioRepository,
   StoredCashEntry,
   StoredPortfolio,
+  StoredPortfolioCopy,
   StoredReversal,
   StoredTrade,
 } from '../application/ports.js';
-import { PortfolioNameInUseError } from '../domain/errors.js';
+import { PortfolioNameInUseError, PortfolioNotFoundError } from '../domain/errors.js';
 
 /**
  * Livro-razão da carteira em memória (SPECs 013 e 014). A trava é uma fila por carteira: cada
@@ -269,11 +271,57 @@ export class InMemoryPortfolioRepository implements PortfolioRepository {
       startDate: portfolio.startDate,
       createdAt: portfolio.at,
       updatedAt: portfolio.at,
+      copiedFromId: null,
     };
     this.portfolios.set(stored.id, stored);
     if (portfolio.initialDeposit) this.ledger.add(stored.id, portfolio.initialDeposit);
     const { nameKey: _key, ...result } = stored;
     return Promise.resolve({ ...result });
+  }
+
+  /** SPEC-023: a cópia, como o PostgreSQL faz (mesmo dono, tipo e início; lançamentos com ids novos). */
+  async copyLocked(
+    sourceId: string,
+    decide: (current: PortfolioLedger, count: number) => NewStoredPortfolioCopy,
+  ): Promise<StoredPortfolioCopy> {
+    const source = this.portfolios.get(sourceId);
+    if (!source) throw new PortfolioNotFoundError();
+    const copy = decide(await this.ledger.ledger(sourceId), await this.countByUser(source.userId));
+    if (this.taken(source.userId, copy.nameKey)) throw new PortfolioNameInUseError();
+    const stored = {
+      id: randomUUID(),
+      userId: source.userId,
+      name: copy.name,
+      nameKey: copy.nameKey,
+      type: source.type,
+      startDate: source.startDate,
+      createdAt: copy.at,
+      updatedAt: copy.at,
+      copiedFromId: sourceId,
+    };
+    this.portfolios.set(stored.id, stored);
+    for (const entry of copy.cash) this.ledger.add(stored.id, entry);
+    for (const trade of copy.trades) {
+      this.ledger.trades.push({ id: randomUUID(), portfolioId: stored.id, ...trade });
+    }
+    const { nameKey: _key, ...portfolio } = stored;
+    return {
+      portfolio: { ...portfolio },
+      copied: { cashEntries: copy.cash.length, trades: copy.trades.length },
+    };
+  }
+
+  namesOf(ids: readonly string[]): Promise<Map<string, string>> {
+    return Promise.resolve(
+      new Map(
+        ids
+          .map((id) => this.portfolios.get(id))
+          .filter(
+            (portfolio): portfolio is NonNullable<typeof portfolio> => portfolio !== undefined,
+          )
+          .map((portfolio) => [portfolio.id, portfolio.name]),
+      ),
+    );
   }
 
   rename(id: string, name: string, nameKey: string, at: Date): Promise<StoredPortfolio> {

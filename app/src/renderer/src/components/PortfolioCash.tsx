@@ -15,6 +15,7 @@ import { ArrowDown, ArrowUp, Info } from '@phosphor-icons/react';
 import { Fragment, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatMoney } from '../format';
 import { MoneyField } from './MoneyField';
 import { TextField } from './TextField';
@@ -48,9 +49,12 @@ export function PortfolioCash({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const [state, setState] = useState<CashState>({ status: 'loading' });
   const [mode, setMode] = useState<CashEntryType | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // SPEC-032: sem conexão, a página seguinte do extrato pode não estar guardada.
+  const [moreMissing, setMoreMissing] = useState(false);
   // SPEC-015: o lançamento com a confirmação de estorno aberta e o botão que a abriu.
   const [reversing, setReversing] = useState<{ entry: CashEntry; opener: HTMLElement } | null>(
     null,
@@ -96,8 +100,11 @@ export function PortfolioCash({
     setLoadingMore(false);
     if (!result.ok) {
       if (result.error === 'unauthorized') return onSessionExpired();
+      // O que já está na tela continua; só a página seguinte é que não foi vista aqui.
+      if (result.error === 'not_saved_offline') return setMoreMissing(true);
       return setState({ status: 'failed', error: result.error });
     }
+    setMoreMissing(false);
     setState({
       status: 'ready',
       data: { ...result.data, entries: [...data.entries, ...result.data.entries] },
@@ -171,6 +178,7 @@ export function PortfolioCash({
                   setNotice(null);
                   setMode('deposit');
                 }}
+                {...needs.props}
               >
                 {t('portfolios.cash.deposit')}
                 <span className="pill-icon" aria-hidden="true">
@@ -185,6 +193,7 @@ export function PortfolioCash({
                   setNotice(null);
                   setMode('withdrawal');
                 }}
+                {...needs.props}
               >
                 {t('portfolios.cash.withdraw')}
                 <span className="pill-icon" aria-hidden="true">
@@ -323,6 +332,11 @@ export function PortfolioCash({
               {t('portfolios.cash.showMore')}
             </button>
           )}
+          {data.hasMore && moreMissing && (
+            <p className="field-hint" role="status">
+              {t('authErrors.not_saved_offline')}
+            </p>
+          )}
         </div>
       )}
     </section>
@@ -368,6 +382,7 @@ function StatementRow({
   reverseDisabled: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const describe = useDescribe();
   // Entra no caixa: aporte, venda e provento; sai: retirada e compra.
@@ -464,6 +479,7 @@ function StatementRow({
               description: describe(entry, live),
             })}
             onClick={(event) => onReverse(event.currentTarget)}
+            {...needs.props}
           >
             {t('portfolios.cash.reversal.reverse')}
           </button>
@@ -491,6 +507,7 @@ function ReversalConfirm({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const describe = useDescribe();
   const questionId = useId();
@@ -565,6 +582,7 @@ function ReversalConfirm({
           autoFocus
           disabled={saving}
           onClick={() => void confirm()}
+          {...needs.props}
         >
           {saving
             ? t('portfolios.cash.reversal.saving')
@@ -598,6 +616,7 @@ function CashEntryForm({
   const titleId = useId();
   const questionId = useId();
   const warningId = useId();
+  const needs = useNeedsConnection();
   // Decimal da API ("1234.56"): o campo de dinheiro já entrega assim.
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState('');
@@ -711,7 +730,7 @@ function CashEntryForm({
             </p>
           )}
           <div className="form-actions">
-            <button type="submit" className="pill pill-primary">
+            <button type="submit" className="pill pill-primary" {...needs.props}>
               {t('portfolios.cash.review')}
             </button>
             <button type="button" className="pill pill-ghost" onClick={onCancel}>
@@ -740,6 +759,7 @@ function CashEntryForm({
               autoFocus
               disabled={saving}
               onClick={() => void submit()}
+              {...needs.props}
             >
               {saving
                 ? t('portfolios.cash.saving')

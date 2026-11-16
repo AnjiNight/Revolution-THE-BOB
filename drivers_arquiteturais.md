@@ -296,7 +296,7 @@ Durante a análise foram encontradas divergências entre os documentos do projet
 | # | Divergência | Encaminhamento adotado na arquitetura |
 |---|---|---|
 | 1 | A **Visão de produto** coloca no MVP a *carteira real* + notícias + gráfico Notícias × Ativo, com a carteira virtual como "prioridade seguinte". Os **Requisitos** colocam a simulação como *Must* e notícias como *Could* | A arquitetura segue os Requisitos (simulação no núcleo) e deixa notícias e carteira real como módulos plugáveis |
-| 2 | **RNF14** fala em modo offline de *leitura*, mas **RF37** fala em *sincronizar dados pendentes* (o que implica escrita offline) | No MVP, offline é somente leitura; fila de lançamentos pendentes fica como evolução (ver [Arquitetura](arquitetura.md), DA08) |
+| 2 | **RNF14** fala em modo offline de *leitura*, mas **RF37** fala em *sincronizar dados pendentes* (o que implica escrita offline) | No MVP, offline é somente leitura; fila de lançamentos pendentes fica como evolução (ver [Arquitetura](arquitetura.md), DA08). **Resolvido na [SPEC-032](specs/SPEC-032.md) (16/11/2026):** RF37 reescrito na versão 1.13 dos requisitos ("atualizar os dados guardados, trazendo só o que mudou") |
 | 3 | A Visão fala em *IA conversacional* e *probabilidades de alta/queda*; os Requisitos só tratam de *classificação de sentimento* e *projeção* | IA entra como módulo isolado atrás de uma interface, fora do caminho crítico |
 | 4 | O modelo de domínio ainda não tem entidades citadas nas regras: `CalendarioPregao`, lançamento de caixa (aporte/retirada), estorno, assinatura/plano, fonte de notícia, execução de ingestão | Listadas na visão de dados do documento de arquitetura como entidades a incluir |
 

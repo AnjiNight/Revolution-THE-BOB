@@ -14,6 +14,7 @@ import {
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatMoney, quoteMoment } from '../format';
 import { AssetLogo } from './AssetLogo';
 import { MoneyField } from './MoneyField';
@@ -211,6 +212,7 @@ function TradeDetails({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const quantityId = useId();
   const questionId = useId();
@@ -580,7 +582,7 @@ function TradeDetails({
           <p className="field-hint trade-costs">{t('portfolios.trade.costs')}</p>
 
           <div className="form-actions">
-            <button type="submit" className="pill pill-primary">
+            <button type="submit" className="pill pill-primary" {...needs.props}>
               {t('portfolios.trade.review')}
             </button>
             <button type="button" className="pill pill-ghost" onClick={onCancel}>
@@ -621,6 +623,7 @@ function TradeDetails({
               autoFocus
               disabled={saving}
               onClick={() => void submit()}
+              {...needs.props}
             >
               {saving
                 ? t('portfolios.trade.saving')

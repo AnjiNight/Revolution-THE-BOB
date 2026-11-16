@@ -824,3 +824,16 @@
     transform: translateX(var(--shift)) rotate(var(--rot));
   }
 }
+
+/* SPEC-035: com a troca de idioma ao lado de "Entrar", a barra estreita mostra só a marca; o nome
+   do app continua para leitores de tela (como na barra das telas depois de entrar). */
+@media (max-width: 560px) {
+  .landing .island .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

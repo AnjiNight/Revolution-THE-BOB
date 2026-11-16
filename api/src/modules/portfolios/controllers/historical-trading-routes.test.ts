@@ -254,13 +254,13 @@ describe('compra e venda na carteira histórica (SPEC-016)', () => {
     expect(withoutQuote.json()).toMatchObject({ fields: { quotedAt: 'required' } });
   });
 
-  it('exportação com a negociação da histórica, sem horário de cotação, versão 6 (CA09)', async () => {
+  it('exportação com a negociação da histórica, sem horário de cotação, versão 7 (CA09)', async () => {
     await trade({ type: 'buy', assetId: PETR4, quantity: 10, date: '2019-03-15' });
     const exported = (await call('GET', PROFILE_PATHS.export)).json<{
       version: number;
       portfolios: Array<{ trades: unknown[] }>;
     }>();
-    expect(exported.version).toBe(6);
+    expect(exported.version).toBe(7);
     expect(exported.portfolios[0]?.trades).toEqual([
       expect.objectContaining({
         date: '2019-03-15',

@@ -9,6 +9,7 @@ import type {
   ComparisonQuery,
   PerformanceQuery,
   PortfolioComparison,
+  PortfolioCopyResult,
   PortfolioPerformance,
   PortfolioPositions,
   ReversalResult,
@@ -37,6 +38,7 @@ import type {
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  AppLanguage,
   AssetSearchQuery,
   AssetUpdateInput,
   AuthResult,
@@ -46,11 +48,14 @@ import type {
   ChangePasswordInput,
   ClientResult,
   ConfirmEmailChangeInput,
+  ConnectionEvent,
+  ReconnectResult,
   EmailConfirmationInput,
   EmailConfirmationResendInput,
   LoginInput,
   NewAssetInput,
   NewCashEntryInput,
+  NewPortfolioCopyInput,
   NewPortfolioInput,
   NewTradeInput,
   PasswordResetConfirmInput,
@@ -64,6 +69,21 @@ import type { ServerStatus } from '../shared/server-status.js';
 /** Funções que o processo principal expõe para a interface (window.api). */
 export interface DesktopApi {
   checkServerHealth(): Promise<ServerStatus>;
+  /** SPEC-035: avisa o processo principal do idioma da interface (ao abrir e a cada troca). */
+  setLanguage(language: AppLanguage): Promise<void>;
+  /** SPEC-032: modo consulta (sem conexão) e a volta da conexão. */
+  connection: {
+    status(): Promise<{ offline: boolean }>;
+    /** "Tentar agora": confere o servidor e, se ele responde, renova a sessão. */
+    retry(): Promise<ReconnectResult>;
+    /** Avisa quando o app entra ou sai do modo consulta; devolve a função que para de avisar. */
+    onChange(listener: (event: ConnectionEvent) => void): () => void;
+    /**
+     * Avisa a data de cada leitura que veio da cópia local (o `savedAt`), para a faixa do modo
+     * consulta mostrar a mais antiga da tela.
+     */
+    onSavedAt(listener: (savedAt: string) => void): () => void;
+  };
   auth: {
     getSession(): Promise<AuthResult>;
     /** SPEC-039: cria a conta pendente e manda o código; não abre sessão. */
@@ -137,6 +157,8 @@ export interface DesktopApi {
     performance(id: string, query: PerformanceQuery): Promise<ClientResult<PortfolioPerformance>>;
     /** SPEC-022: de 2 a 4 carteiras no mesmo período, na ordem escolhida. */
     comparison(query: ComparisonQuery): Promise<ClientResult<PortfolioComparison>>;
+    /** SPEC-023: nova carteira a partir desta; `copy_breaks_cash` traz em details a retirada. */
+    copy(id: string, input: NewPortfolioCopyInput): Promise<ClientResult<PortfolioCopyResult>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

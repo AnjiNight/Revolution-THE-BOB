@@ -144,3 +144,17 @@ export class PortfolioValidationError extends DomainError {
     super('dados inválidos');
   }
 }
+
+/**
+ * SPEC-023: só com os aportes e retiradas, uma retirada ficaria sem saldo (na original, o dinheiro
+ * veio de uma venda ou de um provento); `details` diz qual.
+ */
+export class CopyBreaksCashError extends DomainError {
+  readonly code = 'copy_breaks_cash';
+  override readonly details: Readonly<Record<string, string>>;
+
+  constructor(date: string, amount: string) {
+    super('a cópia deixaria o caixa negativo');
+    this.details = { date, amount };
+  }
+}

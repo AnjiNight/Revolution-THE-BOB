@@ -47,7 +47,7 @@ Esta Spec cobre os dados que existem hoje: conta, consentimentos, sessões e có
 - **Exclusão de conta de colaborador** pelo app: a conta é da equipe, e quem remove é a equipe (comando no servidor, numa Spec futura).
 - **Prazo para desistir** da exclusão: ela é imediata (§4).
 - **Envio do arquivo por e-mail:** dados pessoais não circulam por e-mail.
-- **Limpeza do cache local:** o cache ainda não existe; chega com a SPEC-032, que entrega a sua parte.
+- **Limpeza do cache local:** o cache ainda não existe; chega com a SPEC-032, que entrega a sua parte. *(Entregue em 16/11/2026 pela [SPEC-032](SPEC-032.md): confirmar a exclusão apaga a cópia local junto com a sessão, e uma conta excluída em outro computador some deste na primeira conexão, no máximo 30 dias depois da última renovação. A cópia local não entra no arquivo "Baixar meus dados": é uma cópia do que já está no servidor.)*
 
 ## 4. Decisões tomadas nesta Spec
 

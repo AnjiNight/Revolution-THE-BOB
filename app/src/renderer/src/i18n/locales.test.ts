@@ -72,6 +72,8 @@ describe('arquivos de idioma (CA13)', () => {
       'calendar_not_published',
       'ticker_in_use',
       'asset_not_found',
+      // SPEC-032: leitura nunca aberta neste computador, sem conexão.
+      'not_saved_offline',
     ];
     const fieldErrors: FieldErrorCode[] = [
       'required',

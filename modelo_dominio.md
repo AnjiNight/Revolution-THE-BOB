@@ -50,6 +50,7 @@ Conjunto de posições de um usuário. Um usuário pode ter várias carteiras.
 | tipo | enum | `ao_vivo` ou `historica`, escolhido na criação e imutável (RB24, [DA17](adr/DA17-carteira-ao-vivo-e-historica.md)) |
 | inicio_em | date | Ao vivo: o dia da criação; histórica: o dia de pregão escolhido, desde 04/01/2016 |
 | criada_em | date | Data de criação |
+| origem_id | uuid | A carteira de que esta foi copiada, se foi ([SPEC-023](specs/SPEC-023.md)); sem chave estrangeira, para a cópia continuar sabendo que é cópia depois que a original é excluída |
 
 Não há saldo guardado na carteira: o caixa vem só dos aportes e retiradas (livro-razão, [DA09](adr/DA09-lancamentos-imutaveis.md); OPEN-11 decidida na SPEC-012).
 
@@ -79,7 +80,7 @@ Operação de compra ou venda registrada em uma carteira sobre um ativo ([SPEC-0
 | fonte_cotacao | enum | Fonte da cotação (`brapi`) |
 
 ### SIMULACAO
-Projeção gerada a partir de uma carteira.
+Projeção gerada a partir de uma carteira: é a dos cenários por sentimento (SPEC-031). O "cenário" das personas é uma CARTEIRA ([SPEC-022](specs/SPEC-022.md)), e "salvar e recuperar simulações" (RF20) é copiar uma carteira em outra ([SPEC-023](specs/SPEC-023.md)).
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
@@ -158,6 +159,7 @@ Série histórica do índice: o fechamento de cada pregão, como a B3 publica.
 | CARTEIRA | 1 : N | LANCAMENTO_CAIXA | registra |
 | CARTEIRA | 1 : N | TRANSACAO | registra |
 | CARTEIRA | 1 : N | SIMULACAO | origina |
+| CARTEIRA | 0..1 : N | CARTEIRA | origina cópia ([SPEC-023](specs/SPEC-023.md)) |
 | ATIVO | 1 : N | TRANSACAO | movimenta |
 | ATIVO | 1 : N | COTACAO | possui |
 | ATIVO | N : 1 | INDEXADOR | indexado_por *(fase de renda fixa)* |

@@ -235,6 +235,45 @@ button.pill {
   height: 1.9rem;
 }
 
+/* ---------- Troca de idioma (SPEC-035) ---------- */
+
+/* O globo e o nome do outro idioma, ao lado de "Entrar" e no rodapé das telas. */
+.island-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.island-actions .pill {
+  white-space: nowrap;
+}
+
+button.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.6rem;
+  margin-top: 0;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+button.language-switch:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+button.language-switch svg {
+  flex-shrink: 0;
+  font-size: 1.05rem;
+}
+
 /* ---------- Cartões com moldura dupla (casca + núcleo) ---------- */
 
 .bezel {

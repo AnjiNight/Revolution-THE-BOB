@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
+import { uniqueTicker } from '../../../testing/unique-ticker.js';
 import { PrismaClassificationRepository } from './prisma-classification-repository.js';
 
 /**
@@ -17,9 +17,6 @@ describe.skipIf(!url)('classificação setorial no PostgreSQL', () => {
   let fiiId: string;
   let reviewedId: string;
 
-  /** Ticker que não existe no banco ("Q" + 3 dígitos + o final da classe). */
-  const ticker = (end: string) => `Q${randomUUID().replace(/\D/g, '').slice(0, 3)}${end}`;
-
   beforeAll(() => {
     prisma = createPrismaClient(url as string);
     repo = new PrismaClassificationRepository(prisma);
@@ -31,10 +28,11 @@ describe.skipIf(!url)('classificação setorial no PostgreSQL', () => {
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe('TRUNCATE TABLE classificacao_b3');
-    const asset = (classe: 'acao' | 'fii', setor: string, reviewed: boolean) =>
+    // Ticker que não existe no banco ("Q" + 3 sorteados + o final da classe).
+    const asset = async (classe: 'acao' | 'fii', setor: string, reviewed: boolean) =>
       prisma.ativo.create({
         data: {
-          ticker: ticker(classe === 'fii' ? '11' : '3'),
+          ticker: await uniqueTicker(prisma, 'Q', classe === 'fii' ? '11' : '3'),
           nome: 'Teste',
           classe,
           setor,

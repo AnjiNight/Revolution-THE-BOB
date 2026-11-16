@@ -19,6 +19,8 @@ export const PORTFOLIO_PATHS = {
   performance: '/api/portfolios/:id/performance',
   /** SPEC-022: o caminho fixo tem preferência sobre `item` no roteador. */
   comparison: '/api/portfolios/comparison',
+  /** SPEC-023: nova carteira a partir desta. */
+  copies: '/api/portfolios/:id/copies',
 } as const;
 
 export function portfolioPath(id: string): string {
@@ -53,6 +55,17 @@ export interface Portfolio {
   /** ISO 8601. */
   createdAt: string;
   updatedAt: string;
+  /**
+   * SPEC-023: a carteira de que esta foi copiada, ou `null`. `name` nulo quando a original já foi
+   * excluída.
+   */
+  copiedFrom: PortfolioOrigin | null;
+}
+
+/** SPEC-023: de qual carteira a cópia nasceu. */
+export interface PortfolioOrigin {
+  id: string;
+  name: string | null;
 }
 
 /** Corpo de `GET /api/portfolios`: da mais recente para a mais antiga. */
@@ -98,7 +111,9 @@ export type PortfolioErrorCode =
   | 'reversal_breaks_position'
   // SPEC-016
   | 'no_close_that_day'
-  | 'history_pending';
+  | 'history_pending'
+  // SPEC-023
+  | 'copy_breaks_cash';
 
 // --- Caixa (SPEC-013) ---
 
@@ -887,4 +902,76 @@ export function validateComparisonQuery(input: unknown): ValidationResult<Compar
   Object.assign(fields, period.fields);
   if (Object.keys(fields).length > 0 || !period.query) return { success: false, fields };
   return { success: true, data: { ids: ids as string[], ...period.query } };
+}
+
+// --- Nova carteira a partir de outra (SPEC-023) ---
+
+/** O que copiar: tudo (aportes, retiradas, compras e vendas) ou só o dinheiro (aportes e retiradas). */
+export const COPY_SCOPES = ['all', 'cash'] as const;
+export type CopyScope = (typeof COPY_SCOPES)[number];
+
+export interface NewPortfolioCopyInput {
+  name: string;
+  scope: CopyScope;
+  /** Só na carteira histórica: entram só os lançamentos até esse dia, inclusive. */
+  until?: IsoDate;
+}
+
+/** Corpo do 201 de `POST /api/portfolios/:id/copies`. */
+export interface PortfolioCopyResult {
+  portfolio: Portfolio;
+  /** Quantos lançamentos entraram na cópia. */
+  copied: { cashEntries: number; trades: number };
+}
+
+/** `copy_breaks_cash`: a primeira retirada que ficaria sem saldo só com os aportes e retiradas. */
+export interface CopyBreaksCashDetails {
+  date: IsoDate;
+  amount: string;
+}
+
+/**
+ * Valida a cópia (SPEC-023 §4.2). `until` é conferido aqui só no formato: "antes do início",
+ * "hoje ou depois" e "não na ao vivo" dependem da carteira original e de hoje em Brasília, e ficam
+ * com o servidor.
+ */
+export function validateNewPortfolioCopy(input: unknown): ValidationResult<NewPortfolioCopyInput> {
+  const raw = asRecord(input);
+  const fields: FieldErrors = {};
+  const name = nameError(raw.name);
+  if (name) fields.name = name;
+  const scope = raw.scope;
+  if (scope !== 'all' && scope !== 'cash') fields.scope = 'invalid_option';
+  let until: IsoDate | undefined;
+  const rawUntil = raw.until;
+  if (rawUntil !== undefined && rawUntil !== null && rawUntil !== '') {
+    if (typeof rawUntil !== 'string' || !isIsoDate(rawUntil.trim())) fields.until = 'invalid_date';
+    else until = rawUntil.trim();
+  }
+  if (Object.keys(fields).length > 0) return { success: false, fields };
+  return {
+    success: true,
+    data: {
+      name: normalizePortfolioName(raw.name as string),
+      scope: scope as CopyScope,
+      ...(until ? { until } : {}),
+    },
+  };
+}
+
+/**
+ * Nome sugerido para a cópia (SPEC-023 §4.2): "{nome} ({sufixo})" e, se já existe, "({sufixo} 2)",
+ * "({sufixo} 3)"…, com o nome da original cortado para caber em `PORTFOLIO_NAME_MAX`. `taken` são
+ * os nomes que o usuário já tem (comparados sem maiúsculas nem acentos).
+ */
+export function suggestCopyName(name: string, taken: readonly string[], suffix: string): string {
+  const keys = new Set(taken.map(portfolioNameKey));
+  for (let n = 1; ; n += 1) {
+    const tail = ` (${n === 1 ? suffix : `${suffix} ${n}`})`;
+    const base = normalizePortfolioName(name)
+      .slice(0, PORTFOLIO_NAME_MAX - tail.length)
+      .trimEnd();
+    const candidate = `${base}${tail}`;
+    if (!keys.has(portfolioNameKey(candidate))) return candidate;
+  }
 }

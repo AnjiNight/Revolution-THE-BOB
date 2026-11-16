@@ -1,6 +1,12 @@
 import { join } from 'node:path';
 import type { PersonalDataExport } from '@simulador/shared';
-import type { ClientResult } from '../shared/auth-ipc.js';
+import type { AppLanguage, ClientResult } from '../shared/auth-ipc.js';
+
+/** SPEC-035: o nome sugerido do arquivo segue o idioma do app; o conteúdo é o mesmo. */
+const FILE_PREFIX: Record<AppLanguage, string> = {
+  'pt-BR': 'simulador-meus-dados',
+  en: 'investment-simulator-my-data',
+};
 
 /** Onde e como salvar o arquivo. No app, a janela "Salvar como" do Electron e o disco. */
 export interface SaveTarget {
@@ -17,12 +23,13 @@ export async function saveDataExport(
   fetchExport: () => Promise<ClientResult<PersonalDataExport>>,
   target: SaveTarget,
   downloadsDir: string,
+  language: AppLanguage = 'pt-BR',
 ): Promise<ClientResult<{ saved: boolean }>> {
   const result = await fetchExport();
   if (!result.ok) return result;
 
   const day = result.data.exportedAt.slice(0, 10);
-  const path = await target.chooseFile(join(downloadsDir, `simulador-meus-dados-${day}.json`));
+  const path = await target.chooseFile(join(downloadsDir, `${FILE_PREFIX[language]}-${day}.json`));
   if (!path) return { ok: true, data: { saved: false } };
 
   try {

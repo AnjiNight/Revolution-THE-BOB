@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import { createPkcePair, GoogleOAuthClient } from './google-oauth.js';
+import { callbackPage, createPkcePair, GoogleOAuthClient } from './google-oauth.js';
 
 const config = { clientId: 'app.apps.googleusercontent.com', clientSecret: 'nao-e-segredo' };
 
@@ -106,5 +106,44 @@ describe('GoogleOAuthClient (DA24)', () => {
       fetchFn: fetchFn as unknown as typeof fetch,
     });
     await expect(client.signIn()).resolves.toEqual({ ok: false, error: 'server_unavailable' });
+  });
+});
+
+describe('página do navegador no fim do login (SPEC-035 CA04)', () => {
+  it('segue o idioma do app', () => {
+    expect(callbackPage('pt-BR', true)).toContain('<html lang="pt-BR">');
+    expect(callbackPage('pt-BR', true)).toContain(
+      'Você já pode fechar esta aba e voltar ao Simulador de Investimentos.',
+    );
+    expect(callbackPage('en', true)).toContain('<html lang="en">');
+    expect(callbackPage('en', true)).toContain(
+      'You can close this tab and go back to Investment Simulator.',
+    );
+    expect(callbackPage('pt-BR', false)).toBe('Requisição inválida.');
+    expect(callbackPage('en', false)).toBe('Invalid request.');
+  });
+
+  it('o navegador recebe a página no idioma de agora', async () => {
+    const pages: Array<Promise<string>> = [];
+    const openExternal = vi.fn(async (raw: string) => {
+      const url = new URL(raw);
+      const callback = new URL(url.searchParams.get('redirect_uri') ?? '');
+      callback.search = new URLSearchParams({
+        code: 'c',
+        state: url.searchParams.get('state') ?? '',
+      }).toString();
+      pages.push(
+        new Promise((resolve) =>
+          setTimeout(() => resolve(fetch(callback).then((response) => response.text())), 5),
+        ),
+      );
+    });
+    const client = new GoogleOAuthClient(config, {
+      openExternal,
+      fetchFn: fakeTokenEndpoint().fetchFn,
+      language: () => 'en',
+    });
+    await expect(client.signIn()).resolves.toMatchObject({ ok: true });
+    await expect(pages[0]).resolves.toContain('Done!');
   });
 });

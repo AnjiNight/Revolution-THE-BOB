@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import type { AppLanguage } from '../shared/auth-ipc.js';
 
 /**
  * Login com Google no app desktop (DA24): OAuth 2.0 com PKCE e redirecionamento para um
@@ -22,16 +23,38 @@ export interface GoogleOAuthDeps {
   fetchFn?: typeof fetch;
   /** Tempo máximo esperando a pessoa concluir o login no navegador. */
   timeoutMs?: number;
+  /** SPEC-035: o idioma do app, para a página que o navegador mostra no fim (padrão: português). */
+  language?: () => AppLanguage;
 }
 
 export type GoogleOAuthResult =
   { ok: true; idToken: string } | { ok: false; error: 'google_cancelled' | 'server_unavailable' };
 
-const DONE_PAGE = `<!doctype html><html lang="pt-BR"><meta charset="utf-8">
-<title>Simulador de Investimentos</title>
+const CALLBACK_TEXTS = {
+  'pt-BR': {
+    title: 'Simulador de Investimentos',
+    done: 'Pronto!',
+    close: 'Você já pode fechar esta aba e voltar ao Simulador de Investimentos.',
+    invalid: 'Requisição inválida.',
+  },
+  en: {
+    title: 'Investment Simulator',
+    done: 'Done!',
+    close: 'You can close this tab and go back to Investment Simulator.',
+    invalid: 'Invalid request.',
+  },
+} as const;
+
+/** A página que o navegador mostra depois do login com Google, no idioma do app (SPEC-035). */
+export function callbackPage(language: AppLanguage, ok: boolean): string {
+  const text = CALLBACK_TEXTS[language];
+  if (!ok) return text.invalid;
+  return `<!doctype html><html lang="${language}"><meta charset="utf-8">
+<title>${text.title}</title>
 <body style="font-family:system-ui;max-width:32rem;margin:4rem auto;text-align:center">
-<h1>Pronto!</h1><p>Você já pode fechar esta aba e voltar ao Simulador de Investimentos.</p>
+<h1>${text.done}</h1><p>${text.close}</p>
 </body></html>`;
+}
 
 export function base64url(bytes: Buffer): string {
   return bytes.toString('base64url');
@@ -128,7 +151,7 @@ export class GoogleOAuthClient {
         const ok = url.searchParams.get('state') === expectedState;
         const received = ok ? url.searchParams.get('code') : null;
         response.writeHead(ok ? 200 : 400, { 'content-type': 'text/html; charset=utf-8' });
-        response.end(ok ? DONE_PAGE : 'Requisição inválida.');
+        response.end(callbackPage(this.deps.language?.() ?? 'pt-BR', ok));
         done(received);
       });
 

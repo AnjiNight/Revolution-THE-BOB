@@ -2,11 +2,26 @@ import type { PublicUser } from '@simulador/shared';
 import { ChartLineUp, SignOut } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { ReconnectResult } from '../../../shared/auth-ipc';
+import { stopDisabledClick } from '../connection';
 import { initials } from '../format';
 import '../shell.css';
+import { LanguageSwitch } from './LanguageSwitch';
+import { OfflineBanner } from './OfflineBanner';
 import { ServerStatusPanel } from './ServerStatusPanel';
 
+/** SPEC-032: a situação da conexão que a moldura mostra. */
+export interface ShellConnection {
+  offline: boolean;
+  /** A data da leitura guardada mais antiga da tela atual. */
+  dataFrom: string | null;
+  /** A conexão acabou de voltar: mostra o aviso por alguns segundos. */
+  reconnected: boolean;
+  onRetry: () => Promise<ReconnectResult>;
+}
+
 interface AppShellProps {
+  connection?: ShellConnection;
   user: PublicUser;
   current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'news';
   onHome: () => void;
@@ -29,6 +44,7 @@ interface AppShellProps {
  * botão Sair, e a situação do servidor no rodapé.
  */
 export function AppShell({
+  connection,
   user,
   current,
   onHome,
@@ -120,13 +136,39 @@ export function AppShell({
         </nav>
       </header>
 
-      <main id="conteudo" className="shell-main" tabIndex={-1}>
+      <main
+        id="conteudo"
+        className="shell-main"
+        tabIndex={-1}
+        // SPEC-032: no modo consulta, nenhum botão de escrita faz nada.
+        {...(connection?.offline ? { onClickCapture: stopDisabledClick } : {})}
+      >
+        {/* SPEC-032: anunciado uma vez a cada mudança, também para o leitor de tela. */}
+        <p className="visually-hidden" role="status">
+          {connection?.offline
+            ? t('offline.announce')
+            : connection?.reconnected
+              ? t('offline.back')
+              : ''}
+        </p>
+        {connection?.offline && (
+          <OfflineBanner dataFrom={connection.dataFrom} onRetry={connection.onRetry} />
+        )}
+        {connection && !connection.offline && connection.reconnected && (
+          <p className="connection-back" aria-hidden="true">
+            {t('offline.back')}
+          </p>
+        )}
         {children}
       </main>
 
       <footer className="shell-footer">
         <div className="status-dock">
           <ServerStatusPanel />
+        </div>
+        {/* SPEC-035: em todas as telas; na barra do topo não cabe a 480 px. */}
+        <div className="footer-language">
+          <LanguageSwitch />
         </div>
         <p className="disclaimer">{t('disclaimer')}</p>
       </footer>

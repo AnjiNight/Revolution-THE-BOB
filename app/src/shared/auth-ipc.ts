@@ -125,7 +125,44 @@ export const PORTFOLIO_CHANNELS = {
   performance: 'portfolios:performance',
   // SPEC-022: comparação de 2 a 4 carteiras.
   comparison: 'portfolios:comparison',
+  // SPEC-023: nova carteira a partir de outra.
+  copy: 'portfolios:copy',
 } as const;
+
+/** SPEC-035: os idiomas do app. */
+export type AppLanguage = 'pt-BR' | 'en';
+
+export function isAppLanguage(value: unknown): value is AppLanguage {
+  return value === 'pt-BR' || value === 'en';
+}
+
+/**
+ * SPEC-035: a interface avisa o processo principal do idioma, ao abrir e a cada troca, para o que
+ * ele mesmo escreve (a página do login com Google e o nome do arquivo "Baixar meus dados").
+ */
+export const APP_CHANNELS = {
+  setLanguage: 'app:set-language',
+} as const;
+
+/**
+ * SPEC-032: a situação da conexão. A interface pergunta (`status`), pede uma conferência agora
+ * (`retry`) e é avisada quando muda (`changed`).
+ */
+export const CONNECTION_CHANNELS = {
+  status: 'connection:status',
+  retry: 'connection:retry',
+  changed: 'connection:changed',
+} as const;
+
+/**
+ * O que o processo principal avisa: entrou em modo consulta; a conexão voltou (com o usuário
+ * atualizado); ou a sessão foi recusada na volta e a cópia local foi apagada.
+ */
+export type ConnectionEvent =
+  { status: 'offline' } | { status: 'online'; user: PublicUser } | { status: 'signed-out' };
+
+/** Resultado de uma conferência da conexão. */
+export type ReconnectResult = 'online' | 'offline' | 'signed-out';
 
 /** Erros que a interface sabe traduzir. */
 export type ClientAuthError =
@@ -138,18 +175,24 @@ export type ClientAuthError =
   | 'server_unavailable'
   | 'invalid_url'
   | 'unexpected'
-  | 'google_cancelled';
+  | 'google_cancelled'
+  /** SPEC-032: sem conexão, e esta leitura nunca foi aberta neste computador. */
+  | 'not_saved_offline';
 
 /** Dado do servidor para corrigir o pedido, como o saldo disponível (SPEC-013). */
 export type ErrorDetails = Readonly<Record<string, string>>;
 
+/** SPEC-032: `offline` quando o app abriu em modo consulta, com o usuário da cópia local. */
 export type AuthResult =
-  | { ok: true; user: PublicUser }
+  | { ok: true; user: PublicUser; offline?: true }
   | { ok: false; error: ClientAuthError; fields?: FieldErrors; details?: ErrorDetails };
 
-/** Resultado genérico das chamadas do perfil. */
+/**
+ * Resultado genérico das chamadas. SPEC-032: `savedAt` só quando o dado veio da cópia local, sem
+ * conexão: é o horário em que o servidor o confirmou pela última vez.
+ */
 export type ClientResult<T> =
-  | { ok: true; data: T }
+  | { ok: true; data: T; savedAt?: string }
   | { ok: false; error: ClientAuthError; fields?: FieldErrors; details?: ErrorDetails };
 
 export type {
