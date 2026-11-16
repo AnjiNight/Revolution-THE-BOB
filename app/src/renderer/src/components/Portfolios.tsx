@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
 import '../assets.css';
 import '../portfolios.css';
+import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatMoney } from '../format';
 import { MoneyField } from './MoneyField';
 import { PortfolioCash } from './PortfolioCash';
@@ -56,8 +57,10 @@ export function Portfolios({
   startCreating = false,
 }: PortfoliosProps) {
   const { t } = useTranslation();
+  const needs = useNeedsConnection();
   const [state, setState] = useState<ListState>({ status: 'loading' });
-  const [creating, setCreating] = useState(startCreating);
+  // SPEC-032: sem conexão, o atalho "Nova carteira" do Início não abre o formulário.
+  const [creating, setCreating] = useState(startCreating && !needs.offline);
   // SPEC-023: a carteira que está sendo copiada, com o formulário no lugar do de nova carteira.
   const [copying, setCopying] = useState<Portfolio | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -136,6 +139,7 @@ export function Portfolios({
                 setNotice(null);
                 setCreating(true);
               }}
+              {...needs.props}
             >
               {t('portfolios.new')}
               <span className="pill-icon" aria-hidden="true">
@@ -283,6 +287,7 @@ function NewPortfolioForm({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const titleId = useId();
   const typeName = useId();
   const [name, setName] = useState('');
@@ -380,7 +385,7 @@ function NewPortfolioForm({
           </p>
         )}
         <div className="form-actions">
-          <button type="submit" className="pill pill-primary" disabled={saving}>
+          <button type="submit" className="pill pill-primary" disabled={saving} {...needs.props}>
             {saving ? t('portfolios.creating') : t('portfolios.create')}
           </button>
           <button type="button" className="pill pill-ghost" onClick={onCancel}>
@@ -408,6 +413,7 @@ export function CopyPortfolioForm({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const titleId = useId();
   const scopeName = useId();
   const [name, setName] = useState('');
@@ -532,7 +538,7 @@ export function CopyPortfolioForm({
           </p>
         )}
         <div className="form-actions">
-          <button type="submit" className="pill pill-primary" disabled={saving}>
+          <button type="submit" className="pill pill-primary" disabled={saving} {...needs.props}>
             {saving ? t('portfolios.copy.creating') : t('portfolios.copy.create')}
           </button>
           <button type="button" className="pill pill-ghost" onClick={onCancel}>
@@ -575,6 +581,7 @@ function PortfolioRow({
   choice?: RowChoice;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const [mode, setMode] = useState<'view' | 'rename' | 'delete'>('view');
   const [name, setName] = useState(portfolio.name);
   const [error, setError] = useState<ClientAuthError | null>(null);
@@ -662,7 +669,12 @@ function PortfolioRow({
             aria-invalid={fieldError || error ? true : undefined}
             onChange={(event) => setName(event.target.value)}
           />
-          <button type="submit" className="pill pill-primary pill-small" disabled={busy}>
+          <button
+            type="submit"
+            className="pill pill-primary pill-small"
+            disabled={busy}
+            {...needs.props}
+          >
             {t('portfolios.save')}
           </button>
           <button type="button" className="pill pill-ghost pill-small" onClick={cancel}>
@@ -700,6 +712,7 @@ function PortfolioRow({
             className="pill pill-ghost pill-small"
             aria-label={t('portfolios.renameLabel', { name: portfolio.name })}
             onClick={() => setMode('rename')}
+            {...needs.props}
           >
             {t('portfolios.rename')}
           </button>
@@ -709,6 +722,7 @@ function PortfolioRow({
             aria-label={t('portfolios.copy.actionLabel', { name: portfolio.name })}
             disabled={onCopy === null}
             onClick={() => onCopy?.()}
+            {...needs.props}
           >
             {t('portfolios.copy.action')}
           </button>
@@ -717,6 +731,7 @@ function PortfolioRow({
             className="pill pill-ghost pill-small"
             aria-label={t('portfolios.deleteLabel', { name: portfolio.name })}
             onClick={() => setMode('delete')}
+            {...needs.props}
           >
             {t('portfolios.delete')}
           </button>
@@ -740,6 +755,7 @@ function PortfolioRow({
               disabled={busy}
               autoFocus
               onClick={() => void remove()}
+              {...needs.props}
             >
               {t('portfolios.deleteButton')}
             </button>
@@ -784,6 +800,7 @@ export function PortfolioPage({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   // Cada lançamento novo (aporte, retirada, compra ou venda) recarrega o caixa e as posições.
   const [version, setVersion] = useState(0);
   const changed = useCallback(() => setVersion((current) => current + 1), []);
@@ -890,6 +907,7 @@ export function PortfolioPage({
                   type="button"
                   className="pill pill-ghost"
                   onClick={() => setCopying(true)}
+                  {...needs.props}
                 >
                   {t('portfolios.copy.pageAction')}
                   <span className="pill-icon" aria-hidden="true">

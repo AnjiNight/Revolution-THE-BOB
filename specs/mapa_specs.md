@@ -60,6 +60,8 @@
 | 1.50 | SPEC-022 aprovada (Luís, 11/11/2026) com as recomendações e implementada: botão "Comparar carteiras" na lista (de 2 a 4), tela Comparação com o período "Em comum", gráfico da cota em % com cor e marcador por carteira e "Comparar com os índices", resumo em reais e composição de hoje; números iguais aos da tela de cada carteira; 4 carteiras com 50 ativos no total em 1,05 s (RNF06). OPEN-23 resolvida e OPEN-22 em parte (cenário = carteira); a SPEC-023 deixa de estar bloqueada: o que ela vira fica para decidir ao detalhá-la |
 | 1.51 | SPEC-023 detalhada ([SPEC-023.md](SPEC-023.md)), aguardando a aprovação: "Nova carteira a partir de outra", com o mesmo tipo e início, copiando tudo (aportes, retiradas, compras e vendas) ou só o dinheiro, na histórica até uma data, sem os estornados; a cópia guarda de qual carteira nasceu e abre com "Comparar as duas"; proposta para fechar a OPEN-22 (RF20 reescrito na versão 1.12 dos requisitos) |
 | 1.52 | SPEC-023 aprovada (Luís, 16/11/2026, como escrita) e implementada: botão Copiar na lista e na carteira, formulário com "Tudo" ou "Só o dinheiro" e "Copiar até" na histórica, cópia numa transação com a original travada mantendo o horário de cada lançamento, `copy_breaks_cash`, "Criada em … a partir de" com o link e "Comparar as duas"; `carteira.origem_id`, exportação na versão 7, requisitos 1.12 (RF20) e modelo de domínio. OPEN-22 resolvida. Fase 5 completa |
+| 1.53 | SPEC-032 detalhada ([SPEC-032.md](SPEC-032.md)) a pedido do Luís, fora da ordem das fases, aguardando a aprovação: cópia local cifrada pelo cofre do SO do que foi consultado, modo consulta sem conexão (servidor inalcançável, sessão renovada há menos de 30 dias), ETag e 304 nas leituras (RNF19) e limpeza no logout, na sessão recusada e na exclusão; propostas para a OPEN-10 (offline só leitura, RF37 reescrito na versão 1.13 dos requisitos), para trocar o SQLite das decisões técnicas por arquivos cifrados e para a SPEC-029 deixar de ser dependência (ela entrega a sua parte) |
+| 1.54 | SPEC-032 aprovada (Luís, 16/11/2026, como escrita) e implementada: ETag e 304 em todas as leituras do servidor, cópia local cifrada no processo principal (`offline-cache`), modo consulta com a faixa "Sem conexão", os botões de escrita desativados e a volta da conexão a cada 30 s ou no "Tentar agora"; reabrir uma histórica de 10 anos sem mudança: de 139 KB para 0 de corpo; requisitos 1.13 (RF37), decisões técnicas, DA08, drivers e SPEC-034 atualizados. OPEN-10 resolvida; a SPEC-029 entrega a sua parte |
 ---
 
 ## 0. Como ler este documento
@@ -140,7 +142,7 @@ flowchart LR
     C11 --> C10
     C03 --> C10
     C08 --> C12["C12 Offline"]
-    C09 --> C12
+    C09 -.-> C12
     C06 --> C13["C13 Notificações"]
     C01 --> C14["C14 LGPD"]
     C06 -. "acrescenta sua parte" .-> C14
@@ -298,7 +300,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-07 | ✅ **Resolvida na [SPEC-009](SPEC-009.md):** a brapi é usada só para mostrar as cotações no próprio app, com fonte e horário, nunca "tempo real" e sem repassar os dados a terceiros | PE02 | 009, 026 |
 | OPEN-08 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** compra e venda na carteira ao vivo só em dia de pregão (RB11) e com a cotação do próprio dia (RB07); depois do fechamento vale a última cotação do dia; sem ordem para a abertura. Original: compra/venda com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
 | OPEN-09 | ✅ **Parte da carteira resolvida na [SPEC-012](SPEC-012.md)** (RB07, RF11, RB24 e RB25 nos requisitos v1.8); RF09 e RF33 ficam com a SPEC-026. Original: reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
-| OPEN-10 | RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
+| OPEN-10 | ✅ **Resolvida na [SPEC-032](SPEC-032.md) (16/11/2026):** offline só leitura e RF37 reescrito na versão 1.13 dos requisitos ("ao restabelecer a conexão, atualizar os dados guardados no computador, trazendo do servidor só o que mudou"); a fila de lançamentos pendentes continua como evolução (DA08). Original: RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
 | OPEN-11 | ✅ **Resolvida na [SPEC-012](SPEC-012.md):** sem `saldo_inicial`; o caixa vem só dos aportes ("Valor inicial" na SPEC-013), e retirada maior que o caixa é recusada (RB26). Original: relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
 | OPEN-12 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** quantidade inteira, de 1 a 1.000.000, sem lote padrão (RB27). Original: quantidade fracionária de ações e regras de lote | INC-18 | 014, 016 |
 | OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra e na venda de ações e FIIs (RB20, RB21); o aviso na aplicação no Tesouro Direto volta com a renda fixa (DA22) | INC-19 | 014, 016, 019; 024 na fase de renda fixa |
@@ -1013,7 +1015,7 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 | Drivers | OBJ02, FAS05 |
 | ADRs | DA11, DA16 |
 | Depende de | SPEC-010, SPEC-028 |
-| Posição | Combina a ficha (010) com as notícias classificadas (028) |
+| Posição | Combina a ficha (010) com as notícias classificadas (028). Entrega a sua parte da consulta sem conexão ([SPEC-032](SPEC-032.md) §5.1): diz quais leituras de notícias entram na cópia local e as testa em modo consulta |
 | Em aberto | — |
 | Prioridade derivada | Could (RF29); destacado como núcleo do MVP na Visão §24 (ver OPEN-42 e drivers §8) |
 
@@ -1059,20 +1061,22 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 
 #### SPEC-032 — Consulta sem conexão e sincronização incremental
 
+📄 Detalhada em [SPEC-032.md](SPEC-032.md) — aprovada (Luís, 16/11/2026, como escrita) e implementada. A SPEC-029 deixou de ser dependência e entrega a sua parte (as leituras de notícias).
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Sem conexão, o app exibe carteiras, posições, séries e notícias do cache local, em modo somente leitura e com a data dos dados; ao reconectar, sincroniza só o que mudou; o cache é limpo no logout |
 | Valor | **Usuário:** consulta a carteira em qualquer lugar (QA03) |
-| RF | RF36, RF37 (em conflito, OPEN-10) |
+| RF | RF36, RF37 (reescrito na versão 1.13 dos requisitos) |
 | RB | RB03 |
 | RNF | RNF13, RNF14, RNF19, RNF21 |
 | Caso de uso / fluxo | Fluxo 7.3 |
 | Entidades | Nenhuma nova (cópia local) |
 | Drivers | FAS06, QA03, PA01 |
 | ADRs | DA03, DA08 |
-| Depende de | SPEC-002, SPEC-010, SPEC-019, SPEC-029 |
+| Depende de | SPEC-002, SPEC-010, SPEC-019 (a SPEC-029 entrega a sua parte quando for feita) |
 | Posição | Só pode guardar localmente o que já existe para consulta |
-| Em aberto | OPEN-10 |
+| Em aberto | — (OPEN-10 resolvida) |
 | Prioridade derivada | Should |
 
 #### SPEC-033 — Notificações de variação relevante

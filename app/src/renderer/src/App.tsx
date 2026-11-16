@@ -1,8 +1,8 @@
 import type { PublicUser } from '@simulador/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../shared/auth-ipc';
-import { AppShell } from './components/AppShell';
+import { AppShell, type ShellConnection } from './components/AppShell';
 import { AssetCatalog } from './components/AssetCatalog';
 import { AssetDetailPage } from './components/AssetDetailPage';
 import { AssetSearch } from './components/AssetSearch';
@@ -18,6 +18,10 @@ import type { TradeAsset } from './components/TradeForm';
 import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
 import { TradingCalendar } from './components/TradingCalendar';
+import { ConnectionContext } from './connection';
+
+/** SPEC-032: por quanto tempo o aviso "Conexão de volta" fica na tela. */
+const RECONNECTED_NOTICE_MS = 8000;
 
 /** Volta da recuperação de senha (SPEC-004): e-mail preenchido e aviso de senha redefinida. */
 interface AfterReset {
@@ -65,7 +69,19 @@ type View =
  */
 export function App() {
   const { t } = useTranslation();
-  const [view, setView] = useState<View>({ kind: 'loading' });
+  const [view, setViewState] = useState<View>({ kind: 'loading' });
+  // SPEC-032: o modo consulta, a data da leitura guardada mais antiga da tela atual e o aviso de
+  // que a conexão voltou.
+  const [offline, setOffline] = useState(false);
+  const [dataFrom, setDataFrom] = useState<string | null>(null);
+  const [reconnected, setReconnected] = useState(false);
+  /** Muda quando a conexão volta: a tela atual é montada de novo e relê tudo do servidor. */
+  const [screenVersion, setScreenVersion] = useState(0);
+  /** Cada tela começa sem data: as leituras dela é que dizem de quando são os dados. */
+  const setView = useCallback((next: View) => {
+    setDataFrom(null);
+    setViewState(next);
+  }, []);
   /** O botão que abriu a ficha: o foco volta para ele quando a ficha fecha. */
   const assetOpener = useRef<HTMLElement | null>(null);
   const showingList = view.kind === 'assets' && view.assetId === undefined;
@@ -81,25 +97,72 @@ export function App() {
     window.api.auth
       .getSession()
       .then((result) => {
-        if (result.ok) setView({ kind: 'home', user: result.user });
-        else if (result.error === 'unauthorized') setView({ kind: 'login' });
+        if (result.ok) {
+          // SPEC-032: sem conexão, o app abre em modo consulta com a cópia local.
+          setOffline(result.offline === true);
+          setView({ kind: 'home', user: result.user });
+        } else if (result.error === 'unauthorized') setView({ kind: 'login' });
         else setView({ kind: 'login', notice: result.error });
       })
       .catch(() => setView({ kind: 'login', notice: 'unexpected' }));
-  }, []);
+  }, [setView]);
 
-  const signedIn = (user: PublicUser) => setView({ kind: 'home', user });
-  const logout = () => {
-    void window.api.auth.logout().finally(() => setView({ kind: 'login' }));
+  // SPEC-032: o processo principal avisa quando o app entra ou sai do modo consulta, e a data de
+  // cada leitura que veio da cópia local.
+  useEffect(() => {
+    const stopChanges = window.api.connection.onChange((event) => {
+      if (event.status === 'offline') {
+        setOffline(true);
+        setReconnected(false);
+      } else if (event.status === 'online') {
+        setOffline(false);
+        setDataFrom(null);
+        setReconnected(true);
+        setScreenVersion((version) => version + 1);
+        setViewState((current) => ('user' in current ? { ...current, user: event.user } : current));
+      } else {
+        setOffline(false);
+        setReconnected(false);
+        setView({ kind: 'login', notice: 'invalid_refresh_token' });
+      }
+    });
+    const stopSavedAt = window.api.connection.onSavedAt((savedAt) =>
+      setDataFrom((current) => (current === null || savedAt < current ? savedAt : current)),
+    );
+    return () => {
+      stopChanges();
+      stopSavedAt();
+    };
+  }, [setView]);
+
+  useEffect(() => {
+    if (!reconnected) return;
+    const timer = setTimeout(() => setReconnected(false), RECONNECTED_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [reconnected]);
+
+  const connectionValue = useMemo(() => ({ offline }), [offline]);
+
+  const signedIn = (user: PublicUser) => {
+    setOffline(false);
+    setReconnected(false);
+    setView({ kind: 'home', user });
   };
-  const sessionExpired = useCallback(
-    () => setView({ kind: 'login', notice: 'invalid_refresh_token' }),
-    [],
-  );
+  const logout = () => {
+    void window.api.auth.logout().finally(() => {
+      setOffline(false);
+      setReconnected(false);
+      setView({ kind: 'login' });
+    });
+  };
+  const sessionExpired = useCallback(() => {
+    setOffline(false);
+    setView({ kind: 'login', notice: 'invalid_refresh_token' });
+  }, [setView]);
   const userChanged = useCallback(
     ({ id, name, email, role }: PublicUser) =>
       setView({ kind: 'profile', user: { id, name, email, role } }),
-    [],
+    [setView],
   );
 
   if (
@@ -116,133 +179,154 @@ export function App() {
       assetOpener.current = opener;
       setView({ kind: 'assets', user, assetId });
     };
+    // SPEC-032: só a conta de usuário tem modo consulta.
+    const shellConnection: ShellConnection | undefined =
+      user.role === 'user'
+        ? { offline, dataFrom, reconnected, onRetry: () => window.api.connection.retry() }
+        : undefined;
     return (
-      <AppShell
-        user={user}
-        current={view.kind}
-        onHome={() => setView({ kind: 'home', user })}
-        onPortfolios={() => setView({ kind: 'portfolios', user })}
-        onProfile={() => setView({ kind: 'profile', user })}
-        onCalendar={() => openCalendar()}
-        onAssets={() => setView({ kind: 'assets', user })}
-        onLogout={logout}
-      >
-        {view.kind === 'home' && (
-          <Home
-            user={user}
-            onOpenProfile={() => setView({ kind: 'profile', user })}
-            onOpenCalendar={openCalendar}
-            onOpenAssets={() => setView({ kind: 'assets', user })}
-            onOpenPortfolios={(creating) =>
-              setView({ kind: 'portfolios', user, ...(creating ? { creating: true } : {}) })
-            }
-          />
-        )}
-        {view.kind === 'portfolios' &&
-          (view.compare ? (
-            <PortfolioComparison
-              key={view.compare.join(',')}
-              ids={view.compare}
-              onBack={() => setView({ kind: 'portfolios', user })}
-              onOpen={(portfolioId) =>
-                setView({
-                  kind: 'portfolios',
-                  user,
-                  portfolioId,
-                  ...(view.compare ? { fromComparison: view.compare } : {}),
-                })
-              }
-              onSessionExpired={sessionExpired}
-            />
-          ) : view.portfolioId ? (
-            <PortfolioPage
-              key={view.portfolioId}
-              portfolioId={view.portfolioId}
-              buyAsset={view.buyAsset ?? null}
-              {...(view.fromComparison
-                ? { backLabel: t('portfolios.comparison.backToComparison') }
-                : {})}
-              onBack={() =>
-                setView(
-                  view.fromComparison
-                    ? { kind: 'portfolios', user, compare: view.fromComparison }
-                    : { kind: 'portfolios', user },
-                )
-              }
-              onOpenAsset={(assetId) =>
-                setView({
-                  kind: 'assets',
-                  user,
-                  assetId,
-                  ...(view.portfolioId ? { returnTo: view.portfolioId } : {}),
-                })
-              }
-              justCopied={view.copied ?? null}
-              onOpenPortfolio={(portfolioId, copied) =>
-                setView({ kind: 'portfolios', user, portfolioId, ...(copied ? { copied } : {}) })
-              }
-              onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
-              onSessionExpired={sessionExpired}
-            />
-          ) : (
-            <Portfolios
-              startCreating={view.creating === true}
-              onOpen={(portfolioId, copied) =>
-                setView({ kind: 'portfolios', user, portfolioId, ...(copied ? { copied } : {}) })
-              }
-              onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
-              onSessionExpired={sessionExpired}
-            />
-          ))}
-        {view.kind === 'calendar' && (
-          // A chave reabre a tela no ano pedido pelo aviso do Início.
-          <TradingCalendar
-            key={view.year ?? 'atual'}
-            initialYear={view.year}
-            onSessionExpired={sessionExpired}
-          />
-        )}
-        {view.kind === 'assets' && (
-          <>
-            {/* Com a ficha aberta, a lista fica escondida, mas montada: a busca não se perde. */}
-            <div hidden={view.assetId !== undefined}>
-              {user.role === 'collaborator' ? (
-                <AssetCatalog onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
-              ) : (
-                <AssetSearch onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
-              )}
-            </div>
-            {view.assetId !== undefined && (
-              <AssetDetailPage
-                key={view.assetId}
-                assetId={view.assetId}
-                onBack={() =>
-                  setView(
-                    view.returnTo
-                      ? { kind: 'portfolios', user, portfolioId: view.returnTo }
-                      : { kind: 'assets', user },
-                  )
+      <ConnectionContext.Provider value={connectionValue}>
+        <AppShell
+          {...(shellConnection ? { connection: shellConnection } : {})}
+          user={user}
+          current={view.kind}
+          onHome={() => setView({ kind: 'home', user })}
+          onPortfolios={() => setView({ kind: 'portfolios', user })}
+          onProfile={() => setView({ kind: 'profile', user })}
+          onCalendar={() => openCalendar()}
+          onAssets={() => setView({ kind: 'assets', user })}
+          onLogout={logout}
+        >
+          {/* SPEC-032: quando a conexão volta, a tela é montada de novo e relê tudo. */}
+          <Fragment key={screenVersion}>
+            {view.kind === 'home' && (
+              <Home
+                user={user}
+                onOpenProfile={() => setView({ kind: 'profile', user })}
+                onOpenCalendar={openCalendar}
+                onOpenAssets={() => setView({ kind: 'assets', user })}
+                onOpenPortfolios={(creating) =>
+                  setView({ kind: 'portfolios', user, ...(creating ? { creating: true } : {}) })
                 }
-                // SPEC-014: só a conta de usuário compra; abre a carteira escolhida já comprando.
-                {...(user.role === 'user'
-                  ? {
-                      onBuy: (portfolioId: string, asset: TradeAsset) =>
-                        setView({ kind: 'portfolios', user, portfolioId, buyAsset: asset }),
-                    }
-                  : {})}
+              />
+            )}
+            {view.kind === 'portfolios' &&
+              (view.compare ? (
+                <PortfolioComparison
+                  key={view.compare.join(',')}
+                  ids={view.compare}
+                  onBack={() => setView({ kind: 'portfolios', user })}
+                  onOpen={(portfolioId) =>
+                    setView({
+                      kind: 'portfolios',
+                      user,
+                      portfolioId,
+                      ...(view.compare ? { fromComparison: view.compare } : {}),
+                    })
+                  }
+                  onSessionExpired={sessionExpired}
+                />
+              ) : view.portfolioId ? (
+                <PortfolioPage
+                  key={view.portfolioId}
+                  portfolioId={view.portfolioId}
+                  buyAsset={view.buyAsset ?? null}
+                  {...(view.fromComparison
+                    ? { backLabel: t('portfolios.comparison.backToComparison') }
+                    : {})}
+                  onBack={() =>
+                    setView(
+                      view.fromComparison
+                        ? { kind: 'portfolios', user, compare: view.fromComparison }
+                        : { kind: 'portfolios', user },
+                    )
+                  }
+                  onOpenAsset={(assetId) =>
+                    setView({
+                      kind: 'assets',
+                      user,
+                      assetId,
+                      ...(view.portfolioId ? { returnTo: view.portfolioId } : {}),
+                    })
+                  }
+                  justCopied={view.copied ?? null}
+                  onOpenPortfolio={(portfolioId, copied) =>
+                    setView({
+                      kind: 'portfolios',
+                      user,
+                      portfolioId,
+                      ...(copied ? { copied } : {}),
+                    })
+                  }
+                  onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
+                  onSessionExpired={sessionExpired}
+                />
+              ) : (
+                <Portfolios
+                  startCreating={view.creating === true}
+                  onOpen={(portfolioId, copied) =>
+                    setView({
+                      kind: 'portfolios',
+                      user,
+                      portfolioId,
+                      ...(copied ? { copied } : {}),
+                    })
+                  }
+                  onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
+                  onSessionExpired={sessionExpired}
+                />
+              ))}
+            {view.kind === 'calendar' && (
+              // A chave reabre a tela no ano pedido pelo aviso do Início.
+              <TradingCalendar
+                key={view.year ?? 'atual'}
+                initialYear={view.year}
                 onSessionExpired={sessionExpired}
               />
             )}
-          </>
-        )}
-        {view.kind === 'profile' && (
-          <Profile
-            onUserChanged={userChanged}
-            onSessionExpired={sessionExpired}
-            onAccountDeleted={() => setView({ kind: 'login', accountDeleted: true })}
-          />
-        )}
-      </AppShell>
+            {view.kind === 'assets' && (
+              <>
+                {/* Com a ficha aberta, a lista fica escondida, mas montada: a busca não se perde. */}
+                <div hidden={view.assetId !== undefined}>
+                  {user.role === 'collaborator' ? (
+                    <AssetCatalog onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
+                  ) : (
+                    <AssetSearch onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
+                  )}
+                </div>
+                {view.assetId !== undefined && (
+                  <AssetDetailPage
+                    key={view.assetId}
+                    assetId={view.assetId}
+                    onBack={() =>
+                      setView(
+                        view.returnTo
+                          ? { kind: 'portfolios', user, portfolioId: view.returnTo }
+                          : { kind: 'assets', user },
+                      )
+                    }
+                    // SPEC-014: só a conta de usuário compra; abre a carteira escolhida já comprando.
+                    {...(user.role === 'user'
+                      ? {
+                          onBuy: (portfolioId: string, asset: TradeAsset) =>
+                            setView({ kind: 'portfolios', user, portfolioId, buyAsset: asset }),
+                        }
+                      : {})}
+                    onSessionExpired={sessionExpired}
+                  />
+                )}
+              </>
+            )}
+            {view.kind === 'profile' && (
+              <Profile
+                onUserChanged={userChanged}
+                onSessionExpired={sessionExpired}
+                onAccountDeleted={() => setView({ kind: 'login', accountDeleted: true })}
+              />
+            )}
+          </Fragment>
+        </AppShell>
+      </ConnectionContext.Provider>
     );
   }
 

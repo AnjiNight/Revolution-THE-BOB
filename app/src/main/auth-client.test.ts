@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   ASSET_PATHS,
   assetPath,
@@ -5,12 +6,16 @@ import {
   CALENDAR_PATHS,
   calendarPath,
   PORTFOLIO_PATHS,
+  portfolioCashPath,
+  portfolioPath,
   PROFILE_PATHS,
   type ComparisonQuery,
   type PriceHistoryPeriod,
 } from '@simulador/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AuthClient } from './auth-client.js';
+import type { ConnectionEvent } from '../shared/auth-ipc.js';
+import { AuthClient, OFFLINE_MAX_AGE_MS } from './auth-client.js';
+import { MemoryOfflineCache } from './offline-cache.js';
 import { MemorySecretStore } from './secret-store.js';
 
 const user = { id: 'u1', name: 'Ana', email: 'ana@exemplo.com', role: 'user' as const };
@@ -36,11 +41,40 @@ const ASSET = {
 
 /** Servidor falso com o comportamento das rotas da SPEC-002. */
 class FakeServer {
-  calls: Array<{ method: string; path: string; search?: string; authorization?: string }> = [];
+  calls: Array<{
+    method: string;
+    path: string;
+    search?: string;
+    authorization?: string;
+    ifNoneMatch?: string;
+  }> = [];
   validAccess = new Set<string>();
   validRefresh = new Set<string>();
   counter = 0;
   down = false;
+  /** SPEC-032: toda resposta passa a ter este status (500, 502, 503…), como uma hospedagem fora. */
+  failStatus: number | null = null;
+  /** SPEC-032: quantos pedidos tentaram sair, mesmo com a rede fora. */
+  attempts = 0;
+  /** SPEC-032: quantas leituras voltaram 304. */
+  notModified = 0;
+  portfolios = [{ id: '0d9e1f7a-1111-4222-8333-00000000000a', name: 'Primeira' }];
+
+  /** SPEC-032: o ETag do corpo em cada leitura com 200, e 304 quando o app manda o mesmo. */
+  fetch: typeof fetch = async (input, init) => {
+    this.attempts += 1;
+    const response = await this.handle(input, init);
+    if ((init?.method ?? 'GET') !== 'GET' || response.status !== 200) return response;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const etag = `W/"${createHash('sha256').update(bytes).digest('base64url')}"`;
+    const headers = new Headers(response.headers);
+    headers.set('etag', etag);
+    if ((init?.headers as Record<string, string> | undefined)?.['if-none-match'] === etag) {
+      this.notModified += 1;
+      return new Response(null, { status: 304, headers });
+    }
+    return new Response(bytes, { status: 200, headers });
+  };
 
   issue() {
     this.counter += 1;
@@ -54,7 +88,10 @@ class FakeServer {
     this.validAccess.clear();
   }
 
-  fetch: typeof fetch = async (input, init) => {
+  private handle = async (
+    input: Parameters<typeof fetch>[0],
+    init?: RequestInit,
+  ): Promise<Response> => {
     if (this.down) throw new TypeError('fetch failed');
     const url = new URL(input.toString());
     const headers = (init?.headers ?? {}) as Record<string, string>;
@@ -64,10 +101,28 @@ class FakeServer {
       path: url.pathname,
       ...(url.search ? { search: url.search } : {}),
       ...(headers.authorization ? { authorization: headers.authorization } : {}),
+      ...(headers['if-none-match'] ? { ifNoneMatch: headers['if-none-match'] } : {}),
     });
     const json = (status: number, data: unknown) => Response.json(data, { status });
+    if (this.failStatus !== null) {
+      return new Response('<html>fora do ar</html>', {
+        status: this.failStatus,
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+    const signedIn = () =>
+      this.validAccess.has(headers.authorization?.replace('Bearer ', '') ?? '');
 
     switch (url.pathname) {
+      // SPEC-032: a lista de carteiras, que o teste muda para ver o ETag mudar.
+      case PORTFOLIO_PATHS.list:
+        if (!signedIn()) return json(401, { error: 'unauthorized', message: 'x' });
+        return init?.method === 'POST'
+          ? json(201, { portfolio: { id: 'nova', name: body.name } })
+          : json(200, { portfolios: this.portfolios });
+      case portfolioCashPath('0d9e1f7a-1111-4222-8333-00000000000a'):
+        if (!signedIn()) return json(401, { error: 'unauthorized', message: 'x' });
+        return json(201, { entry: { id: 'e1' } });
       case AUTH_PATHS.login:
         return body.password === 'certa'
           ? json(200, { user, ...this.issue() })
@@ -713,5 +768,269 @@ describe('comparação de carteiras (SPEC-022)', () => {
       period: 'all&ids=x',
     } as unknown as ComparisonQuery);
     expect(server.calls.at(-1)?.search).toBe(`?ids=${A}%2C${B}`);
+  });
+});
+
+describe('consulta sem conexão (SPEC-032)', () => {
+  const P1 = '0d9e1f7a-1111-4222-8333-00000000000a';
+  const T1 = new Date('2026-11-16T12:00:00.000Z');
+  const LIST_KEY = `GET ${PORTFOLIO_PATHS.list}`;
+  let now: Date;
+  let cache: MemoryOfflineCache;
+  let events: ConnectionEvent[];
+
+  const open = () =>
+    new AuthClient({
+      serverUrl: () => 'http://localhost:3333',
+      allowInsecureLocalhost: true,
+      store,
+      fetchFn: server.fetch,
+      cache,
+      clock: () => now,
+      onConnectionChange: (event) => events.push(event),
+    });
+
+  beforeEach(() => {
+    now = T1;
+    cache = new MemoryOfflineCache();
+    events = [];
+    client = open();
+  });
+
+  const signIn = async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    const list = await client.listPortfolios();
+    expect(list).toEqual({ ok: true, data: { portfolios: server.portfolios } });
+  };
+
+  it('com conexão: guarda a leitura e pergunta com o ETag; 304 devolve o guardado (CA03)', async () => {
+    await signIn();
+    expect(server.calls.at(-1)?.ifNoneMatch).toBeUndefined();
+    await expect(client.listPortfolios()).resolves.toEqual({
+      ok: true,
+      data: { portfolios: server.portfolios },
+    });
+    expect(server.calls.at(-1)?.ifNoneMatch).toMatch(/^W\/"/);
+    expect(server.notModified).toBe(1);
+    // Mudou no servidor: vem o corpo novo, sem `savedAt`.
+    server.portfolios = [...server.portfolios, { id: 'b', name: 'Segunda' }];
+    await expect(client.listPortfolios()).resolves.toEqual({
+      ok: true,
+      data: { portfolios: server.portfolios },
+    });
+    expect(server.notModified).toBe(1);
+    expect(client.isOffline).toBe(false);
+    expect(events).toEqual([]);
+  });
+
+  it('a conexão cai: a leitura vem da cópia com a data, e o app entra em modo consulta (CA05)', async () => {
+    await signIn();
+    now = new Date('2026-11-16T15:30:00.000Z');
+    server.down = true;
+    await expect(client.listPortfolios()).resolves.toEqual({
+      ok: true,
+      data: { portfolios: server.portfolios },
+      savedAt: T1.toISOString(),
+    });
+    expect(client.isOffline).toBe(true);
+    expect(events).toEqual([{ status: 'offline' }]);
+    // Em modo consulta, nada sai para a rede, e o que nunca foi aberto aqui não existe.
+    const attempts = server.attempts;
+    await expect(client.getPortfolio(P1)).resolves.toEqual({
+      ok: false,
+      error: 'not_saved_offline',
+    });
+    await expect(client.listPortfolios()).resolves.toMatchObject({ savedAt: T1.toISOString() });
+    expect(server.attempts).toBe(attempts);
+    expect(events).toEqual([{ status: 'offline' }]);
+  });
+
+  it('escrita sem conexão: server_unavailable, sem repetir sozinha (CA05)', async () => {
+    await signIn();
+    server.down = true;
+    const attempts = server.attempts;
+    await expect(client.addCashEntry(P1, { type: 'deposit', amount: '100.00' })).resolves.toEqual({
+      ok: false,
+      error: 'server_unavailable',
+    });
+    expect(server.attempts).toBe(attempts + 1);
+    expect(client.isOffline).toBe(true);
+  });
+
+  it('um 500 não liga o modo consulta; 502, 503 e 504 ligam (CA04)', async () => {
+    await signIn();
+    server.failStatus = 500;
+    await expect(client.listPortfolios()).resolves.toEqual({
+      ok: false,
+      error: 'server_unavailable',
+    });
+    expect(client.isOffline).toBe(false);
+    for (const status of [502, 503, 504]) {
+      const fresh = open();
+      server.failStatus = null;
+      await fresh.login({ email: 'ana@exemplo.com', password: 'certa' });
+      await fresh.listPortfolios();
+      server.failStatus = status;
+      await expect(fresh.listPortfolios()).resolves.toMatchObject({ ok: true });
+      expect(fresh.isOffline, String(status)).toBe(true);
+    }
+  });
+
+  it('abre o app sem conexão em modo consulta, com a sessão renovada há menos de 30 dias (CA04)', async () => {
+    await signIn();
+    server.down = true;
+    now = new Date(T1.getTime() + OFFLINE_MAX_AGE_MS - 60_000);
+    const reopened = open();
+    await expect(reopened.restore()).resolves.toEqual({ ok: true, user, offline: true });
+    expect(reopened.isOffline).toBe(true);
+    await expect(reopened.listPortfolios()).resolves.toEqual({
+      ok: true,
+      data: { portfolios: server.portfolios },
+      savedAt: T1.toISOString(),
+    });
+    // Chamar de novo devolve a mesma sessão em modo consulta.
+    await expect(reopened.restore()).resolves.toEqual({ ok: true, user, offline: true });
+
+    // 30 dias ou mais: a sessão já acabou no servidor; vai para o login, como antes.
+    now = new Date(T1.getTime() + OFFLINE_MAX_AGE_MS);
+    await expect(open().restore()).resolves.toEqual({ ok: false, error: 'server_unavailable' });
+  });
+
+  it('colaborador não tem cópia nem modo consulta (CA04)', async () => {
+    await client.collaboratorLogin({ email: 'nicoly@exemplo.com', password: 'x' });
+    await client.listPortfolios();
+    await expect(cache.owner()).resolves.toBeNull();
+    await expect(cache.get(LIST_KEY)).resolves.toBeNull();
+    server.down = true;
+    await expect(client.listPortfolios()).resolves.toEqual({
+      ok: false,
+      error: 'server_unavailable',
+    });
+    expect(client.isOffline).toBe(false);
+    await expect(open().restore()).resolves.toEqual({ ok: false, error: 'server_unavailable' });
+  });
+
+  it('a conexão volta: renova a sessão, sai do modo consulta e avisa com o usuário (CA07)', async () => {
+    await signIn();
+    server.down = true;
+    await client.listPortfolios();
+    await expect(client.reconnect()).resolves.toBe('offline');
+    expect(client.isOffline).toBe(true);
+
+    server.down = false;
+    await expect(client.reconnect()).resolves.toBe('online');
+    expect(client.isOffline).toBe(false);
+    expect(events).toEqual([{ status: 'offline' }, { status: 'online', user }]);
+    // De volta ao servidor, com o ETag guardado.
+    await expect(client.listPortfolios()).resolves.toEqual({
+      ok: true,
+      data: { portfolios: server.portfolios },
+    });
+    expect(server.calls.at(-1)?.ifNoneMatch).toMatch(/^W\/"/);
+  });
+
+  it('o app aberto sem conexão reconecta quando o servidor volta', async () => {
+    await signIn();
+    server.down = true;
+    const reopened = open();
+    await reopened.restore();
+    server.down = false;
+    await expect(reopened.reconnect()).resolves.toBe('online');
+    await expect(reopened.listPortfolios()).resolves.toEqual({
+      ok: true,
+      data: { portfolios: server.portfolios },
+    });
+  });
+
+  it('sessão recusada na volta: apaga o cofre e a cópia local (CA07, CA08)', async () => {
+    await signIn();
+    server.down = true;
+    await client.listPortfolios();
+    server.validRefresh.clear();
+    server.down = false;
+    await expect(client.reconnect()).resolves.toBe('signed-out');
+    expect(events.at(-1)).toEqual({ status: 'signed-out' });
+    expect(client.isOffline).toBe(false);
+    await expect(store.load()).resolves.toBeNull();
+    await expect(cache.owner()).resolves.toBeNull();
+    await expect(cache.get(LIST_KEY)).resolves.toBeNull();
+  });
+
+  it('sair sem conexão apaga a cópia na hora (CA08)', async () => {
+    await signIn();
+    server.down = true;
+    await client.listPortfolios();
+    await expect(client.logout()).resolves.toBeUndefined();
+    await expect(store.load()).resolves.toBeNull();
+    await expect(cache.owner()).resolves.toBeNull();
+    await expect(cache.get(LIST_KEY)).resolves.toBeNull();
+    expect(client.isOffline).toBe(false);
+  });
+
+  it('sair com conexão e excluir a conta também apagam a cópia (CA08)', async () => {
+    await signIn();
+    await client.logout();
+    await expect(cache.get(LIST_KEY)).resolves.toBeNull();
+
+    await signIn();
+    await client.requestDeletion({ locale: 'pt-BR' });
+    await expect(client.confirmDeletion({ code: 'K7QM4XPD' })).resolves.toEqual({
+      ok: true,
+      data: null,
+    });
+    await expect(cache.owner()).resolves.toBeNull();
+    await expect(cache.get(LIST_KEY)).resolves.toBeNull();
+  });
+
+  it('a renovação recusada no uso normal também apaga a cópia (CA08)', async () => {
+    await signIn();
+    server.expireAccessTokens();
+    server.validRefresh.clear();
+    await expect(client.listPortfolios()).resolves.toEqual({ ok: false, error: 'unauthorized' });
+    await expect(cache.get(LIST_KEY)).resolves.toBeNull();
+  });
+
+  it('outra pessoa entra: a cópia que sobrou de outra conta é apagada antes (CA08)', async () => {
+    const bia = { id: 'u2', name: 'Bia', email: 'bia@exemplo.com', role: 'user' as const };
+    await cache.adopt(bia, T1);
+    await cache.put(LIST_KEY, {
+      body: JSON.stringify({ portfolios: [{ id: 'x', name: 'da Bia' }] }),
+      etag: null,
+      savedAt: T1.toISOString(),
+    });
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(cache.owner()).resolves.toMatchObject({ user });
+    await expect(cache.get(LIST_KEY)).resolves.toBeNull();
+  });
+
+  it('o logo também fica guardado, já como data: URL', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    const online = await client.assetLogo(ASSET.id);
+    expect(online).toMatchObject({
+      ok: true,
+      data: expect.stringMatching(/^data:image\/svg\+xml/),
+    });
+    server.down = true;
+    await expect(client.assetLogo(ASSET.id)).resolves.toEqual({
+      ok: true,
+      data: online.ok ? online.data : null,
+      savedAt: T1.toISOString(),
+    });
+  });
+
+  it('a renovação no uso normal adia o prazo do modo consulta', async () => {
+    await signIn();
+    now = new Date(T1.getTime() + 20 * 24 * 60 * 60 * 1000);
+    server.expireAccessTokens();
+    await client.listPortfolios();
+    await expect(cache.owner()).resolves.toMatchObject({ renewedAt: now.toISOString() });
+  });
+
+  it('a carteira aberta fica guardada pela chave da própria rota', async () => {
+    await signIn();
+    await client.getPortfolio(P1);
+    // O servidor falso não conhece a rota da carteira (500): nada é guardado para ela.
+    await expect(cache.get(`GET ${portfolioPath(P1)}`)).resolves.toBeNull();
+    await expect(cache.get(LIST_KEY)).resolves.not.toBeNull();
   });
 });

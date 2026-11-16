@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.12
+**Versão:** 1.13
 
 | Versão | Alteração |
 |---|---|
@@ -20,6 +20,7 @@
 | 1.10 | RB07: na carteira ao vivo, a cotação usada é sempre a do próprio dia; nova RB27 (compra e venda só em quantidade inteira) ([SPEC-014](specs/SPEC-014.md)) |
 | 1.11 | Nova RB28: o estorno anula um lançamento, só é aceito se o livro continuar válido sem ele e, na carteira ao vivo, compra e venda só se estornam no mesmo dia ([SPEC-015](specs/SPEC-015.md)) |
 | 1.12 | RF20 reescrito: com cenário = carteira ([SPEC-022](specs/SPEC-022.md)), "salvar e recuperar" já é a lista de carteiras (RF11); o requisito passa a ser criar uma carteira a partir de outra ([SPEC-023](specs/SPEC-023.md)) |
+| 1.13 | RF37 reescrito: sem conexão, o app é só para consulta (RNF14, [DA08](adr/DA08-cache-dois-niveis-offline-leitura.md)); ao reconectar, atualiza os dados guardados trazendo só o que mudou, e não há lançamento pendente a sincronizar ([SPEC-032](specs/SPEC-032.md)) |
 
 ---
 
@@ -121,7 +122,7 @@ Adiada para fase futura. RF23, RF24 e RF25 estão preservados na seção 9.
 |---|---|---|---|
 | RF35 | Enviar notificação de variação relevante em ativo da carteira | Sistema | Could |
 | RF36 | Permitir consulta da carteira sem conexão, com dados em cache local | Usuário | Should |
-| RF37 | Sincronizar dados pendentes ao restabelecer conexão | Sistema | Should |
+| RF37 | Ao restabelecer a conexão, atualizar os dados guardados no computador, trazendo do servidor só o que mudou | Sistema | Should |
 | RF38 | Permitir alternância de idioma entre português e inglês | Usuário | Could |
 
 ### 2.8 Administração

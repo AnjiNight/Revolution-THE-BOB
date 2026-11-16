@@ -11,6 +11,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { PortfolioAllocation } from './PortfolioAllocation';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatChange, formatMoney, quoteMoment } from '../format';
 import { changeDirection } from './QuoteText';
 import { TradeForm, type TradeAsset } from './TradeForm';
@@ -45,11 +46,13 @@ export function PortfolioPositions({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const titleId = useId();
   const [state, setState] = useState<PositionsState>({ status: 'loading' });
+  // SPEC-032: sem conexão, a compra pedida pela ficha do ativo não abre.
   const [form, setForm] = useState<OpenForm | null>(
-    startBuying ? { type: 'buy', asset: startBuying, opener: null } : null,
+    startBuying && !needs.offline ? { type: 'buy', asset: startBuying, opener: null } : null,
   );
   const [notice, setNotice] = useState<string | null>(null);
   const buyButton = useRef<HTMLButtonElement>(null);
@@ -109,6 +112,7 @@ export function PortfolioPositions({
               type="button"
               className="pill pill-primary"
               onClick={(event) => open('buy', null, event.currentTarget)}
+              {...needs.props}
             >
               {t('portfolios.positions.buy')}
               <span className="pill-icon" aria-hidden="true">
@@ -288,6 +292,7 @@ function PositionRow({
   sellDisabled: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const columns = 'portfolios.positions.columns';
   const when =
@@ -374,6 +379,7 @@ function PositionRow({
           disabled={sellDisabled}
           aria-label={t('portfolios.positions.sellLabel', { ticker: position.ticker })}
           onClick={(event) => onSell(event.currentTarget)}
+          {...needs.props}
         >
           {t('portfolios.positions.sell')}
         </button>

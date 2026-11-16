@@ -31,16 +31,20 @@ import {
   ASSET_CHANNELS,
   AUTH_CHANNELS,
   CALENDAR_CHANNELS,
+  CONNECTION_CHANNELS,
   FUNDAMENTALS_CHANNELS,
   INDEX_CHANNELS,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
+  type ConnectionEvent,
 } from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL } from '../shared/server-status.js';
 import { AuthClient } from './auth-client.js';
+import { ConnectionMonitor } from './connection-monitor.js';
 import { saveDataExport } from './data-export.js';
 import { GoogleOAuthClient } from './google-oauth.js';
 import { GoogleSignIn } from './google-sign-in.js';
+import { EncryptedFileOfflineCache } from './offline-cache.js';
 import { EncryptedFileSecretStore, type OsEncryption } from './secret-store.js';
 import { checkServerHealth } from './server-health.js';
 
@@ -114,12 +118,34 @@ app.whenReady().then(() => {
     checkServerHealth(serverUrl(), { allowInsecureLocalhost }),
   );
 
+  // SPEC-032: cada janela fica sabendo quando o app entra ou sai do modo consulta.
+  const broadcast = (event: ConnectionEvent) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send(CONNECTION_CHANNELS.changed, event);
+    }
+  };
+  let monitor: ConnectionMonitor | null = null;
+
   // Sessão (SPEC-002): token de renovação criptografado pelo cofre do SO (RNF08).
+  // SPEC-032: a cópia local das leituras, cifrada pelo mesmo cofre.
   const auth = new AuthClient({
     serverUrl,
     allowInsecureLocalhost,
     store: new EncryptedFileSecretStore(join(app.getPath('userData'), 'sessao.bin'), osEncryption),
+    cache: new EncryptedFileOfflineCache(join(app.getPath('userData'), 'cache'), osEncryption),
+    onConnectionChange: (event) => {
+      monitor?.setOffline(event.status === 'offline');
+      broadcast(event);
+    },
   });
+  monitor = new ConnectionMonitor({
+    check: () => checkServerHealth(serverUrl(), { allowInsecureLocalhost }),
+    reconnect: () => auth.reconnect(),
+  });
+  const connection = monitor;
+  ipcMain.handle(CONNECTION_CHANNELS.status, () => ({ offline: auth.isOffline }));
+  ipcMain.handle(CONNECTION_CHANNELS.retry, () => connection.checkNow());
+
   ipcMain.handle(AUTH_CHANNELS.getSession, () => auth.restore());
   ipcMain.handle(AUTH_CHANNELS.register, (_event, input: RegisterInput) => auth.register(input));
   // Confirmação de e-mail (SPEC-039): o código é digitado no app e nunca fica guardado.

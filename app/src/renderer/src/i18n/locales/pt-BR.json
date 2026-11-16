@@ -266,7 +266,8 @@
     "reversal_breaks_position": "Esse estorno deixaria uma venda maior que a posição.",
     "no_close_that_day": "O ativo não tem fechamento da B3 nesse dia.",
     "history_pending": "O histórico de preços deste ativo ainda está sendo carregado.",
-    "copy_breaks_cash": "Sem as compras e vendas, uma retirada ficaria sem saldo."
+    "copy_breaks_cash": "Sem as compras e vendas, uma retirada ficaria sem saldo.",
+    "not_saved_offline": "Ainda não consultado neste computador. Conecte-se para ver."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -403,6 +404,18 @@
     "assets": "Ativos",
     "logoutLabel": "Sair da conta",
     "portfolios": "Carteiras"
+  },
+  "offline": {
+    "title": "Sem conexão com o servidor.",
+    "body": "Você está vendo os dados guardados neste computador, só para consulta.",
+    "dataFrom": "Dados de {{date}}.",
+    "retry": "Tentar agora",
+    "retrying": "Tentando…",
+    "stillOffline": "Ainda sem conexão. O app tenta de novo sozinho a cada 30 segundos.",
+    "needsConnection": "Precisa de conexão.",
+    "announce": "Sem conexão com o servidor. Modo consulta: só os dados guardados neste computador.",
+    "back": "Conexão de volta. Os dados foram atualizados.",
+    "searchNeedsConnection": "A busca precisa de conexão. Os ativos que você já abriu continuam nas posições das carteiras."
   },
   "calendar": {
     "title": "Calendário de pregão",

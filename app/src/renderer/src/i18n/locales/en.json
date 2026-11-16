@@ -266,7 +266,8 @@
     "reversal_breaks_position": "This reversal would make a sale larger than the position.",
     "no_close_that_day": "This asset has no B3 close on that day.",
     "history_pending": "This asset's price history is still being loaded.",
-    "copy_breaks_cash": "Without the purchases and sales, a withdrawal would have no balance."
+    "copy_breaks_cash": "Without the purchases and sales, a withdrawal would have no balance.",
+    "not_saved_offline": "Not viewed on this computer yet. Connect to see it."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -403,6 +404,18 @@
     "assets": "Assets",
     "logoutLabel": "Sign out of your account",
     "portfolios": "Portfolios"
+  },
+  "offline": {
+    "title": "No connection to the server.",
+    "body": "You are seeing the data saved on this computer, read-only.",
+    "dataFrom": "Data from {{date}}.",
+    "retry": "Try now",
+    "retrying": "Trying…",
+    "stillOffline": "Still offline. The app tries again on its own every 30 seconds.",
+    "needsConnection": "Needs a connection.",
+    "announce": "No connection to the server. Read-only mode: only the data saved on this computer.",
+    "back": "Connection is back. The data was updated.",
+    "searchNeedsConnection": "Search needs a connection. The assets you already opened are still in your portfolios' positions."
   },
   "calendar": {
     "title": "Trading calendar",

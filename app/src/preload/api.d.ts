@@ -41,6 +41,8 @@ import type {
   ChangePasswordInput,
   ClientResult,
   ConfirmEmailChangeInput,
+  ConnectionEvent,
+  ReconnectResult,
   EmailConfirmationInput,
   EmailConfirmationResendInput,
   LoginInput,
@@ -60,6 +62,19 @@ import type { ServerStatus } from '../shared/server-status.js';
 /** Funções que o processo principal expõe para a interface (window.api). */
 export interface DesktopApi {
   checkServerHealth(): Promise<ServerStatus>;
+  /** SPEC-032: modo consulta (sem conexão) e a volta da conexão. */
+  connection: {
+    status(): Promise<{ offline: boolean }>;
+    /** "Tentar agora": confere o servidor e, se ele responde, renova a sessão. */
+    retry(): Promise<ReconnectResult>;
+    /** Avisa quando o app entra ou sai do modo consulta; devolve a função que para de avisar. */
+    onChange(listener: (event: ConnectionEvent) => void): () => void;
+    /**
+     * Avisa a data de cada leitura que veio da cópia local (o `savedAt`), para a faixa do modo
+     * consulta mostrar a mais antiga da tela.
+     */
+    onSavedAt(listener: (savedAt: string) => void): () => void;
+  };
   auth: {
     getSession(): Promise<AuthResult>;
     /** SPEC-039: cria a conta pendente e manda o código; não abre sessão. */

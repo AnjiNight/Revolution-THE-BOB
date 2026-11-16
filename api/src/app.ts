@@ -26,6 +26,7 @@ import type { PortfolioService } from './modules/portfolios/application/portfoli
 import type { TradingService } from './modules/portfolios/application/trading-service.js';
 import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfolio-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
+import { registerEtag } from './shared/http/etag.js';
 import { HttpError } from './shared/http/http-error.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 
@@ -76,6 +77,8 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
       new HttpError(429, 'rate_limited', 'Muitas tentativas. Tente novamente em instantes.'),
   });
   registerErrorHandling(app);
+  // SPEC-032: ETag e 304 em todas as leituras (antes das rotas, para valer em todas).
+  registerEtag(app);
 
   registerHealthRoutes(app, { probe: deps.probe, version: deps.version });
   registerAuthRoutes(app, {

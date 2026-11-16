@@ -79,8 +79,11 @@ import type {
   AuthResult,
   ClientAuthError,
   ClientResult,
+  ConnectionEvent,
   ErrorDetails,
+  ReconnectResult,
 } from '../shared/auth-ipc.js';
+import { MemoryOfflineCache, type OfflineCache, type SavedRead } from './offline-cache.js';
 import type { SecretStore } from './secret-store.js';
 import { validateServerUrl } from './server-health.js';
 
@@ -90,7 +93,24 @@ export interface AuthClientOptions {
   store: SecretStore;
   fetchFn?: typeof fetch;
   timeoutMs?: number;
+  /** SPEC-032: cópia local das leituras do usuário (padrão: só na memória). */
+  cache?: OfflineCache;
+  /** SPEC-032: avisa quando o app entra em modo consulta, quando a conexão volta ou cai a sessão. */
+  onConnectionChange?: (event: ConnectionEvent) => void;
+  clock?: () => Date;
 }
+
+/**
+ * SPEC-032: o modo consulta só abre se a sessão foi renovada há menos disso. É a validade do token
+ * de renovação (SPEC-002): depois, a sessão já acabou no servidor.
+ */
+export const OFFLINE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Respostas da hospedagem com o servidor fora do ar ou hibernando: contam como sem conexão. */
+const UNREACHABLE_STATUSES = new Set([502, 503, 504]);
+
+/** O que uma leitura trouxe do servidor: o corpo novo, ou "nada mudou" (304). */
+type FreshRead = { notModified: true } | { notModified: false; text: string; etag: string | null };
 
 const KNOWN_ERRORS: ReadonlyArray<
   AuthErrorCode | CalendarErrorCode | CatalogErrorCode | FundamentalsErrorCode | PortfolioErrorCode
@@ -144,33 +164,81 @@ class RequestFailed extends Error {
     readonly error: ClientAuthError,
     readonly fields?: FieldErrors,
     readonly details?: ErrorDetails,
+    /** SPEC-032: sem rede, tempo esgotado ou servidor fora do ar (502, 503, 504). */
+    readonly unreachable = false,
   ) {
     super(error);
   }
 }
 
+/** Servidor inalcançável: a tela vê `server_unavailable`, como antes; o app liga o modo consulta. */
+function unreachable(): RequestFailed {
+  return new RequestFailed('server_unavailable', undefined, undefined, true);
+}
+
 /**
  * Cliente de autenticação do processo principal (SPEC-002).
  * O token de acesso fica só na memória; o de renovação vai para o SecretStore (RNF08).
+ *
+ * SPEC-032: as leituras do usuário ficam numa cópia local; sem conexão, o app mostra essa cópia
+ * (modo consulta) até a conexão voltar.
  */
 export class AuthClient {
   private accessToken: string | null = null;
   private user: PublicUser | null = null;
   private refreshing: Promise<boolean> | null = null;
+  private reconnecting: Promise<ReconnectResult> | null = null;
+  private offline = false;
+  /** Muda a cada saída: uma leitura que terminou depois dela não grava na cópia. */
+  private generation = 0;
+  private readonly cache: OfflineCache;
 
-  constructor(private readonly options: AuthClientOptions) {}
+  constructor(private readonly options: AuthClientOptions) {
+    this.cache = options.cache ?? new MemoryOfflineCache();
+  }
 
-  /** Ao abrir o app: usa o token de renovação guardado para entrar sem pedir senha. */
+  /** SPEC-032: o app está em modo consulta. */
+  get isOffline(): boolean {
+    return this.offline;
+  }
+
+  /**
+   * Ao abrir o app: usa o token de renovação guardado para entrar sem pedir senha. SPEC-032: com
+   * o servidor inalcançável, abre em modo consulta, se a cópia local permitir.
+   */
   async restore(): Promise<AuthResult> {
-    if (this.user) return { ok: true, user: this.user };
+    if (this.user) {
+      return this.offline
+        ? { ok: true, user: this.user, offline: true }
+        : { ok: true, user: this.user };
+    }
     const stored = await this.options.store.load();
-    if (!stored) return { ok: false, error: 'unauthorized' };
+    if (!stored) {
+      // Sem sessão não há cópia local (uma que tenha sobrado é apagada).
+      await this.cache.clear();
+      return { ok: false, error: 'unauthorized' };
+    }
     try {
       if (!(await this.refresh())) return { ok: false, error: 'unauthorized' };
       return await this.loadCurrentUser();
     } catch (error) {
+      if (error instanceof RequestFailed && error.unreachable) {
+        const offline = await this.openOffline();
+        if (offline) return offline;
+      }
       return failure(error);
     }
+  }
+
+  /**
+   * SPEC-032: o servidor voltou a responder (conferência a cada 30 s ou "Tentar agora"). Renova a
+   * sessão e sai do modo consulta; com a sessão recusada, apaga tudo deste computador.
+   */
+  reconnect(): Promise<ReconnectResult> {
+    this.reconnecting ??= this.doReconnect().finally(() => {
+      this.reconnecting = null;
+    });
+    return this.reconnecting;
   }
 
   /** SPEC-039: a conta nasce pendente e não abre sessão; o código vai para o e-mail. */
@@ -211,14 +279,19 @@ export class AuthClient {
     });
   }
 
-  /** Encerra a sessão no servidor (melhor esforço) e apaga tudo do dispositivo. */
+  /**
+   * Encerra a sessão no servidor (melhor esforço) e apaga tudo do dispositivo, inclusive a cópia
+   * local (SPEC-032). Em modo consulta, não espera o aviso ao servidor, que dificilmente chega.
+   */
   async logout(): Promise<void> {
     const refreshToken = await this.options.store.load();
-    this.accessToken = null;
-    this.user = null;
-    await this.options.store.clear();
+    const wasOffline = this.offline;
+    await this.forget();
     if (refreshToken) {
-      await this.request('POST', AUTH_PATHS.logout, { refreshToken }).catch(() => undefined);
+      const notice = this.request('POST', AUTH_PATHS.logout, { refreshToken }).catch(
+        () => undefined,
+      );
+      if (!wasOffline) await notice;
     }
   }
 
@@ -243,13 +316,10 @@ export class AuthClient {
   // --- Perfil (SPEC-003) ---
 
   getProfile(): Promise<ClientResult<UserProfile>> {
-    return this.call(async () => {
-      const { user } = await this.authorizedRequest<{ user: UserProfile }>(
-        'GET',
-        PROFILE_PATHS.profile,
-      );
-      return user;
-    });
+    return this.read<{ user: UserProfile }, UserProfile>(
+      () => PROFILE_PATHS.profile,
+      (body) => body.user,
+    );
   }
 
   updateName(input: UpdateNameInput): Promise<ClientResult<UserProfile>> {
@@ -279,13 +349,14 @@ export class AuthClient {
     });
   }
 
-  /** Código certo apaga a conta no servidor; aqui, apaga a sessão guardada no dispositivo. */
+  /**
+   * Código certo apaga a conta no servidor; aqui, apaga a sessão guardada no dispositivo e a cópia
+   * local (SPEC-032).
+   */
   confirmDeletion(input: AccountDeletionConfirmInput): Promise<ClientResult<null>> {
     return this.call(async () => {
       await this.authorizedRequest('POST', PROFILE_PATHS.deletionConfirm, input);
-      this.accessToken = null;
-      this.user = null;
-      await this.options.store.clear();
+      await this.forget();
       return null;
     });
   }
@@ -306,12 +377,13 @@ export class AuthClient {
       await this.options.store.save(session.refreshToken);
       this.accessToken = session.accessToken;
       this.user = session.user;
+      await this.adoptCache();
       return null;
     });
   }
 
   listConsents(): Promise<ClientResult<ConsentList>> {
-    return this.call(() => this.authorizedRequest<ConsentList>('GET', PROFILE_PATHS.consents));
+    return this.read<ConsentList>(() => PROFILE_PATHS.consents);
   }
 
   acceptTerms(): Promise<ClientResult<null>> {
@@ -329,7 +401,7 @@ export class AuthClient {
   /** Qualquer pessoa conectada: ano não publicado vem com `published: false`. */
   /** SPEC-012: carteiras do usuário, da mais recente para a mais antiga. */
   listPortfolios(): Promise<ClientResult<PortfolioList>> {
-    return this.call(() => this.authorizedRequest<PortfolioList>('GET', PORTFOLIO_PATHS.list));
+    return this.read<PortfolioList>(() => PORTFOLIO_PATHS.list);
   }
 
   createPortfolio(input: NewPortfolioInput): Promise<ClientResult<Portfolio>> {
@@ -344,10 +416,10 @@ export class AuthClient {
   }
 
   getPortfolio(id: string): Promise<ClientResult<Portfolio>> {
-    return this.call(async () => {
-      const body = await this.authorizedRequest<{ portfolio: Portfolio }>('GET', portfolioUrl(id));
-      return body.portfolio;
-    });
+    return this.read<{ portfolio: Portfolio }, Portfolio>(
+      () => portfolioUrl(id),
+      (body) => body.portfolio,
+    );
   }
 
   renamePortfolio(id: string, input: RenamePortfolioInput): Promise<ClientResult<Portfolio>> {
@@ -370,9 +442,7 @@ export class AuthClient {
 
   /** SPEC-013: saldo e extrato, do mais recente ao mais antigo, a partir de `offset`. */
   cashStatement(id: string, offset = 0): Promise<ClientResult<CashStatement>> {
-    return this.call(() =>
-      this.authorizedRequest<CashStatement>('GET', portfolioCashUrl(id, offset)),
-    );
+    return this.read<CashStatement>(() => portfolioCashUrl(id, offset));
   }
 
   /** SPEC-013: aporte ou retirada; `insufficient_cash` traz `details.available`. */
@@ -388,12 +458,7 @@ export class AuthClient {
 
   /** SPEC-014: posições da carteira, com o caixa e o total. */
   portfolioPositions(id: string): Promise<ClientResult<PortfolioPositions>> {
-    return this.call(() =>
-      this.authorizedRequest<PortfolioPositions>(
-        'GET',
-        portfolioRouteUrl(PORTFOLIO_PATHS.positions, id),
-      ),
-    );
+    return this.read<PortfolioPositions>(() => portfolioRouteUrl(PORTFOLIO_PATHS.positions, id));
   }
 
   /**
@@ -401,7 +466,7 @@ export class AuthClient {
    * query string; o resto é o servidor que confere.
    */
   portfolioPerformance(id: string, query: unknown): Promise<ClientResult<PortfolioPerformance>> {
-    return this.call(() => {
+    return this.read<PortfolioPerformance>(() => {
       const record = (query ?? {}) as Record<string, unknown>;
       const params = new URLSearchParams();
       const day = /^\d{4}-\d{2}-\d{2}$/;
@@ -413,7 +478,7 @@ export class AuthClient {
         if (typeof value === 'string' && day.test(value)) params.set(key, value);
       }
       const path = portfolioRouteUrl(PORTFOLIO_PATHS.performance, id);
-      return this.authorizedRequest<PortfolioPerformance>('GET', `${path}?${params.toString()}`);
+      return `${path}?${params.toString()}`;
     });
   }
 
@@ -422,7 +487,7 @@ export class AuthClient {
    * datas AAAA-MM-DD vão para a query string; quantos e quais, o servidor confere.
    */
   portfolioComparison(query: unknown): Promise<ClientResult<PortfolioComparison>> {
-    return this.call(() => {
+    return this.read<PortfolioComparison>(() => {
       const record = (query ?? {}) as Record<string, unknown>;
       const ids = Array.isArray(record.ids) ? record.ids : [];
       if (!ids.every((id) => typeof id === 'string' && UUID_PATTERN.test(id))) {
@@ -436,10 +501,7 @@ export class AuthClient {
         const value = record[key];
         if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) params.set(key, value);
       }
-      return this.authorizedRequest<PortfolioComparison>(
-        'GET',
-        `${PORTFOLIO_PATHS.comparison}?${params.toString()}`,
-      );
+      return `${PORTFOLIO_PATHS.comparison}?${params.toString()}`;
     });
   }
 
@@ -552,9 +614,7 @@ export class AuthClient {
 
   /** SPEC-010: ficha do ativo para qualquer pessoa conectada, também de ativo desativado. */
   assetDetail(id: string): Promise<ClientResult<AssetDetail>> {
-    return this.call(() =>
-      this.authorizedRequest<AssetDetail>('GET', assetUrl(ASSET_PATHS.detail, id)),
-    );
+    return this.read<AssetDetail>(() => assetUrl(ASSET_PATHS.detail, id));
   }
 
   /**
@@ -566,34 +626,23 @@ export class AuthClient {
     period: PriceHistoryPeriod,
     adjusted = true,
   ): Promise<ClientResult<PriceHistory>> {
-    return this.call(() => {
+    return this.read<PriceHistory>(() => {
       // O período vem da interface: só um dos cinco entra na query string.
       if (!isPriceHistoryPeriod(period)) throw new RequestFailed('unexpected');
-      return this.authorizedRequest<PriceHistory>(
-        'GET',
-        `${assetUrl(ASSET_PATHS.history, id)}?period=${period}&adjusted=${adjusted === false ? 'false' : 'true'}`,
-      );
+      return `${assetUrl(ASSET_PATHS.history, id)}?period=${period}&adjusted=${adjusted === false ? 'false' : 'true'}`;
     });
   }
 
   /** SPEC-041: indicadores do Investidor10 (com autorização, só neste projeto acadêmico). */
   assetFundamentals(id: string): Promise<ClientResult<AssetFundamentals>> {
-    return this.call(() =>
-      this.authorizedRequest<AssetFundamentals>(
-        'GET',
-        assetUrl(FUNDAMENTALS_PATHS.fundamentals, id),
-      ),
-    );
+    return this.read<AssetFundamentals>(() => assetUrl(FUNDAMENTALS_PATHS.fundamentals, id));
   }
 
   /** SPEC-042: proventos do período (12 meses, 5 anos ou tudo). */
   assetDividends(id: string, period: DividendPeriod): Promise<ClientResult<AssetDividends>> {
-    return this.call(() => {
+    return this.read<AssetDividends>(() => {
       if (!isDividendPeriod(period)) throw new RequestFailed('unexpected');
-      return this.authorizedRequest<AssetDividends>(
-        'GET',
-        `${assetUrl(FUNDAMENTALS_PATHS.dividends, id)}?period=${period}`,
-      );
+      return `${assetUrl(FUNDAMENTALS_PATHS.dividends, id)}?period=${period}`;
     });
   }
 
@@ -644,15 +693,7 @@ export class AuthClient {
    * `null` quando o ativo não tem logo próprio.
    */
   assetLogo(id: string): Promise<ClientResult<string | null>> {
-    return this.call(async () => {
-      const path = assetUrl(ASSET_PATHS.logo, id);
-      let logo = await this.image(path, this.accessToken);
-      if (logo === 'unauthorized' && (await this.refresh())) {
-        logo = await this.image(path, this.accessToken);
-      }
-      if (logo === 'unauthorized') throw new RequestFailed('unauthorized');
-      return logo;
-    });
+    return this.read<string | null>(() => assetUrl(ASSET_PATHS.logo, id), undefined, 'image');
   }
 
   private async assetAction(
@@ -679,19 +720,161 @@ export class AuthClient {
     try {
       return { ok: true, data: await action() };
     } catch (error) {
-      const result = failure(error);
-      return result.ok ? { ok: false, error: 'unexpected' } : result;
+      return this.failed(error);
     }
+  }
+
+  /**
+   * SPEC-032: uma leitura que a tela mostra. Com conexão, pergunta ao servidor com o ETag guardado
+   * e guarda o que vier; sem conexão, devolve a cópia local com a data dela (`savedAt`).
+   */
+  private async read<T, R = T>(
+    path: () => string,
+    pick: (body: T) => R = (body) => body as unknown as R,
+    kind: 'json' | 'image' = 'json',
+  ): Promise<ClientResult<R>> {
+    try {
+      const { body, savedAt } = await this.cachedRead<T>(path(), kind);
+      const data = pick(body);
+      return savedAt === undefined ? { ok: true, data } : { ok: true, data, savedAt };
+    } catch (error) {
+      return this.failed(error);
+    }
+  }
+
+  private failed<T>(error: unknown): ClientResult<T> {
+    if (error instanceof RequestFailed && error.unreachable) this.goOffline();
+    const result = failure(error);
+    return result.ok ? { ok: false, error: 'unexpected' } : result;
+  }
+
+  private async cachedRead<T>(
+    path: string,
+    kind: 'json' | 'image',
+  ): Promise<{ body: T; savedAt?: string }> {
+    const fresh = (etag: string | null) =>
+      this.authorized((token) =>
+        kind === 'json' ? this.conditionalGet(path, etag, token) : this.logoGet(path, etag, token),
+      );
+    // O colaborador (e quem ainda não entrou) não tem cópia local: vai direto ao servidor.
+    if (!this.caching) {
+      const answer = await fresh(null);
+      if (answer.notModified) throw new RequestFailed('unexpected');
+      return { body: parse<T>(answer.text) };
+    }
+
+    const key = `GET ${path}`;
+    const generation = this.generation;
+    const saved = await this.cache.get(key);
+    // Em modo consulta, a cópia responde na hora; a volta da conexão é com a conferência.
+    if (this.offline) return fromSaved<T>(saved);
+    try {
+      const answer = await fresh(saved?.etag ?? null);
+      const savedAt = this.now().toISOString();
+      // Depois de uma saída (ou de outra pessoa entrar), o que chegou não é mais desta cópia.
+      const current = generation === this.generation;
+      if (answer.notModified) {
+        if (!saved) throw new RequestFailed('unexpected');
+        if (current) await this.cache.put(key, { ...saved, savedAt });
+        return { body: parse<T>(saved.body) };
+      }
+      const body = parse<T>(answer.text);
+      if (current) await this.cache.put(key, { body: answer.text, etag: answer.etag, savedAt });
+      return { body };
+    } catch (error) {
+      if (!(error instanceof RequestFailed) || !error.unreachable) throw error;
+      this.goOffline();
+      return fromSaved<T>(saved);
+    }
+  }
+
+  /** Só a conta de usuário tem cópia local e modo consulta (SPEC-032 §3.2). */
+  private get caching(): boolean {
+    return this.user?.role === 'user';
+  }
+
+  private goOffline(): void {
+    if (this.offline || !this.caching) return;
+    this.offline = true;
+    this.options.onConnectionChange?.({ status: 'offline' });
+  }
+
+  /**
+   * Abre em modo consulta com o usuário da cópia local: só uma conta de usuário, e só se a sessão
+   * foi renovada há menos de 30 dias (depois disso, ela já acabou no servidor).
+   */
+  private async openOffline(): Promise<AuthResult | null> {
+    const owner = await this.cache.owner();
+    if (!owner || owner.user.role !== 'user') return null;
+    const renewed = Date.parse(owner.renewedAt);
+    if (!Number.isFinite(renewed) || this.now().getTime() - renewed >= OFFLINE_MAX_AGE_MS) {
+      return null;
+    }
+    this.user = owner.user;
+    this.offline = true;
+    this.options.onConnectionChange?.({ status: 'offline' });
+    return { ok: true, user: owner.user, offline: true };
+  }
+
+  private async doReconnect(): Promise<ReconnectResult> {
+    if (!this.offline) return this.user ? 'online' : 'signed-out';
+    try {
+      if (!(await this.refresh())) {
+        // Sessão recusada: nada fica neste computador (o cofre e a cópia local).
+        await this.forget();
+        this.options.onConnectionChange?.({ status: 'signed-out' });
+        return 'signed-out';
+      }
+      const { user } = await this.request<{ user: PublicUser }>(
+        'GET',
+        AUTH_PATHS.me,
+        undefined,
+        this.accessToken,
+      );
+      this.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+      await this.adoptCache();
+      this.offline = false;
+      this.options.onConnectionChange?.({ status: 'online', user: this.user });
+      return 'online';
+    } catch {
+      return 'offline';
+    }
+  }
+
+  /** A cópia local passa a ser deste usuário, renovado agora; colaborador não tem cópia. */
+  private async adoptCache(): Promise<void> {
+    if (!this.user) return;
+    if (this.user.role !== 'user') return this.cache.clear();
+    await this.cache.adopt(this.user, this.now());
+  }
+
+  /** Esquece a sessão: tokens, usuário, o cofre e a cópia local (SPEC-032 §4.2). */
+  private async forget(): Promise<void> {
+    this.generation += 1;
+    this.accessToken = null;
+    this.user = null;
+    this.offline = false;
+    const cleared = this.cache.clear();
+    await this.options.store.clear();
+    await cleared;
+  }
+
+  private now(): Date {
+    return this.options.clock?.() ?? new Date();
   }
 
   /** Requisição autenticada; renova a sessão uma vez se o token de acesso tiver expirado (RF02). */
   async authorizedRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+    return this.authorized((token) => this.request<T>(method, path, body, token));
+  }
+
+  private async authorized<T>(attempt: (accessToken: string | null) => Promise<T>): Promise<T> {
     try {
-      return await this.request<T>(method, path, body, this.accessToken);
+      return await attempt(this.accessToken);
     } catch (error) {
       if (!(error instanceof RequestFailed) || error.error !== 'unauthorized') throw error;
       if (!(await this.refresh())) throw error;
-      return this.request<T>(method, path, body, this.accessToken);
+      return attempt(this.accessToken);
     }
   }
 
@@ -701,6 +884,8 @@ export class AuthClient {
       await this.options.store.save(session.refreshToken);
       this.accessToken = session.accessToken;
       this.user = session.user;
+      this.offline = false;
+      await this.adoptCache();
       return { ok: true, user: session.user };
     } catch (error) {
       return failure(error);
@@ -710,6 +895,7 @@ export class AuthClient {
   private async loadCurrentUser(): Promise<AuthResult> {
     const { user } = await this.authorizedRequest<{ user: PublicUser }>('GET', AUTH_PATHS.me);
     this.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+    await this.adoptCache();
     return { ok: true, user: this.user };
   }
 
@@ -728,47 +914,72 @@ export class AuthClient {
       const pair = await this.request<TokenPair>('POST', AUTH_PATHS.refresh, { refreshToken });
       await this.options.store.save(pair.refreshToken);
       this.accessToken = pair.accessToken;
+      // SPEC-032: a última renovação conta o prazo do modo consulta.
+      await this.adoptCache();
       return true;
     } catch (error) {
       if (error instanceof RequestFailed && error.error === 'invalid_refresh_token') {
-        this.accessToken = null;
-        this.user = null;
-        await this.options.store.clear();
+        await this.forget();
         return false;
       }
       throw error;
     }
   }
 
-  /** Baixa uma imagem do servidor; só SVG ou PNG de até 100 KB viram `data:` URL. */
-  private async image(
+  /** Leitura com o ETag guardado: o servidor responde 304 quando nada mudou (RNF19). */
+  private async conditionalGet(
     path: string,
+    etag: string | null,
     accessToken: string | null,
-  ): Promise<string | null | 'unauthorized'> {
-    const base = validateServerUrl(this.options.serverUrl(), this.options.allowInsecureLocalhost);
-    if (!base) throw new RequestFailed('invalid_url');
-    let response: Response;
-    try {
-      response = await (this.options.fetchFn ?? fetch)(new URL(path, base), {
-        headers: {
-          accept: 'image/svg+xml, image/png',
-          ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
-        },
-        signal: AbortSignal.timeout(this.options.timeoutMs ?? 10_000),
-      });
-    } catch {
-      throw new RequestFailed('server_unavailable');
+  ): Promise<FreshRead> {
+    const response = await this.send('GET', path, {
+      accessToken,
+      ...(etag ? { headers: { 'if-none-match': etag } } : {}),
+    });
+    if (response.status === 304) return { notModified: true };
+    if (response.ok) {
+      const text = await response.text();
+      try {
+        if (JSON.parse(text) === null) throw new Error('vazio');
+      } catch {
+        throw new RequestFailed('unexpected');
+      }
+      return { notModified: false, text, etag: response.headers.get('etag') };
     }
-    if (response.status === 401) return 'unauthorized';
-    if (response.status === 404) return null;
+    await this.parse(response);
+    throw new RequestFailed('unexpected');
+  }
+
+  /**
+   * Baixa o logo do servidor; só SVG ou PNG de até 100 KB viram `data:` URL. Sem logo próprio (404
+   * ou outro tipo), `null`, que também fica guardado.
+   */
+  private async logoGet(
+    path: string,
+    etag: string | null,
+    accessToken: string | null,
+  ): Promise<FreshRead> {
+    const response = await this.send('GET', path, {
+      accessToken,
+      accept: 'image/svg+xml, image/png',
+      ...(etag ? { headers: { 'if-none-match': etag } } : {}),
+    });
+    if (response.status === 304) return { notModified: true };
+    if (response.status === 401) throw new RequestFailed('unauthorized');
+    const none: FreshRead = { notModified: false, text: 'null', etag: null };
+    if (response.status === 404) return none;
     if (!response.ok) {
       throw new RequestFailed(response.status >= 500 ? 'server_unavailable' : 'unexpected');
     }
     const type = response.headers.get('content-type')?.split(';')[0]?.trim();
-    if (type !== 'image/svg+xml' && type !== 'image/png') return null;
+    if (type !== 'image/svg+xml' && type !== 'image/png') return none;
     const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > MAX_LOGO_BYTES) return null;
-    return `data:${type};base64,${bytes.toString('base64')}`;
+    if (bytes.length === 0 || bytes.length > MAX_LOGO_BYTES) return none;
+    return {
+      notModified: false,
+      text: JSON.stringify(`data:${type};base64,${bytes.toString('base64')}`),
+      etag: response.headers.get('etag'),
+    };
   }
 
   private async request<T>(
@@ -777,25 +988,53 @@ export class AuthClient {
     body?: unknown,
     accessToken?: string | null,
   ): Promise<T> {
+    const response = await this.send(method, path, {
+      ...(body !== undefined ? { body } : {}),
+      accessToken: accessToken ?? null,
+    });
+    return this.parse<T>(response);
+  }
+
+  /**
+   * Manda o pedido. Sem rede, tempo esgotado e 502/503/504 (a hospedagem com o servidor fora do
+   * ar) viram servidor inalcançável (SPEC-032); um 500 continua sendo um erro do servidor.
+   */
+  private async send(
+    method: string,
+    path: string,
+    init: {
+      body?: unknown;
+      accessToken: string | null;
+      accept?: string;
+      headers?: Record<string, string>;
+    },
+  ): Promise<Response> {
     const base = validateServerUrl(this.options.serverUrl(), this.options.allowInsecureLocalhost);
     if (!base) throw new RequestFailed('invalid_url');
 
-    const headers: Record<string, string> = { accept: 'application/json' };
-    if (body !== undefined) headers['content-type'] = 'application/json';
-    if (accessToken) headers.authorization = `Bearer ${accessToken}`;
+    const headers: Record<string, string> = {
+      accept: init.accept ?? 'application/json',
+      ...init.headers,
+    };
+    if (init.body !== undefined) headers['content-type'] = 'application/json';
+    if (init.accessToken) headers.authorization = `Bearer ${init.accessToken}`;
 
     let response: Response;
     try {
       response = await (this.options.fetchFn ?? fetch)(new URL(path, base), {
         method,
         headers,
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
         signal: AbortSignal.timeout(this.options.timeoutMs ?? 10_000),
       });
     } catch {
-      throw new RequestFailed('server_unavailable');
+      throw unreachable();
     }
+    if (UNREACHABLE_STATUSES.has(response.status)) throw unreachable();
+    return response;
+  }
 
+  private async parse<T>(response: Response): Promise<T> {
     // 202 (pedido aceito) e 204 (feito) não têm corpo.
     if (response.status === 202 || response.status === 204) return undefined as T;
     const json = (await response.json().catch(() => null)) as Record<string, unknown> | null;
@@ -810,6 +1049,25 @@ export class AuthClient {
       );
     }
     throw new RequestFailed(response.status >= 500 ? 'server_unavailable' : 'unexpected');
+  }
+}
+
+/** O corpo guardado ou recebido, já conferido como JSON. */
+function parse<T>(text: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new RequestFailed('unexpected');
+  }
+}
+
+/** SPEC-032: sem conexão, a cópia local; sem cópia, "ainda não consultado neste computador". */
+function fromSaved<T>(saved: SavedRead | null): { body: T; savedAt: string } {
+  if (!saved) throw new RequestFailed('not_saved_offline');
+  try {
+    return { body: JSON.parse(saved.body) as T, savedAt: saved.savedAt };
+  } catch {
+    throw new RequestFailed('not_saved_offline');
   }
 }
 
