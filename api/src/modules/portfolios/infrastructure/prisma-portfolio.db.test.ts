@@ -68,6 +68,7 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
       startDate: '2019-01-02',
       createdAt: at,
       updatedAt: at,
+      copiedFromId: null,
     });
     await expect(
       portfolios.create(newPortfolio('DIVIDENDOS', { nameKey: 'dividendos' })),
@@ -448,5 +449,100 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
     // Sem horário, mas com nível: nem uma regra nem a outra.
     await refused({ level: 'free' });
     expect(await prisma.transacao.count()).toBe(0);
+  });
+
+  // --- SPEC-023: nova carteira a partir de outra ---
+
+  it('cópia: mesmo dono, tipo e início, com origem_id; os lançamentos entram iguais, com ids novos (CA01, CA10)', async () => {
+    const assetId = await newAsset();
+    const source = await portfolios.create(
+      newPortfolio('E se', { initialDeposit: deposit('10000', '2019-01-02') }),
+    );
+    const trade = await ledger.appendTradeLocked(source.id, () => historicalBuy(assetId));
+    const later = new Date('2026-11-16T15:00:00Z');
+
+    const { portfolio, copied } = await portfolios.copyLocked(source.id, (current, count) => {
+      expect(count).toBe(1);
+      return {
+        name: 'Cenário B',
+        nameKey: 'cenario b',
+        at: later,
+        cash: current.cash.map(({ type, amount, date, recordedAt }) => ({
+          type,
+          amount,
+          date,
+          recordedAt,
+        })),
+        trades: current.trades.map(({ id: _id, portfolioId: _p, ...rest }) => rest),
+      };
+    });
+    expect(copied).toEqual({ cashEntries: 1, trades: 1 });
+    expect(portfolio).toEqual({
+      id: expect.any(String),
+      userId,
+      name: 'Cenário B',
+      type: 'historical',
+      startDate: '2019-01-02',
+      createdAt: later,
+      updatedAt: later,
+      copiedFromId: source.id,
+    });
+    expect(portfolio.id).not.toBe(source.id);
+    const twin = await ledger.ledger(portfolio.id);
+    expect(twin.cash).toEqual([
+      { ...deposit('10000.00', '2019-01-02'), id: expect.any(String), portfolioId: portfolio.id },
+    ]);
+    expect(twin.trades).toEqual([{ ...trade, id: expect.any(String), portfolioId: portfolio.id }]);
+    expect(twin.trades[0]?.id).not.toBe(trade.id);
+    expect(await portfolios.namesOf([source.id, portfolio.id, randomUUID()])).toEqual(
+      new Map([
+        [source.id, 'E se'],
+        [portfolio.id, 'Cenário B'],
+      ]),
+    );
+    // A original continua sem origem.
+    expect((await portfolios.findById(source.id))?.copiedFromId).toBeNull();
+  });
+
+  it('cópia: nome repetido não deixa nada gravado; a original excluída não apaga a cópia nem a origem (CA04, CA06)', async () => {
+    const source = await portfolios.create(
+      newPortfolio('E se', { initialDeposit: deposit('10000', '2019-01-02') }),
+    );
+    await expect(
+      portfolios.copyLocked(source.id, (current) => ({
+        name: 'E SE',
+        nameKey: 'e se',
+        at,
+        cash: current.cash.map(({ type, amount, date, recordedAt }) => ({
+          type,
+          amount,
+          date,
+          recordedAt,
+        })),
+        trades: [],
+      })),
+    ).rejects.toThrow(PortfolioNameInUseError);
+    expect(await prisma.carteira.count()).toBe(1);
+    expect(await prisma.lancamentoCaixa.count()).toBe(1);
+
+    const { portfolio } = await portfolios.copyLocked(source.id, () => ({
+      name: 'Cópia',
+      nameKey: 'copia',
+      at,
+      cash: [],
+      trades: [],
+    }));
+    await portfolios.delete(source.id, at);
+    expect((await portfolios.findById(portfolio.id))?.copiedFromId).toBe(source.id);
+    expect(await portfolios.namesOf([source.id])).toEqual(new Map());
+    await expect(
+      portfolios.copyLocked(source.id, () => ({
+        name: 'Nada',
+        nameKey: 'nada',
+        at,
+        cash: [],
+        trades: [],
+      })),
+    ).rejects.toThrow(PortfolioNotFoundError);
   });
 });

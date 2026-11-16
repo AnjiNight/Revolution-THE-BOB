@@ -7,11 +7,14 @@ import {
 } from '../../../generated/prisma/client.js';
 import type {
   NewStoredPortfolio,
+  NewStoredPortfolioCopy,
+  PortfolioLedger,
   PortfolioRepository,
   StoredPortfolio,
+  StoredPortfolioCopy,
 } from '../application/ports.js';
 import { PortfolioNameInUseError } from '../domain/errors.js';
-import { cashEntryData, lockPortfolio } from './prisma-ledger-repository.js';
+import { cashEntryData, lockPortfolio, readLedger, tradeData } from './prisma-ledger-repository.js';
 
 const TYPE_TO_TIPO: Record<PortfolioType, TipoCarteira> = {
   live: 'ao_vivo',
@@ -27,6 +30,7 @@ function toStored(row: Carteira): StoredPortfolio {
     startDate: row.inicioEm.toISOString().slice(0, 10),
     createdAt: row.criadaEm,
     updatedAt: row.atualizadaEm,
+    copiedFromId: row.origemId,
   };
 }
 
@@ -94,6 +98,63 @@ export class PrismaPortfolioRepository implements PortfolioRepository {
       if (isNameViolation(error)) throw new PortfolioNameInUseError();
       throw error;
     }
+  }
+
+  /**
+   * SPEC-023: tudo numa transação, com a original travada (a foto do livro é de um instante só e o
+   * limite de 20 é conferido dentro da trava). Os lançamentos copiados entram com os ids novos e o
+   * resto igual, inclusive o horário de registro: o banco exige que a data case com ele.
+   */
+  async copyLocked(
+    sourceId: string,
+    decide: (current: PortfolioLedger, count: number) => NewStoredPortfolioCopy,
+  ): Promise<StoredPortfolioCopy> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await lockPortfolio(tx, sourceId);
+        const source = await tx.carteira.findUniqueOrThrow({ where: { id: sourceId } });
+        const count = await tx.carteira.count({ where: { usuarioId: source.usuarioId } });
+        const copy = decide(await readLedger(tx, sourceId), count);
+        const row = await tx.carteira.create({
+          data: {
+            usuarioId: source.usuarioId,
+            nome: copy.name,
+            nomeChave: copy.nameKey,
+            tipo: source.tipo,
+            inicioEm: source.inicioEm,
+            criadaEm: copy.at,
+            atualizadaEm: copy.at,
+            origemId: sourceId,
+          },
+        });
+        if (copy.cash.length > 0) {
+          await tx.lancamentoCaixa.createMany({
+            data: copy.cash.map((entry) => ({ carteiraId: row.id, ...cashEntryData(entry) })),
+          });
+        }
+        if (copy.trades.length > 0) {
+          await tx.transacao.createMany({
+            data: copy.trades.map((trade) => tradeData(row.id, trade)),
+          });
+        }
+        return {
+          portfolio: toStored(row),
+          copied: { cashEntries: copy.cash.length, trades: copy.trades.length },
+        };
+      });
+    } catch (error) {
+      if (isNameViolation(error)) throw new PortfolioNameInUseError();
+      throw error;
+    }
+  }
+
+  async namesOf(ids: readonly string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.prisma.carteira.findMany({
+      where: { id: { in: [...ids] } },
+      select: { id: true, nome: true },
+    });
+    return new Map(rows.map((row) => [row.id, row.nome]));
   }
 
   /**

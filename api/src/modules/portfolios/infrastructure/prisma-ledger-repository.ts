@@ -78,7 +78,7 @@ export function cashEntryData(entry: NewStoredCashEntry) {
   };
 }
 
-function tradeData(portfolioId: string, trade: NewStoredTrade) {
+export function tradeData(portfolioId: string, trade: NewStoredTrade) {
   return {
     carteiraId: portfolioId,
     ativoId: trade.assetId,
@@ -104,7 +104,7 @@ export async function lockPortfolio(tx: Prisma.TransactionClient, portfolioId: s
   if (rows.length === 0) throw new PortfolioNotFoundError();
 }
 
-async function readLedger(
+export async function readLedger(
   client: Prisma.TransactionClient | PrismaClient,
   portfolioId: string,
 ): Promise<PortfolioLedger> {

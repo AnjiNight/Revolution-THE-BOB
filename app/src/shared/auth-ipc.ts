@@ -115,6 +115,8 @@ export const PORTFOLIO_CHANNELS = {
   performance: 'portfolios:performance',
   // SPEC-022: comparação de 2 a 4 carteiras.
   comparison: 'portfolios:comparison',
+  // SPEC-023: nova carteira a partir de outra.
+  copy: 'portfolios:copy',
 } as const;
 
 /** Erros que a interface sabe traduzir. */

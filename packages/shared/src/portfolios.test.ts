@@ -5,8 +5,10 @@ import {
   normalizePortfolioName,
   portfolioNameKey,
   validateComparisonQuery,
+  suggestCopyName,
   validateNewCashEntry,
   validateNewPortfolio,
+  validateNewPortfolioCopy,
   validateNewReversal,
   validateNewTrade,
   validatePerformanceQuery,
@@ -296,5 +298,39 @@ describe('comparação: validação (SPEC-022)', () => {
       success: false,
       fields: { from: 'after_end' },
     });
+  });
+});
+
+describe('cópia de carteira (SPEC-023 §4.2)', () => {
+  it('valida o nome, o que copiar e o formato de "até"', () => {
+    expect(validateNewPortfolioCopy({ name: ' Cenário B ', scope: 'all' })).toEqual({
+      success: true,
+      data: { name: 'Cenário B', scope: 'all' },
+    });
+    expect(validateNewPortfolioCopy({ name: 'B', scope: 'cash', until: '2025-02-28' })).toEqual({
+      success: true,
+      data: { name: 'B', scope: 'cash', until: '2025-02-28' },
+    });
+    // Vazio é o mesmo que não mandar.
+    expect(validateNewPortfolioCopy({ name: 'B', scope: 'all', until: '' })).toEqual({
+      success: true,
+      data: { name: 'B', scope: 'all' },
+    });
+    expect(validateNewPortfolioCopy({ name: '', scope: 'tudo', until: '28/02/2025' })).toEqual({
+      success: false,
+      fields: { name: 'required', scope: 'invalid_option', until: 'invalid_date' },
+    });
+  });
+
+  it('sugere "{nome} (cópia)" e numera quando já existe, cabendo em 60 caracteres', () => {
+    expect(suggestCopyName('Cenário A', [], 'cópia')).toBe('Cenário A (cópia)');
+    expect(suggestCopyName('Cenário A', ['cenário a (CÓPIA)'], 'cópia')).toBe(
+      'Cenário A (cópia 2)',
+    );
+    expect(suggestCopyName('A', ['A (copy)', 'A (copy 2)'], 'copy')).toBe('A (copy 3)');
+    const long = 'x'.repeat(60);
+    const suggested = suggestCopyName(long, [], 'cópia');
+    expect(suggested).toBe(`${'x'.repeat(52)} (cópia)`);
+    expect(suggested.length).toBe(60);
   });
 });

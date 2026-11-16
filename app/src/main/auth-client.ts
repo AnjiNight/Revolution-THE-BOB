@@ -51,11 +51,13 @@ import {
   type NewCashEntryInput,
   type NewTradeInput,
   type PortfolioComparison,
+  type PortfolioCopyResult,
   type PortfolioPerformance,
   type PortfolioPositions,
   type ReversalResult,
   type TradeQuote,
   type TradeResult,
+  type NewPortfolioCopyInput,
   type NewPortfolioInput,
   type PasswordResetConfirmInput,
   type PasswordResetRequestInput,
@@ -481,6 +483,20 @@ export class AuthClient {
         { entryId },
       );
     });
+  }
+
+  /** SPEC-023: nova carteira a partir desta; `copy_breaks_cash` traz em details a retirada. */
+  copyPortfolio(
+    id: string,
+    input: NewPortfolioCopyInput,
+  ): Promise<ClientResult<PortfolioCopyResult>> {
+    return this.call(() =>
+      this.authorizedRequest<PortfolioCopyResult>(
+        'POST',
+        portfolioRouteUrl(PORTFOLIO_PATHS.copies, id),
+        input,
+      ),
+    );
   }
 
   /** Colaborador (SPEC-007): até que dia a série do CDI está carregada e a última atualização. */

@@ -101,9 +101,10 @@ export const PERSONAL_DATA_FORMAT = 'simulador-investimentos/dados-pessoais';
 /**
  * 2: SPEC-012, carteiras. 3: SPEC-013, aportes e retiradas de cada carteira. 4: SPEC-014, compras e
  * vendas de cada carteira. 5: SPEC-015, o momento do estorno de cada lançamento. 6: SPEC-016,
- * compras e vendas da carteira histórica (sem horário de cotação, com a fonte).
+ * compras e vendas da carteira histórica (sem horário de cotação, com a fonte). 7: SPEC-023, de qual
+ * carteira cada uma foi copiada (`copiedFrom`).
  */
-export const PERSONAL_DATA_VERSION = 6;
+export const PERSONAL_DATA_VERSION = 7;
 
 /**
  * Arquivo "Baixar meus dados" (SPEC-034, LGPD). Tudo o que o app guarda sobre a pessoa, sem
@@ -140,6 +141,8 @@ export interface PersonalDataExport {
     startDate: string;
     createdAt: string;
     updatedAt: string;
+    /** SPEC-023: a carteira de que esta foi copiada (`name` nulo se já foi excluída), ou `null`. */
+    copiedFrom: { id: string; name: string | null } | null;
     cashEntries: Array<{
       type: 'deposit' | 'withdrawal';
       /** Decimal em texto com 2 casas: "1234.56". */

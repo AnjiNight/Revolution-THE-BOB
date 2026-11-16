@@ -166,6 +166,25 @@ export interface StoredPortfolio {
   startDate: IsoDate;
   createdAt: Date;
   updatedAt: Date;
+  /** SPEC-023: a carteira de que esta foi copiada (pode já não existir), ou `null`. */
+  copiedFromId: string | null;
+}
+
+/**
+ * SPEC-023: a cópia que o serviço decidiu, com a original travada: o nome e os lançamentos que
+ * entram (sem id nem carteira: o repositório grava com ids novos, na carteira nova).
+ */
+export interface NewStoredPortfolioCopy {
+  name: string;
+  nameKey: string;
+  at: Date;
+  cash: NewStoredCashEntry[];
+  trades: NewStoredTrade[];
+}
+
+export interface StoredPortfolioCopy {
+  portfolio: StoredPortfolio;
+  copied: { cashEntries: number; trades: number };
 }
 
 export interface NewStoredPortfolio {
@@ -193,6 +212,19 @@ export interface PortfolioRepository {
   create(portfolio: NewStoredPortfolio): Promise<StoredPortfolio>;
   /** Lança PortfolioNameInUseError se o usuário já tem a chave. */
   rename(id: string, name: string, nameKey: string, at: Date): Promise<StoredPortfolio>;
+  /**
+   * SPEC-023: trava a original, lê o livro dela e quantas carteiras o dono tem, e chama `decide`,
+   * que confere as regras e devolve o que copiar (ou lança o erro). Grava a carteira nova (mesmo
+   * dono, tipo e início da original, com `origem_id`) e os lançamentos copiados antes de soltar a
+   * trava: se algo falhar, nada fica. Lança PortfolioNameInUseError se o usuário já tem a chave e
+   * PortfolioNotFoundError se a original sumiu enquanto o pedido chegava.
+   */
+  copyLocked(
+    sourceId: string,
+    decide: (current: PortfolioLedger, count: number) => NewStoredPortfolioCopy,
+  ): Promise<StoredPortfolioCopy>;
+  /** SPEC-023: o nome atual das carteiras pedidas (as que ainda existem), para `copiedFrom`. */
+  namesOf(ids: readonly string[]): Promise<Map<string, string>>;
   /**
    * Apaga a carteira e os lançamentos dela e grava o registro da exclusão (com quantos lançamentos
    * havia), sem dado pessoal, numa transação só.

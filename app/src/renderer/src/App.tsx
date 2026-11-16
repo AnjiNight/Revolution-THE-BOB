@@ -13,7 +13,7 @@ import { ForgotPasswordForm } from './components/ForgotPasswordForm';
 import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
 import { PortfolioComparison } from './components/PortfolioComparison';
-import { PortfolioPage, Portfolios } from './components/Portfolios';
+import { PortfolioPage, Portfolios, type CopiedCounts } from './components/Portfolios';
 import type { TradeAsset } from './components/TradeForm';
 import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
@@ -54,6 +54,8 @@ type View =
       buyAsset?: TradeAsset;
       compare?: string[];
       fromComparison?: string[];
+      /** SPEC-023: a carteira aberta acabou de ser copiada de outra, com estes lançamentos. */
+      copied?: CopiedCounts;
     };
 
 /**
@@ -175,12 +177,19 @@ export function App() {
                   ...(view.portfolioId ? { returnTo: view.portfolioId } : {}),
                 })
               }
+              justCopied={view.copied ?? null}
+              onOpenPortfolio={(portfolioId, copied) =>
+                setView({ kind: 'portfolios', user, portfolioId, ...(copied ? { copied } : {}) })
+              }
+              onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
               onSessionExpired={sessionExpired}
             />
           ) : (
             <Portfolios
               startCreating={view.creating === true}
-              onOpen={(portfolioId) => setView({ kind: 'portfolios', user, portfolioId })}
+              onOpen={(portfolioId, copied) =>
+                setView({ kind: 'portfolios', user, portfolioId, ...(copied ? { copied } : {}) })
+              }
               onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
               onSessionExpired={sessionExpired}
             />

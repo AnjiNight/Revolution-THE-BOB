@@ -265,7 +265,8 @@
     "reversal_breaks_cash": "Esse estorno deixaria o caixa negativo.",
     "reversal_breaks_position": "Esse estorno deixaria uma venda maior que a posição.",
     "no_close_that_day": "O ativo não tem fechamento da B3 nesse dia.",
-    "history_pending": "O histórico de preços deste ativo ainda está sendo carregado."
+    "history_pending": "O histórico de preços deste ativo ainda está sendo carregado.",
+    "copy_breaks_cash": "Sem as compras e vendas, uma retirada ficaria sem saldo."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -855,6 +856,36 @@
       "max": "Até 4 carteiras",
       "go": "Comparar ({{count}})",
       "cancel": "Cancelar"
+    },
+    "copy": {
+      "action": "Copiar",
+      "actionLabel": "Copiar a carteira {{name}}",
+      "pageAction": "Copiar carteira",
+      "title": "Nova carteira a partir de «{{name}}»",
+      "fixedHint": "A cópia tem o mesmo tipo e o mesmo início da original.",
+      "suffix": "cópia",
+      "scope": "O que copiar",
+      "scopes": {
+        "all": {
+          "title": "Tudo",
+          "text": "Aportes, retiradas, compras e vendas, até hoje: mude só o que quiser testar."
+        },
+        "cash": {
+          "title": "Só o dinheiro",
+          "text": "Aportes e retiradas nas mesmas datas: monte outra distribuição com o mesmo dinheiro."
+        }
+      },
+      "until": "Copiar até (opcional)",
+      "untilHint": "Entram só os lançamentos até esse dia. Vazio: todos.",
+      "create": "Criar cópia",
+      "creating": "Copiando…",
+      "breaksCash": "Sem as compras e vendas, a retirada de {{amount}} de {{date}} ficaria sem saldo. Copie tudo, ou copie só até antes dela.",
+      "created": "Criada a partir de «{{name}}»: {{cash}} aportes e retiradas e {{trades}} negociações copiados.",
+      "compareBoth": "Comparar as duas",
+      "from": "Criada em {{date}} a partir de",
+      "fromName": "«{{name}}»",
+      "fromDeleted": "Criada em {{date}} a partir de uma carteira já excluída",
+      "openOrigin": "Abrir a carteira {{name}}"
     },
     "comparison": {
       "title": "Comparação",

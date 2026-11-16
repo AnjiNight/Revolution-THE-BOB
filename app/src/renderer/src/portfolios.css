@@ -1347,3 +1347,14 @@ button.allocation-sector-button:hover {
   padding-left: 1.75rem;
   font-weight: 500;
 }
+
+/* ---------- Nova carteira a partir de outra (SPEC-023) ---------- */
+
+.portfolio-origin .link {
+  font-size: inherit;
+}
+
+.portfolio-copied {
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}

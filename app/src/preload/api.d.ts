@@ -9,6 +9,7 @@ import type {
   ComparisonQuery,
   PerformanceQuery,
   PortfolioComparison,
+  PortfolioCopyResult,
   PortfolioPerformance,
   PortfolioPositions,
   ReversalResult,
@@ -45,6 +46,7 @@ import type {
   LoginInput,
   NewAssetInput,
   NewCashEntryInput,
+  NewPortfolioCopyInput,
   NewPortfolioInput,
   NewTradeInput,
   PasswordResetConfirmInput,
@@ -131,6 +133,8 @@ export interface DesktopApi {
     performance(id: string, query: PerformanceQuery): Promise<ClientResult<PortfolioPerformance>>;
     /** SPEC-022: de 2 a 4 carteiras no mesmo período, na ordem escolhida. */
     comparison(query: ComparisonQuery): Promise<ClientResult<PortfolioComparison>>;
+    /** SPEC-023: nova carteira a partir desta; `copy_breaks_cash` traz em details a retirada. */
+    copy(id: string, input: NewPortfolioCopyInput): Promise<ClientResult<PortfolioCopyResult>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

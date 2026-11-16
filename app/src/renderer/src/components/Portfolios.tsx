@@ -5,18 +5,21 @@ import {
   isoDateInBrasilia,
   PORTFOLIO_HISTORY_START,
   PORTFOLIO_NAME_MAX,
+  suggestCopyName,
+  type CopyScope,
   type FieldErrors,
   type Portfolio,
+  type PortfolioCopyResult,
   type PortfolioList,
   type PortfolioType,
 } from '@simulador/shared';
-import { ArrowLeft, ChartLine, Plus } from '@phosphor-icons/react';
+import { ArrowLeft, ChartLine, Copy, Plus } from '@phosphor-icons/react';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
 import '../assets.css';
 import '../portfolios.css';
-import { formatCalendarDay } from '../format';
+import { formatCalendarDay, formatMoney } from '../format';
 import { MoneyField } from './MoneyField';
 import { PortfolioCash } from './PortfolioCash';
 import { PortfolioPerformance } from './PortfolioPerformance';
@@ -29,8 +32,12 @@ type ListState =
   | { status: 'ready'; data: PortfolioList }
   | { status: 'failed'; error: ClientAuthError };
 
+/** SPEC-023: quantos lançamentos a cópia recém-criada levou, para o aviso na tela dela. */
+export type CopiedCounts = PortfolioCopyResult['copied'];
+
 interface PortfoliosProps {
-  onOpen: (id: string) => void;
+  /** SPEC-023: `copied` quando a carteira aberta acabou de ser criada a partir de outra. */
+  onOpen: (id: string, copied?: CopiedCounts) => void;
   /** SPEC-022: as carteiras escolhidas para comparar, na ordem da escolha. */
   onCompare: (ids: string[]) => void;
   onSessionExpired: () => void;
@@ -51,6 +58,8 @@ export function Portfolios({
   const { t } = useTranslation();
   const [state, setState] = useState<ListState>({ status: 'loading' });
   const [creating, setCreating] = useState(startCreating);
+  // SPEC-023: a carteira que está sendo copiada, com o formulário no lugar do de nova carteira.
+  const [copying, setCopying] = useState<Portfolio | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   // SPEC-022: escolher de 2 a 4 carteiras para comparar, na ordem em que foram marcadas.
@@ -117,7 +126,7 @@ export function Portfolios({
             {t('portfolios.count', { count: list.portfolios.length, limit: list.limit })}
           </p>
         )}
-        {!creating && !selecting && list && (
+        {!creating && !copying && !selecting && list && (
           <div className="portfolio-hero-actions">
             <button
               type="button"
@@ -167,6 +176,17 @@ export function Portfolios({
           onSessionExpired={onSessionExpired}
         />
       )}
+      {copying && (
+        <CopyPortfolioForm
+          source={copying}
+          onCreated={(result) => {
+            setCopying(null);
+            onOpen(result.portfolio.id, result.copied);
+          }}
+          onCancel={() => setCopying(null)}
+          onSessionExpired={onSessionExpired}
+        />
+      )}
 
       {state.status === 'loading' && (
         <p className="loading" role="status">
@@ -192,6 +212,15 @@ export function Portfolios({
                 onOpen={() => onOpen(portfolio.id)}
                 onChanged={load}
                 onDeleted={() => deleted(portfolio.name)}
+                onCopy={
+                  full
+                    ? null
+                    : () => {
+                        setNotice(null);
+                        setCreating(false);
+                        setCopying(portfolio);
+                      }
+                }
                 onSessionExpired={onSessionExpired}
                 {...(selecting
                   ? {
@@ -363,6 +392,158 @@ function NewPortfolioForm({
   );
 }
 
+/**
+ * SPEC-023 §4.2: nova carteira a partir de `source`, com o mesmo tipo e início. O nome sugerido é
+ * "{nome} (cópia)" (numerado se já existe); "Tudo" ou "Só o dinheiro"; na histórica, "Copiar até".
+ */
+export function CopyPortfolioForm({
+  source,
+  onCreated,
+  onCancel,
+  onSessionExpired,
+}: {
+  source: Portfolio;
+  onCreated: (result: PortfolioCopyResult) => void;
+  onCancel: () => void;
+  onSessionExpired: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const titleId = useId();
+  const scopeName = useId();
+  const [name, setName] = useState('');
+  const [touched, setTouched] = useState(false);
+  const [scope, setScope] = useState<CopyScope>('all');
+  const [until, setUntil] = useState('');
+  const [fields, setFields] = useState<FieldErrors>({});
+  const [error, setError] = useState<ClientAuthError | null>(null);
+  const [breaks, setBreaks] = useState<{ date: string; amount: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const lastDay = addDays(isoDateInBrasilia(new Date()), -1);
+
+  // O nome sugerido não repete nenhum que a pessoa já tem (até ela mexer no campo).
+  useEffect(() => {
+    let active = true;
+    void window.api.portfolios.list().then((result) => {
+      if (!active || !result.ok) return;
+      const taken = result.data.portfolios.map((portfolio) => portfolio.name);
+      setName((current) =>
+        touched || current
+          ? current
+          : suggestCopyName(source.name, taken, t('portfolios.copy.suffix')),
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [source.name, touched, t]);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setFields({});
+    setError(null);
+    setBreaks(null);
+    setSaving(true);
+    const result = await window.api.portfolios.copy(source.id, {
+      name,
+      scope,
+      ...(source.type === 'historical' && until ? { until } : {}),
+    });
+    setSaving(false);
+    if (result.ok) return onCreated(result.data);
+    if (result.error === 'unauthorized') return onSessionExpired();
+    if (result.fields) setFields(result.fields);
+    if (result.error === 'portfolio_name_in_use') setFields({ name: 'duplicate' });
+    if (result.error === 'copy_breaks_cash' && result.details?.date && result.details.amount) {
+      setBreaks({ date: result.details.date, amount: result.details.amount });
+    }
+    setError(result.error);
+  };
+
+  return (
+    <section className="profile-panel portfolio-new" aria-labelledby={titleId}>
+      <h2 id={titleId}>{t('portfolios.copy.title', { name: source.name })}</h2>
+      <p className="portfolio-meta">
+        <TypeLabel type={source.type} />
+        <span>
+          {t('portfolios.since', { date: formatCalendarDay(source.startDate, i18n.language) })}
+        </span>
+      </p>
+      <p className="field-hint">{t('portfolios.copy.fixedHint')}</p>
+      <form onSubmit={(event) => void submit(event)} noValidate>
+        <TextField
+          label={t('portfolios.name')}
+          type="text"
+          value={name}
+          onChange={(value) => {
+            setTouched(true);
+            setName(value);
+          }}
+          autoComplete="off"
+          error={fields.name === 'duplicate' ? undefined : fields.name}
+          hint={t('portfolios.nameHint', { max: PORTFOLIO_NAME_MAX })}
+        />
+        {fields.name === 'duplicate' && (
+          <p className="field-error">{t('authErrors.portfolio_name_in_use')}</p>
+        )}
+
+        <fieldset className="portfolio-types">
+          <legend>{t('portfolios.copy.scope')}</legend>
+          {(['all', 'cash'] as const).map((option) => (
+            <label key={option} className={`type-card${scope === option ? ' is-selected' : ''}`}>
+              <input
+                type="radio"
+                name={scopeName}
+                value={option}
+                checked={scope === option}
+                onChange={() => setScope(option)}
+              />
+              <span className="type-card-title">{t(`portfolios.copy.scopes.${option}.title`)}</span>
+              <span className="type-card-text">{t(`portfolios.copy.scopes.${option}.text`)}</span>
+            </label>
+          ))}
+        </fieldset>
+        {fields.scope && <p className="field-error">{t(`fieldErrors.${fields.scope}`)}</p>}
+
+        {source.type === 'historical' && (
+          <TextField
+            label={t('portfolios.copy.until')}
+            type="date"
+            value={until}
+            onChange={setUntil}
+            autoComplete="off"
+            min={source.startDate}
+            max={lastDay}
+            error={fields.until}
+            hint={t('portfolios.copy.untilHint')}
+          />
+        )}
+
+        {breaks && (
+          <p className="form-error" role="alert">
+            {t('portfolios.copy.breaksCash', {
+              amount: formatMoney(breaks.amount, i18n.language),
+              date: formatCalendarDay(breaks.date, i18n.language),
+            })}
+          </p>
+        )}
+        {error && !breaks && error !== 'validation_error' && error !== 'portfolio_name_in_use' && (
+          <p className="form-error" role="alert">
+            {t(`authErrors.${error}`)}
+          </p>
+        )}
+        <div className="form-actions">
+          <button type="submit" className="pill pill-primary" disabled={saving}>
+            {saving ? t('portfolios.copy.creating') : t('portfolios.copy.create')}
+          </button>
+          <button type="button" className="pill pill-ghost" onClick={onCancel}>
+            {t('portfolios.cancel')}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
 /** SPEC-022: a caixa de seleção da carteira, na escolha para comparar. */
 interface RowChoice {
   checked: boolean;
@@ -380,6 +561,7 @@ function PortfolioRow({
   onOpen,
   onChanged,
   onDeleted,
+  onCopy,
   onSessionExpired,
   choice,
 }: {
@@ -387,6 +569,8 @@ function PortfolioRow({
   onOpen: () => void;
   onChanged: () => void;
   onDeleted: () => void;
+  /** SPEC-023: abre o formulário de cópia; `null` com o limite de carteiras atingido. */
+  onCopy: (() => void) | null;
   onSessionExpired: () => void;
   choice?: RowChoice;
 }) {
@@ -522,6 +706,15 @@ function PortfolioRow({
           <button
             type="button"
             className="pill pill-ghost pill-small"
+            aria-label={t('portfolios.copy.actionLabel', { name: portfolio.name })}
+            disabled={onCopy === null}
+            onClick={() => onCopy?.()}
+          >
+            {t('portfolios.copy.action')}
+          </button>
+          <button
+            type="button"
+            className="pill pill-ghost pill-small"
             aria-label={t('portfolios.deleteLabel', { name: portfolio.name })}
             onClick={() => setMode('delete')}
           >
@@ -568,8 +761,11 @@ export function PortfolioPage({
   portfolioId,
   buyAsset = null,
   backLabel,
+  justCopied = null,
   onBack,
   onOpenAsset,
+  onOpenPortfolio,
+  onCompare,
   onSessionExpired,
 }: {
   portfolioId: string;
@@ -577,14 +773,23 @@ export function PortfolioPage({
   backLabel?: string;
   /** SPEC-014: a ficha do ativo pediu para comprar este ativo aqui. */
   buyAsset?: TradeAsset | null;
+  /** SPEC-023: a carteira acabou de ser criada a partir de outra, com estes lançamentos. */
+  justCopied?: CopiedCounts | null;
   onBack: () => void;
   onOpenAsset: (assetId: string) => void;
+  /** SPEC-023: abre outra carteira (a original, ou a cópia recém-criada). */
+  onOpenPortfolio: (id: string, copied?: CopiedCounts) => void;
+  /** SPEC-023: "Comparar as duas" abre a Comparação (SPEC-022) com a original e a cópia. */
+  onCompare: (ids: string[]) => void;
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
   // Cada lançamento novo (aporte, retirada, compra ou venda) recarrega o caixa e as posições.
   const [version, setVersion] = useState(0);
   const changed = useCallback(() => setVersion((current) => current + 1), []);
+  // SPEC-023: o formulário de cópia, acima do caixa.
+  const [copying, setCopying] = useState(false);
+  const copyButton = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'ready'; portfolio: Portfolio }
@@ -642,7 +847,89 @@ export function PortfolioPage({
                 })}
               </span>
             </p>
+            {/* SPEC-023 §4.2: de onde a cópia veio; com a original excluída, só a data. */}
+            {state.portfolio.copiedFrom && (
+              <p className="portfolio-meta portfolio-origin">
+                {state.portfolio.copiedFrom.name === null ? (
+                  <span>
+                    {t('portfolios.copy.fromDeleted', {
+                      date: formatCalendarDay(
+                        state.portfolio.createdAt.slice(0, 10),
+                        i18n.language,
+                      ),
+                    })}
+                  </span>
+                ) : (
+                  <span>
+                    {t('portfolios.copy.from', {
+                      date: formatCalendarDay(
+                        state.portfolio.createdAt.slice(0, 10),
+                        i18n.language,
+                      ),
+                    })}{' '}
+                    <button
+                      type="button"
+                      className="link"
+                      aria-label={t('portfolios.copy.openOrigin', {
+                        name: state.portfolio.copiedFrom.name,
+                      })}
+                      onClick={() =>
+                        onOpenPortfolio((state.portfolio.copiedFrom as { id: string }).id)
+                      }
+                    >
+                      {t('portfolios.copy.fromName', { name: state.portfolio.copiedFrom.name })}
+                    </button>
+                  </span>
+                )}
+              </p>
+            )}
+            {!copying && (
+              <div className="portfolio-hero-actions">
+                <button
+                  ref={copyButton}
+                  type="button"
+                  className="pill pill-ghost"
+                  onClick={() => setCopying(true)}
+                >
+                  {t('portfolios.copy.pageAction')}
+                  <span className="pill-icon" aria-hidden="true">
+                    <Copy weight="bold" />
+                  </span>
+                </button>
+              </div>
+            )}
           </header>
+          {justCopied && state.portfolio.copiedFrom?.name && (
+            <p className="form-success portfolio-copied" role="status">
+              <span>
+                {t('portfolios.copy.created', {
+                  name: state.portfolio.copiedFrom.name,
+                  cash: justCopied.cashEntries,
+                  trades: justCopied.trades,
+                })}
+              </span>
+              <button
+                type="button"
+                className="pill pill-ghost pill-small"
+                onClick={() =>
+                  onCompare([(state.portfolio.copiedFrom as { id: string }).id, state.portfolio.id])
+                }
+              >
+                {t('portfolios.copy.compareBoth')}
+              </button>
+            </p>
+          )}
+          {copying && (
+            <CopyPortfolioForm
+              source={state.portfolio}
+              onCreated={(result) => onOpenPortfolio(result.portfolio.id, result.copied)}
+              onCancel={() => {
+                setCopying(false);
+                requestAnimationFrame(() => copyButton.current?.focus());
+              }}
+              onSessionExpired={onSessionExpired}
+            />
+          )}
           {/*
             Reordenação de 09/11/2026 (Luís): do que mais se consulta para o que menos se consulta.
             No topo, o saldo com Aportar e Retirar; depois a rentabilidade (SPEC-019), as posições

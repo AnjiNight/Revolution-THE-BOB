@@ -79,6 +79,9 @@ model Carteira {
   inicioEm     DateTime     @map("inicio_em") @db.Date
   criadaEm     DateTime     @default(now()) @map("criada_em") @db.Timestamptz(3)
   atualizadaEm DateTime     @map("atualizada_em") @db.Timestamptz(3)
+  /// SPEC-023: a carteira de que esta foi copiada. Sem chave estrangeira: a cópia continua
+  /// sabendo que é cópia depois que a original é excluída (o id sozinho não é dado pessoal).
+  origemId     String?      @map("origem_id") @db.Uuid
 
   usuario          Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   /// SPEC-013: aportes e retiradas (livro-razão do caixa).

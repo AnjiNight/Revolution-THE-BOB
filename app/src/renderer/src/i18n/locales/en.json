@@ -265,7 +265,8 @@
     "reversal_breaks_cash": "This reversal would make cash negative.",
     "reversal_breaks_position": "This reversal would make a sale larger than the position.",
     "no_close_that_day": "This asset has no B3 close on that day.",
-    "history_pending": "This asset's price history is still being loaded."
+    "history_pending": "This asset's price history is still being loaded.",
+    "copy_breaks_cash": "Without the purchases and sales, a withdrawal would have no balance."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -855,6 +856,36 @@
       "max": "Up to 4 portfolios",
       "go": "Compare ({{count}})",
       "cancel": "Cancel"
+    },
+    "copy": {
+      "action": "Copy",
+      "actionLabel": "Copy the portfolio {{name}}",
+      "pageAction": "Copy portfolio",
+      "title": "New portfolio from “{{name}}”",
+      "fixedHint": "The copy has the same type and the same start as the original.",
+      "suffix": "copy",
+      "scope": "What to copy",
+      "scopes": {
+        "all": {
+          "title": "Everything",
+          "text": "Deposits, withdrawals, purchases and sales, up to today: change only what you want to test."
+        },
+        "cash": {
+          "title": "Only the money",
+          "text": "Deposits and withdrawals on the same dates: build another allocation with the same money."
+        }
+      },
+      "until": "Copy until (optional)",
+      "untilHint": "Only entries up to that day are copied. Empty: all of them.",
+      "create": "Create copy",
+      "creating": "Copying…",
+      "breaksCash": "Without the purchases and sales, the withdrawal of {{amount}} on {{date}} would have no balance. Copy everything, or copy only until before it.",
+      "created": "Created from “{{name}}”: {{cash}} deposits and withdrawals and {{trades}} trades copied.",
+      "compareBoth": "Compare both",
+      "from": "Created on {{date}} from",
+      "fromName": "“{{name}}”",
+      "fromDeleted": "Created on {{date}} from a portfolio already deleted",
+      "openOrigin": "Open the portfolio {{name}}"
     },
     "comparison": {
       "title": "Comparison",

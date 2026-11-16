@@ -58,6 +58,8 @@
 | 1.48 | Tela da carteira reordenada a pedido do Luís (09/11/2026): Caixa (saldo, Aportar e Retirar) no topo, depois Rentabilidade, Posições e Distribuição, e o Extrato no fim (SPEC-021 §9) |
 | 1.49 | SPEC-022 detalhada ([SPEC-022.md](SPEC-022.md)), aguardando a aprovação: de 2 a 4 carteiras lado a lado no mesmo período ("Em comum" por padrão), rentabilidade da cota num gráfico em %, resumo em reais e composição de hoje; propostas para a OPEN-22 (cenário = carteira) e a OPEN-23 (ao vivo e histórica juntas, com o rótulo) |
 | 1.50 | SPEC-022 aprovada (Luís, 11/11/2026) com as recomendações e implementada: botão "Comparar carteiras" na lista (de 2 a 4), tela Comparação com o período "Em comum", gráfico da cota em % com cor e marcador por carteira e "Comparar com os índices", resumo em reais e composição de hoje; números iguais aos da tela de cada carteira; 4 carteiras com 50 ativos no total em 1,05 s (RNF06). OPEN-23 resolvida e OPEN-22 em parte (cenário = carteira); a SPEC-023 deixa de estar bloqueada: o que ela vira fica para decidir ao detalhá-la |
+| 1.51 | SPEC-023 detalhada ([SPEC-023.md](SPEC-023.md)), aguardando a aprovação: "Nova carteira a partir de outra", com o mesmo tipo e início, copiando tudo (aportes, retiradas, compras e vendas) ou só o dinheiro, na histórica até uma data, sem os estornados; a cópia guarda de qual carteira nasceu e abre com "Comparar as duas"; proposta para fechar a OPEN-22 (RF20 reescrito na versão 1.12 dos requisitos) |
+| 1.52 | SPEC-023 aprovada (Luís, 16/11/2026, como escrita) e implementada: botão Copiar na lista e na carteira, formulário com "Tudo" ou "Só o dinheiro" e "Copiar até" na histórica, cópia numa transação com a original travada mantendo o horário de cada lançamento, `copy_breaks_cash`, "Criada em … a partir de" com o link e "Comparar as duas"; `carteira.origem_id`, exportação na versão 7, requisitos 1.12 (RF20) e modelo de domínio. OPEN-22 resolvida. Fase 5 completa |
 ---
 
 ## 0. Como ler este documento
@@ -308,7 +310,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-19 | ⏸ **Adiada com a renda fixa (DA22).** Significado do caso de uso "Projetar renda fixa" | INC-16 | 017 |
 | OPEN-20 | ⏸ **Adiada com a renda fixa (DA22).** Renda fixa na carteira histórica | DA17 PO4 | 016, 017 |
 | OPEN-21 | ✅ **Resolvida na [SPEC-020](SPEC-020.md):** Ibovespa e IFIX pelas estatísticas históricas da B3, desde 2016. Original: fonte do histórico do Ibovespa | PE06 | 020 |
-| OPEN-22 | ⏳ **Em parte resolvida na [SPEC-022](SPEC-022.md):** cada cenário é uma carteira, e "Comparar cenários" é a comparação de carteiras (RF19); a SIMULACAO do modelo (projeção) fica com a SPEC-031. Falta o RF20: decidir, ao detalhar a SPEC-023, se ela vira "Nova carteira a partir de outra" ou fica coberta pela SPEC-012. Original: significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
+| OPEN-22 | ✅ **Resolvida nas SPECs [022](SPEC-022.md) e [023](SPEC-023.md):** cada cenário é uma carteira, e "Comparar cenários" é a comparação de carteiras (RF19); a SIMULACAO do modelo (projeção) fica com a SPEC-031; o RF20 virou "Nova carteira a partir de outra" (requisitos 1.12). Original: significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
 | OPEN-23 | ✅ **Resolvida na [SPEC-022](SPEC-022.md):** pode misturar, com o rótulo do tipo sempre visível e a nota da DA17. Original: comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
 | OPEN-24 | ✅ **Resolvida nas SPECs [014](SPEC-014.md) e [016](SPEC-016.md):** a API registra por quantidade (RF12); a tela tem "Calcular por valor", em reais ou em "% do caixa" (o "50% em PETR4" da P01); montar vários ativos de uma vez fica fora. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
@@ -897,22 +899,24 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 | Em aberto | — (OPEN-23 resolvida; OPEN-22 resolvida na parte do RF19) |
 | Prioridade derivada | Could |
 
-#### SPEC-023 — Salvar e recuperar simulações
+#### SPEC-023 — Salvar e recuperar simulações: nova carteira a partir de outra
+
+📄 Detalhada em [SPEC-023.md](SPEC-023.md) — aprovada (Luís, 16/11/2026) e implementada.
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O usuário salva uma simulação e a recupera depois |
-| Valor | **Usuário:** retoma análises (P02 passo 9) |
-| RF | RF20 |
-| RB | RB02, RB03 |
-| RNF | — |
-| Caso de uso / fluxo | P02 passos 6–9 |
-| Entidades | SIMULACAO (significado em aberto) |
-| Drivers | OBJ02 |
-| ADRs | DA09 |
-| Depende de | SPEC-012, SPEC-019 |
-| Posição | Com cenário = carteira (SPEC-022), as carteiras já ficam salvas (SPEC-012). Ao detalhar, decidir se ela vira "Nova carteira a partir de outra" (mesmo tipo, início e valor inicial, para montar o cenário B rápido) ou fica coberta pela SPEC-012 (SPEC-022 §8) |
-| Em aberto | OPEN-22 (a parte do RF20, decidida com a própria Spec) |
+| Objetivo | O usuário cria uma carteira a partir de outra, com o mesmo tipo e o mesmo início, copiando tudo (aportes, retiradas, compras e vendas) ou só o dinheiro (aportes e retiradas), na histórica até uma data, sem os lançamentos estornados; a cópia é independente e guarda de qual carteira nasceu. "Salvar e recuperar" já é a lista de carteiras (SPEC-012) |
+| Valor | **Usuário:** monta o cenário B sem redigitar o A (P01: "altera a distribuição e compara"; P02: Cenário A × Cenário B) e retoma análises (P02 passo 9) |
+| RF | RF20 (reescrito na versão 1.12 dos requisitos) |
+| RB | RB02, RB03, RB08, RB24, RB25, RB26, RB28 |
+| RNF | RNF04, RNF11, RNF15, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | Criar carteira; P01 (altera a distribuição); P02 passos 6, 7 e 9 e o cenário de uso |
+| Entidades | CARTEIRA (`origem_id`); a SIMULACAO do modelo é a projeção da SPEC-031 |
+| Drivers | OBJ02, QA13 |
+| ADRs | DA09, DA13, DA17 |
+| Depende de | SPEC-012, SPEC-013, SPEC-014, SPEC-015, SPEC-016, SPEC-022 |
+| Posição | Fecha a Fase 5: usa o livro-razão das SPECs 013 a 016 e entrega na Comparação (SPEC-022) |
+| Em aberto | — (OPEN-22 resolvida) |
 | Prioridade derivada | Should |
 
 ---

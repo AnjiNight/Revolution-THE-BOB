@@ -4,6 +4,7 @@ import {
   validateComparisonQuery,
   validateNewCashEntry,
   validateNewPortfolio,
+  validateNewPortfolioCopy,
   validateNewReversal,
   validateNewTrade,
   validatePerformanceQuery,
@@ -66,6 +67,11 @@ const run = domainErrorRunner({
   reversal_breaks_position: {
     status: 409,
     message: 'Esse estorno deixaria uma venda maior que a posição.',
+  },
+  // SPEC-023
+  copy_breaks_cash: {
+    status: 409,
+    message: 'Sem as compras e vendas, uma retirada ficaria sem saldo.',
   },
   calendar_not_published: {
     status: 409,
@@ -145,6 +151,16 @@ export function registerPortfolioRoutes(
     const id = portfolioId(request);
     await owned(request, () => portfolios.delete(requireAuth(request).userId, id));
     return reply.status(204).send();
+  });
+
+  // SPEC-023 §5.1: nova carteira a partir desta. A original de outra pessoa é o mesmo 404.
+  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.copies, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const input = ensureValid(validateNewPortfolioCopy(request.body));
+    const result = await owned(request, () =>
+      portfolios.copy(requireAuth(request).userId, id, input),
+    );
+    return reply.status(201).send(result);
   });
 
   // SPEC-013 §5.1: saldo e extrato; aporte ou retirada. Nenhuma rota altera ou apaga um lançamento.

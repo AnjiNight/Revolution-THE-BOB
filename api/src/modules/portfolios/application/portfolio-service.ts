@@ -11,9 +11,11 @@ import {
   type IncomeDetail,
   type IsoDate,
   type NewCashEntryInput,
+  type NewPortfolioCopyInput,
   type NewPortfolioInput,
   type PersonalDataExport,
   type Portfolio,
+  type PortfolioCopyResult,
   type PortfolioList,
   type ReversalResult,
 } from '@simulador/shared';
@@ -30,6 +32,7 @@ import {
 } from '../../financial-calculation/corporate-actions.js';
 import {
   AlreadyReversedError,
+  CopyBreaksCashError,
   EntryNotFoundError,
   InsufficientCashError,
   PortfolioLimitReachedError,
@@ -88,11 +91,68 @@ export class PortfolioService {
 
   async list(userId: string): Promise<PortfolioList> {
     const portfolios = await this.deps.portfolios.listByUser(userId);
-    return { portfolios: portfolios.map(toPublic), limit: PORTFOLIO_LIMIT };
+    const origins = await this.origins(portfolios);
+    return {
+      portfolios: portfolios.map((portfolio) => toPublic(portfolio, origins)),
+      limit: PORTFOLIO_LIMIT,
+    };
   }
 
   async get(userId: string, id: string): Promise<Portfolio> {
-    return toPublic(await this.owned(userId, id));
+    const portfolio = await this.owned(userId, id);
+    return toPublic(portfolio, await this.origins([portfolio]));
+  }
+
+  /**
+   * SPEC-023: nova carteira a partir de outra do usuário, com o mesmo tipo e início. "Tudo" copia
+   * os aportes, retiradas, compras e vendas que valem (sem os estornados); "só o dinheiro", os
+   * aportes e retiradas. Na histórica, `until` corta o livro nesse dia (inclusive). Tudo decidido
+   * com a original travada, e a cópia nasce com o livro válido (RB26).
+   */
+  async copy(
+    userId: string,
+    sourceId: string,
+    input: NewPortfolioCopyInput,
+  ): Promise<PortfolioCopyResult> {
+    const source = await this.owned(userId, sourceId);
+    const now = this.clock();
+    const today = isoDateInBrasilia(now);
+    const until = input.until;
+    if (until !== undefined) {
+      // Na ao vivo, cada lançamento é do momento em que foi feito (DA17): a cópia vai até agora.
+      if (source.type === 'live') throw new PortfolioValidationError({ until: 'not_allowed' });
+      if (until < source.startDate) throw new PortfolioValidationError({ until: 'before_start' });
+      if (until >= today) throw new PortfolioValidationError({ until: 'future' });
+    }
+    const within = (date: IsoDate) => until === undefined || date <= until;
+    const result = await this.deps.portfolios.copyLocked(sourceId, (current, count) => {
+      if (count >= PORTFOLIO_LIMIT) throw new PortfolioLimitReachedError();
+      const active = activeLedger(current);
+      const cash = active.cash.filter((entry) => within(entry.date));
+      const trades =
+        input.scope === 'all' ? active.trades.filter((trade) => within(trade.date)) : [];
+      if (input.scope === 'cash') {
+        // Sem as vendas e os proventos, uma retirada do lucro não tem de onde sair.
+        const broken = cashLedger(cash).lines.find((line) => toCents(line.balanceAfter) < 0n);
+        if (broken) throw new CopyBreaksCashError(broken.date, broken.amount);
+      }
+      return {
+        name: input.name,
+        nameKey: portfolioNameKey(input.name),
+        at: now,
+        cash: cash.map(({ type, amount, date, recordedAt }) => ({
+          type,
+          amount,
+          date,
+          recordedAt,
+        })),
+        trades: trades.map(({ id: _id, portfolioId: _portfolioId, ...trade }) => trade),
+      };
+    });
+    return {
+      portfolio: toPublic(result.portfolio, new Map([[sourceId, source.name]])),
+      copied: result.copied,
+    };
   }
 
   /**
@@ -134,15 +194,17 @@ export class PortfolioService {
           }
         : {}),
     });
-    return toPublic(created);
+    return toPublic(created, new Map());
   }
 
   /** O mesmo nome (já limpo) não grava nada. */
   async rename(userId: string, id: string, name: string): Promise<Portfolio> {
     const portfolio = await this.owned(userId, id);
-    if (portfolio.name === name) return toPublic(portfolio);
+    const origins = await this.origins([portfolio]);
+    if (portfolio.name === name) return toPublic(portfolio, origins);
     return toPublic(
       await this.deps.portfolios.rename(id, name, portfolioNameKey(name), this.clock()),
+      origins,
     );
   }
 
@@ -314,6 +376,7 @@ export class PortfolioService {
    */
   async exportForUser(userId: string): Promise<PersonalDataExport['portfolios']> {
     const portfolios = await this.deps.portfolios.listByUser(userId);
+    const origins = await this.origins(portfolios);
     const ledgers = await this.deps.ledger.ledgers(portfolios.map((p) => p.id));
     const tickers = await this.tickers(
       [...ledgers.values()].flatMap((ledger) => ledger.trades.map((trade) => trade.assetId)),
@@ -323,7 +386,7 @@ export class PortfolioService {
       const reversed = reversalTimes(ledger);
       const reversedAt = (entryId: string) => reversed.get(entryId)?.toISOString() ?? null;
       return {
-        ...toPublic(portfolio),
+        ...toPublic(portfolio, origins),
         cashEntries: [...ledger.cash].sort(compareMovements).map((entry) => ({
           type: entry.type,
           amount: entry.amount,
@@ -387,9 +450,18 @@ export class PortfolioService {
   private owned(userId: string, id: string): Promise<StoredPortfolio> {
     return ownedPortfolio(this.deps.portfolios, userId, id);
   }
+
+  /** SPEC-023: o nome atual das carteiras de que estas foram copiadas (as que ainda existem). */
+  private origins(portfolios: readonly StoredPortfolio[]): Promise<Map<string, string>> {
+    const ids = portfolios
+      .map((portfolio) => portfolio.copiedFromId)
+      .filter((id): id is string => id !== null);
+    return ids.length === 0 ? Promise.resolve(new Map()) : this.deps.portfolios.namesOf(ids);
+  }
 }
 
-function toPublic(portfolio: StoredPortfolio): Portfolio {
+/** `origins`: o nome das carteiras de origem que ainda existem (SPEC-023). */
+function toPublic(portfolio: StoredPortfolio, origins: ReadonlyMap<string, string>): Portfolio {
   return {
     id: portfolio.id,
     name: portfolio.name,
@@ -397,6 +469,9 @@ function toPublic(portfolio: StoredPortfolio): Portfolio {
     startDate: portfolio.startDate,
     createdAt: portfolio.createdAt.toISOString(),
     updatedAt: portfolio.updatedAt.toISOString(),
+    copiedFrom: portfolio.copiedFromId
+      ? { id: portfolio.copiedFromId, name: origins.get(portfolio.copiedFromId) ?? null }
+      : null,
   };
 }
 
