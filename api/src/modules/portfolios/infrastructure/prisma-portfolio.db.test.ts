@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { TERMS_VERSION } from '@simulador/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
+import { uniqueTicker } from '../../../testing/unique-ticker.js';
 import { PrismaUserRepository } from '../../identity/infrastructure/prisma-user-repository.js';
 import { PortfolioNameInUseError, PortfolioNotFoundError } from '../domain/errors.js';
 import { PrismaLedgerRepository } from './prisma-ledger-repository.js';
@@ -220,7 +221,7 @@ describe.skipIf(!url)('carteiras no PostgreSQL', () => {
   // --- SPEC-014: compras e vendas ---
 
   const newAsset = async () => {
-    const ticker = `T${randomUUID().replace(/\D/g, '').slice(0, 3)}3`.slice(0, 5);
+    const ticker = await uniqueTicker(prisma, 'T', '3');
     const row = await prisma.ativo.create({
       data: { ticker, nome: 'Teste', classe: 'acao', setor: 'bens_industriais', atualizadoEm: at },
     });

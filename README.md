@@ -162,7 +162,7 @@ npm test
 npm run build
 ```
 
-Migrações: toda pasta em `api/prisma/migrations/` tem um `down.sql` escrito à mão; `npm run db:rollback` desfaz a última migração aplicada.
+Migrações: toda pasta em `api/prisma/migrations/` tem um `down.sql` escrito à mão; `npm run db:rollback` desfaz a última migração aplicada, e `npm run db:check` confere se o banco montado pelas migrações é igual ao `api/prisma/schema.prisma` (a CI roda os dois).
 
 ## Aviso legal
 

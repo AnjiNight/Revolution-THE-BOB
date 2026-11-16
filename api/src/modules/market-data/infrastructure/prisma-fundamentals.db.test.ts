@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient, type PrismaClient } from '../../../shared/infrastructure/database.js';
+import { uniqueTicker } from '../../../testing/unique-ticker.js';
 import { PrismaB3TradeRepository } from './prisma-b3-trade-repository.js';
 import { PrismaEventRepository } from './prisma-event-repository.js';
 import { PrismaFundamentalsRepository } from './prisma-fundamentals-repository.js';
@@ -33,7 +33,7 @@ describe.skipIf(!url)('indicadores, proventos e eventos no PostgreSQL', () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE indicador_ativo, informacao_fii, coleta_investidor10, provento, evento_corporativo',
     );
-    const ticker = `T${randomUUID().replace(/\D/g, '').slice(0, 3)}3`.slice(0, 5);
+    const ticker = await uniqueTicker(prisma, 'T', '3');
     const asset = await prisma.ativo.create({
       data: { ticker, nome: 'Teste', classe: 'acao', setor: 'bens_industriais', atualizadoEm: at },
     });
