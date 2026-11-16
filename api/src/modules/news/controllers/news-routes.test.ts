@@ -71,6 +71,50 @@ describe('rotas das fontes de notícias (SPEC-027 §5.1)', () => {
       ...fields,
     });
 
+  it('SPEC-028: últimas notícias com os vínculos, só para o colaborador (CA06)', async () => {
+    t.newsRepo.catalog.push({ assetId: 'a1', ticker: 'PETR4', name: 'PETROBRAS', active: true });
+    await t.newsRepo.saveNews(
+      t.newsRepo.parent.id,
+      [
+        {
+          url: 'https://investidor10.com.br/noticias/petr4-1/',
+          title: 'PETR4 sobe',
+          summary: null,
+          body: null,
+          author: null,
+          themes: [],
+          companies: [],
+          publishedAt: new Date('2026-11-12T12:00:00Z'),
+          updatedAt: null,
+        },
+      ],
+      NOW,
+    );
+    const id = t.newsRepo.news[0]?.id as string;
+    await t.newsRepo.saveLinks(
+      id,
+      [{ assetId: 'a1', relevance: 'principal', origin: 'ticker_titulo' }],
+      1,
+    );
+    const res = await call('GET', NEWS_PATHS.latest);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({
+      total: 1,
+      linked: 1,
+      news: [
+        {
+          id,
+          title: 'PETR4 sobe',
+          url: 'https://investidor10.com.br/noticias/petr4-1/',
+          source: 'Investidor10',
+          publishedAt: '2026-11-12T12:00:00.000Z',
+          links: [{ ticker: 'PETR4', relevance: 'principal' }],
+        },
+      ],
+    });
+    expect((await call('GET', NEWS_PATHS.latest, user)).statusCode).toBe(403);
+  });
+
   it('lista: a fonte pai primeiro, a Agência Brasil e o interruptor (CA08)', async () => {
     const res = await call('GET', NEWS_PATHS.sources);
     expect(res.statusCode).toBe(200);

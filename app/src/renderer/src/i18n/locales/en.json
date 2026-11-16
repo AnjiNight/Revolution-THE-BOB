@@ -1307,6 +1307,19 @@
     "testing": "Testing the feed…",
     "cancel": "Cancel",
     "created_one": "Source {{name}} saved: {{count}} article in the feed.",
-    "created_other": "Source {{name}} saved: {{count}} articles in the feed."
+    "created_other": "Source {{name}} saved: {{count}} articles in the feed.",
+    "latest": {
+      "title": "Latest news",
+      "loading": "Loading the news…",
+      "linked": "Linked to an asset: {{linked}} of {{total}} articles.",
+      "empty": "No news collected yet.",
+      "assets": "Assets in the article",
+      "noLinks": "No linked asset",
+      "relevance": {
+        "principal": "Main",
+        "citado": "Mentioned",
+        "lista": "List"
+      }
+    }
   }
 }

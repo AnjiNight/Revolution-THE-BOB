@@ -4,6 +4,7 @@ import {
   NEWS_SOURCE_PROBLEM_AFTER,
   validateNewNewsSource,
   type FieldErrors,
+  type LatestNews,
   type NewsCategory,
   type NewsSource,
   type NewsSourcesStatus,
@@ -241,7 +242,111 @@ export function NewsSources({ onSessionExpired }: { onSessionExpired: () => void
           )}
         </section>
       )}
+
+      {data && <LatestNewsList onSessionExpired={onSessionExpired} />}
     </div>
+  );
+}
+
+type LatestState =
+  | { status: 'loading' }
+  | { status: 'ready'; data: LatestNews }
+  | { status: 'failed'; error: ClientAuthError };
+
+/**
+ * SPEC-028 §5.2: as 20 últimas notícias com os ativos vinculados, para o colaborador conferir a
+ * coleta e o vínculo. O título abre a matéria no navegador do sistema.
+ */
+function LatestNewsList({ onSessionExpired }: { onSessionExpired: () => void }) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
+  const titleId = useId();
+  const [state, setState] = useState<LatestState>({ status: 'loading' });
+
+  useEffect(() => {
+    let active = true;
+    void window.api.news.latest().then((result) => {
+      if (!active) return;
+      if (!result.ok && result.error === 'unauthorized') return onSessionExpired();
+      setState(
+        result.ok
+          ? { status: 'ready', data: result.data }
+          : { status: 'failed', error: result.error },
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [onSessionExpired]);
+
+  const number = (value: number) => new Intl.NumberFormat(language).format(value);
+  const dateTime = (iso: string) =>
+    new Intl.DateTimeFormat(language, {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: CALENDAR_TIME_ZONE,
+    }).format(new Date(iso));
+
+  return (
+    <section className="profile-panel latest-news" aria-labelledby={titleId}>
+      <h2 id={titleId}>{t('news.latest.title')}</h2>
+      {state.status === 'loading' && (
+        <p className="loading" role="status">
+          {t('news.latest.loading')}
+        </p>
+      )}
+      {state.status === 'failed' && (
+        <p className="form-error" role="alert">
+          {t(`authErrors.${state.error}`)}
+        </p>
+      )}
+      {state.status === 'ready' && (
+        <>
+          <p className="field-hint">
+            {t('news.latest.linked', {
+              linked: number(state.data.linked),
+              total: number(state.data.total),
+            })}
+          </p>
+          {state.data.news.length === 0 ? (
+            <p className="assets-empty">{t('news.latest.empty')}</p>
+          ) : (
+            <ol className="latest-news-list">
+              {state.data.news.map((item) => (
+                <li key={item.id}>
+                  <a href={item.url} target="_blank" rel="noreferrer">
+                    {item.title}
+                  </a>
+                  <span className="position-name">
+                    {item.source} · {dateTime(item.publishedAt)}
+                  </span>
+                  {item.links.length > 0 ? (
+                    <ul className="news-links" aria-label={t('news.latest.assets')}>
+                      {item.links.map((link) => (
+                        <li key={link.ticker} className={`news-link is-${link.relevance}`}>
+                          {link.ticker}
+                          <span className="visually-hidden">
+                            {' '}
+                            ({t(`news.latest.relevance.${link.relevance}`)})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="position-name">{t('news.latest.noLinks')}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="field-hint news-links-legend">
+            <span className="news-link is-principal">{t('news.latest.relevance.principal')}</span>
+            <span className="news-link is-citado">{t('news.latest.relevance.citado')}</span>
+            <span className="news-link is-lista">{t('news.latest.relevance.lista')}</span>
+          </p>
+        </>
+      )}
+    </section>
   );
 }
 

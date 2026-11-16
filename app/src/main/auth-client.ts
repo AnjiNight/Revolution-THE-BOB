@@ -48,6 +48,7 @@ import {
   type Investidor10Status,
   type LoginInput,
   type NewAssetInput,
+  type LatestNews,
   type NewNewsSourceInput,
   type NewsErrorCode,
   type NewsSource,
@@ -608,6 +609,11 @@ export class AuthClient {
   /** Colaborador (SPEC-027): fontes de notícias, última coleta e o andamento do arquivo. */
   newsSources(): Promise<ClientResult<NewsSourcesStatus>> {
     return this.call(() => this.authorizedRequest<NewsSourcesStatus>('GET', NEWS_PATHS.sources));
+  }
+
+  /** Colaborador (SPEC-028): as últimas notícias com os vínculos aos ativos. */
+  latestNews(): Promise<ClientResult<LatestNews>> {
+    return this.call(() => this.authorizedRequest<LatestNews>('GET', NEWS_PATHS.latest));
   }
 
   /** Colaborador (SPEC-027): nova fonte curada; o servidor testa o feed antes de gravar. */

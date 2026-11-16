@@ -32,6 +32,8 @@ export interface NewsCollectionDeps {
   feeds: FeedFetcher;
   news: NewsRepository;
   runs: NewsRunLog;
+  /** SPEC-028: vincula as notícias aos ativos logo depois de cada coleta. */
+  linker?: { run(): Promise<number> };
   clock?: () => Date;
   sleep?: (ms: number) => Promise<void>;
   pauseMs?: number;
@@ -189,7 +191,10 @@ export class NewsCollection {
     if (this.busy.has(task)) return null;
     this.busy.add(task);
     try {
-      return await fn();
+      const summary = await fn();
+      // SPEC-028: o que chegou já sai vinculado; falha no vínculo não derruba a coleta.
+      if (summary && summary.collected > 0) await this.deps.linker?.run().catch(() => 0);
+      return summary;
     } finally {
       this.busy.delete(task);
     }

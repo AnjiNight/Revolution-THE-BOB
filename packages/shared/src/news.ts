@@ -4,7 +4,40 @@ import type { FieldErrors, ValidationResult } from './auth.js';
 export const NEWS_PATHS = {
   sources: '/api/news/sources',
   source: '/api/news/sources/:id',
+  /** SPEC-028: as últimas notícias com os vínculos, para o colaborador conferir. */
+  latest: '/api/news/latest',
 } as const;
+
+/** SPEC-028: o ativo é o assunto, aparece no texto ou a notícia é uma lista com muitos ativos. */
+export type NewsLinkRelevance = 'principal' | 'citado' | 'lista';
+
+export interface NewsAssetLink {
+  ticker: string;
+  relevance: NewsLinkRelevance;
+}
+
+export interface LatestNewsItem {
+  id: string;
+  title: string;
+  url: string;
+  source: string;
+  /** ISO 8601. */
+  publishedAt: string;
+  /** Principais primeiro, depois citados e de lista, cada grupo por ticker. */
+  links: NewsAssetLink[];
+}
+
+/** Corpo de `GET /api/news/latest`. */
+export interface LatestNews {
+  /** Notícias guardadas. */
+  total: number;
+  /** Com pelo menos um vínculo. */
+  linked: number;
+  news: LatestNewsItem[];
+}
+
+/** Notícias por página na lista do colaborador. */
+export const LATEST_NEWS_LIMIT = 20;
 
 export function newsSourcePath(id: string): string {
   return NEWS_PATHS.source.replace(':id', encodeURIComponent(id));

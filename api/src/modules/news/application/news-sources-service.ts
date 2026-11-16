@@ -1,9 +1,11 @@
-import type {
-  NewNewsSourceInput,
-  NewsSource,
-  NewsSourceCreated,
-  NewsSourcesStatus,
-  UpdateNewsSourceInput,
+import {
+  LATEST_NEWS_LIMIT,
+  type LatestNews,
+  type NewNewsSourceInput,
+  type NewsSource,
+  type NewsSourceCreated,
+  type NewsSourcesStatus,
+  type UpdateNewsSourceInput,
 } from '@simulador/shared';
 import { FeedRejectedError, NewsSourceNotFoundError, ParentSourceError } from '../domain/errors.js';
 import { parseFeed } from '../domain/feed.js';
@@ -30,6 +32,18 @@ export class NewsSourcesService {
 
   constructor(private readonly deps: NewsSourcesServiceDeps) {
     this.clock = deps.clock ?? (() => new Date());
+  }
+
+  /** SPEC-028 §5.1: as últimas notícias com os vínculos e quantas têm vínculo. */
+  async latest(): Promise<LatestNews> {
+    const [rows, counts] = await Promise.all([
+      this.deps.news.latestNews(LATEST_NEWS_LIMIT),
+      this.deps.news.linkCounts(),
+    ]);
+    return {
+      ...counts,
+      news: rows.map((row) => ({ ...row, publishedAt: row.publishedAt.toISOString() })),
+    };
   }
 
   async status(): Promise<NewsSourcesStatus> {

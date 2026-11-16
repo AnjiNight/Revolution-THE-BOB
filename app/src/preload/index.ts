@@ -18,6 +18,7 @@ import type {
   MarketIndexStatus,
   ConsentList,
   Investidor10Status,
+  LatestNews,
   NewsSource,
   NewsSourceCreated,
   NewsSourcesStatus,
@@ -117,6 +118,7 @@ const api: DesktopApi = {
   },
   news: {
     sources: () => invoke<ClientResult<NewsSourcesStatus>>(NEWS_CHANNELS.sources),
+    latest: () => invoke<ClientResult<LatestNews>>(NEWS_CHANNELS.latest),
     createSource: (input) =>
       invoke<ClientResult<NewsSourceCreated>>(NEWS_CHANNELS.createSource, input),
     updateSource: (id, input) =>

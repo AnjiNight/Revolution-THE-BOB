@@ -1307,6 +1307,19 @@
     "testing": "Testando o feed…",
     "cancel": "Cancelar",
     "created_one": "Fonte {{name}} cadastrada: {{count}} notícia no feed.",
-    "created_other": "Fonte {{name}} cadastrada: {{count}} notícias no feed."
+    "created_other": "Fonte {{name}} cadastrada: {{count}} notícias no feed.",
+    "latest": {
+      "title": "Últimas notícias",
+      "loading": "Carregando as notícias…",
+      "linked": "Com ativo vinculado: {{linked}} de {{total}} notícias.",
+      "empty": "Nenhuma notícia coletada ainda.",
+      "assets": "Ativos da notícia",
+      "noLinks": "Sem ativo vinculado",
+      "relevance": {
+        "principal": "Principal",
+        "citado": "Citado",
+        "lista": "Lista"
+      }
+    }
   }
 }

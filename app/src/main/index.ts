@@ -254,6 +254,7 @@ app.whenReady().then(() => {
   ipcMain.handle(FUNDAMENTALS_CHANNELS.collection, () => auth.investidor10Status());
   // Fontes de notícias (SPEC-027): só colaborador; o servidor confere e testa o feed.
   ipcMain.handle(NEWS_CHANNELS.sources, () => auth.newsSources());
+  ipcMain.handle(NEWS_CHANNELS.latest, () => auth.latestNews());
   ipcMain.handle(NEWS_CHANNELS.createSource, (_event, input: NewNewsSourceInput) =>
     auth.createNewsSource(input),
   );

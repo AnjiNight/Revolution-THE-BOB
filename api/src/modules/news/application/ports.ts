@@ -1,5 +1,6 @@
 import type { NewsCategory } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
+import type { CatalogTicker, LinkOrigin, LinkRelevance } from '../domain/asset-links.js';
 
 /** Fonte como fica guardada (SPEC-027 §6). */
 export interface StoredNewsSource {
@@ -76,6 +77,39 @@ export interface NewsRepository {
   ): Promise<StoredNewsSource>;
   /** SPEC-027 §4.2: apaga as notícias e o andamento do arquivo da fonte pai. Devolve as linhas. */
   clearParent(): Promise<number>;
+  /** SPEC-028: notícias nunca vinculadas ou vinculadas com outra versão da regra, das mais novas. */
+  newsToLink(version: number, limit: number): Promise<NewsToLink[]>;
+  /** Troca os vínculos da notícia e marca a versão, numa transação. */
+  saveLinks(newsId: string, links: readonly StoredLink[], version: number, at: Date): Promise<void>;
+  /** Os tickers do catálogo (ativos e desativados), para achar os citados. */
+  catalogTickers(): Promise<CatalogTicker[]>;
+  /** As últimas notícias guardadas, com a fonte e os vínculos (SPEC-028 §5.1). */
+  latestNews(limit: number): Promise<LatestNewsRow[]>;
+  /** Quantas notícias há e quantas têm pelo menos um vínculo. */
+  linkCounts(): Promise<{ total: number; linked: number }>;
+}
+
+export interface NewsToLink {
+  id: string;
+  title: string;
+  summary: string | null;
+  body: string | null;
+  companies: string[];
+}
+
+export interface StoredLink {
+  assetId: string;
+  relevance: LinkRelevance;
+  origin: LinkOrigin;
+}
+
+export interface LatestNewsRow {
+  id: string;
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: Date;
+  links: Array<{ ticker: string; relevance: LinkRelevance }>;
 }
 
 /** O Investidor10: os dois sitemaps e a página de uma notícia (DA06). */

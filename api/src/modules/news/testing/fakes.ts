@@ -4,16 +4,27 @@ import type { AuditEntry } from '../../audit/application/audit.js';
 import type {
   ArchiveProgress,
   FeedFetcher,
+  LatestNewsRow,
   NewsRepository,
   NewsRunLog,
   NewsTask,
+  NewsToLink,
   NewsToSave,
   ParentNewsSource,
+  StoredLink,
   StoredNewsSource,
 } from '../application/ports.js';
+import type { CatalogTicker } from '../domain/asset-links.js';
 import { NewsSourceExistsError, NewsSourceNotFoundError } from '../domain/errors.js';
 
-type StoredNews = NewsToSave & { sourceId: string; collectedAt: Date };
+type StoredNews = NewsToSave & {
+  id: string;
+  sourceId: string;
+  collectedAt: Date;
+  /** SPEC-028: versão da regra do último vínculo, ou `null`. */
+  linkVersion: number | null;
+  links: StoredLink[];
+};
 
 /** Fontes e notícias em memória (SPEC-027), com a fonte pai e a Agência Brasil da migração. */
 export class InMemoryNewsRepository implements NewsRepository {
@@ -21,6 +32,8 @@ export class InMemoryNewsRepository implements NewsRepository {
   readonly news: StoredNews[] = [];
   readonly archives = new Map<string, ArchiveProgress>();
   readonly audit: AuditEntry[] = [];
+  /** SPEC-028: o catálogo que o vinculador usa. */
+  readonly catalog: CatalogTicker[] = [];
 
   constructor() {
     const base = {
@@ -97,9 +110,23 @@ export class InMemoryNewsRepository implements NewsRepository {
       const index = this.news.findIndex((n) => n.sourceId === sourceId && n.url === item.url);
       const current = this.news[index];
       if (current) {
-        this.news[index] = { ...item, publishedAt: current.publishedAt, sourceId, collectedAt: at };
+        // Como no banco: o texto novo desfaz o vínculo, que é refeito (SPEC-028).
+        this.news[index] = {
+          ...current,
+          ...item,
+          publishedAt: current.publishedAt,
+          collectedAt: at,
+          linkVersion: null,
+        };
       } else {
-        this.news.push({ ...item, sourceId, collectedAt: at });
+        this.news.push({
+          ...item,
+          id: randomUUID(),
+          sourceId,
+          collectedAt: at,
+          linkVersion: null,
+          links: [],
+        });
         created += 1;
       }
     }
@@ -119,6 +146,63 @@ export class InMemoryNewsRepository implements NewsRepository {
       source.failures = outcome.status === 'success' ? 0 : source.failures + 1;
     }
     return Promise.resolve();
+  }
+
+  newsToLink(version: number, limit: number): Promise<NewsToLink[]> {
+    return Promise.resolve(
+      [...this.news]
+        .filter((item) => item.linkVersion !== version)
+        .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+        .slice(0, limit)
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          summary: item.summary,
+          body: item.body,
+          companies: item.companies,
+        })),
+    );
+  }
+
+  saveLinks(newsId: string, links: readonly StoredLink[], version: number): Promise<void> {
+    const item = this.news.find((n) => n.id === newsId);
+    if (item) {
+      item.links = [...links];
+      item.linkVersion = version;
+    }
+    return Promise.resolve();
+  }
+
+  catalogTickers(): Promise<CatalogTicker[]> {
+    return Promise.resolve([...this.catalog]);
+  }
+
+  latestNews(limit: number): Promise<LatestNewsRow[]> {
+    const ticker = (assetId: string) =>
+      this.catalog.find((asset) => asset.assetId === assetId)?.ticker ?? '';
+    return Promise.resolve(
+      [...this.news]
+        .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+        .slice(0, limit)
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          url: item.url,
+          source: this.list.find((s) => s.id === item.sourceId)?.name ?? '',
+          publishedAt: item.publishedAt,
+          links: item.links.map((link) => ({
+            ticker: ticker(link.assetId),
+            relevance: link.relevance,
+          })),
+        })),
+    );
+  }
+
+  linkCounts(): Promise<{ total: number; linked: number }> {
+    return Promise.resolve({
+      total: this.news.length,
+      linked: this.news.filter((item) => item.links.length > 0).length,
+    });
   }
 
   archive(sourceId: string): Promise<ArchiveProgress | null> {

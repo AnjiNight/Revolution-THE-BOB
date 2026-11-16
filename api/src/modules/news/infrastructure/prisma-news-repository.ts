@@ -4,10 +4,14 @@ import type { AuditEntry } from '../../audit/application/audit.js';
 import { auditRow } from '../../audit/infrastructure/prisma-audit.js';
 import type {
   ArchiveProgress,
+  LatestNewsRow,
   NewsRepository,
+  NewsToLink,
   NewsToSave,
+  StoredLink,
   StoredNewsSource,
 } from '../application/ports.js';
+import type { CatalogTicker, LinkRelevance } from '../domain/asset-links.js';
 import { NewsSourceExistsError, NewsSourceNotFoundError } from '../domain/errors.js';
 
 function toStored(row: FonteNoticia): StoredNewsSource {
@@ -92,7 +96,8 @@ export class PrismaNewsRepository implements NewsRepository {
           where: { fonteId_url: { fonteId: sourceId, url: item.url } },
           // A data de publicação de uma notícia já guardada nunca muda (§4.2).
           create: { fonteId: sourceId, url: item.url, publicadaEm: item.publishedAt, ...fields },
-          update: fields,
+          // SPEC-028: texto atualizado, vínculo refeito (o vinculador pega as sem versão).
+          update: { ...fields, vinculadaEm: null, versaoVinculo: null },
         });
       }),
     );
@@ -199,6 +204,93 @@ export class PrismaNewsRepository implements NewsRepository {
       return updated;
     });
     return toStored(row);
+  }
+
+  async newsToLink(version: number, limit: number): Promise<NewsToLink[]> {
+    const rows = await this.prisma.noticia.findMany({
+      where: { OR: [{ versaoVinculo: null }, { versaoVinculo: { not: version } }] },
+      select: { id: true, titulo: true, resumo: true, texto: true, empresasMarcadas: true },
+      orderBy: { publicadaEm: 'desc' },
+      take: limit,
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.titulo,
+      summary: row.resumo,
+      body: row.texto,
+      companies: row.empresasMarcadas,
+    }));
+  }
+
+  async saveLinks(
+    newsId: string,
+    links: readonly StoredLink[],
+    version: number,
+    at: Date,
+  ): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.noticiaAtivo.deleteMany({ where: { noticiaId: newsId } }),
+      this.prisma.noticiaAtivo.createMany({
+        data: links.map((link) => ({
+          noticiaId: newsId,
+          ativoId: link.assetId,
+          relevancia: link.relevance,
+          origem: link.origin,
+        })),
+      }),
+      this.prisma.noticia.update({
+        where: { id: newsId },
+        data: { vinculadaEm: at, versaoVinculo: version },
+      }),
+    ]);
+  }
+
+  async catalogTickers(): Promise<CatalogTicker[]> {
+    const rows = await this.prisma.ativo.findMany({
+      select: { id: true, ticker: true, nome: true, desativadoEm: true },
+    });
+    return rows.map((row) => ({
+      assetId: row.id,
+      ticker: row.ticker,
+      name: row.nome,
+      active: row.desativadoEm === null,
+    }));
+  }
+
+  async latestNews(limit: number): Promise<LatestNewsRow[]> {
+    const rows = await this.prisma.noticia.findMany({
+      orderBy: [{ publicadaEm: 'desc' }, { id: 'asc' }],
+      take: limit,
+      select: {
+        id: true,
+        titulo: true,
+        url: true,
+        publicadaEm: true,
+        fonte: { select: { nome: true } },
+        ativos: { select: { relevancia: true, ativo: { select: { ticker: true } } } },
+      },
+    });
+    const order: Record<LinkRelevance, number> = { principal: 0, citado: 1, lista: 2 };
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.titulo,
+      url: row.url,
+      source: row.fonte.nome,
+      publishedAt: row.publicadaEm,
+      links: row.ativos
+        .map((link) => ({ ticker: link.ativo.ticker, relevance: link.relevancia }))
+        .sort(
+          (a, b) => order[a.relevance] - order[b.relevance] || a.ticker.localeCompare(b.ticker),
+        ),
+    }));
+  }
+
+  async linkCounts(): Promise<{ total: number; linked: number }> {
+    const [total, linked] = await Promise.all([
+      this.prisma.noticia.count(),
+      this.prisma.noticia.count({ where: { ativos: { some: {} } } }),
+    ]);
+    return { total, linked };
   }
 
   async clearParent(): Promise<number> {

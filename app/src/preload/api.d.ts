@@ -21,6 +21,7 @@ import type {
   ConsentList,
   DividendPeriod,
   Investidor10Status,
+  LatestNews,
   NewNewsSourceInput,
   NewsSource,
   NewsSourceCreated,
@@ -149,6 +150,8 @@ export interface DesktopApi {
   /** Fontes de notícias (SPEC-027): só colaborador (403 para usuário). */
   news: {
     sources(): Promise<ClientResult<NewsSourcesStatus>>;
+    /** SPEC-028: as últimas notícias com os vínculos aos ativos. */
+    latest(): Promise<ClientResult<LatestNews>>;
     /** O servidor testa o feed antes de gravar; recusado, o motivo vem em `fields.url`. */
     createSource(input: NewNewsSourceInput): Promise<ClientResult<NewsSourceCreated>>;
     updateSource(

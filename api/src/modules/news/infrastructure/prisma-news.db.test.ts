@@ -31,7 +31,7 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE noticia, coleta_noticia_arquivo');
+    await prisma.$executeRawUnsafe('TRUNCATE TABLE noticia_ativo, noticia, coleta_noticia_arquivo');
     await prisma.fonteNoticia.deleteMany({ where: { url: { notIn: SEEDED } } });
     await prisma.fonteNoticia.updateMany({
       data: { ativa: true, ultimaColetaEm: null, ultimaSituacao: null, falhasSeguidas: 0 },
@@ -159,6 +159,56 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
     await expect(
       prisma.fonteNoticia.create({ data: { tipo: 'pai', nome: 'Outra', url: 'https://y.com/' } }),
     ).rejects.toThrow();
+  });
+
+  it('SPEC-028: vínculos trocados por notícia, versão, contagem e as últimas (CA07)', async () => {
+    const parent = (await repo.parentSource())?.id as string;
+    const asset = await prisma.ativo.create({
+      data: {
+        ticker: `Z${randomUUID().replace(/\D/g, '').slice(0, 3)}3`.slice(0, 5),
+        nome: 'EMPRESA TESTE S.A.',
+        classe: 'acao',
+        setor: 'bens_industriais',
+        atualizadoEm: at,
+      },
+    });
+    await repo.saveNews(parent, [item(1), item(2)], at);
+    const pending = await repo.newsToLink(1, 10);
+    expect(pending.map((n) => n.title).sort()).toEqual(['Notícia 1', 'Notícia 2']);
+    const first = pending.find((n) => n.title === 'Notícia 1')?.id as string;
+    await repo.saveLinks(
+      first,
+      [{ assetId: asset.id, relevance: 'citado', origin: 'ticker_texto' }],
+      1,
+      at,
+    );
+    await repo.saveLinks(
+      first,
+      [{ assetId: asset.id, relevance: 'principal', origin: 'ticker_titulo' }],
+      1,
+      at,
+    );
+    expect(await prisma.noticiaAtivo.findMany({ where: { noticiaId: first } })).toMatchObject([
+      { relevancia: 'principal', origem: 'ticker_titulo' },
+    ]);
+    expect((await repo.newsToLink(1, 10)).map((n) => n.title)).toEqual(['Notícia 2']);
+    expect(await repo.linkCounts()).toEqual({ total: 2, linked: 1 });
+    const latest = await repo.latestNews(5);
+    expect(latest.find((n) => n.id === first)).toMatchObject({
+      source: 'Investidor10',
+      links: [{ ticker: asset.ticker, relevance: 'principal' }],
+    });
+    expect((await repo.catalogTickers()).some((t) => t.ticker === asset.ticker)).toBe(true);
+    // Texto atualizado na fonte: volta a ficar sem vínculo calculado.
+    await repo.saveNews(parent, [item(1, { title: 'Notícia 1 nova' })], at);
+    expect((await repo.newsToLink(1, 10)).map((n) => n.title).sort()).toEqual([
+      'Notícia 1 nova',
+      'Notícia 2',
+    ]);
+    // O vínculo sai junto com a notícia (fim da autorização).
+    await repo.clearParent();
+    expect(await prisma.noticiaAtivo.count({ where: { ativoId: asset.id } })).toBe(0);
+    await prisma.ativo.delete({ where: { id: asset.id } });
   });
 
   it('andamento do arquivo e a limpeza do fim da autorização (CA07)', async () => {

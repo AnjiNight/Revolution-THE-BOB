@@ -36,6 +36,7 @@ import { BcbSgsSource } from './modules/market-data/infrastructure/bcb-sgs-sourc
 import { Investidor10HttpSource } from './modules/market-data/infrastructure/investidor10-source.js';
 import { PrismaEventRepository } from './modules/market-data/infrastructure/prisma-event-repository.js';
 import { NewsCollection } from './modules/news/application/news-collection.js';
+import { NewsLinker } from './modules/news/application/news-linker.js';
 import { NewsSourcesService } from './modules/news/application/news-sources-service.js';
 import { HttpFeedFetcher } from './modules/news/infrastructure/http-feed-fetcher.js';
 import { Investidor10NewsHttpSource } from './modules/news/infrastructure/investidor10-news-source.js';
@@ -169,12 +170,15 @@ async function main(): Promise<void> {
   // SPEC-027: notícias da fonte pai (Investidor10, com o interruptor) e das fontes curadas (RSS).
   const newsRepo = new PrismaNewsRepository(prisma);
   const feedFetcher = new HttpFeedFetcher();
+  // SPEC-028: vínculo notícia–ativo, depois de cada coleta e a cada 30 minutos.
+  const newsLinker = new NewsLinker({ news: newsRepo });
   const news = new NewsCollection({
     parentEnabled: config.investidor10.enabled,
     parent: new Investidor10NewsHttpSource({ baseUrl: config.investidor10.baseUrl }),
     feeds: feedFetcher,
     news: newsRepo,
     runs,
+    linker: newsLinker,
   });
 
   if (mode === 'server') {
@@ -359,6 +363,8 @@ async function main(): Promise<void> {
           run: async () => (await news.feeds())?.collected ?? 0,
           everyMinutes: 30,
         },
+        // SPEC-028: as notícias sem vínculo (o arquivo, as atualizadas, outra versão da regra).
+        { name: 'vínculo notícia–ativo', run: () => newsLinker.run(), everyMinutes: 30 },
         // SPEC-009: confere a cada 5 minutos se chegou a hora de uma coleta do pregão.
         {
           name: 'cotações do pregão',

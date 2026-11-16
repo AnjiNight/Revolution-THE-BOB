@@ -337,6 +337,8 @@ model Ativo {
   eventos         EventoCorporativo[]
   /// SPEC-014: compras e vendas nas carteiras (o ativo não é apagado enquanto houver).
   transacoes      Transacao[]
+  /// SPEC-028: notícias que falam do ativo.
+  noticias        NoticiaAtivo[]
 
   @@index([classe, setor])
   @@map("ativo")
@@ -860,12 +862,49 @@ model Noticia {
   publicadaEm         DateTime  @map("publicada_em") @db.Timestamptz(3)
   atualizadaNaFonteEm DateTime? @map("atualizada_na_fonte_em") @db.Timestamptz(3)
   coletadaEm          DateTime  @map("coletada_em") @db.Timestamptz(3)
+  /// SPEC-028: quando e com qual versão da regra a notícia foi vinculada aos ativos.
+  vinculadaEm         DateTime? @map("vinculada_em") @db.Timestamptz(3)
+  versaoVinculo       Int?      @map("versao_vinculo") @db.SmallInt
 
-  fonte FonteNoticia @relation(fields: [fonteId], references: [id], onDelete: Restrict)
+  fonte  FonteNoticia   @relation(fields: [fonteId], references: [id], onDelete: Restrict)
+  ativos NoticiaAtivo[]
 
   @@unique([fonteId, url])
   @@index([publicadaEm])
+  @@index([versaoVinculo], map: "noticia_vinculo_idx")
   @@map("noticia")
+}
+
+/// SPEC-028: o ativo é o assunto (principal), aparece no texto (citado) ou a notícia é uma lista.
+enum RelevanciaNoticia {
+  principal
+  citado
+  lista
+
+  @@map("relevancia_noticia")
+}
+
+enum OrigemVinculoNoticia {
+  ticker_titulo
+  ticker_texto
+  empresa_marcada
+
+  @@map("origem_vinculo_noticia")
+}
+
+/// SPEC-028: vínculo notícia–ativo (RF27).
+model NoticiaAtivo {
+  noticiaId  String               @map("noticia_id") @db.Uuid
+  ativoId    String               @map("ativo_id") @db.Uuid
+  relevancia RelevanciaNoticia
+  origem     OrigemVinculoNoticia
+
+  noticia Noticia @relation(fields: [noticiaId], references: [id], onDelete: Cascade)
+  ativo   Ativo   @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([noticiaId, ativoId])
+  @@index([ativoId, relevancia], map: "noticia_ativo_ativo_idx")
+  @@map("noticia_ativo")
 }
 
 /// SPEC-027 §4.1, decisão 3: andamento da carga do arquivo da fonte pai.

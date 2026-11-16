@@ -43,6 +43,11 @@ export function registerNewsRoutes(app: FastifyInstance, options: NewsRoutesOpti
     return reply.send(await sources.status());
   });
 
+  // SPEC-028: as últimas notícias com os vínculos, para conferir a coleta e o vínculo.
+  app.get(NEWS_PATHS.latest, collaboratorOnly, async (_request, reply) => {
+    return reply.send(await sources.latest());
+  });
+
   app.post(NEWS_PATHS.sources, collaboratorOnly, async (request, reply) => {
     const input = ensureValid(validateNewNewsSource(request.body));
     const created = await run(() => sources.create(requireAuth(request).userId, input));

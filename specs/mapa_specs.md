@@ -60,6 +60,7 @@
 | 1.50 | SPEC-022 aprovada (Luís, 11/11/2026) com as recomendações e implementada: botão "Comparar carteiras" na lista (de 2 a 4), tela Comparação com o período "Em comum", gráfico da cota em % com cor e marcador por carteira e "Comparar com os índices", resumo em reais e composição de hoje; números iguais aos da tela de cada carteira; 4 carteiras com 50 ativos no total em 1,05 s (RNF06). OPEN-23 resolvida e OPEN-22 em parte (cenário = carteira); a SPEC-023 deixa de estar bloqueada: o que ela vira fica para decidir ao detalhá-la |
 | 1.51 | SPEC-027 detalhada ([SPEC-027.md](SPEC-027.md)) pela Nicoly, aguardando a aprovação: notícias do Investidor10 (autorizadas por telefone em 12/11/2026) pelo sitemap de notícias a cada 30 min e o arquivo desde 22/09/2023 (22.491 notícias); fontes curadas por RSS ou Atom, a primeira a Agência Brasil; propostas para a OPEN-28 (notícias) e a OPEN-29 |
 | 1.52 | SPEC-027 aprovada (Nicoly, 12/11/2026; decisão 1 sem o pedido de e-mail) e implementada: módulo Notícias com a fonte pai (Investidor10, sitemap de notícias a cada 30 min e o arquivo aos poucos) e as fontes curadas por RSS ou Atom (Agência Brasil), tela Notícias do colaborador; coleta real de 251 notícias do Investidor10 e 10 da Agência Brasil. OPEN-28 resolvida e OPEN-29 em parte. Primeira Spec com a validação visual como usuária e o teste de ponta a ponta em `tests/e2e/` (Playwright), com os mocks em `mocks/` |
+| 1.53 | SPEC-028 detalhada ([SPEC-028.md](SPEC-028.md)) pela Nicoly, aguardando a aprovação: só o vínculo notícia–ativo (RF27), pelo ticker citado e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista; o sentimento (RF28, OPEN-30, OPEN-31) proposto para uma nova SPEC-044, para as notícias chegarem antes à ficha (SPEC-029) |
 ---
 
 ## 0. Como ler este documento
@@ -982,6 +983,8 @@ Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
 | Prioridade derivada | Could |
 
 #### SPEC-028 — Vínculo notícia–ativo e classificação de sentimento
+
+Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de ficar só com o vínculo (RF27) e passar o sentimento (RF28) para uma nova SPEC-044.
 
 | Campo | Conteúdo |
 |---|---|

@@ -88,6 +88,46 @@
     parentEnabled: scenario !== 'vazio',
   };
 
+  // SPEC-028: últimas notícias fictícias, com os vínculos.
+  const latest =
+    scenario === 'vazio'
+      ? { total: 0, linked: 0, news: [] }
+      : {
+          total: 261,
+          linked: 154,
+          news: [
+            {
+              id: 'n1',
+              title: 'Petróleo Fictício (PETR4) anuncia dividendos extraordinários',
+              url: 'https://investidor10.com.br/noticias/exemplo-ficticio-1/',
+              source: 'Investidor10',
+              publishedAt: minutesAgo(20),
+              links: [
+                { ticker: 'PETR4', relevance: 'principal' },
+                { ticker: 'PRIO3', relevance: 'citado' },
+              ],
+            },
+            {
+              id: 'n2',
+              title: 'Agenda fictícia: 12 empresas divulgam resultados nesta semana',
+              url: 'https://investidor10.com.br/noticias/exemplo-ficticio-2/',
+              source: 'Investidor10',
+              publishedAt: minutesAgo(65),
+              links: ['BBAS3', 'ITUB4', 'VALE3', 'WEGE3', 'ABEV3', 'B3SA3', 'RENT3', 'SUZB3', 'GGBR4'].map(
+                (ticker) => ({ ticker, relevance: 'lista' }),
+              ),
+            },
+            {
+              id: 'n3',
+              title: 'Notícia fictícia sobre juros, sem ativo citado',
+              url: 'https://agenciabrasil.ebc.com.br/economia/noticia/exemplo-ficticio-3',
+              source: 'Agência Brasil – Economia',
+              publishedAt: minutesAgo(90),
+              links: [],
+            },
+          ],
+        };
+
   window.api = {
     checkServerHealth: () => Promise.resolve({ kind: 'connected', version: 'mock' }),
     auth: group({
@@ -106,6 +146,10 @@
       sources: () => {
         calls.push(['sources']);
         return ok(structuredClone(status));
+      },
+      latest: () => {
+        calls.push(['latest']);
+        return ok(structuredClone(latest));
       },
       updateSource: (id, input) => {
         calls.push(['updateSource', id, input]);

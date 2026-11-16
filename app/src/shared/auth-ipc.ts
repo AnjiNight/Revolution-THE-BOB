@@ -101,6 +101,8 @@ export const NEWS_CHANNELS = {
   sources: 'news:sources',
   createSource: 'news:create-source',
   updateSource: 'news:update-source',
+  // SPEC-028: as últimas notícias com os vínculos.
+  latest: 'news:latest',
 } as const;
 
 /** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */
