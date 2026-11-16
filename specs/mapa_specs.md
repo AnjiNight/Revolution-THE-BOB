@@ -63,6 +63,7 @@
 | 1.53 | SPEC-032 detalhada ([SPEC-032.md](SPEC-032.md)) a pedido do Luís, fora da ordem das fases, aguardando a aprovação: cópia local cifrada pelo cofre do SO do que foi consultado, modo consulta sem conexão (servidor inalcançável, sessão renovada há menos de 30 dias), ETag e 304 nas leituras (RNF19) e limpeza no logout, na sessão recusada e na exclusão; propostas para a OPEN-10 (offline só leitura, RF37 reescrito na versão 1.13 dos requisitos), para trocar o SQLite das decisões técnicas por arquivos cifrados e para a SPEC-029 deixar de ser dependência (ela entrega a sua parte) |
 | 1.54 | SPEC-032 aprovada (Luís, 16/11/2026, como escrita) e implementada: ETag e 304 em todas as leituras do servidor, cópia local cifrada no processo principal (`offline-cache`), modo consulta com a faixa "Sem conexão", os botões de escrita desativados e a volta da conexão a cada 30 s ou no "Tentar agora"; reabrir uma histórica de 10 anos sem mudança: de 139 KB para 0 de corpo; requisitos 1.13 (RF37), decisões técnicas, DA08, drivers e SPEC-034 atualizados. OPEN-10 resolvida; a SPEC-029 entrega a sua parte |
 | 1.55 | SPEC-035 detalhada ([SPEC-035.md](SPEC-035.md)) a pedido do Luís, aprovada com as recomendações no próprio pedido ("vamo faze o md e implementar") e implementada: botão com o globo e o nome do outro idioma no topo da página de entrada e no rodapé das telas, troca na hora (textos, números, moeda, datas, `<html lang>` e título), escolha guardada neste computador e não na conta, e a página do login com Google e o nome do arquivo "Baixar meus dados" seguindo o idioma. OPEN-45 resolvida (o que vem das fontes fica como veio) |
+| 1.56 | SPEC-011 detalhada ([SPEC-011.md](SPEC-011.md)) a pedido do Luís, aguardando a aprovação: tela Tarefas aberta pelo Início do colaborador (as 9 tarefas, o histórico com os erros e o estado do processador), "Executar agora" por pedido gravado no banco e atendido pelo processador a cada 15 s, sinal de vida do processador, execução interrompida fechada como falha e limpeza das execuções com mais de 90 dias (proposta para a OPEN-40) |
 ---
 
 ## 0. Como ler este documento
@@ -331,7 +332,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
 | OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
 | OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
-| OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias. Decidido: backups e logs por no máximo 30 dias ([SPEC-034](SPEC-034.md)); cotações do pregão por 30 dias ([SPEC-009](SPEC-009.md)) | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
+| OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias. Decidido: backups e logs por no máximo 30 dias ([SPEC-034](SPEC-034.md)); cotações do pregão por 30 dias ([SPEC-009](SPEC-009.md)). Proposta na [SPEC-011](SPEC-011.md) para os registros de execução: 90 dias, guardando sempre a última de cada tarefa | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
 | OPEN-41 | ✅ **Resolvida na [SPEC-006](SPEC-006.md):** a busca procura só nos ativos ativos do catálogo da equipe | INC-09 | 006 |
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
@@ -673,6 +674,8 @@ Visão geral por fase:
 | Prioridade derivada | Should |
 
 #### SPEC-011 — Monitoramento e reexecução das tarefas de ingestão
+
+📄 Detalhada em [SPEC-011.md](SPEC-011.md) — aguardando a aprovação.
 
 | Campo | Conteúdo |
 |---|---|
