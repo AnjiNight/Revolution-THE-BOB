@@ -141,7 +141,13 @@ export type IngestionTask =
   | 'calendario_b3'
   | 'cdi_diario'
   | 'investidor10'
-  | 'eventos_b3';
+  | 'eventos_b3'
+  /** SPEC-020: Ibovespa e IFIX pela B3. */
+  | 'indices_b3'
+  /** SPEC-027: notícias (o módulo Notícias usa o mesmo registro de execuções). */
+  | 'noticias_novas'
+  | 'noticias_arquivo'
+  | 'noticias_feeds';
 export type RunStatus = 'sucesso' | 'parcial' | 'falha' | 'aguardando_publicacao' | 'cota_esgotada';
 
 export interface RunError {
@@ -442,6 +448,36 @@ export interface IndexRateRepository {
 }
 
 /**
+ * Estatísticas históricas de um índice da B3 (SPEC-020, DA06): a resposta de um ano inteiro, como o
+ * site devolve. Falha lança IndexSourceError (a mesma classificação do SGS).
+ */
+export interface MarketIndexSource {
+  year(code: string, year: number): Promise<unknown>;
+}
+
+/** Índice da B3 cadastrado (SPEC-020 §6): IBOV e IFIX. */
+export interface StoredMarketIndex {
+  id: string;
+  code: string;
+}
+
+export interface MarketIndexRepository {
+  /** Pela sigla (`IBOV`); `null` se a migração não o cadastrou. */
+  findIndex(code: string): Promise<StoredMarketIndex | null>;
+  /** Todas as datas guardadas, em ordem. */
+  closeDates(indexId: string): Promise<IsoDate[]>;
+  /** Anos fechados já carregados. */
+  loadedYears(indexId: string): Promise<Set<number>>;
+  /** Insere ou atualiza (a B3 pode corrigir um dia). Devolve quantas linhas mudaram. */
+  save(
+    indexId: string,
+    closes: ReadonlyArray<{ date: IsoDate; value: string }>,
+    at: Date,
+  ): Promise<number>;
+  markYearLoaded(indexId: string, year: number, records: number, at: Date): Promise<void>;
+}
+
+/**
  * Páginas do Investidor10 (SPEC-041), usadas com autorização só neste projeto acadêmico. `null`
  * quando a página não existe (404 ou 410). Falha lança Investidor10SourceError.
  */
@@ -513,6 +549,49 @@ export interface FundamentalsRepository {
  */
 export interface B3CompanySource {
   company(code: string): Promise<unknown>;
+  /** SPEC-021: a página de detalhe da empresa (classificação setorial), pelo código CVM. */
+  detail(codeCvm: string): Promise<unknown>;
+}
+
+/** SPEC-021: classificação setorial da B3 de uma empresa (código de 4 letras do ticker). */
+export interface StoredB3Classification {
+  code: string;
+  codeCvm: string;
+  sector: string | null;
+  subsector: string | null;
+  segment: string | null;
+  collectedAt: Date;
+}
+
+/** SPEC-021: ativo que a equipe ainda não conferiu, com o setor de agora e, se FII, o Investidor10. */
+export interface UnreviewedAsset {
+  id: string;
+  ticker: string;
+  assetClass: AssetClass;
+  sector: SectorCode;
+  /** Tipo e segmento do fundo no Investidor10 (SPEC-041); `null` sem a página coletada. */
+  fundType: string | null;
+  fundSegment: string | null;
+}
+
+/** SPEC-021: troca da classificação sugerida, com a fonte. */
+export interface SectorSuggestion {
+  assetId: string;
+  ticker: string;
+  from: SectorCode;
+  to: SectorCode;
+  source: 'b3' | 'investidor10';
+}
+
+export interface ClassificationRepository {
+  b3Classifications(): Promise<Map<string, StoredB3Classification>>;
+  saveB3Classification(row: StoredB3Classification): Promise<void>;
+  unreviewed(): Promise<UnreviewedAsset[]>;
+  /**
+   * Troca o setor de cada ativo que continua a revisar e com o setor de antes, com o registro de
+   * auditoria sem colaborador na mesma transação. Devolve quantos mudaram.
+   */
+  suggest(changes: readonly SectorSuggestion[], at: Date): Promise<number>;
 }
 
 export interface CorporateEventRepository {

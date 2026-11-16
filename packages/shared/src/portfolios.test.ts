@@ -4,10 +4,14 @@ import {
   centsToAmount,
   normalizePortfolioName,
   portfolioNameKey,
+  validateComparisonQuery,
+  suggestCopyName,
   validateNewCashEntry,
   validateNewPortfolio,
+  validateNewPortfolioCopy,
   validateNewReversal,
   validateNewTrade,
+  validatePerformanceQuery,
   validateRenamePortfolio,
   validateTradeQuoteQuery,
 } from './portfolios.js';
@@ -201,6 +205,36 @@ describe('compra e venda: validação (SPEC-014)', () => {
   });
 });
 
+describe('rentabilidade: validação do período (SPEC-019)', () => {
+  it('período conhecido, vazio é desde o início; ou duas datas em ordem', () => {
+    expect(validatePerformanceQuery({})).toEqual({ success: true, data: { period: 'all' } });
+    expect(validatePerformanceQuery({ period: '6m' })).toEqual({
+      success: true,
+      data: { period: '6m' },
+    });
+    expect(validatePerformanceQuery({ period: '2y' })).toEqual({
+      success: false,
+      fields: { period: 'invalid_option' },
+    });
+    expect(validatePerformanceQuery({ from: '2020-01-01', to: '2020-01-01' })).toEqual({
+      success: true,
+      data: { from: '2020-01-01', to: '2020-01-01' },
+    });
+    expect(validatePerformanceQuery({ from: '2020-02-01', to: '2020-01-01' })).toEqual({
+      success: false,
+      fields: { from: 'after_end' },
+    });
+    expect(validatePerformanceQuery({ from: '2020-01-01' })).toEqual({
+      success: false,
+      fields: { to: 'required' },
+    });
+    expect(validatePerformanceQuery({ period: '1m', from: 'x', to: '2020-01-01' })).toEqual({
+      success: false,
+      fields: { from: 'invalid_date', period: 'not_allowed' },
+    });
+  });
+});
+
 describe('estorno: validação (SPEC-015)', () => {
   it('o id do lançamento, como UUID', () => {
     const id = '11111111-1111-4111-8111-111111111111';
@@ -213,5 +247,90 @@ describe('estorno: validação (SPEC-015)', () => {
       success: false,
       fields: { entryId: 'invalid_option' },
     });
+  });
+});
+
+describe('comparação: validação (SPEC-022)', () => {
+  const a = '11111111-1111-4111-8111-111111111111';
+  const b = '22222222-2222-4222-8222-222222222222';
+  const c = '33333333-3333-4333-8333-333333333333';
+  const d = '44444444-4444-4444-8444-444444444444';
+  const e = '55555555-5555-4555-8555-555555555555';
+
+  it('de 2 a 4 ids na ordem pedida; sem período é "Em comum"', () => {
+    expect(validateComparisonQuery({ ids: `${b},${a}` })).toEqual({
+      success: true,
+      data: { ids: [b, a], period: 'common' },
+    });
+    expect(validateComparisonQuery({ ids: ` ${a.toUpperCase()} , ${b},${c},${d}` })).toEqual({
+      success: true,
+      data: { ids: [a, b, c, d], period: 'common' },
+    });
+  });
+
+  it('menos de 2, mais de 4, repetidos ou que não são um id: invalid_selection (CA02)', () => {
+    const fields = (ids: unknown) =>
+      (validateComparisonQuery({ ids }) as { fields?: Record<string, string> }).fields;
+    for (const ids of [undefined, '', a, `${a},${b},${c},${d},${e}`, `${a},${a.toUpperCase()}`]) {
+      expect(fields(ids)).toEqual({ ids: 'invalid_selection' });
+    }
+    expect(fields(`${a},x`)).toEqual({ ids: 'invalid_selection' });
+    expect(fields([a, b])).toEqual({ ids: 'invalid_selection' });
+  });
+
+  it('os períodos da SPEC-019 e o "Em comum", ou duas datas em ordem', () => {
+    const ids = `${a},${b}`;
+    for (const period of ['common', '1m', '6m', '12m', 'ytd', 'all']) {
+      expect(validateComparisonQuery({ ids, period })).toEqual({
+        success: true,
+        data: { ids: [a, b], period },
+      });
+    }
+    expect(validateComparisonQuery({ ids, from: '2026-01-02', to: '2026-03-02' })).toEqual({
+      success: true,
+      data: { ids: [a, b], from: '2026-01-02', to: '2026-03-02' },
+    });
+    expect(validateComparisonQuery({ ids: a, period: '2y' })).toEqual({
+      success: false,
+      fields: { ids: 'invalid_selection', period: 'invalid_option' },
+    });
+    expect(validateComparisonQuery({ ids, from: '2026-03-02', to: '2026-01-02' })).toEqual({
+      success: false,
+      fields: { from: 'after_end' },
+    });
+  });
+});
+
+describe('cópia de carteira (SPEC-023 §4.2)', () => {
+  it('valida o nome, o que copiar e o formato de "até"', () => {
+    expect(validateNewPortfolioCopy({ name: ' Cenário B ', scope: 'all' })).toEqual({
+      success: true,
+      data: { name: 'Cenário B', scope: 'all' },
+    });
+    expect(validateNewPortfolioCopy({ name: 'B', scope: 'cash', until: '2025-02-28' })).toEqual({
+      success: true,
+      data: { name: 'B', scope: 'cash', until: '2025-02-28' },
+    });
+    // Vazio é o mesmo que não mandar.
+    expect(validateNewPortfolioCopy({ name: 'B', scope: 'all', until: '' })).toEqual({
+      success: true,
+      data: { name: 'B', scope: 'all' },
+    });
+    expect(validateNewPortfolioCopy({ name: '', scope: 'tudo', until: '28/02/2025' })).toEqual({
+      success: false,
+      fields: { name: 'required', scope: 'invalid_option', until: 'invalid_date' },
+    });
+  });
+
+  it('sugere "{nome} (cópia)" e numera quando já existe, cabendo em 60 caracteres', () => {
+    expect(suggestCopyName('Cenário A', [], 'cópia')).toBe('Cenário A (cópia)');
+    expect(suggestCopyName('Cenário A', ['cenário a (CÓPIA)'], 'cópia')).toBe(
+      'Cenário A (cópia 2)',
+    );
+    expect(suggestCopyName('A', ['A (copy)', 'A (copy 2)'], 'copy')).toBe('A (copy 3)');
+    const long = 'x'.repeat(60);
+    const suggested = suggestCopyName(long, [], 'cópia');
+    expect(suggested).toBe(`${'x'.repeat(52)} (cópia)`);
+    expect(suggested.length).toBe(60);
   });
 });

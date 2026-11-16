@@ -3,6 +3,7 @@ import { Info } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../assets.css';
+import { useOffline } from '../connection';
 import { useAssetPages } from '../useAssetQuery';
 import {
   AssetFilters,
@@ -16,19 +17,38 @@ import {
 import { AssetLogo } from './AssetLogo';
 import { QuoteText } from './QuoteText';
 
+interface AssetSearchProps {
+  onSessionExpired: () => void;
+  /** SPEC-010: `opener` recebe o foco de volta quando a ficha fecha. */
+  onOpenAsset: (assetId: string, opener: HTMLElement) => void;
+}
+
 /**
  * Tela "Ativos" do usuário (SPECs 006, 010 e 040, §5.3): busca por ticker ou nome e filtros de
  * classe e de setor ou segmento, só nos ativos ativos do catálogo (OPEN-41). Sem texto, os mais
  * negociados primeiro. O ticker abre a ficha do ativo.
+ *
+ * SPEC-032: a busca procura no catálogo do servidor; no modo consulta, a tela diz que precisa de
+ * conexão (as fichas já abertas continuam pelas posições das carteiras).
  */
-export function AssetSearch({
-  onSessionExpired,
-  onOpenAsset,
-}: {
-  onSessionExpired: () => void;
-  /** SPEC-010: `opener` recebe o foco de volta quando a ficha fecha. */
-  onOpenAsset: (assetId: string, opener: HTMLElement) => void;
-}) {
+export function AssetSearch(props: AssetSearchProps) {
+  const { t } = useTranslation();
+  const offline = useOffline();
+  if (!offline) return <OnlineAssetSearch {...props} />;
+  return (
+    <div className="assets-view">
+      <header className="page-hero page-hero-compact">
+        <h1>{t('assets.title')}</h1>
+        <p className="lead">{t('assets.subtitle')}</p>
+      </header>
+      <section className="profile-panel assets-panel" aria-label={t('assets.title')}>
+        <p className="assets-empty">{t('offline.searchNeedsConnection')}</p>
+      </section>
+    </div>
+  );
+}
+
+function OnlineAssetSearch({ onSessionExpired, onOpenAsset }: AssetSearchProps) {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<AssetFilterState>(EMPTY_FILTERS);
   const query: AssetSearchQuery = toSearchQuery(filters);

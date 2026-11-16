@@ -98,6 +98,16 @@
       "missing_one": "{{count}} trading day has no CDI in the series.",
       "missing_other": "{{count}} trading days have no CDI in the series."
     },
+    "indexes": {
+      "range": "{{name}}: {{from}} to {{to}}",
+      "loadingOne": "{{name}}: loading",
+      "loading": "Ibovespa and IFIX: loading (the worker fetches them from B3)",
+      "updated": "updated {{at}}",
+      "stale": "{{name}} stopped at {{date}}. Check that the worker is running.",
+      "failed": "The last Ibovespa and IFIX update failed ({{at}}).",
+      "missing_one": "{{count}} trading day without a {{name}} close.",
+      "missing_other": "{{count}} trading days without a {{name}} close."
+    },
     "investidor10": {
       "summary": "Indicators (Investidor10): last collected on {{at}} · {{collected}} of {{total}} assets",
       "never": "Indicators (Investidor10): not collected yet (the processor visits the pages gradually)",
@@ -204,7 +214,14 @@
     "not_allowed": "In a live portfolio, the date is always now.",
     "before_start": "Choose a day on or after the portfolio's start.",
     "before_last_entry": "Choose the day of the last entry or later: a historical portfolio's entries follow date order.",
-    "invalid_quantity": "Enter a whole quantity, 1 or more."
+    "invalid_quantity": "Enter a whole quantity, 1 or more.",
+    "after_end": "The start date can't be after the end date.",
+    "after_today": "Choose an end date no later than today.",
+    "invalid_selection": "Choose 2 to 4 different portfolios.",
+    "not_https": "Use an address that starts with https://.",
+    "private_address": "Use a public https address (not an internal network one).",
+    "not_a_feed": "Could not read an RSS or Atom feed at this address.",
+    "invalid_url": "Invalid address."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -252,7 +269,10 @@
     "reversal_breaks_cash": "This reversal would make cash negative.",
     "reversal_breaks_position": "This reversal would make a sale larger than the position.",
     "no_close_that_day": "This asset has no B3 close on that day.",
-    "history_pending": "This asset's price history is still being loaded."
+    "history_pending": "This asset's price history is still being loaded.",
+    "news_source_not_found": "News source not found.",
+    "source_exists": "There is already a source with this address.",
+    "parent_source": "The parent source can't be changed here."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -388,7 +408,8 @@
     "calendar": "Calendar",
     "assets": "Assets",
     "logoutLabel": "Sign out of your account",
-    "portfolios": "Portfolios"
+    "portfolios": "Portfolios",
+    "news": "News"
   },
   "calendar": {
     "title": "Trading calendar",
@@ -654,7 +675,26 @@
         "deposit": "Deposit",
         "withdrawal": "Withdrawal",
         "buy": "Purchase",
-        "sell": "Sale"
+        "sell": "Sale",
+        "income": "Income"
+      },
+      "income": {
+        "kinds": {
+          "dividendo": "Dividend",
+          "jcp": "Interest on equity",
+          "rendimento": "Distribution",
+          "amortizacao": "Amortization"
+        },
+        "fraction": "Fractional share sale",
+        "detail": "{{quantity}} {{ticker}} × {{perShare}} (record date {{exDate}})",
+        "tax": "gross {{gross}}, tax {{tax}}",
+        "fractionDetail": "{{shares}} {{ticker}} at {{price}}",
+        "source": "Source: Investidor10",
+        "pendingTitle": "To receive",
+        "pendingOn": "{{kind}} {{ticker}}: {{amount}} on {{date}}",
+        "pendingNoDate": "{{kind}} {{ticker}}: {{amount}}, no payment date yet",
+        "disabled": "Income is off: cash doesn't include dividends.",
+        "negative": "Cash went negative because an income payment is no longer in the source. Only deposits are allowed until it's positive again."
       },
       "showMore": "Show more",
       "count_one": "{{shown}} of {{count}} entry",
@@ -691,6 +731,68 @@
         "breaksPosition": "This reversal would make the sale of {{quantity}} {{ticker}} on {{date}} larger than the position. Reverse that sale first."
       }
     },
+    "performance": {
+      "title": "Performance",
+      "periodLabel": "Period",
+      "periods": {
+        "1m": "1 month",
+        "6m": "6 months",
+        "12m": "12 months",
+        "ytd": "Year to date",
+        "all": "Since inception",
+        "custom": "Custom"
+      },
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "loading": "Calculating the performance…",
+      "empty": "Make a deposit to see the performance.",
+      "range": "From {{from}} to {{to}}",
+      "return": "Return",
+      "result": "Result",
+      "equity": "Net worth",
+      "flows": "Net worth at the start: {{start}}; deposits minus withdrawals in the period: {{flows}}.",
+      "chartLabel": "Net worth over time",
+      "legendEquity": "Net worth",
+      "legendInvested": "Total deposited",
+      "tooltipInvested": "Deposited: {{amount}}",
+      "cursor": "{{date}}: net worth {{equity}}, deposited {{invested}}, return {{return}}",
+      "weekly": "One point per week.",
+      "note": "Time-weighted return: deposits and withdrawals don't change the %, and income counts as gain. Prices: B3 close and, today, the trading-session quote; no trading costs.",
+      "jump": "{{ticker}} had a price jump on {{date}} with no known split or reverse split: the result may be wrong.",
+      "noClose": "{{ticker}} has no close until {{date}}: until then, the purchase price is used.",
+      "chartMode": "Chart",
+      "chartModes": {
+        "money": "In reais",
+        "percent": "In %"
+      },
+      "legendPortfolio": "Portfolio",
+      "returnChartLabel": "Portfolio and benchmark returns",
+      "returnCursor": "{{date}}: {{values}}",
+      "noData": "no data",
+      "benchmarks": {
+        "title": "Same period",
+        "cdi": "CDI",
+        "ibov": "Ibovespa",
+        "ifix": "IFIX",
+        "until": "through {{date}}",
+        "notLoaded": {
+          "bcb": "not loaded yet: the worker fetches it from the Central Bank",
+          "b3": "not loaded yet: the worker fetches it from B3"
+        },
+        "share": "Your portfolio returned {{share}}% of the CDI.",
+        "note": "Each benchmark's cumulative return since the close of {{date}}, on the same basis as the portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa, B3.",
+        "noteIfix": "Each benchmark's cumulative return since the close of {{date}}, on the same basis as the portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa and IFIX, B3.",
+        "wouldHave": "would be {{amount}}"
+      },
+      "compare": "Compare with indexes",
+      "sameMoney": {
+        "cdi": "In the CDI",
+        "ibov": "In the Ibovespa",
+        "ifix": "In the IFIX"
+      },
+      "sameMoneyNote": "Index lines: the portfolio's same money (its value at the start of the period, with deposits and withdrawals on the same days) invested in each index."
+    },
     "positions": {
       "title": "Positions",
       "loading": "Loading the positions…",
@@ -701,7 +803,9 @@
       "totals": {
         "cash": "Cash",
         "positions": "In assets",
-        "total": "Total"
+        "total": "Total",
+        "income": "Income received",
+        "pending": "To receive"
       },
       "columns": {
         "asset": "Asset",
@@ -715,17 +819,92 @@
       "closeOf": "Close of {{date}}",
       "noPrice": "No price",
       "changeNote": "Change over the average price, without trading costs or dividends.",
-      "dividendsNote": "Dividends and splits don't enter this portfolio yet.",
+      "dividendsNote": "Income enters cash on the payment date, for whoever held the asset at the end of the record date (interest on equity already net of tax); splits, reverse splits and bonus issues adjust the quantity and the average price. Income source: Investidor10.",
+      "incomeDisabled": "Income is off: cash doesn't include dividends. Splits, reverse splits and bonus issues still adjust the quantity.",
+      "incomeReceived": "Income received: {{amount}}",
+      "incomeNotLoaded": "Income for this asset not loaded yet.",
+      "nextPayment": "Next: {{amount}} on {{date}}",
+      "eventApplied": "{{event}} on {{date}}: {{before}} → {{after}}",
       "bought": "Purchase saved: {{quantity}} {{ticker}}.",
       "sold": "Sale saved: {{quantity}} {{ticker}}.",
       "at": "at {{time}}",
       "priceNote": "Last price: the trading-session quote, delayed up to {{delay}} minutes; without it, the last close.",
-      "eventWarning": "Had a {{event}} on {{date}}: the current value doesn't account for it yet.",
       "event": {
-        "split": "split",
-        "reverse_split": "reverse split",
-        "bonus": "bonus issue"
+        "split": "Split",
+        "reverse_split": "Reverse split",
+        "bonus": "Bonus issue"
       }
+    },
+    "allocation": {
+      "title": "Allocation",
+      "classes": {
+        "stock": "Stocks",
+        "fii": "REITs (FIIs)",
+        "cash": "Cash"
+      },
+      "byClass": {
+        "stock": "Stocks by sector",
+        "fii": "REITs (FIIs) by segment"
+      },
+      "shares": {
+        "stock": "{{ofClass}} of stocks · {{ofTotal}} of the portfolio",
+        "fii": "{{ofClass}} of REITs · {{ofTotal}} of the portfolio"
+      },
+      "assetShare": "{{share}} of the portfolio",
+      "empty": "Buy an asset to see the allocation by sector.",
+      "negativeCash": "Negative cash: {{amount}}. The allocation considers only the assets.",
+      "atCost_one": "{{tickers}} is valued at cost: no price yet.",
+      "atCost_other": "{{tickers}} are valued at cost: no price yet.",
+      "note": "Today's values, as in the positions. Stock sectors from B3's classification; REIT segments suggested from Investidor10, reviewed by the team."
+    },
+    "compare": {
+      "start": "Compare portfolios",
+      "intro": "Choose 2 to 4 portfolios to see side by side.",
+      "max": "Up to 4 portfolios",
+      "go": "Compare ({{count}})",
+      "cancel": "Cancel"
+    },
+    "comparison": {
+      "title": "Comparison",
+      "lead": "Your portfolios side by side, over the same period.",
+      "loading": "Comparing the portfolios…",
+      "listLabel": "Compared portfolios",
+      "open": "Open {{name}}",
+      "types": {
+        "live": "Live simulation",
+        "historical": "Historical simulation"
+      },
+      "returnTitle": "Performance",
+      "common": "In common",
+      "commonHint": "In common: since the newest portfolio started, the stretch in which all of them exist.",
+      "chartLabel": "Portfolio returns",
+      "cursor": "{{date}}: {{values}}",
+      "noChart": "The chart appears with at least two trading days in the period.",
+      "benchmarksNote": "Each benchmark since the close of {{date}}, the same day for every portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa, B3.",
+      "benchmarksNoteIfix": "Each benchmark since the close of {{date}}, the same day for every portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa and IFIX, B3.",
+      "note": "Each portfolio by time-weighted return, since it started in the period: deposits and withdrawals don't change the %, and income counts as gain. Prices: B3 close and, today, the trading-session quote; no trading costs.",
+      "summary": {
+        "title": "Summary",
+        "type": "Type",
+        "start": "Start",
+        "endValue": "Equity at the end",
+        "netFlows": "Net deposits in the period",
+        "result": "Result in the period",
+        "return": "Time-weighted return",
+        "cdiShare": "% of the CDI",
+        "cdiShareValue": "{{share}}% of the CDI",
+        "startedOn": "started on {{date}}",
+        "empty": "No entries in the period",
+        "none": "no value"
+      },
+      "composition": {
+        "title": "Composition today",
+        "note": "As a % of each portfolio's equity today, as in Allocation. \"—\": the portfolio has nothing there.",
+        "empty": "None of the portfolios has equity today.",
+        "none": "nothing"
+      },
+      "historicalNote": "Historical simulation: result calculated with data already known.",
+      "backToComparison": "Back to the comparison"
     },
     "trade": {
       "buyTitle": "Buy",
@@ -1075,6 +1254,72 @@
       "lastRun": "B3 import {{when}} · new: {{created}} · deactivated: {{deactivated}} · reactivated: {{reactivated}}",
       "failed": "The last import failed: the brapi list did not respond. The catalog did not change; it runs again at the next scheduled time.",
       "b3Behind": "The B3 files were late: nobody was deactivated in this import."
+    }
+  },
+  "news": {
+    "title": "News sources",
+    "subtitle": "The parent source (Investidor10) and the curated RSS or Atom sources. The worker collects new articles every 30 minutes.",
+    "loading": "Loading the sources…",
+    "parentDisabled": "Investidor10 collection is off (INVESTIDOR10_ENABLED=false); curated sources keep running.",
+    "archiveRunning": "Investidor10 archive: {{done}} of {{total}} articles (updated on {{date}}).",
+    "archiveDone": "Investidor10 archive complete: {{done}} of {{total}} articles (checked on {{date}}).",
+    "columns": {
+      "source": "Source",
+      "category": "Category",
+      "reliability": "Reliability",
+      "lastRun": "Last collection",
+      "news": "Articles",
+      "actions": "Actions"
+    },
+    "categories": {
+      "economia": "Economy",
+      "mercado": "Market",
+      "empresas": "Companies",
+      "internacional": "International"
+    },
+    "reliabilityValue": "{{value}} of 5",
+    "parentNote": "Parent source: can't be turned off",
+    "inactive": "Turned off",
+    "never": "Not collected yet",
+    "ok": "Succeeded",
+    "failed": "Failed",
+    "problem_one": "Problem: {{count}} failure in a row",
+    "problem_other": "Problem: {{count}} failures in a row",
+    "activate": "Turn on",
+    "deactivate": "Turn off",
+    "activateLabel": "Turn on the source {{name}}",
+    "deactivateLabel": "Turn off the source {{name}}",
+    "activated": "Source {{name}} turned on.",
+    "deactivated": "Source {{name}} turned off.",
+    "new": "New source",
+    "newTitle": "New curated source",
+    "fields": {
+      "name": "Name",
+      "url": "Feed address (RSS or Atom)",
+      "urlHint": "Public https addresses only. The feed is tested before saving.",
+      "category": "Category",
+      "reliability": "Reliability",
+      "reliabilityHint": "From 1 (barely reliable) to 5 (very reliable), by the team’s criteria.",
+      "choose": "Choose",
+      "license": "I checked that the source's license allows use in this project"
+    },
+    "save": "Test and save",
+    "testing": "Testing the feed…",
+    "cancel": "Cancel",
+    "created_one": "Source {{name}} saved: {{count}} article in the feed.",
+    "created_other": "Source {{name}} saved: {{count}} articles in the feed.",
+    "latest": {
+      "title": "Latest news",
+      "loading": "Loading the news…",
+      "linked": "Linked to an asset: {{linked}} of {{total}} articles.",
+      "empty": "No news collected yet.",
+      "assets": "Assets in the article",
+      "noLinks": "No linked asset",
+      "relevance": {
+        "principal": "Main",
+        "citado": "Mentioned",
+        "lista": "List"
+      }
     }
   }
 }

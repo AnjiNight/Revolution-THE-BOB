@@ -14,7 +14,7 @@ export interface PriceEventInput {
 }
 
 /** Fração exata, para multiplicar fatores sem arredondar no meio. */
-interface Ratio {
+export interface Ratio {
   num: bigint;
   den: bigint;
 }

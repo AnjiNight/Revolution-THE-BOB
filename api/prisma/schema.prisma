@@ -79,6 +79,9 @@ model Carteira {
   inicioEm     DateTime     @map("inicio_em") @db.Date
   criadaEm     DateTime     @default(now()) @map("criada_em") @db.Timestamptz(3)
   atualizadaEm DateTime     @map("atualizada_em") @db.Timestamptz(3)
+  /// SPEC-023: a carteira de que esta foi copiada. Sem chave estrangeira: a cópia continua
+  /// sabendo que é cópia depois que a original é excluída (o id sozinho não é dado pessoal).
+  origemId     String?      @map("origem_id") @db.Uuid
 
   usuario          Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   /// SPEC-013: aportes e retiradas (livro-razão do caixa).
@@ -337,6 +340,8 @@ model Ativo {
   eventos         EventoCorporativo[]
   /// SPEC-014: compras e vendas nas carteiras (o ativo não é apagado enquanto houver).
   transacoes      Transacao[]
+  /// SPEC-028: notícias que falam do ativo.
+  noticias        NoticiaAtivo[]
 
   @@index([classe, setor])
   @@map("ativo")
@@ -397,6 +402,12 @@ enum TarefaIngestao {
   cdi_diario
   investidor10
   eventos_b3
+  /// SPEC-020: Ibovespa e IFIX pelas estatísticas históricas da B3.
+  indices_b3
+  /// SPEC-027: notícias novas e arquivo da fonte pai; feeds das fontes curadas.
+  noticias_novas
+  noticias_arquivo
+  noticias_feeds
 
   @@map("tarefa_ingestao")
 }
@@ -453,6 +464,53 @@ model CargaIndexador {
 
   @@id([indexadorId, ano])
   @@map("carga_indexador")
+}
+
+enum FonteIndice {
+  b3_estatisticas
+
+  @@map("fonte_indice")
+}
+
+/// Índice da B3 usado como referência (SPEC-020): IBOV e IFIX, cadastrados pela migração. Fica fora
+/// de "indexador" (SPEC-007), que guarda taxas do Banco Central.
+model IndiceBolsa {
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sigla String @unique @db.VarChar(10)
+  nome  String @db.VarChar(100)
+
+  fechamentos FechamentoIndice[]
+  cargas      CargaIndice[]
+
+  @@map("indice_bolsa")
+}
+
+/// Fechamento do índice num pregão, como a B3 publica (SPEC-020): pontos com 2 casas, maior que
+/// zero, nunca em fim de semana (CHECK na migração).
+model FechamentoIndice {
+  indiceId  String      @map("indice_id") @db.Uuid
+  data      DateTime    @db.Date
+  valor     Decimal     @db.Decimal(12, 2)
+  fonte     FonteIndice
+  gravadoEm DateTime    @map("gravado_em") @db.Timestamptz(3)
+
+  indice IndiceBolsa @relation(fields: [indiceId], references: [id], onDelete: Restrict)
+
+  @@id([indiceId, data])
+  @@map("fechamento_indice")
+}
+
+/// Ano fechado do índice já carregado (SPEC-020): não é pedido de novo à B3.
+model CargaIndice {
+  indiceId    String   @map("indice_id") @db.Uuid
+  ano         Int      @db.SmallInt
+  carregadaEm DateTime @map("carregada_em") @db.Timestamptz(3)
+  registros   Int
+
+  indice IndiceBolsa @relation(fields: [indiceId], references: [id], onDelete: Restrict)
+
+  @@id([indiceId, ano])
+  @@map("carga_indice")
 }
 
 enum SituacaoExecucao {
@@ -548,6 +606,11 @@ enum AcaoAuditoria {
   classificacao_conferida
   /// SPEC-005 §10: ano fechado do calendário publicado pelo processador, sem colaborador.
   calendario_importado
+  /// SPEC-021: o processador trocou a classificação sugerida de um ativo a revisar.
+  classificacao_sugerida
+  /// SPEC-027: o colaborador cadastrou ou editou (inclusive ativou ou desativou) uma fonte curada.
+  fonte_noticia_cadastrada
+  fonte_noticia_editada
 
   @@map("acao_auditoria")
 }
@@ -555,6 +618,8 @@ enum AcaoAuditoria {
 enum EntidadeAuditoria {
   ativo
   ano_calendario
+  /// SPEC-027.
+  fonte_noticia
 
   @@map("entidade_auditoria")
 }
@@ -722,4 +787,138 @@ model LogoAtivo {
   ativo Ativo @relation(fields: [ativoId], references: [id], onDelete: Restrict)
 
   @@map("logo_ativo")
+}
+
+/// Classificação setorial da B3 de cada empresa listada (SPEC-021), pelo código de 4 letras do
+/// ticker: setor econômico, subsetor e segmento, como a B3 publica na página de detalhe.
+model ClassificacaoB3 {
+  codigo     String   @id @db.VarChar(4)
+  codigoCvm  String   @map("codigo_cvm") @db.VarChar(10)
+  setor      String?  @db.VarChar(100)
+  subsetor   String?  @db.VarChar(100)
+  segmento   String?  @db.VarChar(100)
+  coletadaEm DateTime @map("coletada_em") @db.Timestamptz(3)
+
+  @@map("classificacao_b3")
+}
+
+/// SPEC-027: fonte pai (única, o Investidor10) ou curada (RSS ou Atom, pelo colaborador), DA19.
+enum TipoFonteNoticia {
+  pai
+  curada
+
+  @@map("tipo_fonte_noticia")
+}
+
+enum CategoriaNoticia {
+  economia
+  mercado
+  empresas
+  internacional
+
+  @@map("categoria_noticia")
+}
+
+enum SituacaoArquivoNoticia {
+  em_andamento
+  concluido
+
+  @@map("situacao_arquivo_noticia")
+}
+
+/// SPEC-027: fonte de notícias. `https` obrigatório; a curada tem categoria, confiabilidade (1 a 5)
+/// e a data em que o colaborador conferiu a licença; a pai nunca fica inativa.
+model FonteNoticia {
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo               TipoFonteNoticia
+  nome               String            @db.VarChar(80)
+  url                String            @unique @db.VarChar(500)
+  categoria          CategoriaNoticia?
+  confiabilidade     Int?              @db.SmallInt
+  ativa              Boolean           @default(true)
+  licencaConferidaEm DateTime?         @map("licenca_conferida_em") @db.Timestamptz(3)
+  ultimaColetaEm     DateTime?         @map("ultima_coleta_em") @db.Timestamptz(3)
+  /// `sucesso` ou `falha`.
+  ultimaSituacao     String?           @map("ultima_situacao") @db.VarChar(10)
+  ultimoErro         String?           @map("ultimo_erro") @db.VarChar(300)
+  falhasSeguidas     Int               @default(0) @map("falhas_seguidas")
+  criadaEm           DateTime          @default(now()) @map("criada_em") @db.Timestamptz(3)
+  atualizadaEm       DateTime          @default(now()) @map("atualizada_em") @db.Timestamptz(3)
+
+  noticias Noticia[]
+  arquivo  ColetaNoticiaArquivo?
+
+  @@map("fonte_noticia")
+}
+
+/// SPEC-027: notícia coletada. Texto completo só da fonte pai, para a classificação (SPEC-028).
+model Noticia {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fonteId             String    @map("fonte_id") @db.Uuid
+  url                 String    @db.VarChar(500)
+  titulo              String    @db.VarChar(500)
+  resumo              String?
+  texto               String?
+  autor               String?   @db.VarChar(150)
+  temas               String[]  @default([])
+  empresasMarcadas    String[]  @default([]) @map("empresas_marcadas")
+  publicadaEm         DateTime  @map("publicada_em") @db.Timestamptz(3)
+  atualizadaNaFonteEm DateTime? @map("atualizada_na_fonte_em") @db.Timestamptz(3)
+  coletadaEm          DateTime  @map("coletada_em") @db.Timestamptz(3)
+  /// SPEC-028: quando e com qual versão da regra a notícia foi vinculada aos ativos.
+  vinculadaEm         DateTime? @map("vinculada_em") @db.Timestamptz(3)
+  versaoVinculo       Int?      @map("versao_vinculo") @db.SmallInt
+
+  fonte  FonteNoticia   @relation(fields: [fonteId], references: [id], onDelete: Restrict)
+  ativos NoticiaAtivo[]
+
+  @@unique([fonteId, url])
+  @@index([publicadaEm])
+  @@index([versaoVinculo], map: "noticia_vinculo_idx")
+  @@map("noticia")
+}
+
+/// SPEC-028: o ativo é o assunto (principal), aparece no texto (citado) ou a notícia é uma lista.
+enum RelevanciaNoticia {
+  principal
+  citado
+  lista
+
+  @@map("relevancia_noticia")
+}
+
+enum OrigemVinculoNoticia {
+  ticker_titulo
+  ticker_texto
+  empresa_marcada
+
+  @@map("origem_vinculo_noticia")
+}
+
+/// SPEC-028: vínculo notícia–ativo (RF27).
+model NoticiaAtivo {
+  noticiaId  String               @map("noticia_id") @db.Uuid
+  ativoId    String               @map("ativo_id") @db.Uuid
+  relevancia RelevanciaNoticia
+  origem     OrigemVinculoNoticia
+
+  noticia Noticia @relation(fields: [noticiaId], references: [id], onDelete: Cascade)
+  ativo   Ativo   @relation(fields: [ativoId], references: [id], onDelete: Restrict)
+
+  @@id([noticiaId, ativoId])
+  @@index([ativoId, relevancia], map: "noticia_ativo_ativo_idx")
+  @@map("noticia_ativo")
+}
+
+/// SPEC-027 §4.1, decisão 3: andamento da carga do arquivo da fonte pai.
+model ColetaNoticiaArquivo {
+  fonteId      String                 @id @map("fonte_id") @db.Uuid
+  total        Int
+  feitas       Int
+  situacao     SituacaoArquivoNoticia
+  atualizadaEm DateTime               @map("atualizada_em") @db.Timestamptz(3)
+
+  fonte FonteNoticia @relation(fields: [fonteId], references: [id], onDelete: Cascade)
+
+  @@map("coleta_noticia_arquivo")
 }

@@ -50,6 +50,7 @@ Conjunto de posições de um usuário. Um usuário pode ter várias carteiras.
 | tipo | enum | `ao_vivo` ou `historica`, escolhido na criação e imutável (RB24, [DA17](adr/DA17-carteira-ao-vivo-e-historica.md)) |
 | inicio_em | date | Ao vivo: o dia da criação; histórica: o dia de pregão escolhido, desde 04/01/2016 |
 | criada_em | date | Data de criação |
+| origem_id | uuid | A carteira de que esta foi copiada, se foi ([SPEC-023](specs/SPEC-023.md)); sem chave estrangeira, para a cópia continuar sabendo que é cópia depois que a original é excluída |
 
 Não há saldo guardado na carteira: o caixa vem só dos aportes e retiradas (livro-razão, [DA09](adr/DA09-lancamentos-imutaveis.md); OPEN-11 decidida na SPEC-012).
 
@@ -79,7 +80,7 @@ Operação de compra ou venda registrada em uma carteira sobre um ativo ([SPEC-0
 | fonte_cotacao | enum | Fonte da cotação (`brapi`) |
 
 ### SIMULACAO
-Projeção gerada a partir de uma carteira.
+Projeção gerada a partir de uma carteira: é a dos cenários por sentimento (SPEC-031). O "cenário" das personas é uma CARTEIRA ([SPEC-022](specs/SPEC-022.md)), e "salvar e recuperar simulações" (RF20) é copiar uma carteira em outra ([SPEC-023](specs/SPEC-023.md)).
 
 | Atributo | Tipo | Descrição |
 |---|---|---|
@@ -132,6 +133,22 @@ Série histórica de valores do indexador.
 | data | date | Data de referência |
 | valor | decimal | Valor da taxa no dia |
 
+### INDICE_BOLSA
+Índice da B3 usado como referência (benchmark) da carteira ([SPEC-020](specs/SPEC-020.md)): **Ibovespa** e **IFIX**. Fica separado do INDEXADOR, que guarda taxas do Banco Central; o índice é uma pontuação.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| sigla | string | Sigla da B3 (IBOV, IFIX) |
+| nome | string | Nome do índice |
+
+### FECHAMENTO_INDICE
+Série histórica do índice: o fechamento de cada pregão, como a B3 publica.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| data | date | Pregão |
+| valor | decimal | Pontos no fechamento |
+
 ## Relacionamentos
 
 | Origem | Cardinalidade | Destino | Nome |
@@ -142,12 +159,14 @@ Série histórica de valores do indexador.
 | CARTEIRA | 1 : N | LANCAMENTO_CAIXA | registra |
 | CARTEIRA | 1 : N | TRANSACAO | registra |
 | CARTEIRA | 1 : N | SIMULACAO | origina |
+| CARTEIRA | 0..1 : N | CARTEIRA | origina cópia ([SPEC-023](specs/SPEC-023.md)) |
 | ATIVO | 1 : N | TRANSACAO | movimenta |
 | ATIVO | 1 : N | COTACAO | possui |
 | ATIVO | N : 1 | INDEXADOR | indexado_por *(fase de renda fixa)* |
 | ATIVO | 1 : N | NOTICIA_ATIVO | mencionado_em |
 | NOTICIA | 1 : N | NOTICIA_ATIVO | cita |
 | INDEXADOR | 1 : N | TAXA_DIARIA | registra |
+| INDICE_BOLSA | 1 : N | FECHAMENTO_INDICE | registra |
 
 O par ATIVO → NOTICIA_ATIVO ← NOTICIA representa o N:N entre ativos e notícias.
 
@@ -155,7 +174,7 @@ O par ATIVO → NOTICIA_ATIVO ← NOTICIA representa o N:N entre ativos e notíc
 
 - O modelo conceitual acima não traz chaves; na passagem para o lógico cada entidade recebe uma PK própria (`id`) e as FKs correspondentes aos relacionamentos.
 - `NOTICIA_ATIVO` pode ter chave primária composta (`ativo_id`, `noticia_id`).
-- `COTACAO` e `TAXA_DIARIA` são séries temporais: a combinação (ativo/indexador + data) tende a ser única, o que justifica um índice único nesses pares.
+- `COTACAO`, `TAXA_DIARIA` e `FECHAMENTO_INDICE` são séries temporais: a combinação (ativo/indexador/índice + data) tende a ser única, o que justifica um índice único nesses pares.
 - *(Fase de renda fixa)* `vencimento` só se aplica a ativos de renda fixa, então aceita nulo — alternativa é especializar `ATIVO` em subtipos por `classe`.
 - Ações são classificadas por **setor** e FIIs por **segmento** ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); as duas classificações entram junto com SETOR, prevista na arquitetura §9.
 - `sentimento` está como string; se os valores forem fechados (positivo/neutro/negativo), vale usar um enum ou uma tabela de domínio.

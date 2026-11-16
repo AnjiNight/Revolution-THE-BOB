@@ -166,9 +166,40 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
           change: '135.00',
           changePercent: '4.76',
           events: [],
+          income: '0.00',
+          incomeLoaded: false,
+          // O ativo do teste não tem setor no catálogo falso: Outros.
+          sector: 'outros',
         },
       ],
       lastEntryDate: '2026-11-05',
+      income: '0.00',
+      pendingIncome: '0.00',
+      nextPayment: null,
+      incomeEnabled: true,
+      // SPEC-021: a mesma conta em classes, setores e ativos (2.970 ÷ 5.225 = 56,84%).
+      allocation: {
+        total: '5225.00',
+        classes: [
+          {
+            kind: 'stock',
+            value: '2970.00',
+            percent: '56.84',
+            sectors: [
+              {
+                sector: 'outros',
+                value: '2970.00',
+                percent: '56.84',
+                percentOfClass: '100.00',
+                assets: [{ assetId: PETR4, ticker: 'PETR4', value: '2970.00', percent: '56.84' }],
+              },
+            ],
+          },
+          { kind: 'cash', value: '2255.00', percent: '43.16' },
+        ],
+        atCost: [],
+        negativeCash: null,
+      },
     });
   });
 
@@ -372,7 +403,7 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
     expect(without.positionsValue).toBe('0.00');
   });
 
-  it('extrato com compras e vendas; exportação na versão 6; exclusão conta as negociações (CA02, CA08, CA10)', async () => {
+  it('extrato com compras e vendas; exportação na versão 7; exclusão conta as negociações (CA02, CA08, CA10)', async () => {
     await tradeNow('buy', 10);
     const boughtAt = now.toISOString();
     quote(PETR4, '32.00', '2026-11-05T15:00:00Z');
@@ -399,7 +430,7 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
       version: number;
       portfolios: Array<{ trades: unknown[] }>;
     }>();
-    expect(exported.version).toBe(6);
+    expect(exported.version).toBe(7);
     expect(exported.portfolios[0]?.trades).toEqual([
       {
         type: 'buy',

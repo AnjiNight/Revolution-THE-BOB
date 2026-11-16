@@ -9,6 +9,8 @@ import type { DatabaseProbe } from '../modules/health/application/get-health.js'
 import { EmailCodeHasher } from '../modules/identity/application/email-code.js';
 import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
+import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
+import { FakeFeedFetcher, InMemoryNewsRepository } from '../modules/news/testing/fakes.js';
 import { JwtAccessTokenService } from '../modules/identity/infrastructure/jwt-access-token-service.js';
 import {
   BackgroundTasks,
@@ -22,6 +24,7 @@ import {
 import { CalendarService } from '../modules/market-data/application/calendar-service.js';
 import { CatalogImport } from '../modules/market-data/application/catalog-import.js';
 import { CdiStatusService } from '../modules/market-data/application/cdi-status-service.js';
+import { MarketIndexStatusService } from '../modules/market-data/application/market-index-status-service.js';
 import { FundamentalsService } from '../modules/market-data/application/fundamentals-service.js';
 import { PortfolioService } from '../modules/portfolios/application/portfolio-service.js';
 import { TradingService } from '../modules/portfolios/application/trading-service.js';
@@ -41,6 +44,7 @@ import {
   InMemoryEvents,
   InMemoryFundamentals,
   InMemoryIndexRates,
+  InMemoryMarketIndexes,
   InMemoryIntradayQuoteRepository,
   InMemoryLogoRepository,
   InMemoryQuoteRepository,
@@ -190,6 +194,14 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   // Série do CDI (SPEC-007) em memória.
   const indexRates = new InMemoryIndexRates();
   const cdi = new CdiStatusService({ rates: indexRates, runs, calendars, clock });
+  // Ibovespa e IFIX (SPEC-020) em memória.
+  const marketIndexRepo = new InMemoryMarketIndexes();
+  const marketIndexes = new MarketIndexStatusService({
+    indexes: marketIndexRepo,
+    runs,
+    calendars,
+    clock,
+  });
   // Indicadores e proventos (SPECs 041 e 042) sobre o mesmo catálogo em memória.
   const fundamentalsRepo = new InMemoryFundamentals();
   const syncFundamentalAssets = () => {
@@ -205,6 +217,15 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     enabled: options.investidor10 !== false,
     fundamentals: fundamentalsRepo,
     runs,
+    clock,
+  });
+  // SPEC-027: fontes de notícias em memória; o teste do feed usa o buscador falso.
+  const newsRepo = new InMemoryNewsRepository();
+  const feedFetcher = new FakeFeedFetcher();
+  const newsSources = new NewsSourcesService({
+    news: newsRepo,
+    feeds: feedFetcher,
+    parentEnabled: options.investidor10 !== false,
     clock,
   });
   const logs = new LogCapture();
@@ -224,9 +245,11 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     calendar,
     catalog,
     cdi,
+    marketIndexes,
     fundamentals,
     portfolios,
     trading,
+    newsSources,
     logStream: logs,
   });
 
@@ -262,6 +285,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   return {
     app,
     logs,
+    newsRepo,
+    feedFetcher,
     users,
     refreshTokens,
     emailCodes,
@@ -287,6 +312,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     catalogImport,
     indexRates,
     cdi,
+    marketIndexRepo,
     portfolioRepo,
     portfolios,
     trading,

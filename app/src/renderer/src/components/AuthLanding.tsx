@@ -24,6 +24,7 @@ import {
 import type { MouseEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../landing.css';
+import { LanguageSwitch } from './LanguageSwitch';
 import { ServerStatusPanel } from './ServerStatusPanel';
 
 interface AuthLandingProps {
@@ -128,12 +129,20 @@ export function AuthLanding({ children, onCreateAccount, onSignIn }: AuthLanding
               <a href="#acoes-e-fiis">{t('landing.nav.assets')}</a>
             </li>
           </ul>
-          <a className="pill pill-primary pill-small" href="#acesso" onClick={goToAccess(onSignIn)}>
-            {t('landing.nav.signIn')}
-            <span className="pill-icon" aria-hidden="true">
-              <ArrowUpRight weight="bold" />
-            </span>
-          </a>
+          <div className="island-actions">
+            {/* SPEC-035: antes de entrar, quem não lê português acha a troca no topo. */}
+            <LanguageSwitch />
+            <a
+              className="pill pill-primary pill-small"
+              href="#acesso"
+              onClick={goToAccess(onSignIn)}
+            >
+              {t('landing.nav.signIn')}
+              <span className="pill-icon" aria-hidden="true">
+                <ArrowUpRight weight="bold" />
+              </span>
+            </a>
+          </div>
         </nav>
       </header>
 

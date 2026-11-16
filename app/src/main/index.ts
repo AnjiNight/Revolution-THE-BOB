@@ -16,8 +16,10 @@ import type {
   LoginInput,
   NewAssetInput,
   NewCashEntryInput,
+  NewNewsSourceInput,
   NewPortfolioInput,
   NewTradeInput,
+  UpdateNewsSourceInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   PriceHistoryPeriod,
@@ -32,6 +34,7 @@ import {
   CALENDAR_CHANNELS,
   FUNDAMENTALS_CHANNELS,
   INDEX_CHANNELS,
+  NEWS_CHANNELS,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
 } from '../shared/auth-ipc.js';
@@ -223,6 +226,14 @@ app.whenReady().then(() => {
   ipcMain.handle(PORTFOLIO_CHANNELS.trade, (_event, id: string, input: NewTradeInput) =>
     auth.trade(id, input),
   );
+  // Rentabilidade (SPEC-019): o servidor refaz a conta a partir do livro.
+  ipcMain.handle(PORTFOLIO_CHANNELS.performance, (_event, id: string, query: unknown) =>
+    auth.portfolioPerformance(id, query),
+  );
+  // Comparação (SPEC-022): o servidor confere se todas são do usuário.
+  ipcMain.handle(PORTFOLIO_CHANNELS.comparison, (_event, query: unknown) =>
+    auth.portfolioComparison(query),
+  );
   // Estorno (SPEC-015): o servidor confere o prazo e se o livro continua válido.
   ipcMain.handle(PORTFOLIO_CHANNELS.reverse, (_event, id: string, entryId: string) =>
     auth.reverseEntry(id, entryId),
@@ -230,6 +241,8 @@ app.whenReady().then(() => {
 
   // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.
   ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());
+  // Ibovespa e IFIX (SPEC-020): também só colaborador.
+  ipcMain.handle(INDEX_CHANNELS.marketIndexes, () => auth.marketIndexStatus());
 
   // Indicadores e proventos (SPECs 041 e 042); o cliente confere o período antes do servidor.
   ipcMain.handle(FUNDAMENTALS_CHANNELS.fundamentals, (_event, id: string) =>
@@ -239,6 +252,15 @@ app.whenReady().then(() => {
     auth.assetDividends(id, period),
   );
   ipcMain.handle(FUNDAMENTALS_CHANNELS.collection, () => auth.investidor10Status());
+  // Fontes de notícias (SPEC-027): só colaborador; o servidor confere e testa o feed.
+  ipcMain.handle(NEWS_CHANNELS.sources, () => auth.newsSources());
+  ipcMain.handle(NEWS_CHANNELS.latest, () => auth.latestNews());
+  ipcMain.handle(NEWS_CHANNELS.createSource, (_event, input: NewNewsSourceInput) =>
+    auth.createNewsSource(input),
+  );
+  ipcMain.handle(NEWS_CHANNELS.updateSource, (_event, id: string, input: UpdateNewsSourceInput) =>
+    auth.updateNewsSource(id, input),
+  );
 
   // Catálogo de ativos (SPEC-006): o servidor confere se a conta é de colaborador.
   ipcMain.handle(ASSET_CHANNELS.search, (_event, query: AssetSearchQuery) =>

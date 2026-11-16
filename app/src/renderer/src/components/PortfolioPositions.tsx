@@ -8,8 +8,10 @@ import {
 } from '@simulador/shared';
 import { Info, Plus } from '@phosphor-icons/react';
 import { useEffect, useId, useRef, useState } from 'react';
+import { PortfolioAllocation } from './PortfolioAllocation';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatChange, formatMoney, quoteMoment } from '../format';
 import { changeDirection } from './QuoteText';
 import { TradeForm, type TradeAsset } from './TradeForm';
@@ -44,11 +46,13 @@ export function PortfolioPositions({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const titleId = useId();
   const [state, setState] = useState<PositionsState>({ status: 'loading' });
+  // SPEC-032: sem conexão, a compra pedida pela ficha do ativo não abre.
   const [form, setForm] = useState<OpenForm | null>(
-    startBuying ? { type: 'buy', asset: startBuying, opener: null } : null,
+    startBuying && !needs.offline ? { type: 'buy', asset: startBuying, opener: null } : null,
   );
   const [notice, setNotice] = useState<string | null>(null);
   const buyButton = useRef<HTMLButtonElement>(null);
@@ -98,159 +102,197 @@ export function PortfolioPositions({
   const data = state.status === 'ready' ? state.data : null;
 
   return (
-    <section className="profile-panel positions-panel" aria-labelledby={titleId}>
-      <div className="cash-head">
-        <h2 id={titleId}>{t('portfolios.positions.title')}</h2>
-        {!form && (
-          <button
-            ref={buyButton}
-            type="button"
-            className="pill pill-primary"
-            onClick={(event) => open('buy', null, event.currentTarget)}
-          >
-            {t('portfolios.positions.buy')}
-            <span className="pill-icon" aria-hidden="true">
-              <Plus weight="bold" />
-            </span>
-          </button>
-        )}
-      </div>
-
-      {data && (
-        <dl className="positions-totals">
-          <div>
-            <dt>{t('portfolios.positions.totals.cash')}</dt>
-            <dd>{formatMoney(data.cash, language)}</dd>
-          </div>
-          <div>
-            <dt>{t('portfolios.positions.totals.positions')}</dt>
-            <dd>{formatMoney(data.positionsValue, language)}</dd>
-          </div>
-          <div>
-            <dt>{t('portfolios.positions.totals.total')}</dt>
-            <dd>{formatMoney(data.total, language)}</dd>
-          </div>
-        </dl>
-      )}
-
-      {form && (
-        <TradeForm
-          portfolio={portfolio}
-          type={form.type}
-          initialAsset={form.asset}
-          // SPEC-016: na histórica, a data começa no início ou no último lançamento (RB25).
-          firstDay={
-            data?.lastEntryDate && data.lastEntryDate > portfolio.startDate
-              ? data.lastEntryDate
-              : portfolio.startDate
-          }
-          onDone={done}
-          onCancel={() => close(form.opener)}
-          onSessionExpired={onSessionExpired}
-        />
-      )}
-
-      {notice && (
-        <p className="form-success" role="status">
-          {notice}
-        </p>
-      )}
-
-      {state.status === 'loading' && (
-        <p className="loading" role="status">
-          {t('portfolios.positions.loading')}
-        </p>
-      )}
-      {state.status === 'failed' && (
-        <p className="form-error" role="alert">
-          {t(`authErrors.${state.error}`)}
-        </p>
-      )}
-      {data && data.positions.length === 0 && (
-        <p className="assets-empty">{t('portfolios.positions.empty')}</p>
-      )}
-
-      {data && data.positions.length > 0 && (
-        <div className="positions-scroll">
-          <table className="cash-statement positions-table" aria-labelledby={titleId}>
-            <thead>
-              <tr>
-                <th scope="col">{t('portfolios.positions.columns.asset')}</th>
-                <th scope="col" className="cash-number">
-                  {t('portfolios.positions.columns.quantity')}
-                </th>
-                <th scope="col" className="cash-number">
-                  {t('portfolios.positions.columns.averagePrice')}
-                </th>
-                <th scope="col" className="cash-number">
-                  {t('portfolios.positions.columns.lastPrice')}
-                </th>
-                <th scope="col" className="cash-number">
-                  {t('portfolios.positions.columns.marketValue')}
-                </th>
-                <th scope="col" className="cash-number">
-                  {t('portfolios.positions.columns.change')}
-                </th>
-                <th scope="col">
-                  <span className="visually-hidden">
-                    {t('portfolios.positions.columns.actions')}
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.positions.map((position) => (
-                <PositionRow
-                  key={position.assetId}
-                  position={position}
-                  onOpenAsset={() => onOpenAsset(position.assetId)}
-                  onSell={(opener) =>
-                    open(
-                      'sell',
-                      {
-                        id: position.assetId,
-                        ticker: position.ticker,
-                        name: position.name,
-                        class: position.class,
-                        hasLogo: false,
-                      },
-                      opener,
-                    )
-                  }
-                  sellDisabled={form !== null}
-                />
-              ))}
-            </tbody>
-          </table>
+    <>
+      <section className="profile-panel positions-panel" aria-labelledby={titleId}>
+        <div className="cash-head">
+          <h2 id={titleId}>{t('portfolios.positions.title')}</h2>
+          {!form && (
+            <button
+              ref={buyButton}
+              type="button"
+              className="pill pill-primary"
+              onClick={(event) => open('buy', null, event.currentTarget)}
+              {...needs.props}
+            >
+              {t('portfolios.positions.buy')}
+              <span className="pill-icon" aria-hidden="true">
+                <Plus weight="bold" />
+              </span>
+            </button>
+          )}
         </div>
-      )}
 
-      {data && data.positions.length > 0 && (
-        <p className="field-hint">
-          {t('portfolios.positions.priceNote', { delay: FREE_QUOTE_DELAY_MINUTES })}{' '}
-          {t('portfolios.positions.changeNote')}
+        {data && (
+          <dl className="positions-totals">
+            <div>
+              <dt>{t('portfolios.positions.totals.cash')}</dt>
+              <dd>{formatMoney(data.cash, language)}</dd>
+            </div>
+            <div>
+              <dt>{t('portfolios.positions.totals.positions')}</dt>
+              <dd>{formatMoney(data.positionsValue, language)}</dd>
+            </div>
+            <div>
+              <dt>{t('portfolios.positions.totals.total')}</dt>
+              <dd>{formatMoney(data.total, language)}</dd>
+            </div>
+            {/* SPEC-043: proventos pagos (já no caixa) e a receber. */}
+            {data.incomeEnabled && (
+              <div>
+                <dt>{t('portfolios.positions.totals.income')}</dt>
+                <dd>{formatMoney(data.income, language)}</dd>
+              </div>
+            )}
+            {data.incomeEnabled && data.pendingIncome !== '0.00' && (
+              <div>
+                <dt>{t('portfolios.positions.totals.pending')}</dt>
+                <dd>
+                  {formatMoney(data.pendingIncome, language)}
+                  {data.nextPayment && (
+                    <span className="position-when">
+                      {t('portfolios.positions.nextPayment', {
+                        amount: formatMoney(data.nextPayment.amount, language),
+                        date: formatCalendarDay(data.nextPayment.date, language),
+                      })}
+                    </span>
+                  )}
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
+
+        {form && (
+          <TradeForm
+            portfolio={portfolio}
+            type={form.type}
+            initialAsset={form.asset}
+            // SPEC-016: na histórica, a data começa no início ou no último lançamento (RB25).
+            firstDay={
+              data?.lastEntryDate && data.lastEntryDate > portfolio.startDate
+                ? data.lastEntryDate
+                : portfolio.startDate
+            }
+            onDone={done}
+            onCancel={() => close(form.opener)}
+            onSessionExpired={onSessionExpired}
+          />
+        )}
+
+        {notice && (
+          <p className="form-success" role="status">
+            {notice}
+          </p>
+        )}
+
+        {state.status === 'loading' && (
+          <p className="loading" role="status">
+            {t('portfolios.positions.loading')}
+          </p>
+        )}
+        {state.status === 'failed' && (
+          <p className="form-error" role="alert">
+            {t(`authErrors.${state.error}`)}
+          </p>
+        )}
+        {data && data.positions.length === 0 && (
+          <p className="assets-empty">{t('portfolios.positions.empty')}</p>
+        )}
+
+        {data && data.positions.length > 0 && (
+          <div className="positions-scroll">
+            <table className="cash-statement positions-table" aria-labelledby={titleId}>
+              <thead>
+                <tr>
+                  <th scope="col">{t('portfolios.positions.columns.asset')}</th>
+                  <th scope="col" className="cash-number">
+                    {t('portfolios.positions.columns.quantity')}
+                  </th>
+                  <th scope="col" className="cash-number">
+                    {t('portfolios.positions.columns.averagePrice')}
+                  </th>
+                  <th scope="col" className="cash-number">
+                    {t('portfolios.positions.columns.lastPrice')}
+                  </th>
+                  <th scope="col" className="cash-number">
+                    {t('portfolios.positions.columns.marketValue')}
+                  </th>
+                  <th scope="col" className="cash-number">
+                    {t('portfolios.positions.columns.change')}
+                  </th>
+                  <th scope="col">
+                    <span className="visually-hidden">
+                      {t('portfolios.positions.columns.actions')}
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.positions.map((position) => (
+                  <PositionRow
+                    key={position.assetId}
+                    position={position}
+                    incomeEnabled={data.incomeEnabled}
+                    onOpenAsset={() => onOpenAsset(position.assetId)}
+                    onSell={(opener) =>
+                      open(
+                        'sell',
+                        {
+                          id: position.assetId,
+                          ticker: position.ticker,
+                          name: position.name,
+                          class: position.class,
+                          hasLogo: false,
+                        },
+                        opener,
+                      )
+                    }
+                    sellDisabled={form !== null}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {data && data.positions.length > 0 && (
+          <p className="field-hint">
+            {t('portfolios.positions.priceNote', { delay: FREE_QUOTE_DELAY_MINUTES })}{' '}
+            {t('portfolios.positions.changeNote')}
+          </p>
+        )}
+        <p className="assets-note">
+          <Info weight="fill" aria-hidden="true" />
+          <span>
+            {t(
+              data?.incomeEnabled === false
+                ? 'portfolios.positions.incomeDisabled'
+                : 'portfolios.positions.dividendsNote',
+            )}
+          </span>
         </p>
-      )}
-      <p className="assets-note">
-        <Info weight="fill" aria-hidden="true" />
-        <span>{t('portfolios.positions.dividendsNote')}</span>
-      </p>
-    </section>
+      </section>
+      {/* SPEC-021: a distribuição de hoje, com as mesmas posições. */}
+      {data && <PortfolioAllocation allocation={data.allocation} />}
+    </>
   );
 }
 
 function PositionRow({
   position,
+  incomeEnabled,
   onOpenAsset,
   onSell,
   sellDisabled,
 }: {
   position: Position;
+  incomeEnabled: boolean;
   onOpenAsset: () => void;
   onSell: (opener: HTMLElement) => void;
   sellDisabled: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const columns = 'portfolios.positions.columns';
   const when =
@@ -278,15 +320,27 @@ function PositionRow({
           {position.ticker}
         </button>
         <span className="position-name">{position.name}</span>
-        {/* SPEC-016: evento depois da compra, até a SPEC-043 corrigir a quantidade. */}
+        {/* SPEC-043: eventos já aplicados na quantidade e no preço médio. */}
         {position.events.map((event) => (
           <span key={event.kind + event.exDate} className="position-event">
-            {t('portfolios.positions.eventWarning', {
+            {t('portfolios.positions.eventApplied', {
               event: t(`portfolios.positions.event.${event.kind}`),
               date: formatCalendarDay(event.exDate, language),
+              before: new Intl.NumberFormat(language).format(event.quantityBefore),
+              after: new Intl.NumberFormat(language).format(event.quantityAfter),
             })}
           </span>
         ))}
+        {position.income !== '0.00' && (
+          <span className="position-event">
+            {t('portfolios.positions.incomeReceived', {
+              amount: formatMoney(position.income, language),
+            })}
+          </span>
+        )}
+        {incomeEnabled && !position.incomeLoaded && (
+          <span className="position-event">{t('portfolios.positions.incomeNotLoaded')}</span>
+        )}
       </td>
       <td data-label={t(`${columns}.quantity`)} className="cash-number">
         {new Intl.NumberFormat(language).format(position.quantity)}
@@ -325,6 +379,7 @@ function PositionRow({
           disabled={sellDisabled}
           aria-label={t('portfolios.positions.sellLabel', { ticker: position.ticker })}
           onClick={(event) => onSell(event.currentTarget)}
+          {...needs.props}
         >
           {t('portfolios.positions.sell')}
         </button>

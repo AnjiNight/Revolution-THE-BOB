@@ -52,6 +52,12 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
         Promise.resolve(assetId === 'a1' && date === '2019-03-15' ? '25.3' : null),
       lastTradingDayBefore: (assetId, date) =>
         Promise.resolve(assetId === 'a1' && date > '2019-03-13' ? '2019-03-13' : null),
+      closes: (assetId, from) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [{ date: '2019-03-15', close: '25.3' }].filter((c) => !from || c.date >= from)
+            : [],
+        ),
       sessions: (assetId) =>
         Promise.resolve(
           assetId === 'a1'
@@ -80,6 +86,54 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
             : [],
         ),
     },
+    income: {
+      enabled: true,
+      dividends: (assetId, since) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [
+                {
+                  kind: 'jcp' as const,
+                  exDate: '2026-08-21',
+                  paymentDate: '2026-12-21',
+                  value: '0.2',
+                },
+                {
+                  kind: 'jcp' as const,
+                  exDate: '2026-08-21',
+                  paymentDate: '2026-12-21',
+                  value: '0.2',
+                },
+                { kind: 'dividendo' as const, exDate: '2019-01-02', paymentDate: null, value: '1' },
+              ].filter((row) => !since || row.exDate >= since)
+            : [],
+        ),
+      visitedAssets: () => Promise.resolve(new Set(['a1'])),
+    },
+    benchmarks: {
+      cdiRates: (from, to) =>
+        Promise.resolve(
+          [{ date: '2026-11-05', rate: '0.055131' }].filter((r) => r.date >= from && r.date <= to),
+        ),
+      indexCloses: (code, from, to) =>
+        Promise.resolve(
+          code === 'IBOV'
+            ? [{ date: '2026-11-06', close: '168498.45' }].filter(
+                (c) => c.date >= from && c.date <= to,
+              )
+            : [],
+        ),
+    },
+  });
+
+  it('SPEC-020: o CDI e os índices da B3 entre as datas', async () => {
+    expect(await market.cdiRates('2026-11-01', '2026-11-06')).toEqual([
+      { date: '2026-11-05', rate: '0.055131' },
+    ]);
+    expect(await market.indexCloses('IBOV', '2026-11-06', '2026-11-06')).toEqual([
+      { date: '2026-11-06', close: '168498.45' },
+    ]);
+    expect(await market.indexCloses('IFIX', '2026-11-01', '2026-11-06')).toEqual([]);
   });
 
   it('SPEC-016: fechamento do dia, último dia com negócio e eventos a partir da compra', async () => {
@@ -88,12 +142,36 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
     expect(await market.closeOn('a1', '2019-03-15')).toBe('25.3');
     expect(await market.closeOn('a1', '2019-03-14')).toBeNull();
     expect(await market.lastTradingDayBefore('a1', '2019-03-14')).toBe('2019-03-13');
-    // A data com no dia da compra conta.
-    expect(await market.eventsFrom('a1', '2019-03-15')).toEqual([
-      { kind: 'split', exDate: '2019-03-15' },
-      { kind: 'reverse_split', exDate: '2021-06-01' },
+    // A data com no dia da compra conta; SPEC-043: com o fechamento da data com.
+    expect(await market.corporateEvents('a1', '2019-03-15')).toEqual([
+      {
+        id: 'desdobramento:2019-03-15',
+        assetId: 'a1',
+        kind: 'desdobramento',
+        exDate: '2019-03-15',
+        factor: '2',
+        close: '25.3',
+      },
+      {
+        id: 'grupamento:2021-06-01',
+        assetId: 'a1',
+        kind: 'grupamento',
+        exDate: '2021-06-01',
+        factor: '0.1',
+        close: null,
+      },
     ]);
-    expect(await market.eventsFrom('a1', '2021-06-02')).toEqual([]);
+    expect(await market.corporateEvents('a1', '2021-06-02')).toEqual([]);
+  });
+
+  it('SPEC-043: proventos com id estável (iguais ganham número) e ativos visitados', async () => {
+    const income = await market.income('a1', '2020-01-01');
+    expect(income.map((row) => row.id)).toEqual([
+      'a1:jcp:2026-08-21:2026-12-21:0.2',
+      'a1:jcp:2026-08-21:2026-12-21:0.2:2',
+    ]);
+    expect(market.incomeEnabled).toBe(true);
+    expect(await market.incomeLoaded(['a1', 'a2'])).toEqual(new Set(['a1']));
   });
 
   it('o ativo com a situação; o desativado vem com active false; o que não existe, null', async () => {
@@ -103,6 +181,8 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
       name: 'Petrobras PN',
       assetClass: 'stock',
       active: true,
+      // SPEC-021: o setor do catálogo, para a distribuição.
+      sector: 'petroleo_gas_biocombustiveis',
     });
     expect((await market.asset('a2'))?.active).toBe(false);
     expect(await market.asset('a3')).toBeNull();

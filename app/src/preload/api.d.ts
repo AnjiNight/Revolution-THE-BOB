@@ -6,6 +6,11 @@ import type {
   CalendarSuggestion,
   CashEntryResult,
   CashStatement,
+  ComparisonQuery,
+  PerformanceQuery,
+  PortfolioComparison,
+  PortfolioCopyResult,
+  PortfolioPerformance,
   PortfolioPositions,
   ReversalResult,
   TradeQuote,
@@ -13,9 +18,16 @@ import type {
   CatalogAsset,
   CatalogListResult,
   CdiStatus,
+  MarketIndexStatus,
   ConsentList,
   DividendPeriod,
   Investidor10Status,
+  LatestNews,
+  NewNewsSourceInput,
+  NewsSource,
+  NewsSourceCreated,
+  NewsSourcesStatus,
+  UpdateNewsSourceInput,
   Portfolio,
   PortfolioList,
   PriceHistory,
@@ -26,6 +38,7 @@ import type {
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
+  AppLanguage,
   AssetSearchQuery,
   AssetUpdateInput,
   AuthResult,
@@ -35,11 +48,14 @@ import type {
   ChangePasswordInput,
   ClientResult,
   ConfirmEmailChangeInput,
+  ConnectionEvent,
+  ReconnectResult,
   EmailConfirmationInput,
   EmailConfirmationResendInput,
   LoginInput,
   NewAssetInput,
   NewCashEntryInput,
+  NewPortfolioCopyInput,
   NewPortfolioInput,
   NewTradeInput,
   PasswordResetConfirmInput,
@@ -53,6 +69,21 @@ import type { ServerStatus } from '../shared/server-status.js';
 /** Funções que o processo principal expõe para a interface (window.api). */
 export interface DesktopApi {
   checkServerHealth(): Promise<ServerStatus>;
+  /** SPEC-035: avisa o processo principal do idioma da interface (ao abrir e a cada troca). */
+  setLanguage(language: AppLanguage): Promise<void>;
+  /** SPEC-032: modo consulta (sem conexão) e a volta da conexão. */
+  connection: {
+    status(): Promise<{ offline: boolean }>;
+    /** "Tentar agora": confere o servidor e, se ele responde, renova a sessão. */
+    retry(): Promise<ReconnectResult>;
+    /** Avisa quando o app entra ou sai do modo consulta; devolve a função que para de avisar. */
+    onChange(listener: (event: ConnectionEvent) => void): () => void;
+    /**
+     * Avisa a data de cada leitura que veio da cópia local (o `savedAt`), para a faixa do modo
+     * consulta mostrar a mais antiga da tela.
+     */
+    onSavedAt(listener: (savedAt: string) => void): () => void;
+  };
   auth: {
     getSession(): Promise<AuthResult>;
     /** SPEC-039: cria a conta pendente e manda o código; não abre sessão. */
@@ -93,9 +124,13 @@ export interface DesktopApi {
     /** Substitui a lista inteira do ano. */
     publish(year: number, input: CalendarPublication): Promise<ClientResult<TradingCalendarYear>>;
   };
-  /** Indexadores (SPEC-007): situação da série do CDI, só colaborador (403 para usuário). */
+  /**
+   * Indexadores (SPEC-007) e índices da B3 (SPEC-020): situação das séries, só colaborador (403
+   * para usuário).
+   */
   indexes: {
     cdi(): Promise<ClientResult<CdiStatus>>;
+    market(): Promise<ClientResult<MarketIndexStatus>>;
   };
   /** Carteiras (SPEC-012): só a conta de usuário; carteira de outra pessoa é `portfolio_not_found`. */
   portfolios: {
@@ -118,6 +153,12 @@ export interface DesktopApi {
     trade(id: string, input: NewTradeInput): Promise<ClientResult<TradeResult>>;
     /** SPEC-015: estorna um lançamento; a recusa traz em details o lançamento que quebraria. */
     reverse(id: string, entryId: string): Promise<ClientResult<ReversalResult>>;
+    /** SPEC-019: rentabilidade e evolução patrimonial no período (`period` ou `from` e `to`). */
+    performance(id: string, query: PerformanceQuery): Promise<ClientResult<PortfolioPerformance>>;
+    /** SPEC-022: de 2 a 4 carteiras no mesmo período, na ordem escolhida. */
+    comparison(query: ComparisonQuery): Promise<ClientResult<PortfolioComparison>>;
+    /** SPEC-023: nova carteira a partir desta; `copy_breaks_cash` traz em details a retirada. */
+    copy(id: string, input: NewPortfolioCopyInput): Promise<ClientResult<PortfolioCopyResult>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto
@@ -127,6 +168,18 @@ export interface DesktopApi {
     get(id: string): Promise<ClientResult<AssetFundamentals>>;
     dividends(id: string, period: DividendPeriod): Promise<ClientResult<AssetDividends>>;
     collection(): Promise<ClientResult<Investidor10Status>>;
+  };
+  /** Fontes de notícias (SPEC-027): só colaborador (403 para usuário). */
+  news: {
+    sources(): Promise<ClientResult<NewsSourcesStatus>>;
+    /** SPEC-028: as últimas notícias com os vínculos aos ativos. */
+    latest(): Promise<ClientResult<LatestNews>>;
+    /** O servidor testa o feed antes de gravar; recusado, o motivo vem em `fields.url`. */
+    createSource(input: NewNewsSourceInput): Promise<ClientResult<NewsSourceCreated>>;
+    updateSource(
+      id: string,
+      input: UpdateNewsSourceInput,
+    ): Promise<ClientResult<{ source: NewsSource }>>;
   };
   /**
    * Catálogo de ativos (SPECs 006, 010 e 040). Busca, ficha e logos para todos; o resto só

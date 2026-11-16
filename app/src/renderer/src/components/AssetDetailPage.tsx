@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
 import '../asset-detail.css';
 import '../assets.css';
+import { useNeedsConnection } from '../connection';
 import {
   formatCalendarDay,
   formatChange,
@@ -573,6 +574,7 @@ function BuyFromAsset({
   onSessionExpired: () => void;
 }) {
   const { t } = useTranslation();
+  const needs = useNeedsConnection();
   const titleId = useId();
   const [choice, setChoice] = useState<
     | { status: 'idle' }
@@ -604,6 +606,7 @@ function BuyFromAsset({
           className="pill pill-primary"
           disabled={choice.status === 'loading'}
           onClick={() => void start()}
+          {...needs.props}
         >
           {choice.status === 'loading' ? t('detail.buyLoading') : t('detail.buy')}
         </button>

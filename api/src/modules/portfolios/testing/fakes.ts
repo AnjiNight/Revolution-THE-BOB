@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import type { PositionEvent } from '@simulador/shared';
+import type { EventInput, IncomeInput } from '../../financial-calculation/corporate-actions.js';
+import type { DailyClose } from '../../financial-calculation/performance.js';
 import type {
   LedgerRepository,
   MarketAsset,
   MarketQuote,
   NewStoredCashEntry,
   NewStoredPortfolio,
+  NewStoredPortfolioCopy,
   NewStoredReversal,
   NewStoredTrade,
   PortfolioLedger,
@@ -13,10 +15,11 @@ import type {
   PortfolioRepository,
   StoredCashEntry,
   StoredPortfolio,
+  StoredPortfolioCopy,
   StoredReversal,
   StoredTrade,
 } from '../application/ports.js';
-import { PortfolioNameInUseError } from '../domain/errors.js';
+import { PortfolioNameInUseError, PortfolioNotFoundError } from '../domain/errors.js';
 
 /**
  * Livro-razão da carteira em memória (SPECs 013 e 014). A trava é uma fila por carteira: cada
@@ -132,8 +135,16 @@ export class FakePortfolioMarket implements PortfolioMarket {
   readonly closes = new Map<string, { date: string; close: string }>();
   /** SPEC-016: fechamentos da B3 por ativo e dia ("AAAA-MM-DD" → preço). */
   readonly dailyCloses = new Map<string, Map<string, string>>();
-  /** SPEC-016: eventos corporativos por ativo. */
-  readonly events = new Map<string, PositionEvent[]>();
+  /** SPEC-016/043: eventos corporativos por ativo (o `close` vem de `dailyCloses`). */
+  readonly events = new Map<string, Array<Omit<EventInput, 'id' | 'assetId' | 'close'>>>();
+  /** SPEC-043: proventos por ativo. */
+  readonly dividends = new Map<string, Array<Omit<IncomeInput, 'id' | 'assetId'>>>();
+  /** SPEC-043: os ativos já visitados no Investidor10. */
+  readonly visited = new Set<string>();
+  /** SPEC-020: taxas do CDI por dia (% ao dia) e fechamentos dos índices da B3 por sigla e dia. */
+  readonly cdi = new Map<string, string>();
+  readonly indexes = new Map<string, Map<string, string>>();
+  incomeEnabled = true;
 
   asset(assetId: string): Promise<MarketAsset | null> {
     return Promise.resolve(this.assets.get(assetId) ?? null);
@@ -163,10 +174,57 @@ export class FakePortfolioMarket implements PortfolioMarket {
     return Promise.resolve(days.sort().at(-1) ?? null);
   }
 
-  eventsFrom(assetId: string, date: string): Promise<PositionEvent[]> {
+  corporateEvents(assetId: string, from: string): Promise<EventInput[]> {
     return Promise.resolve(
-      (this.events.get(assetId) ?? []).filter((event) => event.exDate >= date),
+      (this.events.get(assetId) ?? [])
+        .filter((event) => event.exDate >= from)
+        .map((event) => ({
+          ...event,
+          id: `${event.kind}:${event.exDate}`,
+          assetId,
+          close: this.dailyCloses.get(assetId)?.get(event.exDate) ?? null,
+        })),
     );
+  }
+
+  income(assetId: string, from: string): Promise<IncomeInput[]> {
+    if (!this.incomeEnabled) return Promise.resolve([]);
+    return Promise.resolve(
+      (this.dividends.get(assetId) ?? [])
+        .filter((income) => income.exDate >= from)
+        .map((income, index) => ({ ...income, id: `${assetId}:${index}`, assetId })),
+    );
+  }
+
+  closesFrom(assetId: string, from: string): Promise<Array<{ date: string; close: string }>> {
+    return Promise.resolve(
+      [...(this.dailyCloses.get(assetId) ?? [])]
+        .filter(([date]) => date >= from)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, close]) => ({ date, close })),
+    );
+  }
+
+  cdiRates(from: string, to: string): Promise<Array<{ date: string; rate: string }>> {
+    return Promise.resolve(
+      [...this.cdi]
+        .filter(([date]) => date >= from && date <= to)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, rate]) => ({ date, rate })),
+    );
+  }
+
+  indexCloses(code: string, from: string, to: string): Promise<DailyClose[]> {
+    return Promise.resolve(
+      [...(this.indexes.get(code) ?? [])]
+        .filter(([date]) => date >= from && date <= to)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, close]) => ({ date, close })),
+    );
+  }
+
+  incomeLoaded(assetIds: readonly string[]): Promise<Set<string>> {
+    return Promise.resolve(new Set(assetIds.filter((id) => this.visited.has(id))));
   }
 }
 
@@ -213,11 +271,57 @@ export class InMemoryPortfolioRepository implements PortfolioRepository {
       startDate: portfolio.startDate,
       createdAt: portfolio.at,
       updatedAt: portfolio.at,
+      copiedFromId: null,
     };
     this.portfolios.set(stored.id, stored);
     if (portfolio.initialDeposit) this.ledger.add(stored.id, portfolio.initialDeposit);
     const { nameKey: _key, ...result } = stored;
     return Promise.resolve({ ...result });
+  }
+
+  /** SPEC-023: a cópia, como o PostgreSQL faz (mesmo dono, tipo e início; lançamentos com ids novos). */
+  async copyLocked(
+    sourceId: string,
+    decide: (current: PortfolioLedger, count: number) => NewStoredPortfolioCopy,
+  ): Promise<StoredPortfolioCopy> {
+    const source = this.portfolios.get(sourceId);
+    if (!source) throw new PortfolioNotFoundError();
+    const copy = decide(await this.ledger.ledger(sourceId), await this.countByUser(source.userId));
+    if (this.taken(source.userId, copy.nameKey)) throw new PortfolioNameInUseError();
+    const stored = {
+      id: randomUUID(),
+      userId: source.userId,
+      name: copy.name,
+      nameKey: copy.nameKey,
+      type: source.type,
+      startDate: source.startDate,
+      createdAt: copy.at,
+      updatedAt: copy.at,
+      copiedFromId: sourceId,
+    };
+    this.portfolios.set(stored.id, stored);
+    for (const entry of copy.cash) this.ledger.add(stored.id, entry);
+    for (const trade of copy.trades) {
+      this.ledger.trades.push({ id: randomUUID(), portfolioId: stored.id, ...trade });
+    }
+    const { nameKey: _key, ...portfolio } = stored;
+    return {
+      portfolio: { ...portfolio },
+      copied: { cashEntries: copy.cash.length, trades: copy.trades.length },
+    };
+  }
+
+  namesOf(ids: readonly string[]): Promise<Map<string, string>> {
+    return Promise.resolve(
+      new Map(
+        ids
+          .map((id) => this.portfolios.get(id))
+          .filter(
+            (portfolio): portfolio is NonNullable<typeof portfolio> => portfolio !== undefined,
+          )
+          .map((portfolio) => [portfolio.id, portfolio.name]),
+      ),
+    );
   }
 
   rename(id: string, name: string, nameKey: string, at: Date): Promise<StoredPortfolio> {

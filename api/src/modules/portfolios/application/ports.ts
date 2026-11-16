@@ -2,11 +2,15 @@ import type {
   AssetClass,
   CashEntryType,
   IsoDate,
+  MarketIndexCode,
+  SectorCode,
   PortfolioType,
-  PositionEvent,
   QuoteLevelCode,
   TradeType,
 } from '@simulador/shared';
+import type { CdiRate } from '../../financial-calculation/benchmarks.js';
+import type { EventInput, IncomeInput } from '../../financial-calculation/corporate-actions.js';
+import type { DailyClose } from '../../financial-calculation/performance.js';
 import type { TradingCalendar } from '../../financial-calculation/trading-calendar.js';
 
 /** Aporte ou retirada como fica guardado (SPEC-013 §6). Valor em decimal com 2 casas. */
@@ -103,6 +107,8 @@ export interface MarketAsset {
   name: string;
   assetClass: AssetClass;
   active: boolean;
+  /** SPEC-021: setor (ação) ou segmento (FII) do catálogo; sem ele, "Outros". */
+  sector?: SectorCode;
 }
 
 /** Cotação do pregão (SPEC-009): preço com até 6 casas e o horário da coleta. */
@@ -129,8 +135,26 @@ export interface PortfolioMarket {
   closeOn(assetId: string, date: IsoDate): Promise<string | null>;
   /** SPEC-016: o último dia com negócio antes da data, ou `null`. */
   lastTradingDayBefore(assetId: string, date: IsoDate): Promise<IsoDate | null>;
-  /** SPEC-016: desdobramentos, grupamentos e bonificações com data com a partir da data. */
-  eventsFrom(assetId: string, date: IsoDate): Promise<PositionEvent[]>;
+  /**
+   * SPEC-043: desdobramentos, grupamentos e bonificações (SPEC-042) com data com a partir da data,
+   * com o fechamento da B3 da data com (para vender as frações).
+   */
+  corporateEvents(assetId: string, from: IsoDate): Promise<EventInput[]>;
+  /**
+   * SPEC-043: proventos (SPEC-042) com data com a partir da data; vazio com o interruptor do
+   * Investidor10 desligado.
+   */
+  income(assetId: string, from: IsoDate): Promise<IncomeInput[]>;
+  /** SPEC-043: o interruptor `INVESTIDOR10_ENABLED` (SPEC-041). */
+  readonly incomeEnabled: boolean;
+  /** SPEC-043: dos ativos pedidos, os que o processador já visitou no Investidor10. */
+  incomeLoaded(assetIds: readonly string[]): Promise<Set<string>>;
+  /** SPEC-019: os fechamentos da B3 do ativo (como publicados) desde a data, em ordem. */
+  closesFrom(assetId: string, from: IsoDate): Promise<DailyClose[]>;
+  /** SPEC-020: as taxas do CDI (SPEC-007) entre as datas (inclusive), em ordem. */
+  cdiRates(from: IsoDate, to: IsoDate): Promise<CdiRate[]>;
+  /** SPEC-020: os fechamentos do índice da B3 entre as datas (inclusive), em ordem. */
+  indexCloses(code: MarketIndexCode, from: IsoDate, to: IsoDate): Promise<DailyClose[]>;
 }
 
 /** Carteira como fica guardada (SPEC-012 §6). */
@@ -142,6 +166,25 @@ export interface StoredPortfolio {
   startDate: IsoDate;
   createdAt: Date;
   updatedAt: Date;
+  /** SPEC-023: a carteira de que esta foi copiada (pode já não existir), ou `null`. */
+  copiedFromId: string | null;
+}
+
+/**
+ * SPEC-023: a cópia que o serviço decidiu, com a original travada: o nome e os lançamentos que
+ * entram (sem id nem carteira: o repositório grava com ids novos, na carteira nova).
+ */
+export interface NewStoredPortfolioCopy {
+  name: string;
+  nameKey: string;
+  at: Date;
+  cash: NewStoredCashEntry[];
+  trades: NewStoredTrade[];
+}
+
+export interface StoredPortfolioCopy {
+  portfolio: StoredPortfolio;
+  copied: { cashEntries: number; trades: number };
 }
 
 export interface NewStoredPortfolio {
@@ -169,6 +212,19 @@ export interface PortfolioRepository {
   create(portfolio: NewStoredPortfolio): Promise<StoredPortfolio>;
   /** Lança PortfolioNameInUseError se o usuário já tem a chave. */
   rename(id: string, name: string, nameKey: string, at: Date): Promise<StoredPortfolio>;
+  /**
+   * SPEC-023: trava a original, lê o livro dela e quantas carteiras o dono tem, e chama `decide`,
+   * que confere as regras e devolve o que copiar (ou lança o erro). Grava a carteira nova (mesmo
+   * dono, tipo e início da original, com `origem_id`) e os lançamentos copiados antes de soltar a
+   * trava: se algo falhar, nada fica. Lança PortfolioNameInUseError se o usuário já tem a chave e
+   * PortfolioNotFoundError se a original sumiu enquanto o pedido chegava.
+   */
+  copyLocked(
+    sourceId: string,
+    decide: (current: PortfolioLedger, count: number) => NewStoredPortfolioCopy,
+  ): Promise<StoredPortfolioCopy>;
+  /** SPEC-023: o nome atual das carteiras pedidas (as que ainda existem), para `copiedFrom`. */
+  namesOf(ids: readonly string[]): Promise<Map<string, string>>;
   /**
    * Apaga a carteira e os lançamentos dela e grava o registro da exclusão (com quantos lançamentos
    * havia), sem dado pessoal, numa transação só.

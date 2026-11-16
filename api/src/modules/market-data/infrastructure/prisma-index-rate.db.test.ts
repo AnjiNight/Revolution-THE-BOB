@@ -55,6 +55,23 @@ describe.skipIf(!url)('série do CDI no PostgreSQL', () => {
     expect(revised.fonte).toBe('bcb_sgs');
   });
 
+  it('SPEC-020: as taxas entre as datas, em ordem, para a carteira', async () => {
+    await rates.save(
+      cdi.id,
+      [
+        { date: '2026-11-04', value: '0.055131' },
+        { date: '2026-11-03', value: '0.055131' },
+        { date: '2026-11-05', value: '0.05' },
+      ],
+      at,
+    );
+    expect(await rates.ratesBetween('CDI', '2026-11-04', '2026-11-05')).toEqual([
+      { date: '2026-11-04', rate: '0.055131' },
+      { date: '2026-11-05', rate: '0.050000' },
+    ]);
+    expect(await rates.ratesBetween('IPCA', '2026-11-01', '2026-11-05')).toEqual([]);
+  });
+
   it('marca os anos carregados e marca de novo sem erro', async () => {
     await rates.markYearLoaded(cdi.id, 2016, 251, at);
     await rates.markYearLoaded(cdi.id, 2016, 251, at);

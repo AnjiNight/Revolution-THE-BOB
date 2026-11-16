@@ -1,9 +1,12 @@
 import { isoDateInBrasilia, weekdayOf } from '@simulador/shared';
-import { parseB3Events } from '../domain/b3-events.js';
+import { companyCvmCode, industryClassificationOf, parseB3Events } from '../domain/b3-events.js';
+import { b3ClassificationLevels } from '../domain/sector-suggestion.js';
+import type { ClassificationSuggestions } from './classification-suggestions.js';
 import { RETRY_DELAYS_MS } from './history-ingestion.js';
 import type {
   B3CompanySource,
   B3TradeRepository,
+  ClassificationRepository,
   CorporateEventRepository,
   FundamentalsRepository,
   RunError,
@@ -15,6 +18,8 @@ import type {
 /** Uma consulta a cada 2 segundos, uma de cada vez (SPEC-042 §4.3). */
 export const B3_EVENTS_PAUSE_MS = 2_000;
 const MAX_STORED_ERRORS = 100;
+/** SPEC-021: a classificação setorial de uma empresa é pedida de novo depois de 30 dias. */
+const CLASSIFICATION_MAX_AGE_MS = 30 * 86_400_000;
 
 export interface B3EventsCollectionDeps {
   source: B3CompanySource;
@@ -22,6 +27,12 @@ export interface B3EventsCollectionDeps {
   trades: Pick<B3TradeRepository, 'all'>;
   events: CorporateEventRepository;
   runs: TaskRunRepository & TaskRunReader;
+  /**
+   * SPEC-021: a classificação setorial da B3 de cada empresa (guardada) e, no fim, a troca da
+   * classificação sugerida dos ativos a revisar. Sem eles, só os eventos.
+   */
+  classifications?: ClassificationRepository;
+  suggestions?: Pick<ClassificationSuggestions, 'apply'>;
   clock?: () => Date;
   sleep?: (ms: number) => Promise<void>;
   pauseMs?: number;
@@ -90,7 +101,12 @@ export class B3EventsCollection {
     let failed = 0;
     let records = 0;
     let requests = 0;
+    let classified = 0;
+    let suggested = 0;
     const affected = new Set<string>();
+    const known = this.deps.classifications
+      ? await this.deps.classifications.b3Classifications()
+      : new Map<string, never>();
 
     try {
       for (const [code, companyAssets] of byCompany) {
@@ -120,6 +136,51 @@ export class B3EventsCollection {
           records += own.length;
           if (own.length > 0) affected.add(asset.id);
         }
+
+        // SPEC-021: a classificação setorial, se a empresa não tem ou tem há mais de 30 dias.
+        const classifications = this.deps.classifications;
+        const stored = known.get(code);
+        const now = this.clock();
+        if (
+          !classifications ||
+          (stored && now.getTime() - stored.collectedAt.getTime() < CLASSIFICATION_MAX_AGE_MS)
+        ) {
+          continue;
+        }
+        const codeCvm = companyCvmCode(json) ?? stored?.codeCvm ?? null;
+        if (!codeCvm) {
+          error(`${code}: sem código CVM na página da B3; sem classificação setorial`);
+          continue;
+        }
+        try {
+          const detail = await this.withRetries(async () => {
+            await this.sleep(this.pauseMs);
+            requests += 1;
+            return this.deps.source.detail(codeCvm);
+          });
+          const levels = b3ClassificationLevels(industryClassificationOf(detail));
+          if (!levels.sector) {
+            error(`${code}: página de detalhe da B3 sem classificação setorial`);
+            continue;
+          }
+          await classifications.saveB3Classification({
+            code,
+            codeCvm,
+            ...levels,
+            collectedAt: this.clock(),
+          });
+          classified += 1;
+        } catch (cause) {
+          failed += 1;
+          error(
+            `${code} (classificação): ${cause instanceof Error ? cause.message : String(cause)}`,
+          );
+        }
+      }
+      // SPEC-021: troca a classificação sugerida dos ativos a revisar pelas fontes melhores.
+      if (this.deps.suggestions) {
+        const applied = await this.deps.suggestions.apply();
+        suggested = applied.stocks + applied.fiis;
       }
     } catch (cause) {
       failed += 1;
@@ -136,6 +197,9 @@ export class B3EventsCollection {
       periodEnd: null,
       errors: allErrors,
       requests,
+      ...(this.deps.classifications
+        ? { totals: { classificacoes: classified, sugestoes: suggested } }
+        : {}),
     };
     await this.deps.runs.finish(runId, result, this.clock());
     return result;

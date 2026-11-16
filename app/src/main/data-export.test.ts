@@ -32,6 +32,15 @@ describe('Baixar meus dados (SPEC-034 CA02)', () => {
     expect(JSON.parse(save.files.get('C:/escolhido/meus-dados.json') ?? '')).toEqual(data);
   });
 
+  it('SPEC-035: com o app em inglês, o nome sugerido é em inglês', async () => {
+    const save = target('C:/escolhido/my-data.json');
+    await saveDataExport(async () => ({ ok: true, data }), save, 'C:/Downloads', 'en');
+    expect(save.chooseFile).toHaveBeenCalledWith(
+      join('C:/Downloads', 'investment-simulator-my-data-2026-10-13.json'),
+    );
+    expect(JSON.parse(save.files.get('C:/escolhido/my-data.json') ?? '')).toEqual(data);
+  });
+
   it('cancelar a janela não salva nada', async () => {
     const save = target(null);
     await expect(

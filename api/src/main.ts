@@ -20,17 +20,27 @@ import { CalendarService } from './modules/market-data/application/calendar-serv
 import { CatalogImport } from './modules/market-data/application/catalog-import.js';
 import { B3EventsCollection } from './modules/market-data/application/b3-events-collection.js';
 import { CdiIngestion } from './modules/market-data/application/cdi-ingestion.js';
+import { ClassificationSuggestions } from './modules/market-data/application/classification-suggestions.js';
 import { FundamentalsService } from './modules/market-data/application/fundamentals-service.js';
 import { Investidor10Collection } from './modules/market-data/application/investidor10-collection.js';
 import { CdiStatusService } from './modules/market-data/application/cdi-status-service.js';
+import { MarketIndexIngestion } from './modules/market-data/application/market-index-ingestion.js';
+import { MarketIndexStatusService } from './modules/market-data/application/market-index-status-service.js';
 import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
 import { IntradayCollection } from './modules/market-data/application/intraday-collection.js';
 import { HistoryStatusService } from './modules/market-data/application/history-status-service.js';
 import { B3CotahistSource } from './modules/market-data/infrastructure/b3-cotahist-source.js';
 import { B3CompanyHttpSource } from './modules/market-data/infrastructure/b3-company-source.js';
+import { B3IndexHttpSource } from './modules/market-data/infrastructure/b3-index-source.js';
 import { BcbSgsSource } from './modules/market-data/infrastructure/bcb-sgs-source.js';
 import { Investidor10HttpSource } from './modules/market-data/infrastructure/investidor10-source.js';
 import { PrismaEventRepository } from './modules/market-data/infrastructure/prisma-event-repository.js';
+import { NewsCollection } from './modules/news/application/news-collection.js';
+import { NewsLinker } from './modules/news/application/news-linker.js';
+import { NewsSourcesService } from './modules/news/application/news-sources-service.js';
+import { HttpFeedFetcher } from './modules/news/infrastructure/http-feed-fetcher.js';
+import { Investidor10NewsHttpSource } from './modules/news/infrastructure/investidor10-news-source.js';
+import { PrismaNewsRepository } from './modules/news/infrastructure/prisma-news-repository.js';
 import { PrismaFundamentalsRepository } from './modules/market-data/infrastructure/prisma-fundamentals-repository.js';
 import { BrapiLogoSource } from './modules/market-data/infrastructure/brapi-logo-source.js';
 import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
@@ -38,8 +48,10 @@ import { PrismaIntradayQuoteRepository } from './modules/market-data/infrastruct
 import { PrismaB3TradeRepository } from './modules/market-data/infrastructure/prisma-b3-trade-repository.js';
 import { PrismaCalendarRepository } from './modules/market-data/infrastructure/prisma-calendar-repository.js';
 import { PrismaCatalogImportRepository } from './modules/market-data/infrastructure/prisma-catalog-import-repository.js';
+import { PrismaClassificationRepository } from './modules/market-data/infrastructure/prisma-classification-repository.js';
 import { PrismaIndexRateRepository } from './modules/market-data/infrastructure/prisma-index-rate-repository.js';
 import { PrismaLogoRepository } from './modules/market-data/infrastructure/prisma-logo-repository.js';
+import { PrismaMarketIndexRepository } from './modules/market-data/infrastructure/prisma-market-index-repository.js';
 import {
   PrismaQuoteRepository,
   PrismaTaskRunRepository,
@@ -119,10 +131,24 @@ async function main(): Promise<void> {
     runs,
     calendars,
   });
+  // SPEC-020: Ibovespa e IFIX pelas estatísticas históricas da B3.
+  const marketIndexRepo = new PrismaMarketIndexRepository(prisma);
+  const marketIndexIngestion = new MarketIndexIngestion({
+    source: new B3IndexHttpSource({ baseUrl: config.b3ListedBaseUrl }),
+    indexes: marketIndexRepo,
+    runs,
+    calendars,
+  });
   // SPECs 041 e 042: Investidor10 (com autorização, só ligado com INVESTIDOR10_ENABLED) e eventos
   // corporativos da B3.
   const fundamentalsRepo = new PrismaFundamentalsRepository(prisma);
   const events = new PrismaEventRepository(prisma);
+  // SPEC-021: classificação setorial da B3 e sugestão melhor para os ativos a revisar.
+  const classifications = new PrismaClassificationRepository(prisma);
+  const suggestions = new ClassificationSuggestions({
+    classifications,
+    investidor10Enabled: config.investidor10.enabled,
+  });
   const investidor10 = new Investidor10Collection({
     enabled: config.investidor10.enabled,
     source: new Investidor10HttpSource({ baseUrl: config.investidor10.baseUrl }),
@@ -130,6 +156,7 @@ async function main(): Promise<void> {
     runs,
     // Os mais negociados primeiro: numa primeira coleta, o topo da lista Ativos sai logo.
     volumes: quotes,
+    suggestions,
   });
   const b3Events = new B3EventsCollection({
     source: new B3CompanyHttpSource({ baseUrl: config.b3ListedBaseUrl }),
@@ -137,6 +164,21 @@ async function main(): Promise<void> {
     trades,
     events,
     runs,
+    classifications,
+    suggestions,
+  });
+  // SPEC-027: notícias da fonte pai (Investidor10, com o interruptor) e das fontes curadas (RSS).
+  const newsRepo = new PrismaNewsRepository(prisma);
+  const feedFetcher = new HttpFeedFetcher();
+  // SPEC-028: vínculo notícia–ativo, depois de cada coleta e a cada 30 minutos.
+  const newsLinker = new NewsLinker({ news: newsRepo });
+  const news = new NewsCollection({
+    parentEnabled: config.investidor10.enabled,
+    parent: new Investidor10NewsHttpSource({ baseUrl: config.investidor10.baseUrl }),
+    feeds: feedFetcher,
+    news: newsRepo,
+    runs,
+    linker: newsLinker,
   });
 
   if (mode === 'server') {
@@ -156,6 +198,17 @@ async function main(): Promise<void> {
       history: quotes,
       // SPEC-016: desdobramentos, grupamentos e bonificações (SPEC-042).
       events,
+      // SPEC-020: o CDI e os índices da B3 para as referências da rentabilidade.
+      benchmarks: {
+        cdiRates: (from, to) => indexRates.ratesBetween('CDI', from, to),
+        indexCloses: (code, from, to) => marketIndexRepo.closesBetween(code, from, to),
+      },
+      // SPEC-043: proventos do Investidor10, só com o interruptor ligado.
+      income: {
+        enabled: config.investidor10.enabled,
+        dividends: (assetId, since) => fundamentalsRepo.dividends(assetId, since),
+        visitedAssets: () => fundamentalsRepo.visitedAssets(),
+      },
     });
     const portfolios = new PortfolioService({
       portfolios: portfolioRepository,
@@ -206,10 +259,16 @@ async function main(): Promise<void> {
         events,
       }),
       cdi: new CdiStatusService({ rates: indexRates, runs, calendars }),
+      marketIndexes: new MarketIndexStatusService({ indexes: marketIndexRepo, runs, calendars }),
       fundamentals: new FundamentalsService({
         enabled: config.investidor10.enabled,
         fundamentals: fundamentalsRepo,
         runs,
+      }),
+      newsSources: new NewsSourcesService({
+        news: newsRepo,
+        feeds: feedFetcher,
+        parentEnabled: config.investidor10.enabled,
       }),
     });
     await app.listen({ host: config.host, port: config.port });
@@ -262,6 +321,18 @@ async function main(): Promise<void> {
         // iniciar; a segunda encontra a primeira em andamento e não faz nada.
         { name: 'CDI (manhã)', run: async () => (await cdi.run())?.records ?? 0, dailyAtHour: 9 },
         { name: 'CDI (tarde)', run: async () => (await cdi.run())?.records ?? 0, dailyAtHour: 18 },
+        // SPEC-020: Ibovespa e IFIX às 08:00 e às 20:00 (o fechamento do dia sai depois do pregão).
+        // As duas rodam ao iniciar; a segunda encontra a primeira em andamento e não faz nada.
+        {
+          name: 'índices da B3 (manhã)',
+          run: async () => (await marketIndexIngestion.run())?.records ?? 0,
+          dailyAtHour: 8,
+        },
+        {
+          name: 'índices da B3 (noite)',
+          run: async () => (await marketIndexIngestion.run())?.records ?? 0,
+          dailyAtHour: 20,
+        },
         // SPEC-041: Investidor10 às 03:00 (todos no domingo; nos outros dias e ao iniciar, só os
         // nunca visitados). Desligado sem a autorização.
         {
@@ -275,6 +346,25 @@ async function main(): Promise<void> {
           run: async () => (await b3Events.scheduled())?.records ?? 0,
           dailyAtHour: 4,
         },
+        // SPEC-027: notícias novas e feeds a cada 30 minutos; o arquivo do Investidor10 aos poucos
+        // (cerca de 30 minutos de páginas por vez), na mesma fila de uma página a cada 3 segundos.
+        {
+          name: 'notícias novas (Investidor10)',
+          run: async () => (await news.latest())?.collected ?? 0,
+          everyMinutes: 30,
+        },
+        {
+          name: 'arquivo de notícias (Investidor10)',
+          run: async () => (await news.archive())?.collected ?? 0,
+          everyMinutes: 35,
+        },
+        {
+          name: 'notícias das fontes curadas',
+          run: async () => (await news.feeds())?.collected ?? 0,
+          everyMinutes: 30,
+        },
+        // SPEC-028: as notícias sem vínculo (o arquivo, as atualizadas, outra versão da regra).
+        { name: 'vínculo notícia–ativo', run: () => newsLinker.run(), everyMinutes: 30 },
         // SPEC-009: confere a cada 5 minutos se chegou a hora de uma coleta do pregão.
         {
           name: 'cotações do pregão',

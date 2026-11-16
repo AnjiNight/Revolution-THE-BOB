@@ -46,6 +46,21 @@
 | 1.36 | SPEC-016 detalhada ([SPEC-016.md](SPEC-016.md)) para a Nicoly implementar, aguardando a aprovação: compra e venda na carteira histórica com o fechamento da B3 do dia; recomendações para a OPEN-24 ("% do caixa" no "Calcular por valor") e para a OPEN-06 (aviso no lugar do valor quando houve evento depois da compra, até a SPEC-043) esperando a resposta do Luís |
 | 1.37 | SPEC-016 aprovada (Luís, 06/11/2026) com as recomendações; OPEN-24 resolvida ("% do caixa" no "Calcular por valor") |
 | 1.38 | SPEC-016 implementada: compra e venda na carteira histórica com o fechamento da B3 do dia, "% do caixa", aviso de evento corporativo até a SPEC-043 e a exportação na versão 6. Fase 3 completa, faltando só a SPEC-043 |
+| 1.39 | SPEC-043 detalhada ([SPEC-043.md](SPEC-043.md)) pela Nicoly, aguardando a aprovação: proventos no caixa na data de pagamento para quem tinha o ativo na data com, JCP líquido, amortização de FII no preço médio, desdobramento, grupamento e bonificação na quantidade e no preço médio, calculados sobre o livro sem tabela nova; recomendações para a OPEN-06 esperando a resposta |
+| 1.40 | SPEC-043 aprovada (Nicoly, 06/11/2026) com as recomendações e implementada: proventos no caixa das carteiras ao vivo e histórica, JCP líquido (17,5% desde 2026, LC 224/2025), eventos corrigindo quantidade e preço médio, frações vendidas; OPEN-06 resolvida. Fase 3 completa. Limitação: eventos da B3 incompletos em alguns ativos (ex.: MGLU3 2017 e 2019) |
+| 1.41 | SPEC-019 detalhada ([SPEC-019.md](SPEC-019.md)) pela Nicoly, aguardando a aprovação: rentabilidade pela cota e resultado em R$ num período, gráfico da evolução patrimonial nas carteiras ao vivo e histórica, aviso de salto de preço sem evento conhecido e cálculo sem Redis (RNF03) |
+| 1.42 | SPEC-019 aprovada (Nicoly, 06/11/2026) com as recomendações e implementada: painel Rentabilidade com períodos, rentabilidade da cota, resultado, patrimônio, gráfico do patrimônio e do total aportado e avisos de salto sem evento; 50 ativos desde 2016 em menos de 1 s (RNF06) |
+| 1.43 | SPEC-020 detalhada ([SPEC-020.md](SPEC-020.md)), aguardando a aprovação: CDI, Ibovespa e IFIX ao lado da rentabilidade da cota, "% do CDI", gráfico em %; Ibovespa e IFIX pelas estatísticas históricas da B3 (proposta para a OPEN-21) |
+| 1.44 | SPEC-020 aprovada (Luís, 08/11/2026) com as recomendações ("% do CDI" só com a carteira positiva: o CDI nunca é negativo) e implementada: CDI, Ibovespa e IFIX ao lado da cota, "% do CDI", gráfico "Em %", Ibovespa e IFIX pelas estatísticas históricas da B3 desde 2016; OPEN-21 e PE06 resolvidas; IFIX na comparação (DA23 atualizada) |
+| 1.45 | SPEC-020 ajustada a pedido do Luís (08/11/2026): botão "Comparar com os índices" nos gráficos em reais e em %; no gráfico em reais, "o mesmo dinheiro" em cada índice (com os aportes e retiradas nos mesmos dias) e o "teria R$ …" de cada referência; a régua principal continua a cota |
+| 1.46 | SPEC-021 detalhada ([SPEC-021.md](SPEC-021.md)), aguardando a aprovação: distribuição de hoje por classe (Ações, FIIs e Caixa), setor ou segmento e ativo, em barras; classificação sugerida melhor para os ativos a revisar (setor econômico da B3 nas ações, segmento do Investidor10 nos FIIs) |
+| 1.47 | SPEC-021 aprovada (Luís, 09/11/2026), pedindo antes a revisão do setor de todos os ativos, e implementada: painel Distribuição (classes, setores e ativos), classificação setorial da B3 na tarefa dos eventos (tabela `classificacao_b3`) e sugestão melhor dos ativos a revisar, com auditoria `classificacao_sugerida` |
+| 1.48 | Tela da carteira reordenada a pedido do Luís (09/11/2026): Caixa (saldo, Aportar e Retirar) no topo, depois Rentabilidade, Posições e Distribuição, e o Extrato no fim (SPEC-021 §9) |
+| 1.49 | SPEC-022 detalhada ([SPEC-022.md](SPEC-022.md)), aguardando a aprovação: de 2 a 4 carteiras lado a lado no mesmo período ("Em comum" por padrão), rentabilidade da cota num gráfico em %, resumo em reais e composição de hoje; propostas para a OPEN-22 (cenário = carteira) e a OPEN-23 (ao vivo e histórica juntas, com o rótulo) |
+| 1.50 | SPEC-022 aprovada (Luís, 11/11/2026) com as recomendações e implementada: botão "Comparar carteiras" na lista (de 2 a 4), tela Comparação com o período "Em comum", gráfico da cota em % com cor e marcador por carteira e "Comparar com os índices", resumo em reais e composição de hoje; números iguais aos da tela de cada carteira; 4 carteiras com 50 ativos no total em 1,05 s (RNF06). OPEN-23 resolvida e OPEN-22 em parte (cenário = carteira); a SPEC-023 deixa de estar bloqueada: o que ela vira fica para decidir ao detalhá-la |
+| 1.51 | SPEC-027 detalhada ([SPEC-027.md](SPEC-027.md)) pela Nicoly, aguardando a aprovação: notícias do Investidor10 (autorizadas por telefone em 12/11/2026) pelo sitemap de notícias a cada 30 min e o arquivo desde 22/09/2023 (22.491 notícias); fontes curadas por RSS ou Atom, a primeira a Agência Brasil; propostas para a OPEN-28 (notícias) e a OPEN-29 |
+| 1.52 | SPEC-027 aprovada (Nicoly, 12/11/2026; decisão 1 sem o pedido de e-mail) e implementada: módulo Notícias com a fonte pai (Investidor10, sitemap de notícias a cada 30 min e o arquivo aos poucos) e as fontes curadas por RSS ou Atom (Agência Brasil), tela Notícias do colaborador; coleta real de 251 notícias do Investidor10 e 10 da Agência Brasil. OPEN-28 resolvida e OPEN-29 em parte. Primeira Spec com a validação visual como usuária e o teste de ponta a ponta em `tests/e2e/` (Playwright), com os mocks em `mocks/` |
+| 1.53 | SPEC-028 detalhada ([SPEC-028.md](SPEC-028.md)) pela Nicoly, aguardando a aprovação: só o vínculo notícia–ativo (RF27), pelo ticker citado e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista; o sentimento (RF28, OPEN-30, OPEN-31) proposto para uma nova SPEC-044, para as notícias chegarem antes à ficha (SPEC-029) |
 ---
 
 ## 0. Como ler este documento
@@ -295,15 +310,15 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-18 | ⏸ **Adiada com a renda fixa (DA22).** Valorização e resgate do Tesouro Direto (preço publicado × curva); confirmar a fonte (hoje "Sugerida") | Decisões técnicas §3 | 024 |
 | OPEN-19 | ⏸ **Adiada com a renda fixa (DA22).** Significado do caso de uso "Projetar renda fixa" | INC-16 | 017 |
 | OPEN-20 | ⏸ **Adiada com a renda fixa (DA22).** Renda fixa na carteira histórica | DA17 PO4 | 016, 017 |
-| OPEN-21 | Fonte do histórico do Ibovespa | PE06 | 020 |
-| OPEN-22 | Significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
-| OPEN-23 | Comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
+| OPEN-21 | ✅ **Resolvida na [SPEC-020](SPEC-020.md):** Ibovespa e IFIX pelas estatísticas históricas da B3, desde 2016. Original: fonte do histórico do Ibovespa | PE06 | 020 |
+| OPEN-22 | ⏳ **Em parte resolvida na [SPEC-022](SPEC-022.md):** cada cenário é uma carteira, e "Comparar cenários" é a comparação de carteiras (RF19); a SIMULACAO do modelo (projeção) fica com a SPEC-031. Falta o RF20: decidir, ao detalhar a SPEC-023, se ela vira "Nova carteira a partir de outra" ou fica coberta pela SPEC-012. Original: significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
+| OPEN-23 | ✅ **Resolvida na [SPEC-022](SPEC-022.md):** pode misturar, com o rótulo do tipo sempre visível e a nota da DA17. Original: comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
 | OPEN-24 | ✅ **Resolvida nas SPECs [014](SPEC-014.md) e [016](SPEC-016.md):** a API registra por quantidade (RF12); a tela tem "Calcular por valor", em reais ou em "% do caixa" (o "50% em PETR4" da P01); montar vários ativos de uma vez fica fora. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
 | OPEN-26 | Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
-| OPEN-28 | **[Crítico]** Autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta. **Parte de dados resolvida (04/11/2026):** autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)); a parte de **notícias** ainda precisa ser confirmada com eles | PE07 | 027, 041, 042 |
-| OPEN-29 | Lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
+| OPEN-28 | ✅ **Resolvida.** Dados (04/11/2026): autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)). Notícias (12/11/2026): autorizadas por telefone para fins universitários, nas mesmas condições ([SPEC-027 §4.1](SPEC-027.md)). Original: autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta | PE07 | 027, 041, 042 |
+| OPEN-29 | ⏳ **Em parte resolvida na [SPEC-027](SPEC-027.md):** fontes curadas por RSS ou Atom, cadastradas pelo colaborador com categoria, confiabilidade de 1 a 5 (critério da equipe) e licença conferida; a primeira é a Agência Brasil – Economia. As outras fontes ficam com a equipe. Original: lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
 | OPEN-30 | Implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 028 |
 | OPEN-31 | Fonte do histórico de notícias e janela de treino | PE09, PE11 | 028, 031 |
 | OPEN-32 | RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
@@ -781,7 +796,7 @@ Visão geral por fase:
 
 #### SPEC-043 — Proventos e eventos corporativos na carteira
 
-Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalhada.
+Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); detalhada em [SPEC-043.md](SPEC-043.md), aprovada e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -794,7 +809,7 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 | ADRs | DA09, DA10, DA17 |
 | Depende de | SPEC-014, SPEC-042 |
 | Posição | Mexe no caixa e na posição, então entra na mesma conta das SPECs 013 e 014, e não só na rentabilidade (SPEC-019). Vale para a carteira histórica quando a SPEC-016 for entregue |
-| Em aberto | OPEN-06 (regras: data com, data de pagamento, IR do JCP, amortização de FII) |
+| Em aberto | ✅ OPEN-06 resolvida (data com, data de pagamento, IR do JCP, amortização de FII) |
 | Prioridade derivada | Should |
 
 ### Fase 4 — Renda fixa
@@ -806,6 +821,8 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 ### Fase 5 — Acompanhamento da carteira
 
 #### SPEC-019 — Rentabilidade e evolução patrimonial
+
+Detalhada em [SPEC-019.md](SPEC-019.md), aprovada e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -825,23 +842,27 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 
 #### SPEC-020 — Comparação com benchmarks (CDI e Ibovespa)
 
+Detalhada em [SPEC-020.md](SPEC-020.md), aprovada e implementada (com o IFIX nas carteiras com FII).
+
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Exibir a rentabilidade da carteira lado a lado com CDI e Ibovespa no mesmo período, inclusive para carteiras com FIIs (IFIX como evolução, DA23) |
+| Objetivo | Exibir a rentabilidade da carteira lado a lado com CDI e Ibovespa no mesmo período e, nas carteiras com FIIs, com o IFIX (DA23, atualizada na SPEC-020) |
 | Valor | **Usuário:** sabe se a estratégia superou referências do mercado (P02) |
 | RF | RF16 |
 | RB | RB13 |
 | RNF | RNF12, RNF16 |
 | Caso de uso / fluxo | UC: Acompanhar rentabilidade; P02 passo 4 |
-| Entidades | INDEXADOR, TAXA_DIARIA, COTACAO (Ibovespa — representação não definida, OPEN-21) |
+| Entidades | INDEXADOR, TAXA_DIARIA, INDICE_BOLSA, FECHAMENTO_INDICE (SPEC-020) |
 | Drivers | OBJ02, QA01 |
 | ADRs | DA06, DA10, DA18 (Proposta), DA23 |
 | Depende de | SPEC-007, SPEC-019 |
 | Posição | Compara com a rentabilidade já estabelecida em 019 |
-| Em aberto | OPEN-21 |
+| Em aberto | ✅ OPEN-21 resolvida |
 | Prioridade derivada | Should |
 
 #### SPEC-021 — Distribuição da carteira por classe e setor
+
+Detalhada em [SPEC-021.md](SPEC-021.md), aprovada e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -861,6 +882,8 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 
 #### SPEC-022 — Comparação de carteiras
 
+Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Exibir duas ou mais carteiras lado a lado (rentabilidade, evolução e composição) |
@@ -874,7 +897,7 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 | ADRs | DA17 (rótulo do tipo sempre visível) |
 | Depende de | SPEC-019, SPEC-020, SPEC-021 |
 | Posição | Reúne as visões de 019–021 |
-| Em aberto | OPEN-22, OPEN-23 |
+| Em aberto | — (OPEN-23 resolvida; OPEN-22 resolvida na parte do RF19) |
 | Prioridade derivada | Could |
 
 #### SPEC-023 — Salvar e recuperar simulações
@@ -891,8 +914,8 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 | Drivers | OBJ02 |
 | ADRs | DA09 |
 | Depende de | SPEC-012, SPEC-019 |
-| Posição | Depende do que for "simulação". **Não pode ser detalhada antes de OPEN-22** |
-| Em aberto | **OPEN-22 (bloqueante)** |
+| Posição | Com cenário = carteira (SPEC-022), as carteiras já ficam salvas (SPEC-012). Ao detalhar, decidir se ela vira "Nova carteira a partir de outra" (mesmo tipo, início e valor inicial, para montar o cenário B rápido) ou fica coberta pela SPEC-012 (SPEC-022 §8) |
+| Em aberto | OPEN-22 (a parte do RF20, decidida com a própria Spec) |
 | Prioridade derivada | Should |
 
 ---
@@ -941,6 +964,8 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 
 #### SPEC-027 — Fontes oficiais de notícias e coleta
 
+Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Cadastrar a fonte pai (fixa) e as fontes curadas (pelo colaborador, com categoria e confiabilidade) e coletar notícias periodicamente, sem duplicar, com registro de execução |
@@ -958,6 +983,8 @@ Criada pela [SPEC-014](SPEC-014.md) (decisão 4, 06/11/2026); ainda não detalha
 | Prioridade derivada | Could |
 
 #### SPEC-028 — Vínculo notícia–ativo e classificação de sentimento
+
+Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de ficar só com o vínculo (RF27) e passar o sentimento (RF28) para uma nova SPEC-044.
 
 | Campo | Conteúdo |
 |---|---|
@@ -1242,7 +1269,6 @@ Estas Specs **não devem ser detalhadas** antes de a equipe decidir os itens ind
 
 | Spec | Decisão bloqueante |
 |---|---|
-| SPEC-023 | OPEN-22 — significado de "simulação" |
 | SPEC-027 | OPEN-28 — autorização da fonte pai |
 | SPEC-030 | OPEN-32 — RFs das fontes do usuário |
 | SPEC-031 | OPEN-33, OPEN-34 — aprovar DA21 e escopo do cenário |

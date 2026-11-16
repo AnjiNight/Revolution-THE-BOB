@@ -1,22 +1,29 @@
 import {
   addDays,
+  COMPARISON_MAX,
+  COMPARISON_MIN,
   isoDateInBrasilia,
   PORTFOLIO_HISTORY_START,
   PORTFOLIO_NAME_MAX,
+  suggestCopyName,
+  type CopyScope,
   type FieldErrors,
   type Portfolio,
+  type PortfolioCopyResult,
   type PortfolioList,
   type PortfolioType,
 } from '@simulador/shared';
-import { ArrowLeft, Plus } from '@phosphor-icons/react';
+import { ArrowLeft, ChartLine, Copy, Plus } from '@phosphor-icons/react';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
 import '../assets.css';
 import '../portfolios.css';
-import { formatCalendarDay } from '../format';
+import { useNeedsConnection } from '../connection';
+import { formatCalendarDay, formatMoney } from '../format';
 import { MoneyField } from './MoneyField';
 import { PortfolioCash } from './PortfolioCash';
+import { PortfolioPerformance } from './PortfolioPerformance';
 import { PortfolioPositions } from './PortfolioPositions';
 import type { TradeAsset } from './TradeForm';
 import { TextField } from './TextField';
@@ -26,8 +33,14 @@ type ListState =
   | { status: 'ready'; data: PortfolioList }
   | { status: 'failed'; error: ClientAuthError };
 
+/** SPEC-023: quantos lançamentos a cópia recém-criada levou, para o aviso na tela dela. */
+export type CopiedCounts = PortfolioCopyResult['copied'];
+
 interface PortfoliosProps {
-  onOpen: (id: string) => void;
+  /** SPEC-023: `copied` quando a carteira aberta acabou de ser criada a partir de outra. */
+  onOpen: (id: string, copied?: CopiedCounts) => void;
+  /** SPEC-022: as carteiras escolhidas para comparar, na ordem da escolha. */
+  onCompare: (ids: string[]) => void;
   onSessionExpired: () => void;
   /** O Início pede para abrir já com o formulário de nova carteira. */
   startCreating?: boolean;
@@ -37,12 +50,26 @@ interface PortfoliosProps {
  * Carteiras do usuário (SPEC-012 §5.2): lista da mais recente para a mais antiga, nova carteira
  * com a explicação dos dois tipos, renomear no lugar e excluir com confirmação.
  */
-export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: PortfoliosProps) {
+export function Portfolios({
+  onOpen,
+  onCompare,
+  onSessionExpired,
+  startCreating = false,
+}: PortfoliosProps) {
   const { t } = useTranslation();
+  const needs = useNeedsConnection();
   const [state, setState] = useState<ListState>({ status: 'loading' });
-  const [creating, setCreating] = useState(startCreating);
+  // SPEC-032: sem conexão, o atalho "Nova carteira" do Início não abre o formulário.
+  const [creating, setCreating] = useState(startCreating && !needs.offline);
+  // SPEC-023: a carteira que está sendo copiada, com o formulário no lugar do de nova carteira.
+  const [copying, setCopying] = useState<Portfolio | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  // SPEC-022: escolher de 2 a 4 carteiras para comparar, na ordem em que foram marcadas.
+  const [selecting, setSelecting] = useState(false);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const compareButton = useRef<HTMLButtonElement>(null);
+  const limitId = useId();
 
   const load = useCallback(() => {
     void window.api.portfolios.list().then((result) => {
@@ -73,6 +100,22 @@ export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: 
 
   const list = state.status === 'ready' ? state.data : null;
   const full = list !== null && list.portfolios.length >= list.limit;
+  const canCompare = list !== null && list.portfolios.length >= COMPARISON_MIN;
+
+  const toggle = (id: string) =>
+    setChosen((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : current.length < COMPARISON_MAX
+          ? [...current, id]
+          : current,
+    );
+
+  const stopSelecting = () => {
+    setSelecting(false);
+    setChosen([]);
+    requestAnimationFrame(() => compareButton.current?.focus());
+  };
 
   return (
     <div className="portfolios">
@@ -86,21 +129,40 @@ export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: 
             {t('portfolios.count', { count: list.portfolios.length, limit: list.limit })}
           </p>
         )}
-        {!creating && list && (
-          <button
-            type="button"
-            className="pill pill-primary"
-            disabled={full}
-            onClick={() => {
-              setNotice(null);
-              setCreating(true);
-            }}
-          >
-            {t('portfolios.new')}
-            <span className="pill-icon" aria-hidden="true">
-              <Plus weight="bold" />
-            </span>
-          </button>
+        {!creating && !copying && !selecting && list && (
+          <div className="portfolio-hero-actions">
+            <button
+              type="button"
+              className="pill pill-primary"
+              disabled={full}
+              onClick={() => {
+                setNotice(null);
+                setCreating(true);
+              }}
+              {...needs.props}
+            >
+              {t('portfolios.new')}
+              <span className="pill-icon" aria-hidden="true">
+                <Plus weight="bold" />
+              </span>
+            </button>
+            {canCompare && (
+              <button
+                ref={compareButton}
+                type="button"
+                className="pill pill-ghost"
+                onClick={() => {
+                  setNotice(null);
+                  setSelecting(true);
+                }}
+              >
+                {t('portfolios.compare.start')}
+                <span className="pill-icon" aria-hidden="true">
+                  <ChartLine weight="bold" />
+                </span>
+              </button>
+            )}
+          </div>
         )}
         {full && <p className="field-hint">{t('authErrors.portfolio_limit_reached')}</p>}
       </header>
@@ -115,6 +177,17 @@ export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: 
         <NewPortfolioForm
           onCreated={created}
           onCancel={() => setCreating(false)}
+          onSessionExpired={onSessionExpired}
+        />
+      )}
+      {copying && (
+        <CopyPortfolioForm
+          source={copying}
+          onCreated={(result) => {
+            setCopying(null);
+            onOpen(result.portfolio.id, result.copied);
+          }}
+          onCancel={() => setCopying(null)}
           onSessionExpired={onSessionExpired}
         />
       )}
@@ -134,17 +207,63 @@ export function Portfolios({ onOpen, onSessionExpired, startCreating = false }: 
       )}
       {list && list.portfolios.length > 0 && (
         <ul className="portfolio-list">
-          {list.portfolios.map((portfolio) => (
-            <PortfolioRow
-              key={portfolio.id}
-              portfolio={portfolio}
-              onOpen={() => onOpen(portfolio.id)}
-              onChanged={load}
-              onDeleted={() => deleted(portfolio.name)}
-              onSessionExpired={onSessionExpired}
-            />
-          ))}
+          {list.portfolios.map((portfolio, index) => {
+            const checked = chosen.includes(portfolio.id);
+            return (
+              <PortfolioRow
+                key={portfolio.id}
+                portfolio={portfolio}
+                onOpen={() => onOpen(portfolio.id)}
+                onChanged={load}
+                onDeleted={() => deleted(portfolio.name)}
+                onCopy={
+                  full
+                    ? null
+                    : () => {
+                        setNotice(null);
+                        setCreating(false);
+                        setCopying(portfolio);
+                      }
+                }
+                onSessionExpired={onSessionExpired}
+                {...(selecting
+                  ? {
+                      choice: {
+                        checked,
+                        disabled: !checked && chosen.length >= COMPARISON_MAX,
+                        first: index === 0,
+                        describedBy: limitId,
+                        onToggle: () => toggle(portfolio.id),
+                      },
+                    }
+                  : {})}
+              />
+            );
+          })}
         </ul>
+      )}
+
+      {selecting && list && (
+        <div className="compare-bar" role="group" aria-label={t('portfolios.compare.start')}>
+          <p id={limitId} className="field-hint" aria-live="polite">
+            {chosen.length >= COMPARISON_MAX
+              ? t('portfolios.compare.max')
+              : t('portfolios.compare.intro')}
+          </p>
+          <div className="form-actions">
+            <button
+              type="button"
+              className="pill pill-primary"
+              disabled={chosen.length < COMPARISON_MIN}
+              onClick={() => onCompare(chosen)}
+            >
+              {t('portfolios.compare.go', { count: chosen.length })}
+            </button>
+            <button type="button" className="pill pill-ghost" onClick={stopSelecting}>
+              {t('portfolios.compare.cancel')}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -168,6 +287,7 @@ function NewPortfolioForm({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const titleId = useId();
   const typeName = useId();
   const [name, setName] = useState('');
@@ -265,7 +385,7 @@ function NewPortfolioForm({
           </p>
         )}
         <div className="form-actions">
-          <button type="submit" className="pill pill-primary" disabled={saving}>
+          <button type="submit" className="pill pill-primary" disabled={saving} {...needs.props}>
             {saving ? t('portfolios.creating') : t('portfolios.create')}
           </button>
           <button type="button" className="pill pill-ghost" onClick={onCancel}>
@@ -277,20 +397,191 @@ function NewPortfolioForm({
   );
 }
 
+/**
+ * SPEC-023 §4.2: nova carteira a partir de `source`, com o mesmo tipo e início. O nome sugerido é
+ * "{nome} (cópia)" (numerado se já existe); "Tudo" ou "Só o dinheiro"; na histórica, "Copiar até".
+ */
+export function CopyPortfolioForm({
+  source,
+  onCreated,
+  onCancel,
+  onSessionExpired,
+}: {
+  source: Portfolio;
+  onCreated: (result: PortfolioCopyResult) => void;
+  onCancel: () => void;
+  onSessionExpired: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
+  const titleId = useId();
+  const scopeName = useId();
+  const [name, setName] = useState('');
+  const [touched, setTouched] = useState(false);
+  const [scope, setScope] = useState<CopyScope>('all');
+  const [until, setUntil] = useState('');
+  const [fields, setFields] = useState<FieldErrors>({});
+  const [error, setError] = useState<ClientAuthError | null>(null);
+  const [breaks, setBreaks] = useState<{ date: string; amount: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const lastDay = addDays(isoDateInBrasilia(new Date()), -1);
+
+  // O nome sugerido não repete nenhum que a pessoa já tem (até ela mexer no campo).
+  useEffect(() => {
+    let active = true;
+    void window.api.portfolios.list().then((result) => {
+      if (!active || !result.ok) return;
+      const taken = result.data.portfolios.map((portfolio) => portfolio.name);
+      setName((current) =>
+        touched || current
+          ? current
+          : suggestCopyName(source.name, taken, t('portfolios.copy.suffix')),
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [source.name, touched, t]);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setFields({});
+    setError(null);
+    setBreaks(null);
+    setSaving(true);
+    const result = await window.api.portfolios.copy(source.id, {
+      name,
+      scope,
+      ...(source.type === 'historical' && until ? { until } : {}),
+    });
+    setSaving(false);
+    if (result.ok) return onCreated(result.data);
+    if (result.error === 'unauthorized') return onSessionExpired();
+    if (result.fields) setFields(result.fields);
+    if (result.error === 'portfolio_name_in_use') setFields({ name: 'duplicate' });
+    if (result.error === 'copy_breaks_cash' && result.details?.date && result.details.amount) {
+      setBreaks({ date: result.details.date, amount: result.details.amount });
+    }
+    setError(result.error);
+  };
+
+  return (
+    <section className="profile-panel portfolio-new" aria-labelledby={titleId}>
+      <h2 id={titleId}>{t('portfolios.copy.title', { name: source.name })}</h2>
+      <p className="portfolio-meta">
+        <TypeLabel type={source.type} />
+        <span>
+          {t('portfolios.since', { date: formatCalendarDay(source.startDate, i18n.language) })}
+        </span>
+      </p>
+      <p className="field-hint">{t('portfolios.copy.fixedHint')}</p>
+      <form onSubmit={(event) => void submit(event)} noValidate>
+        <TextField
+          label={t('portfolios.name')}
+          type="text"
+          value={name}
+          onChange={(value) => {
+            setTouched(true);
+            setName(value);
+          }}
+          autoComplete="off"
+          error={fields.name === 'duplicate' ? undefined : fields.name}
+          hint={t('portfolios.nameHint', { max: PORTFOLIO_NAME_MAX })}
+        />
+        {fields.name === 'duplicate' && (
+          <p className="field-error">{t('authErrors.portfolio_name_in_use')}</p>
+        )}
+
+        <fieldset className="portfolio-types">
+          <legend>{t('portfolios.copy.scope')}</legend>
+          {(['all', 'cash'] as const).map((option) => (
+            <label key={option} className={`type-card${scope === option ? ' is-selected' : ''}`}>
+              <input
+                type="radio"
+                name={scopeName}
+                value={option}
+                checked={scope === option}
+                onChange={() => setScope(option)}
+              />
+              <span className="type-card-title">{t(`portfolios.copy.scopes.${option}.title`)}</span>
+              <span className="type-card-text">{t(`portfolios.copy.scopes.${option}.text`)}</span>
+            </label>
+          ))}
+        </fieldset>
+        {fields.scope && <p className="field-error">{t(`fieldErrors.${fields.scope}`)}</p>}
+
+        {source.type === 'historical' && (
+          <TextField
+            label={t('portfolios.copy.until')}
+            type="date"
+            value={until}
+            onChange={setUntil}
+            autoComplete="off"
+            min={source.startDate}
+            max={lastDay}
+            error={fields.until}
+            hint={t('portfolios.copy.untilHint')}
+          />
+        )}
+
+        {breaks && (
+          <p className="form-error" role="alert">
+            {t('portfolios.copy.breaksCash', {
+              amount: formatMoney(breaks.amount, i18n.language),
+              date: formatCalendarDay(breaks.date, i18n.language),
+            })}
+          </p>
+        )}
+        {error && !breaks && error !== 'validation_error' && error !== 'portfolio_name_in_use' && (
+          <p className="form-error" role="alert">
+            {t(`authErrors.${error}`)}
+          </p>
+        )}
+        <div className="form-actions">
+          <button type="submit" className="pill pill-primary" disabled={saving} {...needs.props}>
+            {saving ? t('portfolios.copy.creating') : t('portfolios.copy.create')}
+          </button>
+          <button type="button" className="pill pill-ghost" onClick={onCancel}>
+            {t('portfolios.cancel')}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+/** SPEC-022: a caixa de seleção da carteira, na escolha para comparar. */
+interface RowChoice {
+  checked: boolean;
+  /** Já há 4 marcadas e esta não é uma delas. */
+  disabled: boolean;
+  /** A primeira da lista recebe o foco ao começar a escolha. */
+  first: boolean;
+  /** O aviso "Até 4 carteiras". */
+  describedBy: string;
+  onToggle: () => void;
+}
+
 function PortfolioRow({
   portfolio,
   onOpen,
   onChanged,
   onDeleted,
+  onCopy,
   onSessionExpired,
+  choice,
 }: {
   portfolio: Portfolio;
   onOpen: () => void;
   onChanged: () => void;
   onDeleted: () => void;
+  /** SPEC-023: abre o formulário de cópia; `null` com o limite de carteiras atingido. */
+  onCopy: (() => void) | null;
   onSessionExpired: () => void;
+  choice?: RowChoice;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const [mode, setMode] = useState<'view' | 'rename' | 'delete'>('view');
   const [name, setName] = useState(portfolio.name);
   const [error, setError] = useState<ClientAuthError | null>(null);
@@ -331,6 +622,34 @@ function PortfolioRow({
     setError(result.error);
   };
 
+  if (choice) {
+    return (
+      <li className={`portfolio-row${choice.checked ? ' is-chosen' : ''}`}>
+        <label className="portfolio-choice">
+          <input
+            type="checkbox"
+            checked={choice.checked}
+            disabled={choice.disabled}
+            autoFocus={choice.first}
+            aria-describedby={choice.describedBy}
+            onChange={choice.onToggle}
+          />
+          <span>
+            <span className="portfolio-choice-name">{portfolio.name}</span>
+            <span className="portfolio-meta">
+              <TypeLabel type={portfolio.type} />
+              <span>
+                {t('portfolios.since', {
+                  date: formatCalendarDay(portfolio.startDate, i18n.language),
+                })}
+              </span>
+            </span>
+          </span>
+        </label>
+      </li>
+    );
+  }
+
   return (
     <li className="portfolio-row">
       {mode === 'rename' ? (
@@ -350,7 +669,12 @@ function PortfolioRow({
             aria-invalid={fieldError || error ? true : undefined}
             onChange={(event) => setName(event.target.value)}
           />
-          <button type="submit" className="pill pill-primary pill-small" disabled={busy}>
+          <button
+            type="submit"
+            className="pill pill-primary pill-small"
+            disabled={busy}
+            {...needs.props}
+          >
             {t('portfolios.save')}
           </button>
           <button type="button" className="pill pill-ghost pill-small" onClick={cancel}>
@@ -388,14 +712,26 @@ function PortfolioRow({
             className="pill pill-ghost pill-small"
             aria-label={t('portfolios.renameLabel', { name: portfolio.name })}
             onClick={() => setMode('rename')}
+            {...needs.props}
           >
             {t('portfolios.rename')}
           </button>
           <button
             type="button"
             className="pill pill-ghost pill-small"
+            aria-label={t('portfolios.copy.actionLabel', { name: portfolio.name })}
+            disabled={onCopy === null}
+            onClick={() => onCopy?.()}
+            {...needs.props}
+          >
+            {t('portfolios.copy.action')}
+          </button>
+          <button
+            type="button"
+            className="pill pill-ghost pill-small"
             aria-label={t('portfolios.deleteLabel', { name: portfolio.name })}
             onClick={() => setMode('delete')}
+            {...needs.props}
           >
             {t('portfolios.delete')}
           </button>
@@ -419,6 +755,7 @@ function PortfolioRow({
               disabled={busy}
               autoFocus
               onClick={() => void remove()}
+              {...needs.props}
             >
               {t('portfolios.deleteButton')}
             </button>
@@ -439,21 +776,37 @@ function PortfolioRow({
 export function PortfolioPage({
   portfolioId,
   buyAsset = null,
+  backLabel,
+  justCopied = null,
   onBack,
   onOpenAsset,
+  onOpenPortfolio,
+  onCompare,
   onSessionExpired,
 }: {
   portfolioId: string;
+  /** SPEC-022: aberta pela comparação, o Voltar leva de volta a ela. */
+  backLabel?: string;
   /** SPEC-014: a ficha do ativo pediu para comprar este ativo aqui. */
   buyAsset?: TradeAsset | null;
+  /** SPEC-023: a carteira acabou de ser criada a partir de outra, com estes lançamentos. */
+  justCopied?: CopiedCounts | null;
   onBack: () => void;
   onOpenAsset: (assetId: string) => void;
+  /** SPEC-023: abre outra carteira (a original, ou a cópia recém-criada). */
+  onOpenPortfolio: (id: string, copied?: CopiedCounts) => void;
+  /** SPEC-023: "Comparar as duas" abre a Comparação (SPEC-022) com a original e a cópia. */
+  onCompare: (ids: string[]) => void;
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   // Cada lançamento novo (aporte, retirada, compra ou venda) recarrega o caixa e as posições.
   const [version, setVersion] = useState(0);
   const changed = useCallback(() => setVersion((current) => current + 1), []);
+  // SPEC-023: o formulário de cópia, acima do caixa.
+  const [copying, setCopying] = useState(false);
+  const copyButton = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'ready'; portfolio: Portfolio }
@@ -485,7 +838,7 @@ export function PortfolioPage({
     <div className="portfolio-page">
       <button type="button" className="link asset-detail-back" onClick={onBack}>
         <ArrowLeft weight="bold" aria-hidden="true" />
-        {t('portfolios.back')}
+        {backLabel ?? t('portfolios.back')}
       </button>
       {state.status === 'loading' && (
         <p className="loading" role="status">
@@ -511,11 +864,105 @@ export function PortfolioPage({
                 })}
               </span>
             </p>
+            {/* SPEC-023 §4.2: de onde a cópia veio; com a original excluída, só a data. */}
+            {state.portfolio.copiedFrom && (
+              <p className="portfolio-meta portfolio-origin">
+                {state.portfolio.copiedFrom.name === null ? (
+                  <span>
+                    {t('portfolios.copy.fromDeleted', {
+                      date: formatCalendarDay(
+                        state.portfolio.createdAt.slice(0, 10),
+                        i18n.language,
+                      ),
+                    })}
+                  </span>
+                ) : (
+                  <span>
+                    {t('portfolios.copy.from', {
+                      date: formatCalendarDay(
+                        state.portfolio.createdAt.slice(0, 10),
+                        i18n.language,
+                      ),
+                    })}{' '}
+                    <button
+                      type="button"
+                      className="link"
+                      aria-label={t('portfolios.copy.openOrigin', {
+                        name: state.portfolio.copiedFrom.name,
+                      })}
+                      onClick={() =>
+                        onOpenPortfolio((state.portfolio.copiedFrom as { id: string }).id)
+                      }
+                    >
+                      {t('portfolios.copy.fromName', { name: state.portfolio.copiedFrom.name })}
+                    </button>
+                  </span>
+                )}
+              </p>
+            )}
+            {!copying && (
+              <div className="portfolio-hero-actions">
+                <button
+                  ref={copyButton}
+                  type="button"
+                  className="pill pill-ghost"
+                  onClick={() => setCopying(true)}
+                  {...needs.props}
+                >
+                  {t('portfolios.copy.pageAction')}
+                  <span className="pill-icon" aria-hidden="true">
+                    <Copy weight="bold" />
+                  </span>
+                </button>
+              </div>
+            )}
           </header>
+          {justCopied && state.portfolio.copiedFrom?.name && (
+            <p className="form-success portfolio-copied" role="status">
+              <span>
+                {t('portfolios.copy.created', {
+                  name: state.portfolio.copiedFrom.name,
+                  cash: justCopied.cashEntries,
+                  trades: justCopied.trades,
+                })}
+              </span>
+              <button
+                type="button"
+                className="pill pill-ghost pill-small"
+                onClick={() =>
+                  onCompare([(state.portfolio.copiedFrom as { id: string }).id, state.portfolio.id])
+                }
+              >
+                {t('portfolios.copy.compareBoth')}
+              </button>
+            </p>
+          )}
+          {copying && (
+            <CopyPortfolioForm
+              source={state.portfolio}
+              onCreated={(result) => onOpenPortfolio(result.portfolio.id, result.copied)}
+              onCancel={() => {
+                setCopying(false);
+                requestAnimationFrame(() => copyButton.current?.focus());
+              }}
+              onSessionExpired={onSessionExpired}
+            />
+          )}
+          {/*
+            Reordenação de 09/11/2026 (Luís): do que mais se consulta para o que menos se consulta.
+            No topo, o saldo com Aportar e Retirar; depois a rentabilidade (SPEC-019), as posições
+            com a distribuição (SPECs 014 e 021) e, no fim, o extrato (SPECs 013, 015 e 043).
+          */}
           <PortfolioCash
+            part="summary"
             portfolio={state.portfolio}
             version={version}
             onChanged={changed}
+            onSessionExpired={onSessionExpired}
+          />
+          <PortfolioPerformance
+            portfolio={state.portfolio}
+            version={version}
             onSessionExpired={onSessionExpired}
           />
           {/* SPEC-016: a histórica também compra e vende, com a data escolhida. */}
@@ -525,6 +972,13 @@ export function PortfolioPage({
             startBuying={buyAsset}
             onChanged={changed}
             onOpenAsset={onOpenAsset}
+            onSessionExpired={onSessionExpired}
+          />
+          <PortfolioCash
+            part="statement"
+            portfolio={state.portfolio}
+            version={version}
+            onChanged={changed}
             onSessionExpired={onSessionExpired}
           />
         </>

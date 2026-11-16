@@ -52,7 +52,7 @@ Regras comuns:
 
 1. Até quando no passado o usuário pode começar? Sugestão: o mesmo limite do histórico disponível (DA18).
 2. Fonte de proventos e eventos corporativos.
-3. A comparação de carteiras (RF19) pode misturar os dois tipos? Sugestão: sim, sempre com o rótulo visível.
+3. A comparação de carteiras (RF19) pode misturar os dois tipos? Sugestão: sim, sempre com o rótulo visível. **Resolvido na [SPEC-022](../specs/SPEC-022.md) (11/11/2026):** pode, com o rótulo do tipo ao lado de cada nome e esta nota quando há uma histórica.
 4. Renda fixa na carteira histórica precisa da série histórica do indexador (o SGS do Banco Central cobre) e da taxa contratada (hoje ausente do modelo).
 
 ## Impacto nos outros documentos

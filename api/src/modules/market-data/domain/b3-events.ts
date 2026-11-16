@@ -45,6 +45,24 @@ function b3Date(text: unknown): IsoDate | null {
  * continua marcado no gráfico); linha que não dá para ler vira aviso. Linhas repetidas (a B3 repete
  * o mesmo evento) viram uma só.
  */
+/** SPEC-021: o código CVM da empresa, na mesma página dos eventos (`codeCVM`). */
+export function companyCvmCode(json: unknown): string | null {
+  const company = (Array.isArray(json) ? json[0] : json) as { codeCVM?: unknown } | null;
+  const code = company?.codeCVM;
+  const text =
+    typeof code === 'number' ? String(code) : typeof code === 'string' ? code.trim() : '';
+  return /^\d{1,10}$/.test(text) ? text : null;
+}
+
+/** SPEC-021: a classificação setorial da página de detalhe (`industryClassification`). */
+export function industryClassificationOf(json: unknown): string | null {
+  const detail = (Array.isArray(json) ? json[0] : json) as {
+    industryClassification?: unknown;
+  } | null;
+  const text = detail?.industryClassification;
+  return typeof text === 'string' && text.trim() !== '' ? text.trim() : null;
+}
+
 export function parseB3Events(json: unknown): { events: CorporateEvent[]; warnings: string[] } {
   const company = Array.isArray(json) ? json[0] : json;
   const list = (company as { stockDividends?: unknown } | null | undefined)?.stockDividends;

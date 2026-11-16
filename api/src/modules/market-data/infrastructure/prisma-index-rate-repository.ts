@@ -91,6 +91,20 @@ export class PrismaIndexRateRepository implements IndexRateRepository {
     });
   }
 
+  /** SPEC-020: as taxas do indexador entre as datas (inclusive), em ordem, para a carteira. */
+  async ratesBetween(
+    code: string,
+    from: IsoDate,
+    to: IsoDate,
+  ): Promise<Array<{ date: IsoDate; rate: string }>> {
+    const rows = await this.prisma.taxaDiaria.findMany({
+      where: { indexador: { sigla: code }, data: { gte: fromIsoDate(from), lte: fromIsoDate(to) } },
+      select: { data: true, valor: true },
+      orderBy: { data: 'asc' },
+    });
+    return rows.map((row) => ({ date: toIsoDate(row.data), rate: row.valor.toFixed(6) }));
+  }
+
   async markYearLoaded(indexerId: string, year: number, records: number, at: Date): Promise<void> {
     await this.prisma.cargaIndexador.upsert({
       where: { indexadorId_ano: { indexadorId: indexerId, ano: year } },

@@ -5,6 +5,7 @@ import {
   InMemoryFundamentals,
   InMemoryTaskRuns,
 } from '../testing/fakes.js';
+import type { SuggestionResult } from './classification-suggestions.js';
 import { Investidor10Collection } from './investidor10-collection.js';
 import { Investidor10SourceError } from './ports.js';
 
@@ -86,6 +87,35 @@ describe('coleta do Investidor10 (SPEC-041)', () => {
       pauseMs: 3000,
     }).run('all');
     expect(source.requests).toEqual(['acoes/petr4', 'historico/4', 'fiis/mxrf11', 'acoes/zzzz3']);
+  });
+
+  it('SPEC-021: no fim, troca a classificação sugerida dos FIIs a revisar', async () => {
+    const apply = vi
+      .fn<() => Promise<SuggestionResult>>()
+      .mockResolvedValue({ stocks: 0, fiis: 1, changes: [] });
+    await new Investidor10Collection({
+      enabled: true,
+      source,
+      fundamentals,
+      runs,
+      clock: () => now,
+      sleep,
+      suggestions: { apply },
+    }).run('all');
+    expect(apply).toHaveBeenCalledTimes(1);
+
+    // Desligado, nem a coleta nem a sugestão.
+    apply.mockClear();
+    await new Investidor10Collection({
+      enabled: false,
+      source,
+      fundamentals,
+      runs,
+      clock: () => now,
+      sleep,
+      suggestions: { apply },
+    }).run('all');
+    expect(apply).not.toHaveBeenCalled();
   });
 
   it('interruptor desligado: nenhuma visita ao site (CA04)', async () => {

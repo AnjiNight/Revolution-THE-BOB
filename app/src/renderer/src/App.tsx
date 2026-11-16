@@ -8,10 +8,12 @@ import { AssetDetailPage } from './components/AssetDetailPage';
 import { AssetSearch } from './components/AssetSearch';
 import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
+import { NewsSources } from './components/NewsSources';
 import { ConfirmEmailForm } from './components/ConfirmEmailForm';
 import { ForgotPasswordForm } from './components/ForgotPasswordForm';
 import { Home } from './components/Home';
 import { LoginForm } from './components/LoginForm';
+import { PortfolioComparison } from './components/PortfolioComparison';
 import { PortfolioPage, Portfolios } from './components/Portfolios';
 import type { TradeAsset } from './components/TradeForm';
 import { Profile } from './components/Profile';
@@ -34,6 +36,8 @@ type View =
   | { kind: 'home'; user: PublicUser }
   | { kind: 'profile'; user: PublicUser }
   | { kind: 'calendar'; user: PublicUser; year?: number }
+  /** SPEC-027: fontes de notícias (colaborador). */
+  | { kind: 'news'; user: PublicUser }
   /**
    * `assetId`: a ficha do ativo aberta por cima da lista (SPEC-010). `returnTo`: a ficha foi aberta
    * por uma carteira (SPEC-014), e o Voltar leva de volta a ela.
@@ -41,7 +45,9 @@ type View =
   | { kind: 'assets'; user: PublicUser; assetId?: string; returnTo?: string }
   /**
    * SPEC-012: `portfolioId` abre a carteira; `creating` abre já com o formulário de nova. SPEC-014:
-   * `buyAsset` abre a carteira já comprando o ativo escolhido na ficha.
+   * `buyAsset` abre a carteira já comprando o ativo escolhido na ficha. SPEC-022: `compare` abre a
+   * comparação das carteiras escolhidas; `fromComparison`, a carteira aberta por ela, que volta
+   * para ela.
    */
   | {
       kind: 'portfolios';
@@ -49,6 +55,8 @@ type View =
       portfolioId?: string;
       creating?: boolean;
       buyAsset?: TradeAsset;
+      compare?: string[];
+      fromComparison?: string[];
     };
 
 /**
@@ -99,6 +107,7 @@ export function App() {
     view.kind === 'home' ||
     view.kind === 'profile' ||
     view.kind === 'calendar' ||
+    view.kind === 'news' ||
     view.kind === 'assets' ||
     view.kind === 'portfolios'
   ) {
@@ -118,8 +127,10 @@ export function App() {
         onProfile={() => setView({ kind: 'profile', user })}
         onCalendar={() => openCalendar()}
         onAssets={() => setView({ kind: 'assets', user })}
+        onNews={() => setView({ kind: 'news', user })}
         onLogout={logout}
       >
+        {view.kind === 'news' && <NewsSources onSessionExpired={sessionExpired} />}
         {view.kind === 'home' && (
           <Home
             user={user}
@@ -132,12 +143,36 @@ export function App() {
           />
         )}
         {view.kind === 'portfolios' &&
-          (view.portfolioId ? (
+          (view.compare ? (
+            <PortfolioComparison
+              key={view.compare.join(',')}
+              ids={view.compare}
+              onBack={() => setView({ kind: 'portfolios', user })}
+              onOpen={(portfolioId) =>
+                setView({
+                  kind: 'portfolios',
+                  user,
+                  portfolioId,
+                  ...(view.compare ? { fromComparison: view.compare } : {}),
+                })
+              }
+              onSessionExpired={sessionExpired}
+            />
+          ) : view.portfolioId ? (
             <PortfolioPage
               key={view.portfolioId}
               portfolioId={view.portfolioId}
               buyAsset={view.buyAsset ?? null}
-              onBack={() => setView({ kind: 'portfolios', user })}
+              {...(view.fromComparison
+                ? { backLabel: t('portfolios.comparison.backToComparison') }
+                : {})}
+              onBack={() =>
+                setView(
+                  view.fromComparison
+                    ? { kind: 'portfolios', user, compare: view.fromComparison }
+                    : { kind: 'portfolios', user },
+                )
+              }
               onOpenAsset={(assetId) =>
                 setView({
                   kind: 'assets',
@@ -152,6 +187,7 @@ export function App() {
             <Portfolios
               startCreating={view.creating === true}
               onOpen={(portfolioId) => setView({ kind: 'portfolios', user, portfolioId })}
+              onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
               onSessionExpired={sessionExpired}
             />
           ))}

@@ -104,6 +104,20 @@ npm run investidor10:apagar --workspace api
 
 O gráfico da ficha passa a abrir **ajustado** por desdobramentos, grupamentos e bonificações, pelos eventos da página de cada empresa no site da B3 (domingo às 04:00), com a opção "Como a B3 publicou".
 
+**Proventos e eventos na carteira** ([SPEC-043](specs/SPEC-043.md)): nas carteiras ao vivo e históricas, os proventos entram no caixa na data de pagamento para quem tinha o ativo no fim da data com. O JCP entra sem o IR: 15% até 2025 e 17,5% desde 2026. Desdobramentos, grupamentos e bonificações corrigem a quantidade e o preço médio, e a fração que sobra é vendida pelo fechamento ajustado. Nada disso é gravado: a conta é refeita cada vez que a carteira é aberta. Com `INVESTIDOR10_ENABLED=false`, nenhum provento entra e os eventos da B3 continuam. Depois de apagar os dados do Investidor10, uma carteira que gastou proventos pode ficar com o caixa negativo, e a tela avisa.
+
+**Rentabilidade** ([SPEC-019](specs/SPEC-019.md)): no topo de cada carteira, o painel mostra a rentabilidade num período (1 mês, 6 meses, 12 meses, no ano, desde o início ou datas escolhidas), o resultado em reais e o patrimônio, com o gráfico do patrimônio e do total aportado. A rentabilidade é a da cota, como nos fundos: aportes e retiradas não mudam a %, e os proventos contam como ganho. Os preços são os fechamentos da B3 e, hoje, a cotação do pregão. Quando um ativo da carteira tem um salto de preço sem desdobramento ou grupamento conhecido, o painel avisa que o resultado pode estar errado.
+
+**Comparação com o mercado** ([SPEC-020](specs/SPEC-020.md)): no mesmo painel, a rentabilidade do CDI, do Ibovespa e, nas carteiras com FII, do IFIX no período escolhido, com o "% do CDI" da carteira e quanto o mesmo dinheiro teria em cada índice. O gráfico tem "Em reais" e "Em %" e, ao lado, o botão "Comparar com os índices", que mostra as linhas das referências nos dois. O processador (`npm run dev:worker`) carrega o Ibovespa e o IFIX das estatísticas históricas da B3, desde 2016, às 08:00 e às 20:00 (na primeira vez, 22 consultas pequenas, uma a cada 2 segundos). O fechamento do índice no dia só entra depois do pregão; até lá, o painel diz até quando vai cada referência. O Início do colaborador mostra até que dia os índices estão carregados.
+
+**Distribuição** ([SPEC-021](specs/SPEC-021.md)): depois das posições, a carteira mostra como o patrimônio está dividido hoje: Ações, FIIs e Caixa, cada classe por setor (ações) ou segmento (FIIs) e os ativos de cada setor. Para a divisão fazer sentido, o processador melhora a classificação sugerida dos ativos que a equipe ainda não conferiu: o setor econômico da B3 nas ações (na tarefa semanal dos eventos, que passa a consultar também a página de detalhe da empresa) e o segmento do Investidor10 nos FIIs. O que a equipe conferiu nunca muda, e cada troca fica na auditoria.
+
+**Notícias** ([SPEC-027](specs/SPEC-027.md)): o processador (`npm run dev:worker`) coleta as notícias de duas fontes.
+- **Investidor10, a fonte pai:** autorizado para fins universitários (por telefone, em 12/11/2026), nas mesmas condições dos dados. As notícias novas vêm a cada 30 minutos, pelo sitemap de notícias do site. O arquivo desde setembro de 2023 (cerca de 22.500 notícias) é carregado aos poucos, uma página a cada 3 segundos (umas 19 horas no total, divididas em partes de meia hora). Só com `INVESTIDOR10_ENABLED=true`, e o `investidor10:apagar` apaga as notícias também.
+- **Fontes curadas:** feeds RSS ou Atom, a cada 30 minutos. A primeira é a Agência Brasil – Economia.
+
+Na Área do colaborador, **Notícias** mostra as fontes, a última coleta de cada uma, quantas notícias há e o andamento do arquivo. Por lá também se cadastra uma fonte curada (o feed é testado antes de gravar; só `https` público) e se ativa ou desativa uma fonte. As notícias ainda não aparecem para o usuário: o vínculo com os ativos e o sentimento vêm na SPEC-028, e a ficha na SPEC-029.
+
 ### Token da brapi (opcional)
 
 As cotações do pregão e a lista de ativos ([SPEC-009](specs/SPEC-009.md) e [SPEC-040](specs/SPEC-040.md)) vêm da [brapi](https://brapi.dev). Desde a SPEC-040, o app usa a **lista** da brapi, que responde sem token e não desconta da cota: **o token é opcional**. Se você quiser usar um (para o caso de a brapi mudar a regra), **gere o seu**: a cota de 15 mil consultas por mês é por chave, então dois computadores com o mesmo token gastam a mesma cota.
@@ -154,7 +168,15 @@ npm test
 npm run build
 ```
 
-Migrações: toda pasta em `api/prisma/migrations/` tem um `down.sql` escrito à mão; `npm run db:rollback` desfaz a última migração aplicada.
+Migrações: toda pasta em `api/prisma/migrations/` tem um `down.sql` escrito à mão; `npm run db:rollback` desfaz a última migração aplicada, e `npm run db:check` confere se o banco montado pelas migrações é igual ao `api/prisma/schema.prisma` (a CI roda os dois).
+
+**Testes de ponta a ponta (validação visual):** desde a SPEC-027, cada Spec termina testada como usuário, numa janela visível, e o roteiro fica salvo em `tests/e2e/` (Playwright).
+
+```bash
+npm run test:e2e
+```
+
+O comando sobe o renderer do app (`http://localhost:5173`) se ele ainda não estiver rodando e abre o Edge do Windows, devagar, para dar para acompanhar. As telas usam o `window.api` falso de [`mocks/window-api.js`](mocks/README.md), com dados fictícios: não precisa do servidor, do Electron nem de login. Os testes E2E não fazem parte do `npm test` nem do GitHub Actions.
 
 ## Aviso legal
 

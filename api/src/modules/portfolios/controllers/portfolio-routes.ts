@@ -1,10 +1,13 @@
 import {
   PORTFOLIO_PATHS,
   validateCashStatementQuery,
+  validateComparisonQuery,
   validateNewCashEntry,
   validateNewPortfolio,
+  validateNewPortfolioCopy,
   validateNewReversal,
   validateNewTrade,
+  validatePerformanceQuery,
   validateRenamePortfolio,
   validateTradeQuoteQuery,
 } from '@simulador/shared';
@@ -65,6 +68,11 @@ const run = domainErrorRunner({
     status: 409,
     message: 'Esse estorno deixaria uma venda maior que a posição.',
   },
+  // SPEC-023
+  copy_breaks_cash: {
+    status: 409,
+    message: 'Sem as compras e vendas, uma retirada ficaria sem saldo.',
+  },
   calendar_not_published: {
     status: 409,
     message: 'O calendário de pregão desse ano ainda não foi publicado.',
@@ -114,6 +122,16 @@ export function registerPortfolioRoutes(
     return reply.status(201).send({ portfolio });
   });
 
+  // SPEC-022 §5.1: de 2 a 4 carteiras no mesmo período, só leitura. Uma delas de outra pessoa (ou
+  // que não existe) é o mesmo 404, sem dizer qual.
+  app.get(PORTFOLIO_PATHS.comparison, userOnly, async (request, reply) => {
+    const query = ensureValid(validateComparisonQuery(request.query));
+    const result = await owned(request, () =>
+      trading.comparison(requireAuth(request).userId, query),
+    );
+    return reply.send(result);
+  });
+
   app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.item, userOnly, async (request, reply) => {
     const id = portfolioId(request);
     const portfolio = await owned(request, () => portfolios.get(requireAuth(request).userId, id));
@@ -133,6 +151,16 @@ export function registerPortfolioRoutes(
     const id = portfolioId(request);
     await owned(request, () => portfolios.delete(requireAuth(request).userId, id));
     return reply.status(204).send();
+  });
+
+  // SPEC-023 §5.1: nova carteira a partir desta. A original de outra pessoa é o mesmo 404.
+  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.copies, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const input = ensureValid(validateNewPortfolioCopy(request.body));
+    const result = await owned(request, () =>
+      portfolios.copy(requireAuth(request).userId, id, input),
+    );
+    return reply.status(201).send(result);
   });
 
   // SPEC-013 §5.1: saldo e extrato; aporte ou retirada. Nenhuma rota altera ou apaga um lançamento.
@@ -180,6 +208,16 @@ export function registerPortfolioRoutes(
       trading.trade(requireAuth(request).userId, id, input),
     );
     return reply.status(201).send(result);
+  });
+
+  // SPEC-019 §5.1: rentabilidade e evolução patrimonial no período.
+  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.performance, userOnly, async (request, reply) => {
+    const id = portfolioId(request);
+    const query = ensureValid(validatePerformanceQuery(request.query));
+    const result = await owned(request, () =>
+      trading.performance(requireAuth(request).userId, id, query),
+    );
+    return reply.send(result);
   });
 
   // SPEC-015 §5.1: estorno de um lançamento. Nada é alterado nem apagado.

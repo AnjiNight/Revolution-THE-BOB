@@ -575,12 +575,26 @@ button.link.position-ticker {
 }
 
 /* SPEC-016: evento corporativo depois da compra (até a SPEC-043). */
+/* SPEC-043: evento já aplicado e proventos recebidos; informação, não alerta. */
 .position-event {
   display: block;
   margin-top: 0.2rem;
-  color: var(--warn);
+  color: var(--muted);
   font-size: 0.8rem;
-  font-weight: 600;
+}
+
+.cash-pending {
+  margin-top: 1rem;
+}
+
+.cash-pending h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.cash-pending ul {
+  margin: 0;
+  padding-left: 1.2rem;
 }
 
 /* "Calcular por valor": em reais ou em % do caixa. */
@@ -728,4 +742,702 @@ button.link.position-ticker {
   .position-actions::before {
     content: none;
   }
+}
+
+/* SPEC-019: rentabilidade e evolução patrimonial. */
+.performance-panel .period-buttons {
+  margin: 0.75rem 0;
+}
+
+.performance-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.performance-custom .field {
+  margin: 0;
+}
+
+.chart-invested {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.performance-legend {
+  display: flex;
+  gap: 1.25rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.performance-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 1.25rem;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  border-top: 2px solid var(--accent);
+}
+
+.performance-legend .legend-invested::before {
+  border-top: 2px dashed var(--muted);
+}
+
+/*
+ * SPEC-020: referências no mesmo período e gráfico em %. Uma só cor de destaque (a carteira); as
+ * referências se distinguem pelo traço, em tons neutros, não só pela cor.
+ */
+.performance-benchmarks {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.performance-benchmarks h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.performance-benchmarks ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.performance-benchmarks li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.benchmark-name {
+  font-weight: 600;
+}
+
+.benchmark-value,
+.benchmark-until,
+.benchmark-missing {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.benchmark-share {
+  margin: 0.4rem 0 0;
+  font-weight: 600;
+}
+
+.performance-legend {
+  flex-wrap: wrap;
+}
+
+/* O seletor "Em reais / Em %" e, ao lado, o botão "Comparar com os índices". */
+.chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.performance-panel .chart-toolbar .period-buttons {
+  margin: 0;
+}
+
+.compare-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Fora do grupo dos modos, o botão precisa de contorno para não parecer texto. */
+button.period-button.compare-toggle {
+  border: 1px solid var(--border);
+}
+
+/* Ligado: contorno e ícone na cor de destaque, além do fundo dos botões escolhidos. */
+button.period-button.compare-toggle[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+button.period-button.compare-toggle[aria-pressed='true'] svg {
+  color: var(--accent);
+}
+
+.compare-toggle svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.chart-zero {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.chart-benchmark {
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+}
+
+.chart-benchmark.is-cdi {
+  stroke: var(--muted);
+  stroke-dasharray: 6 4;
+}
+
+.chart-benchmark.is-ibov {
+  stroke: var(--text);
+  stroke-width: 2;
+  stroke-dasharray: 1 4;
+  stroke-linecap: round;
+}
+
+.chart-benchmark.is-ifix {
+  stroke: var(--border-strong);
+  stroke-dasharray: 10 3 2 3;
+}
+
+.performance-legend .legend-cdi::before {
+  border-top: 2px dashed var(--muted);
+}
+
+.performance-legend .legend-ibov::before {
+  border-top: 2px dotted var(--text);
+}
+
+.performance-legend .legend-ifix::before {
+  height: 2px;
+  border-top: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border-strong) 0 8px,
+    transparent 8px 10px,
+    var(--border-strong) 10px 12px,
+    transparent 12px 14px
+  );
+}
+
+.assets-note.is-warning svg {
+  color: var(--warn);
+}
+
+/*
+ * SPEC-021: distribuição por classe e setor. Barras só de desenho (o texto ao lado diz tudo);
+ * Ações na cor de destaque, FIIs no mesmo tom mais claro e Caixa neutro.
+ */
+.allocation-bar {
+  display: flex;
+  height: 0.75rem;
+  margin: 0.75rem 0 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.allocation-segment + .allocation-segment {
+  border-left: 2px solid var(--surface);
+}
+
+.allocation-segment.is-stock,
+.allocation-swatch.is-stock {
+  background: var(--accent);
+}
+
+.allocation-segment.is-fii,
+.allocation-swatch.is-fii {
+  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+}
+
+.allocation-segment.is-cash,
+.allocation-swatch.is-cash {
+  background: var(--border-strong);
+}
+
+.allocation-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-classes li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.allocation-swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  align-self: center;
+}
+
+.allocation-muted {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.allocation-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem 2rem;
+  margin: 0.5rem 0;
+}
+
+.allocation-group h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.allocation-sectors,
+.allocation-assets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.allocation-sector + .allocation-sector {
+  margin-top: 0.35rem;
+}
+
+button.allocation-sector-button {
+  display: grid;
+  /* O estilo global dos botões centraliza; aqui a linha ocupa a coluna inteira. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  align-items: stretch;
+  gap: 0.3rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-weight: 400;
+}
+
+button.allocation-sector-button:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.allocation-sector-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-sector-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.allocation-caret {
+  align-self: center;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--muted);
+  transition: transform 150ms var(--ease-out);
+}
+
+.allocation-sector-button[aria-expanded='true'] .allocation-caret {
+  transform: rotate(180deg);
+}
+
+.allocation-sector-bar {
+  display: block;
+  height: 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.allocation-sector-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.allocation-assets {
+  margin: 0.15rem 0 0.4rem 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--border);
+}
+
+.allocation-assets li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.2rem 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-ticker {
+  min-width: 4.5rem;
+  font-weight: 600;
+}
+
+/*
+ * SPEC-022: comparação de carteiras. Cada carteira tem uma cor e um marcador (círculo, quadrado,
+ * triângulo, losango), para não depender só da cor (RNF18); os índices seguem tracejados, em tons
+ * neutros, como na SPEC-020.
+ */
+.portfolio-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.portfolio-row.is-chosen {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.portfolio-choice {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.portfolio-choice input {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0.2rem 0 0;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+
+.portfolio-choice:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.portfolio-choice-name {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.compare-bar {
+  position: sticky;
+  bottom: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 32px -20px color-mix(in srgb, var(--text) 45%, transparent);
+}
+
+.compare-bar .field-hint,
+.compare-bar .form-actions {
+  margin: 0;
+}
+
+.comparison-page {
+  --series-1: var(--accent);
+  --series-2: #2f5fb3;
+  --series-3: var(--warn);
+  --series-4: #7a3e9d;
+}
+
+@media (prefers-color-scheme: dark) {
+  .comparison-page {
+    --series-2: #7ea6f2;
+    --series-4: #c591e6;
+  }
+}
+
+.is-series-1 {
+  color: var(--series-1);
+}
+
+.is-series-2 {
+  color: var(--series-2);
+}
+
+.is-series-3 {
+  color: var(--series-3);
+}
+
+.is-series-4 {
+  color: var(--series-4);
+}
+
+.comparison-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.comparison-marker {
+  fill: currentColor;
+  stroke: var(--surface);
+  stroke-width: 1.25;
+}
+
+.series-badge {
+  flex: none;
+  overflow: visible;
+}
+
+.comparison-portfolios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-portfolios li {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.comparison-portfolios .portfolio-type {
+  font-size: 0.85rem;
+}
+
+.comparison-panel {
+  margin: 1.5rem 0;
+}
+
+/* Ao trocar o período, os números de antes ficam esmaecidos até chegarem os novos. */
+.is-stale {
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+.comparison-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.comparison-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.comparison-tooltip {
+  align-items: flex-start;
+}
+
+.comparison-tooltip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* A 480 px, a tabela rola na horizontal dentro do próprio quadro. */
+.comparison-scroll {
+  max-width: 100%;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.comparison-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  vertical-align: top;
+}
+
+.comparison-table thead th {
+  min-width: 8.5rem;
+  font-weight: 650;
+}
+
+/* Datas e valores numa linha só: a tabela rola, em vez de quebrar "2 de jan. de 2025". */
+.comparison-table td {
+  white-space: nowrap;
+}
+
+.comparison-table th[scope='row'] {
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.comparison-column {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.comparison-table .quote-change {
+  font-size: inherit;
+}
+
+.comparison-started,
+.comparison-empty {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.comparison-empty {
+  min-width: 8rem;
+  font-size: 0.85rem;
+  white-space: normal;
+}
+
+.comparison-table tr.is-class th[scope='row'] {
+  color: var(--text);
+}
+
+.comparison-table tr.is-class td {
+  font-weight: 650;
+}
+
+.comparison-table tr.is-sector th[scope='row'] {
+  padding-left: 1.75rem;
+  font-weight: 500;
+}
+
+/* SPEC-027: fontes de notícias (Área do colaborador). O endereço quebra em qualquer ponto para a
+   tabela caber na tela sem rolagem lateral. */
+.news-sources-table {
+  table-layout: auto;
+}
+
+.news-sources-table .position-name {
+  overflow-wrap: anywhere;
+}
+
+.news-sources-table td:first-child {
+  min-width: 12rem;
+}
+
+.news-source-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 34rem;
+  margin-top: 1rem;
+}
+
+.news-source-form h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.news-sources-page .profile-panel > .pill {
+  margin-top: 1rem;
+}
+
+/* SPEC-028: as últimas notícias com os ativos vinculados (tela Notícias do colaborador). */
+.latest-news {
+  margin-top: 1.5rem;
+}
+
+.latest-news-list {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.latest-news-list > li {
+  display: grid;
+  gap: 0.25rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.latest-news-list a {
+  color: var(--text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.news-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A relevância vai no texto também (para leitores de tela); a aparência só reforça. */
+.news-link {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.news-link.is-principal {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.news-link.is-lista {
+  border-style: dashed;
+}
+
+.news-links-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }

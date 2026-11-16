@@ -8,11 +8,14 @@ import {
   type CashEntry,
   type CashEntryResult,
   type CashStatement,
+  type IncomeDetail,
   type IsoDate,
   type NewCashEntryInput,
+  type NewPortfolioCopyInput,
   type NewPortfolioInput,
   type PersonalDataExport,
   type Portfolio,
+  type PortfolioCopyResult,
   type PortfolioList,
   type ReversalResult,
 } from '@simulador/shared';
@@ -22,9 +25,14 @@ import {
   compareMovements,
   toCents,
 } from '../../financial-calculation/cash-ledger.js';
-import { firstBreak, type CheckedMovement } from '../../financial-calculation/positions.js';
+import {
+  firstTimelineBreak,
+  type DerivedMovement,
+  type IncomeCredit,
+} from '../../financial-calculation/corporate-actions.js';
 import {
   AlreadyReversedError,
+  CopyBreaksCashError,
   EntryNotFoundError,
   InsufficientCashError,
   PortfolioLimitReachedError,
@@ -34,7 +42,10 @@ import {
 } from '../domain/errors.js';
 import {
   activeLedger,
+  cashMovements,
+  corporateData,
   ledgerItems,
+  ledgerTimeline,
   ownedPortfolio,
   reversalTimes,
   type LedgerItem,
@@ -43,6 +54,7 @@ import type {
   LedgerRepository,
   NewStoredCashEntry,
   PortfolioCalendar,
+  PortfolioLedger,
   PortfolioMarket,
   PortfolioRepository,
   StoredPortfolio,
@@ -53,10 +65,16 @@ export interface PortfolioServiceDeps {
   /** SPECs 013 e 014: o livro-razão da carteira. */
   ledger: LedgerRepository;
   calendar: PortfolioCalendar;
-  /** SPEC-014: o ticker das compras e vendas no extrato e na exportação. */
-  market: Pick<PortfolioMarket, 'asset'>;
+  /**
+   * SPEC-014: o ticker das compras e vendas no extrato e na exportação. SPEC-043: os proventos e
+   * eventos, para o saldo e a conferência do livro.
+   */
+  market: Pick<PortfolioMarket, 'asset' | 'corporateEvents' | 'income' | 'incomeEnabled'>;
   clock?: () => Date;
 }
+
+/** Uma linha do extrato: lançamento do usuário ou provento e fração da SPEC-043. */
+type StatementItem = LedgerItem | DerivedMovement;
 
 /**
  * Carteiras de simulação (SPEC-012): cada usuário vê e mexe só nas próprias (RB02, RB03). O tipo
@@ -73,11 +91,68 @@ export class PortfolioService {
 
   async list(userId: string): Promise<PortfolioList> {
     const portfolios = await this.deps.portfolios.listByUser(userId);
-    return { portfolios: portfolios.map(toPublic), limit: PORTFOLIO_LIMIT };
+    const origins = await this.origins(portfolios);
+    return {
+      portfolios: portfolios.map((portfolio) => toPublic(portfolio, origins)),
+      limit: PORTFOLIO_LIMIT,
+    };
   }
 
   async get(userId: string, id: string): Promise<Portfolio> {
-    return toPublic(await this.owned(userId, id));
+    const portfolio = await this.owned(userId, id);
+    return toPublic(portfolio, await this.origins([portfolio]));
+  }
+
+  /**
+   * SPEC-023: nova carteira a partir de outra do usuário, com o mesmo tipo e início. "Tudo" copia
+   * os aportes, retiradas, compras e vendas que valem (sem os estornados); "só o dinheiro", os
+   * aportes e retiradas. Na histórica, `until` corta o livro nesse dia (inclusive). Tudo decidido
+   * com a original travada, e a cópia nasce com o livro válido (RB26).
+   */
+  async copy(
+    userId: string,
+    sourceId: string,
+    input: NewPortfolioCopyInput,
+  ): Promise<PortfolioCopyResult> {
+    const source = await this.owned(userId, sourceId);
+    const now = this.clock();
+    const today = isoDateInBrasilia(now);
+    const until = input.until;
+    if (until !== undefined) {
+      // Na ao vivo, cada lançamento é do momento em que foi feito (DA17): a cópia vai até agora.
+      if (source.type === 'live') throw new PortfolioValidationError({ until: 'not_allowed' });
+      if (until < source.startDate) throw new PortfolioValidationError({ until: 'before_start' });
+      if (until >= today) throw new PortfolioValidationError({ until: 'future' });
+    }
+    const within = (date: IsoDate) => until === undefined || date <= until;
+    const result = await this.deps.portfolios.copyLocked(sourceId, (current, count) => {
+      if (count >= PORTFOLIO_LIMIT) throw new PortfolioLimitReachedError();
+      const active = activeLedger(current);
+      const cash = active.cash.filter((entry) => within(entry.date));
+      const trades =
+        input.scope === 'all' ? active.trades.filter((trade) => within(trade.date)) : [];
+      if (input.scope === 'cash') {
+        // Sem as vendas e os proventos, uma retirada do lucro não tem de onde sair.
+        const broken = cashLedger(cash).lines.find((line) => toCents(line.balanceAfter) < 0n);
+        if (broken) throw new CopyBreaksCashError(broken.date, broken.amount);
+      }
+      return {
+        name: input.name,
+        nameKey: portfolioNameKey(input.name),
+        at: now,
+        cash: cash.map(({ type, amount, date, recordedAt }) => ({
+          type,
+          amount,
+          date,
+          recordedAt,
+        })),
+        trades: trades.map(({ id: _id, portfolioId: _portfolioId, ...trade }) => trade),
+      };
+    });
+    return {
+      portfolio: toPublic(result.portfolio, new Map([[sourceId, source.name]])),
+      copied: result.copied,
+    };
   }
 
   /**
@@ -119,15 +194,17 @@ export class PortfolioService {
           }
         : {}),
     });
-    return toPublic(created);
+    return toPublic(created, new Map());
   }
 
   /** O mesmo nome (já limpo) não grava nada. */
   async rename(userId: string, id: string, name: string): Promise<Portfolio> {
     const portfolio = await this.owned(userId, id);
-    if (portfolio.name === name) return toPublic(portfolio);
+    const origins = await this.origins([portfolio]);
+    if (portfolio.name === name) return toPublic(portfolio, origins);
     return toPublic(
       await this.deps.portfolios.rename(id, name, portfolioNameKey(name), this.clock()),
+      origins,
     );
   }
 
@@ -145,27 +222,41 @@ export class PortfolioService {
   async statement(userId: string, id: string, offset = 0): Promise<CashStatement> {
     const portfolio = await this.owned(userId, id);
     const full = await this.deps.ledger.ledger(id);
-    // SPEC-015: o saldo (e o de cada linha) é o do livro sem os estornados; eles aparecem riscados.
-    const reversed = reversalTimes(full);
-    const active = cashLedger(ledgerItems(activeLedger(full)));
-    const balanceAfter = new Map(active.lines.map((line) => [line.id, line.balanceAfter]));
-    const newestFirst = ledgerItems(full).sort(compareMovements).reverse();
-    const page = newestFirst.slice(offset, offset + CASH_PAGE_SIZE);
     const today = isoDateInBrasilia(this.clock());
-    const tickers = await this.tickers(
-      page.flatMap((item) => (item.kind === 'trade' ? [item.entry.assetId] : [])),
+    // SPEC-015: o saldo (e o de cada linha) é o do livro sem os estornados; eles aparecem riscados.
+    // SPEC-043: com os proventos pagos e as frações vendidas, que não se estornam.
+    const reversed = reversalTimes(full);
+    const active = activeLedger(full);
+    const line = ledgerTimeline(
+      active,
+      await corporateData(this.deps.market, this.deps.calendar, full),
+      today,
     );
+    const book = cashLedger(cashMovements(active, line));
+    const balanceAfter = new Map(book.lines.map((entry) => [entry.id, entry.balanceAfter]));
+    const newestFirst: StatementItem[] = [...ledgerItems(full), ...line.movements]
+      .sort(compareMovements)
+      .reverse();
+    const page = newestFirst.slice(offset, offset + CASH_PAGE_SIZE);
+    const tickers = await this.tickers([
+      ...page.map(itemAssetId).filter((assetId): assetId is string => assetId !== null),
+      ...line.pending.map((credit) => credit.assetId),
+    ]);
     return {
-      balance: active.balance,
+      balance: book.balance,
       entries: page.map((item) =>
-        toPublicEntry(item, tickers, {
-          balanceAfter: balanceAfter.get(item.id) ?? null,
-          reversedAt: reversed.get(item.id) ?? null,
-          reversible: !reversed.has(item.id) && withinWindow(portfolio, item, today),
-        }),
+        item.kind === 'income' || item.kind === 'fraction'
+          ? toDerivedEntry(item, tickers, balanceAfter.get(item.id) ?? null)
+          : toPublicEntry(item, tickers, {
+              balanceAfter: balanceAfter.get(item.id) ?? null,
+              reversedAt: reversed.get(item.id) ?? null,
+              reversible: !reversed.has(item.id) && withinWindow(portfolio, item, today),
+            }),
       ),
       hasMore: newestFirst.length > offset + CASH_PAGE_SIZE,
       total: newestFirst.length,
+      pendingIncome: line.pending.map((credit) => incomeDetail(credit, tickers)),
+      incomeEnabled: this.deps.market.incomeEnabled,
     };
   }
 
@@ -179,9 +270,10 @@ export class PortfolioService {
     const now = this.clock();
     const today = isoDateInBrasilia(now);
     // Os tickers, para dizer em qual negociação o livro quebraria (lidos antes da trava).
-    const tickers = await this.tickers(
-      (await this.deps.ledger.ledger(id)).trades.map((trade) => trade.assetId),
-    );
+    const before = await this.deps.ledger.ledger(id);
+    const tickers = await this.tickers(before.trades.map((trade) => trade.assetId));
+    // SPEC-043: proventos e eventos lidos antes da trava; a conferência conta com eles.
+    const data = await corporateData(this.deps.market, this.deps.calendar, before);
 
     let reversedType: LedgerItem['type'] | null = null;
     const stored = await this.deps.ledger.appendReversalLocked(id, (current) => {
@@ -191,11 +283,21 @@ export class PortfolioService {
         throw new AlreadyReversedError();
       }
       if (!withinWindow(portfolio, item, today)) throw new ReversalWindowClosedError();
-      const remaining = ledgerItems(activeLedger(current)).filter((other) => other.id !== entryId);
-      const broken = firstBreak(remaining.map(toChecked));
-      const at = broken && remaining.find((other) => other.id === broken.id);
-      if (broken && at)
-        throw new ReversalBreaksLedgerError(broken.reason, breakDetails(at, tickers));
+      const active = activeLedger(current);
+      const remaining: PortfolioLedger = {
+        cash: active.cash.filter((entry) => entry.id !== entryId),
+        trades: active.trades.filter((trade) => trade.id !== entryId),
+        reversals: [],
+      };
+      const line = ledgerTimeline(remaining, data, today);
+      const broken = firstTimelineBreak(cashMovements(remaining, line), line.oversold);
+      if (broken) {
+        const at = ledgerItems(remaining).find((other) => other.id === broken.id);
+        throw new ReversalBreaksLedgerError(
+          broken.reason,
+          at ? breakDetails(at, tickers) : { entryId: broken.id },
+        );
+      }
       reversedType = item.type;
       return { entryId, entryKind: item.kind, recordedAt: now };
     });
@@ -207,7 +309,7 @@ export class PortfolioService {
         type: reversedType ?? 'deposit',
         reversedAt: stored.recordedAt.toISOString(),
       },
-      cash: cashLedger(ledgerItems(after)).balance,
+      cash: cashLedger(cashMovements(after, ledgerTimeline(after, data, today))).balance,
     };
   }
 
@@ -224,15 +326,26 @@ export class PortfolioService {
     const portfolio = await this.owned(userId, id);
     const now = this.clock();
     const date = await this.entryDate(portfolio, input.date, isoDateInBrasilia(now));
+    // SPEC-043: proventos e eventos lidos antes da trava.
+    const data = await corporateData(
+      this.deps.market,
+      this.deps.calendar,
+      await this.deps.ledger.ledger(id),
+    );
 
     let balance = '0.00';
     const stored = await this.deps.ledger.appendCashLocked(id, (current): NewStoredCashEntry => {
       // SPEC-015: estornados não contam, nem no saldo nem no "último lançamento" (RB25).
-      const ledger = cashLedger(ledgerItems(activeLedger(current)));
-      const last = ledger.lines.at(-1);
-      if (last && date < last.date) {
+      const active = activeLedger(current);
+      const last = ledgerItems(active)
+        .map((item) => item.date)
+        .sort()
+        .at(-1);
+      if (last && date < last) {
         throw new PortfolioValidationError({ date: 'before_last_entry' });
       }
+      // SPEC-043: o saldo na data, com os proventos pagos até ela.
+      const ledger = cashLedger(cashMovements(active, ledgerTimeline(active, data, date)));
       if (input.type === 'withdrawal' && !canSpend(ledger.balance, input.amount)) {
         throw new InsufficientCashError(ledger.balance);
       }
@@ -263,6 +376,7 @@ export class PortfolioService {
    */
   async exportForUser(userId: string): Promise<PersonalDataExport['portfolios']> {
     const portfolios = await this.deps.portfolios.listByUser(userId);
+    const origins = await this.origins(portfolios);
     const ledgers = await this.deps.ledger.ledgers(portfolios.map((p) => p.id));
     const tickers = await this.tickers(
       [...ledgers.values()].flatMap((ledger) => ledger.trades.map((trade) => trade.assetId)),
@@ -272,7 +386,7 @@ export class PortfolioService {
       const reversed = reversalTimes(ledger);
       const reversedAt = (entryId: string) => reversed.get(entryId)?.toISOString() ?? null;
       return {
-        ...toPublic(portfolio),
+        ...toPublic(portfolio, origins),
         cashEntries: [...ledger.cash].sort(compareMovements).map((entry) => ({
           type: entry.type,
           amount: entry.amount,
@@ -336,9 +450,18 @@ export class PortfolioService {
   private owned(userId: string, id: string): Promise<StoredPortfolio> {
     return ownedPortfolio(this.deps.portfolios, userId, id);
   }
+
+  /** SPEC-023: o nome atual das carteiras de que estas foram copiadas (as que ainda existem). */
+  private origins(portfolios: readonly StoredPortfolio[]): Promise<Map<string, string>> {
+    const ids = portfolios
+      .map((portfolio) => portfolio.copiedFromId)
+      .filter((id): id is string => id !== null);
+    return ids.length === 0 ? Promise.resolve(new Map()) : this.deps.portfolios.namesOf(ids);
+  }
 }
 
-function toPublic(portfolio: StoredPortfolio): Portfolio {
+/** `origins`: o nome das carteiras de origem que ainda existem (SPEC-023). */
+function toPublic(portfolio: StoredPortfolio, origins: ReadonlyMap<string, string>): Portfolio {
   return {
     id: portfolio.id,
     name: portfolio.name,
@@ -346,6 +469,9 @@ function toPublic(portfolio: StoredPortfolio): Portfolio {
     startDate: portfolio.startDate,
     createdAt: portfolio.createdAt.toISOString(),
     updatedAt: portfolio.updatedAt.toISOString(),
+    copiedFrom: portfolio.copiedFromId
+      ? { id: portfolio.copiedFromId, name: origins.get(portfolio.copiedFromId) ?? null }
+      : null,
   };
 }
 
@@ -384,18 +510,58 @@ function withinWindow(portfolio: StoredPortfolio, item: LedgerItem, today: IsoDa
   return portfolio.type === 'historical' || item.kind === 'cash' || item.date === today;
 }
 
-/** O lançamento para a conferência do livro (com o ativo e a quantidade, se for negociação). */
-function toChecked(item: LedgerItem): CheckedMovement {
+function itemAssetId(item: StatementItem): string | null {
+  if (item.kind === 'trade') return item.entry.assetId;
+  if (item.kind === 'income') return item.income.assetId;
+  if (item.kind === 'fraction') return item.fraction.assetId;
+  return null;
+}
+
+function incomeDetail(credit: IncomeCredit, tickers: Map<string, string>): IncomeDetail {
+  return {
+    assetId: credit.assetId,
+    ticker: tickers.get(credit.assetId) ?? '',
+    kind: credit.kind,
+    quantity: credit.quantity,
+    perShare: credit.perShare,
+    gross: credit.gross,
+    tax: credit.tax,
+    net: credit.net,
+    exDate: credit.exDate,
+    paymentDate: credit.paymentDate,
+    source: 'investidor10',
+  };
+}
+
+/**
+ * SPEC-043: provento pago ou fração vendida no extrato. Não se estornam (vêm dos dados da
+ * SPEC-042); o horário é a meia-noite de Brasília do dia, porque não houve registro.
+ */
+function toDerivedEntry(
+  item: DerivedMovement,
+  tickers: Map<string, string>,
+  balanceAfter: string | null,
+): CashEntry {
   const base = {
     id: item.id,
-    type: item.type,
+    type: 'income' as const,
     amount: item.amount,
     date: item.date,
-    recordedAt: item.recordedAt,
+    recordedAt: `${item.date}T03:00:00.000Z`,
+    balanceAfter,
+    reversedAt: null,
+    reversible: false,
   };
-  return item.kind === 'trade'
-    ? { ...base, assetId: item.entry.assetId, quantity: item.entry.quantity }
-    : base;
+  if (item.kind === 'income') return { ...base, income: incomeDetail(item.income, tickers) };
+  return {
+    ...base,
+    fraction: {
+      assetId: item.fraction.assetId,
+      ticker: tickers.get(item.fraction.assetId) ?? '',
+      shares: item.fraction.shares,
+      price: item.fraction.price,
+    },
+  };
 }
 
 /** O lançamento em que o livro quebraria, para a tela dizer qual estornar antes. */

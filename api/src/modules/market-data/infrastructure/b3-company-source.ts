@@ -24,13 +24,27 @@ export class B3CompanyHttpSource implements B3CompanySource {
     this.fetch = options.fetch ?? globalThis.fetch;
   }
 
-  async company(code: string): Promise<unknown> {
-    const params = Buffer.from(
-      JSON.stringify({ issuingCompany: code, language: 'pt-br' }),
-      'utf8',
-    ).toString('base64');
+  company(code: string): Promise<unknown> {
+    return this.call(
+      'GetListedSupplementCompany',
+      { issuingCompany: code, language: 'pt-br' },
+      code,
+    );
+  }
+
+  /** SPEC-021: a página de detalhe da empresa, com a classificação setorial da B3. */
+  detail(codeCvm: string): Promise<unknown> {
+    return this.call('GetDetail', { codeCVM: codeCvm, language: 'pt-br' }, `CVM ${codeCvm}`);
+  }
+
+  private async call(
+    method: string,
+    query: Record<string, string>,
+    code: string,
+  ): Promise<unknown> {
+    const params = Buffer.from(JSON.stringify(query), 'utf8').toString('base64');
     const response = await this.fetch(
-      `${this.baseUrl}/listedCompaniesProxy/CompanyCall/GetListedSupplementCompany/${params}`,
+      `${this.baseUrl}/listedCompaniesProxy/CompanyCall/${method}/${params}`,
       {
         headers: {
           Accept: 'application/json',

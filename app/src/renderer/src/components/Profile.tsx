@@ -15,6 +15,7 @@ import { CheckCircle } from '@phosphor-icons/react';
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError, ClientResult } from '../../../shared/auth-ipc';
+import { useNeedsConnection } from '../connection';
 import { emailLocale, formatDate, initials } from '../format';
 import { TextField } from './TextField';
 
@@ -193,6 +194,7 @@ function EditableSection({
   children: (done: Done) => ReactNode;
 }) {
   const headingId = useId();
+  const needs = useNeedsConnection();
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const panel = useRef<HTMLElement>(null);
@@ -226,6 +228,7 @@ function EditableSection({
               setSaved(false);
               setOpen(true);
             }}
+            {...needs.props}
           >
             {editLabel}
           </button>
@@ -292,6 +295,7 @@ function EditForm({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const needs = useNeedsConnection();
   const handle = (event: FormEvent) => {
     event.preventDefault();
     onSubmit();
@@ -305,7 +309,12 @@ function EditForm({
       )}
       {children}
       <div className="form-actions">
-        <button type="submit" className={danger ? 'danger' : undefined} disabled={state.submitting}>
+        <button
+          type="submit"
+          className={danger ? 'danger' : undefined}
+          disabled={state.submitting}
+          {...needs.props}
+        >
           {state.submitting ? t('auth.submitting') : saveLabel}
         </button>
         <button type="button" className="secondary" onClick={onCancel} disabled={state.submitting}>
@@ -521,6 +530,7 @@ function DataSection({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const locale = emailLocale(i18n.language);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -566,6 +576,7 @@ function DataSection({
           className="pill pill-ghost pill-small"
           disabled={saving}
           onClick={() => void exportData()}
+          {...needs.props}
         >
           {saving ? t('auth.submitting') : t('profile.data.export')}
         </button>
@@ -575,6 +586,7 @@ function DataSection({
             type="button"
             className="pill pill-danger pill-small"
             onClick={() => setStep('warning')}
+            {...needs.props}
           >
             {t('profile.data.delete')}
           </button>
@@ -718,6 +730,7 @@ export function TermsUpdateNotice({
   onAccept: () => void;
 }) {
   const { t } = useTranslation();
+  const needs = useNeedsConnection();
   return (
     <div className="terms-notice" role="status">
       <p>{t('profile.termsUpdated')}</p>
@@ -725,7 +738,7 @@ export function TermsUpdateNotice({
         <summary>{t('auth.termsTitle', { version: TERMS_VERSION })}</summary>
         <p>{t('auth.termsSummary')}</p>
       </details>
-      <button type="button" disabled={submitting} onClick={onAccept}>
+      <button type="button" disabled={submitting} onClick={onAccept} {...needs.props}>
         {t('auth.continue')}
       </button>
     </div>

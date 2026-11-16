@@ -11,10 +11,11 @@ import {
   type IsoDate,
   type Portfolio,
 } from '@simulador/shared';
-import { ArrowDown, ArrowUp } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, Info } from '@phosphor-icons/react';
 import { Fragment, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatMoney } from '../format';
 import { MoneyField } from './MoneyField';
 import { TextField } from './TextField';
@@ -30,11 +31,17 @@ type CashState =
  * o extrato também mostra as compras e vendas.
  */
 export function PortfolioCash({
+  part,
   portfolio,
   version,
   onChanged,
   onSessionExpired,
 }: {
+  /**
+   * Reordenação de 09/11/2026: `summary` é o saldo com Aportar e Retirar, no topo da carteira;
+   * `statement` é o extrato (com o que vai entrar e os estornos), no fim.
+   */
+  part: 'summary' | 'statement';
   portfolio: Portfolio;
   /** Muda a cada lançamento novo (aqui ou numa compra ou venda): o extrato é pedido de novo. */
   version: number;
@@ -42,9 +49,12 @@ export function PortfolioCash({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const [state, setState] = useState<CashState>({ status: 'loading' });
   const [mode, setMode] = useState<CashEntryType | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // SPEC-032: sem conexão, a página seguinte do extrato pode não estar guardada.
+  const [moreMissing, setMoreMissing] = useState(false);
   // SPEC-015: o lançamento com a confirmação de estorno aberta e o botão que a abriu.
   const [reversing, setReversing] = useState<{ entry: CashEntry; opener: HTMLElement } | null>(
     null,
@@ -90,8 +100,11 @@ export function PortfolioCash({
     setLoadingMore(false);
     if (!result.ok) {
       if (result.error === 'unauthorized') return onSessionExpired();
+      // O que já está na tela continua; só a página seguinte é que não foi vista aqui.
+      if (result.error === 'not_saved_offline') return setMoreMissing(true);
       return setState({ status: 'failed', error: result.error });
     }
+    setMoreMissing(false);
     setState({
       status: 'ready',
       data: { ...result.data, entries: [...data.entries, ...result.data.entries] },
@@ -116,73 +129,13 @@ export function PortfolioCash({
     onChanged();
   };
 
-  // Histórica (RB25): do início da carteira ou do último lançamento, o que vier depois.
-  const lastDate = data?.entries[0]?.date;
+  // Histórica (RB25): do início da carteira ou do último lançamento, o que vier depois. Os
+  // proventos (SPEC-043) não são lançamentos do usuário e não contam.
+  const lastDate = data?.entries.find((entry) => entry.type !== 'income')?.date;
   const firstDay = lastDate && lastDate > portfolio.startDate ? lastDate : portfolio.startDate;
 
-  return (
-    <section className="profile-panel cash-panel" aria-labelledby={titleId}>
-      <div className="cash-head">
-        <div>
-          <h2 id={titleId}>{t('portfolios.cash.title')}</h2>
-          {data && (
-            <p className="cash-balance">
-              <span>{t('portfolios.cash.balance')}</span>
-              <strong>{formatMoney(data.balance, language)}</strong>
-            </p>
-          )}
-        </div>
-        {data && !mode && (
-          <div className="cash-actions">
-            <button
-              ref={depositButton}
-              type="button"
-              className="pill pill-primary"
-              onClick={() => {
-                setNotice(null);
-                setMode('deposit');
-              }}
-            >
-              {t('portfolios.cash.deposit')}
-              <span className="pill-icon" aria-hidden="true">
-                <ArrowDown weight="bold" />
-              </span>
-            </button>
-            <button
-              ref={withdrawButton}
-              type="button"
-              className="pill pill-ghost"
-              onClick={() => {
-                setNotice(null);
-                setMode('withdrawal');
-              }}
-            >
-              {t('portfolios.cash.withdraw')}
-              <span className="pill-icon" aria-hidden="true">
-                <ArrowUp weight="bold" />
-              </span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {mode && data && (
-        <CashEntryForm
-          portfolio={portfolio}
-          type={mode}
-          firstDay={firstDay}
-          onRegistered={(result) => registered(mode, result)}
-          onCancel={() => close(mode)}
-          onSessionExpired={onSessionExpired}
-        />
-      )}
-
-      {notice && (
-        <p ref={noticeRef} className="form-success" role="status" tabIndex={-1}>
-          {notice}
-        </p>
-      )}
-
+  const loadingOrFailed = (
+    <>
       {state.status === 'loading' && (
         <p className="loading" role="status">
           {t('portfolios.cash.loading')}
@@ -193,11 +146,124 @@ export function PortfolioCash({
           {t(`authErrors.${state.error}`)}
         </p>
       )}
+    </>
+  );
+  const noticeLine = notice && (
+    <p ref={noticeRef} className="form-success" role="status" tabIndex={-1}>
+      {notice}
+    </p>
+  );
+
+  // Reordenação de 09/11/2026: no topo, o saldo com Aportar e Retirar e os avisos do saldo.
+  if (part === 'summary') {
+    return (
+      <section className="profile-panel cash-panel cash-summary" aria-labelledby={titleId}>
+        <div className="cash-head">
+          <div>
+            <h2 id={titleId}>{t('portfolios.cash.title')}</h2>
+            {data && (
+              <p className="cash-balance">
+                <span>{t('portfolios.cash.balance')}</span>
+                <strong>{formatMoney(data.balance, language)}</strong>
+              </p>
+            )}
+          </div>
+          {data && !mode && (
+            <div className="cash-actions">
+              <button
+                ref={depositButton}
+                type="button"
+                className="pill pill-primary"
+                onClick={() => {
+                  setNotice(null);
+                  setMode('deposit');
+                }}
+                {...needs.props}
+              >
+                {t('portfolios.cash.deposit')}
+                <span className="pill-icon" aria-hidden="true">
+                  <ArrowDown weight="bold" />
+                </span>
+              </button>
+              <button
+                ref={withdrawButton}
+                type="button"
+                className="pill pill-ghost"
+                onClick={() => {
+                  setNotice(null);
+                  setMode('withdrawal');
+                }}
+                {...needs.props}
+              >
+                {t('portfolios.cash.withdraw')}
+                <span className="pill-icon" aria-hidden="true">
+                  <ArrowUp weight="bold" />
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {mode && data && (
+          <CashEntryForm
+            portfolio={portfolio}
+            type={mode}
+            firstDay={firstDay}
+            onRegistered={(result) => registered(mode, result)}
+            onCancel={() => close(mode)}
+            onSessionExpired={onSessionExpired}
+          />
+        )}
+        {noticeLine}
+        {loadingOrFailed}
+        {data && data.balance.startsWith('-') && (
+          <p className="form-error" role="alert">
+            {t('portfolios.cash.income.negative')}
+          </p>
+        )}
+        {data && !data.incomeEnabled && (
+          <p className="assets-note">
+            <Info weight="fill" aria-hidden="true" />
+            <span>{t('portfolios.cash.income.disabled')}</span>
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  // No fim da página: o histórico (o que vai entrar e o extrato), o que menos se consulta.
+  return (
+    <section className="profile-panel cash-panel" aria-labelledby={statementId}>
+      <h2 id={statementId}>{t('portfolios.cash.statement')}</h2>
+      {noticeLine}
+      {loadingOrFailed}
+      {data && data.pendingIncome.length > 0 && (
+        <div className="cash-pending">
+          <h3>{t('portfolios.cash.income.pendingTitle')}</h3>
+          <ul>
+            {data.pendingIncome.map((income) => (
+              <li key={`${income.assetId}${income.kind}${income.exDate}${income.paymentDate}`}>
+                {t(
+                  income.paymentDate
+                    ? 'portfolios.cash.income.pendingOn'
+                    : 'portfolios.cash.income.pendingNoDate',
+                  {
+                    kind: t(`portfolios.cash.income.kinds.${income.kind}`),
+                    ticker: income.ticker,
+                    amount: formatMoney(income.net, language),
+                    date: income.paymentDate ? formatCalendarDay(income.paymentDate, language) : '',
+                  },
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="field-hint">{t('portfolios.cash.income.source')}</p>
+        </div>
+      )}
       {data && data.total === 0 && <p className="assets-empty">{t('portfolios.cash.empty')}</p>}
 
       {data && data.total > 0 && (
         <div className="cash-statement-block">
-          <h3 id={statementId}>{t('portfolios.cash.statement')}</h3>
           <table className="cash-statement" aria-labelledby={statementId}>
             <thead>
               <tr>
@@ -266,6 +332,11 @@ export function PortfolioCash({
               {t('portfolios.cash.showMore')}
             </button>
           )}
+          {data.hasMore && moreMissing && (
+            <p className="field-hint" role="status">
+              {t('authErrors.not_saved_offline')}
+            </p>
+          )}
         </div>
       )}
     </section>
@@ -311,10 +382,18 @@ function StatementRow({
   reverseDisabled: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const describe = useDescribe();
-  // Entra no caixa: aporte e venda; sai: retirada e compra.
-  const sign = entry.type === 'deposit' || entry.type === 'sell' ? '+' : '−';
+  // Entra no caixa: aporte, venda e provento; sai: retirada e compra.
+  const credit = entry.type === 'deposit' || entry.type === 'sell' || entry.type === 'income';
+  const sign = credit ? '+' : '−';
+  const money = (value: string) => formatMoney(value, language);
+  const typeLabel = entry.income
+    ? t(`portfolios.cash.income.kinds.${entry.income.kind}`)
+    : entry.fraction
+      ? t('portfolios.cash.income.fraction')
+      : t(`portfolios.cash.types.${entry.type}`);
   const reversedAt = entry.reversedAt
     ? new Intl.DateTimeFormat(language, {
         dateStyle: 'short',
@@ -328,7 +407,39 @@ function StatementRow({
       <td data-label={t('portfolios.cash.columns.type')}>
         {/* Um bloco só: no cartão (480 px), fica inteiro do lado direito do rótulo. */}
         <span className="cash-type-cell">
-          <span className="cash-type">{t(`portfolios.cash.types.${entry.type}`)}</span>
+          <span className="cash-type">{typeLabel}</span>
+          {/* SPEC-043: provento pago e fração vendida, com a fonte (autorização do Investidor10). */}
+          {entry.income && (
+            <span className="cash-trade">
+              {t('portfolios.cash.income.detail', {
+                quantity: new Intl.NumberFormat(language).format(entry.income.quantity),
+                ticker: entry.income.ticker,
+                perShare: new Intl.NumberFormat(language, {
+                  style: 'currency',
+                  currency: 'BRL',
+                  maximumFractionDigits: 8,
+                }).format(Number(entry.income.perShare)),
+                exDate: formatCalendarDay(entry.income.exDate, language),
+              })}
+              {entry.income.tax !== '0.00' &&
+                ` · ${t('portfolios.cash.income.tax', {
+                  gross: money(entry.income.gross),
+                  tax: money(entry.income.tax),
+                })}`}
+              {` · ${t('portfolios.cash.income.source')}`}
+            </span>
+          )}
+          {entry.fraction && (
+            <span className="cash-trade">
+              {t('portfolios.cash.income.fractionDetail', {
+                shares: new Intl.NumberFormat(language, { maximumFractionDigits: 6 }).format(
+                  Number(entry.fraction.shares),
+                ),
+                ticker: entry.fraction.ticker,
+                price: money(entry.fraction.price),
+              })}
+            </span>
+          )}
           {entry.trade && (
             <span className="cash-trade">
               {t('portfolios.cash.tradeDetail', {
@@ -348,7 +459,7 @@ function StatementRow({
       </td>
       <td
         data-label={t('portfolios.cash.columns.amount')}
-        className={`cash-number cash-${entry.type === 'sell' ? 'deposit' : entry.type}`}
+        className={`cash-number cash-${credit ? 'deposit' : entry.type}`}
       >
         <span className="cash-amount">
           {sign}
@@ -368,6 +479,7 @@ function StatementRow({
               description: describe(entry, live),
             })}
             onClick={(event) => onReverse(event.currentTarget)}
+            {...needs.props}
           >
             {t('portfolios.cash.reversal.reverse')}
           </button>
@@ -395,6 +507,7 @@ function ReversalConfirm({
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const needs = useNeedsConnection();
   const language = i18n.language;
   const describe = useDescribe();
   const questionId = useId();
@@ -469,6 +582,7 @@ function ReversalConfirm({
           autoFocus
           disabled={saving}
           onClick={() => void confirm()}
+          {...needs.props}
         >
           {saving
             ? t('portfolios.cash.reversal.saving')
@@ -502,6 +616,7 @@ function CashEntryForm({
   const titleId = useId();
   const questionId = useId();
   const warningId = useId();
+  const needs = useNeedsConnection();
   // Decimal da API ("1234.56"): o campo de dinheiro já entrega assim.
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState('');
@@ -615,7 +730,7 @@ function CashEntryForm({
             </p>
           )}
           <div className="form-actions">
-            <button type="submit" className="pill pill-primary">
+            <button type="submit" className="pill pill-primary" {...needs.props}>
               {t('portfolios.cash.review')}
             </button>
             <button type="button" className="pill pill-ghost" onClick={onCancel}>
@@ -644,6 +759,7 @@ function CashEntryForm({
               autoFocus
               disabled={saving}
               onClick={() => void submit()}
+              {...needs.props}
             >
               {saving
                 ? t('portfolios.cash.saving')

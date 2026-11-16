@@ -98,6 +98,16 @@
       "missing_one": "Há {{count}} pregão sem CDI na série.",
       "missing_other": "Há {{count}} pregões sem CDI na série."
     },
+    "indexes": {
+      "range": "{{name}}: de {{from}} a {{to}}",
+      "loadingOne": "{{name}}: carregando",
+      "loading": "Ibovespa e IFIX: carregando (o processador busca na B3)",
+      "updated": "atualizados em {{at}}",
+      "stale": "O {{name}} está parado em {{date}}. Confira se o processador está ligado.",
+      "failed": "A última atualização do Ibovespa e do IFIX terminou com falha ({{at}}).",
+      "missing_one": "Há {{count}} pregão sem fechamento do {{name}}.",
+      "missing_other": "Há {{count}} pregões sem fechamento do {{name}}."
+    },
     "investidor10": {
       "summary": "Indicadores (Investidor10): última coleta em {{at}} · {{collected}} de {{total}} ativos",
       "never": "Indicadores (Investidor10): ainda não coletados (o processador visita as páginas aos poucos)",
@@ -204,7 +214,14 @@
     "not_allowed": "Na carteira ao vivo, a data é sempre a de agora.",
     "before_start": "Escolha um dia a partir do início da carteira.",
     "before_last_entry": "Escolha o dia do último lançamento ou depois: na carteira histórica, os lançamentos seguem a ordem das datas.",
-    "invalid_quantity": "Informe uma quantidade inteira, a partir de 1."
+    "invalid_quantity": "Informe uma quantidade inteira, a partir de 1.",
+    "after_end": "A data de início não pode ser depois da data final.",
+    "after_today": "Escolha uma data final até hoje.",
+    "invalid_selection": "Escolha de 2 a 4 carteiras diferentes.",
+    "not_https": "Use um endereço que comece com https://.",
+    "private_address": "Use um endereço https público (não da rede interna).",
+    "not_a_feed": "Não foi possível ler um feed RSS ou Atom neste endereço.",
+    "invalid_url": "Endereço inválido."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -252,7 +269,10 @@
     "reversal_breaks_cash": "Esse estorno deixaria o caixa negativo.",
     "reversal_breaks_position": "Esse estorno deixaria uma venda maior que a posição.",
     "no_close_that_day": "O ativo não tem fechamento da B3 nesse dia.",
-    "history_pending": "O histórico de preços deste ativo ainda está sendo carregado."
+    "history_pending": "O histórico de preços deste ativo ainda está sendo carregado.",
+    "news_source_not_found": "Fonte de notícias não encontrada.",
+    "source_exists": "Já existe uma fonte com este endereço.",
+    "parent_source": "A fonte pai não pode ser alterada pela tela."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -388,7 +408,8 @@
     "calendar": "Calendário",
     "assets": "Ativos",
     "logoutLabel": "Sair da conta",
-    "portfolios": "Carteiras"
+    "portfolios": "Carteiras",
+    "news": "Notícias"
   },
   "calendar": {
     "title": "Calendário de pregão",
@@ -654,7 +675,26 @@
         "deposit": "Aporte",
         "withdrawal": "Retirada",
         "buy": "Compra",
-        "sell": "Venda"
+        "sell": "Venda",
+        "income": "Provento"
+      },
+      "income": {
+        "kinds": {
+          "dividendo": "Dividendo",
+          "jcp": "JCP",
+          "rendimento": "Rendimento",
+          "amortizacao": "Amortização"
+        },
+        "fraction": "Venda de fração",
+        "detail": "{{quantity}} {{ticker}} × {{perShare}} (data com {{exDate}})",
+        "tax": "bruto {{gross}}, IR {{tax}}",
+        "fractionDetail": "{{shares}} {{ticker}} a {{price}}",
+        "source": "Fonte: Investidor10",
+        "pendingTitle": "A receber",
+        "pendingOn": "{{kind}} {{ticker}}: {{amount}} em {{date}}",
+        "pendingNoDate": "{{kind}} {{ticker}}: {{amount}}, sem data de pagamento",
+        "disabled": "Proventos desligados: o caixa não conta os dividendos.",
+        "negative": "O caixa ficou negativo porque um provento deixou de constar da fonte. Só dá para aportar até ele voltar ao positivo."
       },
       "showMore": "Mostrar mais",
       "count_one": "{{shown}} de {{count}} lançamento",
@@ -691,6 +731,68 @@
         "breaksPosition": "Esse estorno deixaria a venda de {{quantity}} {{ticker}} de {{date}} maior que a posição. Estorne essa venda antes."
       }
     },
+    "performance": {
+      "title": "Rentabilidade",
+      "periodLabel": "Período",
+      "periods": {
+        "1m": "1 mês",
+        "6m": "6 meses",
+        "12m": "12 meses",
+        "ytd": "No ano",
+        "all": "Desde o início",
+        "custom": "Personalizado"
+      },
+      "from": "De",
+      "to": "Até",
+      "apply": "Aplicar",
+      "loading": "Calculando a rentabilidade…",
+      "empty": "Faça um aporte para ver a rentabilidade.",
+      "range": "De {{from}} a {{to}}",
+      "return": "Rentabilidade",
+      "result": "Resultado",
+      "equity": "Patrimônio",
+      "flows": "Patrimônio no início: {{start}}; aportes menos retiradas no período: {{flows}}.",
+      "chartLabel": "Evolução do patrimônio",
+      "legendEquity": "Patrimônio",
+      "legendInvested": "Total aportado",
+      "tooltipInvested": "Aportado: {{amount}}",
+      "cursor": "{{date}}: patrimônio {{equity}}, aportado {{invested}}, rentabilidade {{return}}",
+      "weekly": "Um ponto por semana.",
+      "note": "Rentabilidade pela cota: aportes e retiradas não mudam a %, e os proventos contam como ganho. Preços: fechamento da B3 e, hoje, a cotação do pregão; sem custos de operação.",
+      "jump": "{{ticker}} teve um salto de preço em {{date}} sem desdobramento ou grupamento conhecido: o resultado pode estar errado.",
+      "noClose": "{{ticker}} não tem fechamento até {{date}}: até lá, vale o preço da compra.",
+      "chartMode": "Gráfico",
+      "chartModes": {
+        "money": "Em reais",
+        "percent": "Em %"
+      },
+      "legendPortfolio": "Carteira",
+      "returnChartLabel": "Rentabilidade da carteira e das referências",
+      "returnCursor": "{{date}}: {{values}}",
+      "noData": "sem dado",
+      "benchmarks": {
+        "title": "No mesmo período",
+        "cdi": "CDI",
+        "ibov": "Ibovespa",
+        "ifix": "IFIX",
+        "until": "até {{date}}",
+        "notLoaded": {
+          "bcb": "ainda não carregado: o processador busca no Banco Central",
+          "b3": "ainda não carregado: o processador busca na B3"
+        },
+        "share": "Sua carteira rendeu {{share}}% do CDI.",
+        "note": "Rentabilidade acumulada de cada referência desde o fechamento de {{date}}, na mesma régua da carteira. Fontes: CDI, Banco Central; Ibovespa, B3.",
+        "noteIfix": "Rentabilidade acumulada de cada referência desde o fechamento de {{date}}, na mesma régua da carteira. Fontes: CDI, Banco Central; Ibovespa e IFIX, B3.",
+        "wouldHave": "teria {{amount}}"
+      },
+      "compare": "Comparar com os índices",
+      "sameMoney": {
+        "cdi": "No CDI",
+        "ibov": "No Ibovespa",
+        "ifix": "No IFIX"
+      },
+      "sameMoneyNote": "Linhas dos índices: o mesmo dinheiro da carteira (o patrimônio no início do período, com os aportes e retiradas nos mesmos dias) aplicado em cada índice."
+    },
     "positions": {
       "title": "Posições",
       "loading": "Carregando as posições…",
@@ -701,7 +803,9 @@
       "totals": {
         "cash": "Caixa",
         "positions": "Em ativos",
-        "total": "Total"
+        "total": "Total",
+        "income": "Proventos recebidos",
+        "pending": "A receber"
       },
       "columns": {
         "asset": "Ativo",
@@ -715,17 +819,92 @@
       "closeOf": "Fechamento de {{date}}",
       "noPrice": "Sem preço",
       "changeNote": "Variação sobre o preço médio, sem custos de operação nem proventos.",
-      "dividendsNote": "Proventos e desdobramentos ainda não entram nesta carteira.",
+      "dividendsNote": "Proventos entram no caixa na data de pagamento, para quem tinha o ativo no fim da data com (JCP já sem o IR); desdobramentos, grupamentos e bonificações corrigem a quantidade e o preço médio. Fonte dos proventos: Investidor10.",
+      "incomeDisabled": "Proventos desligados: o caixa não conta os dividendos. Desdobramentos, grupamentos e bonificações continuam corrigindo a quantidade.",
+      "incomeReceived": "Proventos recebidos: {{amount}}",
+      "incomeNotLoaded": "Proventos deste ativo ainda não carregados.",
+      "nextPayment": "Próximo: {{amount}} em {{date}}",
+      "eventApplied": "{{event}} em {{date}}: {{before}} → {{after}}",
       "bought": "Compra registrada: {{quantity}} {{ticker}}.",
       "sold": "Venda registrada: {{quantity}} {{ticker}}.",
       "at": "às {{time}}",
       "priceNote": "Último preço: a cotação do pregão, com atraso de até {{delay}} minutos; sem ela, o último fechamento.",
-      "eventWarning": "Teve {{event}} em {{date}}: o valor atual ainda não considera isso.",
       "event": {
-        "split": "desdobramento",
-        "reverse_split": "grupamento",
-        "bonus": "bonificação"
+        "split": "Desdobramento",
+        "reverse_split": "Grupamento",
+        "bonus": "Bonificação"
       }
+    },
+    "allocation": {
+      "title": "Distribuição",
+      "classes": {
+        "stock": "Ações",
+        "fii": "FIIs",
+        "cash": "Caixa"
+      },
+      "byClass": {
+        "stock": "Ações por setor",
+        "fii": "FIIs por segmento"
+      },
+      "shares": {
+        "stock": "{{ofClass}} das ações · {{ofTotal}} da carteira",
+        "fii": "{{ofClass}} dos FIIs · {{ofTotal}} da carteira"
+      },
+      "assetShare": "{{share}} da carteira",
+      "empty": "Compre um ativo para ver a distribuição por setor.",
+      "negativeCash": "Caixa negativo: {{amount}}. A distribuição considera só os ativos.",
+      "atCost_one": "{{tickers}} entrou pelo custo: ainda sem preço.",
+      "atCost_other": "{{tickers}} entraram pelo custo: ainda sem preço.",
+      "note": "Valores de hoje, como nas posições. Setores das ações pela classificação da B3; segmentos dos FIIs sugeridos a partir do Investidor10, conferidos pela equipe."
+    },
+    "compare": {
+      "start": "Comparar carteiras",
+      "intro": "Escolha de 2 a 4 carteiras para ver lado a lado.",
+      "max": "Até 4 carteiras",
+      "go": "Comparar ({{count}})",
+      "cancel": "Cancelar"
+    },
+    "comparison": {
+      "title": "Comparação",
+      "lead": "As carteiras lado a lado, no mesmo período.",
+      "loading": "Comparando as carteiras…",
+      "listLabel": "Carteiras comparadas",
+      "open": "Abrir {{name}}",
+      "types": {
+        "live": "Simulação ao vivo",
+        "historical": "Simulação histórica"
+      },
+      "returnTitle": "Rentabilidade",
+      "common": "Em comum",
+      "commonHint": "Em comum: desde o início da carteira mais nova, o trecho em que todas existem.",
+      "chartLabel": "Rentabilidade das carteiras",
+      "cursor": "{{date}}: {{values}}",
+      "noChart": "O gráfico aparece com pelo menos dois pregões no período.",
+      "benchmarksNote": "Cada referência desde o fechamento de {{date}}, o mesmo dia para todas as carteiras. Fontes: CDI, Banco Central; Ibovespa, B3.",
+      "benchmarksNoteIfix": "Cada referência desde o fechamento de {{date}}, o mesmo dia para todas as carteiras. Fontes: CDI, Banco Central; Ibovespa e IFIX, B3.",
+      "note": "Cada carteira pela cota, desde o início dela no período: aportes e retiradas não mudam a %, e os proventos contam como ganho. Preços: fechamento da B3 e, hoje, a cotação do pregão; sem custos de operação.",
+      "summary": {
+        "title": "Resumo",
+        "type": "Tipo",
+        "start": "Início",
+        "endValue": "Patrimônio no fim",
+        "netFlows": "Aportes líquidos no período",
+        "result": "Resultado no período",
+        "return": "Rentabilidade da cota",
+        "cdiShare": "% do CDI",
+        "cdiShareValue": "{{share}}% do CDI",
+        "startedOn": "começou em {{date}}",
+        "empty": "Sem lançamentos no período",
+        "none": "sem valor"
+      },
+      "composition": {
+        "title": "Composição de hoje",
+        "note": "Em % do patrimônio de cada carteira hoje, como na Distribuição. \"—\": a carteira não tem nada ali.",
+        "empty": "Nenhuma das carteiras tem patrimônio hoje.",
+        "none": "nada"
+      },
+      "historicalNote": "Simulação histórica: resultado calculado com dados já conhecidos.",
+      "backToComparison": "Voltar para a comparação"
     },
     "trade": {
       "buyTitle": "Comprar",
@@ -1075,6 +1254,72 @@
       "lastRun": "Importação da B3 {{when}} · novos: {{created}} · desativados: {{deactivated}} · reativados: {{reactivated}}",
       "failed": "A última importação falhou: a lista da brapi não respondeu. O catálogo não mudou; ela roda de novo no próximo horário.",
       "b3Behind": "Os arquivos da B3 estavam atrasados: ninguém foi desativado nesta importação."
+    }
+  },
+  "news": {
+    "title": "Fontes de notícias",
+    "subtitle": "A fonte pai (Investidor10) e as fontes curadas por RSS ou Atom. O processador coleta as notícias novas a cada 30 minutos.",
+    "loading": "Carregando as fontes…",
+    "parentDisabled": "A coleta do Investidor10 está desligada (INVESTIDOR10_ENABLED=false); as fontes curadas continuam.",
+    "archiveRunning": "Arquivo do Investidor10: {{done}} de {{total}} notícias (atualizado em {{date}}).",
+    "archiveDone": "Arquivo do Investidor10 completo: {{done}} de {{total}} notícias (conferido em {{date}}).",
+    "columns": {
+      "source": "Fonte",
+      "category": "Categoria",
+      "reliability": "Confiabilidade",
+      "lastRun": "Última coleta",
+      "news": "Notícias",
+      "actions": "Ações"
+    },
+    "categories": {
+      "economia": "Economia",
+      "mercado": "Mercado",
+      "empresas": "Empresas",
+      "internacional": "Internacional"
+    },
+    "reliabilityValue": "{{value}} de 5",
+    "parentNote": "Fonte pai: não pode ser desativada",
+    "inactive": "Desativada",
+    "never": "Ainda não coletada",
+    "ok": "Com sucesso",
+    "failed": "Com erro",
+    "problem_one": "Com problema: {{count}} falha seguida",
+    "problem_other": "Com problema: {{count}} falhas seguidas",
+    "activate": "Ativar",
+    "deactivate": "Desativar",
+    "activateLabel": "Ativar a fonte {{name}}",
+    "deactivateLabel": "Desativar a fonte {{name}}",
+    "activated": "Fonte {{name}} ativada.",
+    "deactivated": "Fonte {{name}} desativada.",
+    "new": "Nova fonte",
+    "newTitle": "Nova fonte curada",
+    "fields": {
+      "name": "Nome",
+      "url": "Endereço do feed (RSS ou Atom)",
+      "urlHint": "Só endereços https públicos. O feed é testado antes de gravar.",
+      "category": "Categoria",
+      "reliability": "Confiabilidade",
+      "reliabilityHint": "De 1 (pouco confiável) a 5 (muito confiável), pelo critério da equipe.",
+      "choose": "Escolha",
+      "license": "Conferi que a licença da fonte permite o uso neste projeto"
+    },
+    "save": "Testar e cadastrar",
+    "testing": "Testando o feed…",
+    "cancel": "Cancelar",
+    "created_one": "Fonte {{name}} cadastrada: {{count}} notícia no feed.",
+    "created_other": "Fonte {{name}} cadastrada: {{count}} notícias no feed.",
+    "latest": {
+      "title": "Últimas notícias",
+      "loading": "Carregando as notícias…",
+      "linked": "Com ativo vinculado: {{linked}} de {{total}} notícias.",
+      "empty": "Nenhuma notícia coletada ainda.",
+      "assets": "Ativos da notícia",
+      "noLinks": "Sem ativo vinculado",
+      "relevance": {
+        "principal": "Principal",
+        "citado": "Citado",
+        "lista": "Lista"
+      }
     }
   }
 }
