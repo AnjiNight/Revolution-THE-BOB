@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | ⏳ Escrita em 16/11/2026, a pedido do Luís, **aguardando a aprovação** (§4.1) |
+| Status | ✅ Escrita em 16/11/2026 a pedido do Luís, aprovada como escrita, com as recomendações do §4.1 ("pode implementar", 16/11/2026), e implementada (§9) |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)), a última da fase que faltava; escrita depois das Fases 3 e 5 por ser *Could* |
 | Prioridade | Could (RF40) |
 | Depende de | [SPEC-002](SPEC-002.md) (colaborador), [SPEC-008](SPEC-008.md) (registro das execuções), [SPEC-009](SPEC-009.md) (coleta do pregão e cota); usa as tarefas das SPECs [005](SPEC-005.md), [007](SPEC-007.md), [020](SPEC-020.md), [040](SPEC-040.md), [041](SPEC-041.md) e [042](SPEC-042.md) |
@@ -160,6 +160,36 @@ A migração tem `down.sql` (RNF17) e passa no `npm run db:check`. No `modelo_do
 
 | ID | Situação |
 |---|---|
-| OPEN-40 | Proposta na decisão 5 do §4.1: execuções, erros e pedidos atendidos por 90 dias, guardando a última execução de cada tarefa. Fica resolvida com a aprovação |
+| OPEN-40 | ✅ Resolvida com a aprovação (16/11/2026), pela decisão 5 do §4.1: execuções, erros e pedidos atendidos por 90 dias, guardando a última execução de cada tarefa |
 | OPEN-43 | O diagrama de casos de uso continua sem o caso "Monitorar a ingestão"; fica para a atualização do diagrama |
 | Hospedagem | Com o servidor e o processador em máquinas diferentes, os 15 segundos e os 3 minutos continuam valendo: os dois só conversam pelo banco |
+
+## 9. Verificação (16/11/2026)
+
+**Ajustes da implementação:**
+
+| Tema | Ajuste |
+|---|---|
+| Nomes na resposta | `GET /api/collaborator/tasks` devolve `sources` (uma lista: a importação do catálogo usa a brapi e a B3), `runningSince`, `pendingRequestAt` e `blockedReason` (`running`, `requested` ou `source_disabled`; `null` quando dá para pedir), no lugar de `source`, `running`, `pendingRequest` e `canRequest`. No histórico, quem pediu vem em `request`: `{ name }` (com `name` nulo se a conta saiu) ou `null` quando a execução não veio de um pedido. Os tipos ficam em `packages/shared/src/tasks.ts` |
+| Processador parado | `estado_processador` guarda também `intervalo_segundos` (o `WORKER_HEARTBEAT_SECONDS`). Parado é sem sinal há mais de 3 minutos **ou** há mais de três batidas, o que for maior: com um intervalo configurado acima de 1 minuto, o processador ligado não aparece como parado |
+| Horários num lugar só | `INGESTION_SCHEDULE` (`api/src/modules/market-data/domain/task-schedule.ts`) tem a fonte e quando cada tarefa roda; o processador agenda por ele (`workerTiming`) e o servidor o mostra. O CDI e os índices viraram uma tarefa agendada cada, com os dois horários |
+| Uma execução por vez | O processador guarda numa lista só as tarefas que estão rodando, pelo horário ou por pedido: o pedido com a tarefa rodando espera a vez, e o horário não começa outra execução enquanto a do pedido roda. O pedido de uma tarefa que o processador não conhece (uma versão mais antiga dele) é marcado como atendido, sem rodar nada |
+| O que cada "Executar agora" chama | O Investidor10 roda com o escopo `retry` (os nunca visitados e os que deram erro na última visita). A cotação do pregão, com `collect({ force: true })`: só dentro do pregão (das 10:30 até meia hora depois do fechamento), sem esperar o próximo horário de 30 minutos, mas conferindo o calendário e a proteção da cota. Os eventos corporativos rodam mesmo fora do domingo. As outras fazem o que fariam no horário |
+| Relógios de duas máquinas | A restrição "atendido depois de pedido" saiu da migração: o pedido é gravado com o relógio do servidor e atendido com o do processador, que na hospedagem podem estar em máquinas diferentes |
+| Tela | Os horários das tarefas seguem o idioma ("09:00 AM" em inglês). "0 registros" no plural: em português, o i18next trata 0 como singular, e a forma `_zero` corrige. Depois do **Executar agora**, o foco vai para a linha "Pedido enviado…" do próprio cartão (o botão fica desativado, e a página não pula para o aviso do topo). Com 640 px ou menos, as execuções do histórico viram cartões, com o rótulo na linha do valor |
+| Início do colaborador | "Tarefas de dados" entra em "Disponível agora", e o bloco "O que vem por aí" do colaborador sai (ele só tinha o acompanhamento da coleta) |
+| Testes | Os ids das execuções falsas (`InMemoryTaskRuns`) viraram UUID, porque a rota dos erros confere o formato |
+| Pré-visualização | A ponte falsa (`app/.previa`, fora do Git) ganhou as tarefas: `?processor=stopped` e `?processor=never`, e o "Executar agora" passa por pedido enviado, em andamento e terminada (a cotação do pregão termina em "nada a fazer") |
+
+| Critério | Resultado |
+|---|---|
+| CA01 | ✅ `task-routes.test.ts`: as 9 tarefas, as com falha ou parcial primeiro, com a fonte e quando rodam. `prisma-task-monitor.db.test.ts`: de cada tarefa, a última execução terminada e a que está em andamento. Pré-visualização: o processador no topo; o fechamento diário parcial e o Investidor10 com falha primeiro; cada situação com ícone e texto, além da cor ("Parcial", "Falha", "Aguardando publicação"); "hoje às 08:00 · 47 s · 709 registros · 709 ativos · 3 erros" |
+| CA02 | ✅ `task-routes.test.ts`: histórico 50 por vez, com quem pediu; erros 100 por vez, com o ticker. `prisma-task-monitor.db.test.ts`: período, cota e totais; os erros sem dia primeiro. Pré-visualização: "50 de 60 execuções" e, no **Mostrar mais**, "60 de 60"; os 22 totais conhecidos com nome nos dois idiomas; **Ver os 3 erros** com o ticker, o dia e a mensagem, que com o app em inglês continua em português, marcada com `lang="pt-BR"` |
+| CA03 | ✅ `task-routes.test.ts`: o pedido gravado com quem pediu (202), o segundo recusado (409 `run_already_requested`), e recusado com a tarefa rodando (`run_in_progress`) e com o Investidor10 desligado (`source_disabled`, com o motivo na lista). `worker.test.ts`: atendido em até 15 s com o "Executar agora" da tarefa; com a tarefa rodando, o pedido espera. `prisma-task-monitor.db.test.ts`: um pendente por tarefa; atendido com a execução ou com "nada a fazer". `intraday-collection.test.ts` e `investidor10-collection.test.ts`: as duas exceções do §4.1. Pré-visualização: "Pedido enviado hoje às 20:27, aguardando o processador." com o botão desativado e "Já há um pedido aguardando."; depois, "Execução terminada: Investidor10 (indicadores e proventos), sucesso, 38 registros."; na cotação do pregão, "nada a fazer agora. Fora do horário do pregão, ou sem cota." ⏳ Ver com o processador de verdade (ligar só combinando antes) |
+| CA04 | ✅ `worker.test.ts`: o sinal de vida a cada batida, com o intervalo; uma falha ao gravar não derruba o processador. `task-routes.test.ts`: ligado com sinal recente, parado depois de 3 minutos. `prisma-task-monitor.db.test.ts`: uma linha só, sempre o último sinal; ao iniciar, a execução sem fim vira falha com "Interrompida: o processador parou antes de terminar". Pré-visualização: "Parado desde hoje às 14:05." com a explicação, e no Início "processador parado desde hoje às 14:05" |
+| CA05 | ✅ `prisma-task-monitor.db.test.ts`: saem as execuções (com os erros) e os pedidos atendidos com mais de 90 dias, menos a última execução de cada tarefa; o pedido pendente fica. A cota da brapi conta as consultas desde o início do ciclo (no máximo um mês) e os eventos corporativos olham a última execução, que sempre fica |
+| CA06 | ✅ `task-routes.test.ts`: usuário 403, sem sessão 401, tarefa desconhecida 404 `task_not_found`, execução que não existe (ou com id fora do formato) 404 `run_not_found` |
+| CA07 | ✅ Pré-visualização: o painel "Tarefas de dados" no Início ("processador ligado · 2 tarefas com falha", em âmbar, com **Abrir as tarefas**); a tela se atualiza a cada 15 s e anuncia o fim do pedido (região `role="status"`); em inglês ("Data tasks", "Every day at 09:00 AM and 06:00 PM", "Run now"); pelo teclado (Enter no **Executar agora** leva o foco para "Pedido enviado…", com contorno); a 480 px, sem rolagem lateral, com o histórico e os erros em cartões; temas claro e escuro, com os tons de sucesso, aviso e erro que o app já usa. `tasks.test.ts`: a duração, os horários no idioma, o "hoje às" no horário de Brasília e o "há 40 segundos". ⏳ Ver no Electron |
+| CA08 | ✅ Migração `20261116180000_monitoramento_tarefas` com `down.sql`, desfeita e refeita no banco de teste; `npm run db:check` sem diferença; aplicada no banco de desenvolvimento. `modelo_dominio.md` (EXECUCAO_TAREFA, ERRO_EXECUCAO, PEDIDO_EXECUCAO e ESTADO_PROCESSADOR) e o mapa v1.57 (OPEN-40 resolvida) |
+
+Total: **1.082 testes** passando (25 novos), com o banco de teste, mais lint, tipos e formatação.

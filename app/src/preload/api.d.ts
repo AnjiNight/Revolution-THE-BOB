@@ -26,6 +26,9 @@ import type {
   PortfolioList,
   PriceHistory,
   PriceHistoryPeriod,
+  TaskErrorPage,
+  TaskList,
+  TaskRunPage,
   TradingCalendarYear,
   UserProfile,
 } from '@simulador/shared';
@@ -153,6 +156,16 @@ export interface DesktopApi {
     comparison(query: ComparisonQuery): Promise<ClientResult<PortfolioComparison>>;
     /** SPEC-023: nova carteira a partir desta; `copy_breaks_cash` traz em details a retirada. */
     copy(id: string, input: NewPortfolioCopyInput): Promise<ClientResult<PortfolioCopyResult>>;
+  };
+  /** SPEC-011: as tarefas de ingestão, só colaborador (403 para usuário). */
+  tasks: {
+    list(): Promise<ClientResult<TaskList>>;
+    /** O histórico da tarefa, 50 por vez a partir de `offset`. */
+    runs(task: string, offset?: number): Promise<ClientResult<TaskRunPage>>;
+    /** Os erros de uma execução, 100 por vez a partir de `offset`. */
+    errors(runId: string, offset?: number): Promise<ClientResult<TaskErrorPage>>;
+    /** "Executar agora": o processador atende o pedido em até 15 segundos. */
+    request(task: string): Promise<ClientResult<null>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto

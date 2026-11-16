@@ -52,6 +52,15 @@ export class PrismaFundamentalsRepository implements FundamentalsRepository {
     return new Set(rows.map((row) => row.ativoId));
   }
 
+  /** SPEC-011: a última visita deu erro; "Executar agora" visita de novo. */
+  async failedAssets(): Promise<Set<string>> {
+    const rows = await this.prisma.coletaInvestidor10.findMany({
+      where: { situacao: 'erro' },
+      select: { ativoId: true },
+    });
+    return new Set(rows.map((row) => row.ativoId));
+  }
+
   async save(collection: AssetCollection, at: Date): Promise<void> {
     const ativoId = collection.assetId;
     const indicators = [

@@ -38,6 +38,7 @@ import {
   isAppLanguage,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
+  TASK_CHANNELS,
   type AppLanguage,
   type ConnectionEvent,
 } from '../shared/auth-ipc.js';
@@ -281,6 +282,16 @@ app.whenReady().then(() => {
   ipcMain.handle(PORTFOLIO_CHANNELS.copy, (_event, id: string, input: NewPortfolioCopyInput) =>
     auth.copyPortfolio(id, input),
   );
+
+  // Tarefas de ingestão (SPEC-011): o servidor confere se a conta é de colaborador.
+  ipcMain.handle(TASK_CHANNELS.list, () => auth.listTasks());
+  ipcMain.handle(TASK_CHANNELS.runs, (_event, task: string, offset?: number) =>
+    auth.taskRuns(task, offset),
+  );
+  ipcMain.handle(TASK_CHANNELS.errors, (_event, runId: string, offset?: number) =>
+    auth.runErrors(runId, offset),
+  );
+  ipcMain.handle(TASK_CHANNELS.request, (_event, task: string) => auth.requestTaskRun(task));
 
   // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.
   ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());

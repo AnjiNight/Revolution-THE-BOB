@@ -56,6 +56,8 @@ model Usuario {
   tokensRenovacao TokenRenovacao[]
   codigosEmail    CodigoEmail[]
   carteiras       Carteira[]
+  /// SPEC-011: execuções que o colaborador pediu.
+  pedidosExecucao PedidoExecucao[]
 
   @@map("usuario")
 }
@@ -536,7 +538,9 @@ model ExecucaoTarefa {
   /// SPEC-040: totais que não cabem em "registros" (importação: criados, desativados, logos...).
   totais         Json?             @db.JsonB
 
-  erros ErroExecucao[]
+  erros   ErroExecucao[]
+  /// SPEC-011: o pedido do colaborador que esta execução atendeu.
+  pedidos PedidoExecucao[]
 
   @@index([tarefa, iniciadaEm])
   @@map("execucao_tarefa")
@@ -554,6 +558,43 @@ model ErroExecucao {
 
   @@index([execucaoId])
   @@map("erro_execucao")
+}
+
+/// SPEC-011: o resultado de um pedido de execução, depois de atendido.
+enum ResultadoPedido {
+  executada
+  nada_a_fazer
+
+  @@map("resultado_pedido")
+}
+
+/// SPEC-011: o colaborador pede uma execução e o processador atende (confere a cada 15 s). Um
+/// pedido pendente por tarefa (índice único parcial na migração); atendido sempre com o resultado.
+model PedidoExecucao {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tarefa        TarefaIngestao
+  pedidoEm      DateTime         @map("pedido_em") @db.Timestamptz(3)
+  /// Nulo se a conta do colaborador for removida pela equipe.
+  colaboradorId String?          @map("colaborador_id") @db.Uuid
+  atendidoEm    DateTime?        @map("atendido_em") @db.Timestamptz(3)
+  /// A execução que atendeu o pedido; nula quando não havia nada a fazer.
+  execucaoId    String?          @map("execucao_id") @db.Uuid
+  resultado     ResultadoPedido?
+
+  colaborador Usuario?        @relation(fields: [colaboradorId], references: [id], onDelete: SetNull)
+  execucao    ExecucaoTarefa? @relation(fields: [execucaoId], references: [id], onDelete: SetNull)
+
+  @@index([atendidoEm])
+  @@map("pedido_execucao")
+}
+
+/// SPEC-011: o sinal de vida do processador, uma linha só (id = 1), com o intervalo dele.
+model EstadoProcessador {
+  id                Int      @id @default(1) @db.SmallInt
+  vistoEm           DateTime @map("visto_em") @db.Timestamptz(3)
+  intervaloSegundos Int      @map("intervalo_segundos")
+
+  @@map("estado_processador")
 }
 
 /// Nível da cotação (DA16): o gratuito tem atraso de ~30 minutos; o assinante vem na SPEC-026.

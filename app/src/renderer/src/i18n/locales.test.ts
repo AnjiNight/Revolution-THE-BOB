@@ -74,6 +74,12 @@ describe('arquivos de idioma (CA13)', () => {
       'asset_not_found',
       // SPEC-032: leitura nunca aberta neste computador, sem conexão.
       'not_saved_offline',
+      // SPEC-011: tarefas de dados.
+      'task_not_found',
+      'run_not_found',
+      'run_already_requested',
+      'run_in_progress',
+      'source_disabled',
     ];
     const fieldErrors: FieldErrorCode[] = [
       'required',

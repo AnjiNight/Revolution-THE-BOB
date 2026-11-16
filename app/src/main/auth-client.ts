@@ -7,6 +7,7 @@ import {
   FUNDAMENTALS_PATHS,
   INDEX_PATHS,
   isDividendPeriod,
+  isIngestionTask,
   isPriceHistoryPeriod,
   parseCalendarYear,
   PORTFOLIO_PATHS,
@@ -14,6 +15,9 @@ import {
   portfolioPath,
   portfolioSubPath,
   PROFILE_PATHS,
+  runPath,
+  TASK_PATHS,
+  taskPath,
   TERMS_VERSION,
   type AccountDeletionConfirmInput,
   type AccountDeletionRequestInput,
@@ -70,6 +74,10 @@ import {
   type PublicUser,
   type RegisterInput,
   type RenamePortfolioInput,
+  type TaskErrorCode,
+  type TaskErrorPage,
+  type TaskList,
+  type TaskRunPage,
   type TokenPair,
   type TradingCalendarYear,
   type UpdateNameInput,
@@ -113,7 +121,12 @@ const UNREACHABLE_STATUSES = new Set([502, 503, 504]);
 type FreshRead = { notModified: true } | { notModified: false; text: string; etag: string | null };
 
 const KNOWN_ERRORS: ReadonlyArray<
-  AuthErrorCode | CalendarErrorCode | CatalogErrorCode | FundamentalsErrorCode | PortfolioErrorCode
+  | AuthErrorCode
+  | CalendarErrorCode
+  | CatalogErrorCode
+  | FundamentalsErrorCode
+  | PortfolioErrorCode
+  | TaskErrorCode
 > = [
   'validation_error',
   'email_in_use',
@@ -157,6 +170,11 @@ const KNOWN_ERRORS: ReadonlyArray<
   'reversal_breaks_position',
   'no_close_that_day',
   'history_pending',
+  // SPEC-011
+  'task_not_found',
+  'run_not_found',
+  'run_already_requested',
+  'run_in_progress',
 ];
 
 class RequestFailed extends Error {
@@ -646,6 +664,42 @@ export class AuthClient {
     });
   }
 
+  // --- Tarefas de ingestão (SPEC-011), só colaborador ---
+
+  /** As 9 tarefas e o estado do processador. */
+  listTasks(): Promise<ClientResult<TaskList>> {
+    return this.call(() => this.authorizedRequest<TaskList>('GET', TASK_PATHS.list));
+  }
+
+  /** O histórico de uma tarefa, 50 por vez a partir de `offset`. */
+  taskRuns(task: string, offset = 0): Promise<ClientResult<TaskRunPage>> {
+    return this.call(() => {
+      if (!isIngestionTask(task)) throw new RequestFailed('unexpected');
+      const path = taskPath(TASK_PATHS.runs, task);
+      return this.authorizedRequest<TaskRunPage>('GET', withOffset(path, offset));
+    });
+  }
+
+  /** Os erros de uma execução, 100 por vez a partir de `offset`. */
+  runErrors(runId: string, offset = 0): Promise<ClientResult<TaskErrorPage>> {
+    return this.call(() => {
+      if (typeof runId !== 'string' || !UUID_PATTERN.test(runId)) {
+        throw new RequestFailed('unexpected');
+      }
+      const path = runPath(TASK_PATHS.errors, runId);
+      return this.authorizedRequest<TaskErrorPage>('GET', withOffset(path, offset));
+    });
+  }
+
+  /** "Executar agora": grava o pedido, que o processador atende (202, sem nada a devolver aqui). */
+  requestTaskRun(task: string): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      if (!isIngestionTask(task)) throw new RequestFailed('unexpected');
+      await this.authorizedRequest('POST', taskPath(TASK_PATHS.requests, task));
+      return null;
+    });
+  }
+
   /** Colaborador (SPEC-041): situação da coleta do Investidor10. */
   investidor10Status(): Promise<ClientResult<Investidor10Status>> {
     return this.call(() =>
@@ -1093,6 +1147,11 @@ function withQuery(path: string, query: AssetSearchQuery | CatalogQuery): string
   }
   const text = params.toString();
   return text ? `${path}?${text}` : path;
+}
+
+/** SPEC-011: só um inteiro positivo entra como `offset`. */
+function withOffset(path: string, offset: number): string {
+  return Number.isSafeInteger(offset) && offset > 0 ? `${path}?offset=${offset}` : path;
 }
 
 /** O id da carteira vem da interface: só um UUID entra no caminho da rota. */

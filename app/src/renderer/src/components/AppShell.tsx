@@ -23,7 +23,8 @@ export interface ShellConnection {
 interface AppShellProps {
   connection?: ShellConnection;
   user: PublicUser;
-  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios';
+  /** SPEC-011: a tela Tarefas não tem item no menu (abre pelo Início). */
+  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'tasks';
   onHome: () => void;
   /** SPEC-012: só para o usuário. */
   onPortfolios: () => void;

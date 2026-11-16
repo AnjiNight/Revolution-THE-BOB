@@ -23,8 +23,10 @@ import {
   InMemoryFundamentals,
   InMemoryIndexRates,
   InMemoryMarketIndexes,
+  InMemoryTaskMonitor,
   InMemoryTaskRuns,
 } from '../../market-data/testing/fakes.js';
+import { TaskMonitorService } from '../../market-data/application/task-monitor-service.js';
 import { MarketIndexStatusService } from '../../market-data/application/market-index-status-service.js';
 import { AssetCatalogService } from '../../asset-catalog/application/asset-catalog-service.js';
 import { InMemoryAssetRepository } from '../../asset-catalog/testing/fakes.js';
@@ -155,6 +157,10 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
         ledger: new InMemoryLedgerRepository(),
         calendar: new CalendarService({ calendars: new InMemoryCalendarRepository() }),
         market: new FakePortfolioMarket(),
+      }),
+      tasks: new TaskMonitorService({
+        monitor: new InMemoryTaskMonitor(new InMemoryTaskRuns()),
+        investidor10Enabled: false,
       }),
     });
     return { app, mailer, background };

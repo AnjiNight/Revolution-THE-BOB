@@ -140,6 +140,24 @@ describe('cotações do pregão pela lista da brapi (SPEC-009 e 040)', () => {
       expect(await collection.collect()).toMatchObject({ records: 2 });
       expect(runs.runs).toHaveLength(2);
     });
+
+    it('SPEC-011: "Executar agora" coleta de novo a mesma vez, só no horário do pregão', async () => {
+      expect(await collection.collect()).not.toBeNull();
+      now = at('11:50');
+      expect(await collection.collect()).toBeNull(); // a vez das 11:30 já foi coletada
+      expect(await collection.collect({ force: true })).toMatchObject({ records: 2 });
+      expect(runs.runs).toHaveLength(2);
+      // 03/11/2026: fechamento às 18:00, última vez às 18:30.
+      now = at('18:30');
+      expect(await collection.collect({ force: true })).not.toBeNull();
+      now = at('19:00');
+      expect(await collection.collect({ force: true })).toBeNull();
+      now = at('10:00');
+      expect(await collection.collect({ force: true })).toBeNull();
+      now = new Date('2026-11-07T15:00:00Z'); // sábado
+      expect(await collection.collect({ force: true })).toBeNull();
+      expect(runs.runs).toHaveLength(3);
+    });
   });
 
   describe('o que grava (CA08 da SPEC-040)', () => {

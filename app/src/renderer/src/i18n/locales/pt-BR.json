@@ -74,16 +74,10 @@
     "greeting": "Olá, {{name}}!",
     "next": "Sua conta está pronta. Já dá para buscar ações e FIIs; as carteiras de simulação chegam nas próximas versões.",
     "logout": "Sair",
-    "collaboratorNext": "Mantenha o calendário de pregão e o catálogo de ativos. O acompanhamento da coleta de dados chega nas próximas versões.",
+    "collaboratorNext": "Mantenha o calendário de pregão e o catálogo de ativos, e acompanhe as tarefas que trazem os dados para o app.",
     "profile": "Meu perfil",
     "upcomingTitle": "O que vem por aí",
     "soon": "Em breve",
-    "collabTools": {
-      "ingestion": {
-        "title": "Acompanhamento da coleta",
-        "text": "Ver as execuções e as falhas da coleta de cotações e notícias, e repetir quando precisar."
-      }
-    },
     "calendarReminder": {
       "missing": "O calendário de pregão de {{year}} não foi publicado. Sem ele, os lançamentos com datas desse ano ficam bloqueados.",
       "nextYear": "O calendário de pregão de {{year}} ainda não foi publicado. Publique até 31 de dezembro.",
@@ -132,11 +126,25 @@
       "assets": {
         "title": "Catálogo de ativos",
         "text": "Cadastre e mantenha as ações e os FIIs que os usuários encontram na busca."
+      },
+      "tasks": {
+        "title": "Tarefas de dados",
+        "text": "Veja como rodou cada tarefa que traz os dados, com os erros, e peça uma execução quando precisar."
       }
     },
     "firstPortfolio": {
       "text": "Você ainda não tem carteiras. Crie uma para começar a simular.",
       "create": "Criar carteira"
+    },
+    "tasks": {
+      "title": "Tarefas de dados",
+      "running": "processador ligado",
+      "stoppedSince": "processador parado desde {{when}}",
+      "neverSeen": "o processador ainda não deu sinal",
+      "allGood": "tudo em dia",
+      "failing_one": "{{count}} tarefa com falha",
+      "failing_other": "{{count}} tarefas com falha",
+      "open": "Abrir as tarefas"
     }
   },
   "profile": {
@@ -267,7 +275,11 @@
     "no_close_that_day": "O ativo não tem fechamento da B3 nesse dia.",
     "history_pending": "O histórico de preços deste ativo ainda está sendo carregado.",
     "copy_breaks_cash": "Sem as compras e vendas, uma retirada ficaria sem saldo.",
-    "not_saved_offline": "Ainda não consultado neste computador. Conecte-se para ver."
+    "not_saved_offline": "Ainda não consultado neste computador. Conecte-se para ver.",
+    "task_not_found": "Tarefa não encontrada.",
+    "run_not_found": "Execução não encontrada (as execuções com mais de 90 dias são apagadas).",
+    "run_already_requested": "Esta tarefa já tem um pedido aguardando o processador.",
+    "run_in_progress": "Esta tarefa está rodando agora. Peça de novo quando ela terminar."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -1294,6 +1306,142 @@
       "lastRun": "Importação da B3 {{when}} · novos: {{created}} · desativados: {{deactivated}} · reativados: {{reactivated}}",
       "failed": "A última importação falhou: a lista da brapi não respondeu. O catálogo não mudou; ela roda de novo no próximo horário.",
       "b3Behind": "Os arquivos da B3 estavam atrasados: ninguém foi desativado nesta importação."
+    }
+  },
+  "tasks": {
+    "title": "Tarefas de dados",
+    "subtitle": "As tarefas que trazem os dados para o app: como foi a última execução de cada uma, o histórico com os erros e o botão para rodar agora.",
+    "back": "Voltar para o início",
+    "loading": "Carregando…",
+    "names": {
+      "calendario_b3": "Calendário pelos arquivos da B3",
+      "historico_retroativo": "Histórico retroativo",
+      "fechamento_diario": "Fechamento diário",
+      "importacao_catalogo": "Importação do catálogo",
+      "cdi_diario": "CDI",
+      "indices_b3": "Índices da B3 (Ibovespa e IFIX)",
+      "investidor10": "Investidor10 (indicadores e proventos)",
+      "eventos_b3": "Eventos corporativos e setores",
+      "cotacao_pregao": "Cotações do pregão"
+    },
+    "sources": {
+      "b3": "B3",
+      "brapi": "brapi",
+      "bcb": "Banco Central",
+      "investidor10": "Investidor10"
+    },
+    "source_one": "Fonte: {{sources}}",
+    "source_other": "Fontes: {{sources}}",
+    "schedule": {
+      "daily": "Todo dia às {{times}}",
+      "weekly": "Aos domingos às {{times}}",
+      "every": "A cada {{minutes}} minutos",
+      "session": "A cada {{minutes}} minutos durante o pregão",
+      "sundaysAll": "(todos os ativos aos domingos; nos outros dias, só os novos)"
+    },
+    "status": {
+      "sucesso": "Sucesso",
+      "parcial": "Parcial",
+      "falha": "Falha",
+      "aguardando_publicacao": "Aguardando publicação",
+      "cota_esgotada": "Cota esgotada",
+      "running": "Em andamento"
+    },
+    "at": {
+      "today": "hoje às {{time}}",
+      "other": "{{date}} às {{time}}"
+    },
+    "runningSince": "desde {{when}}",
+    "records_one": "{{formatted}} registro",
+    "records_other": "{{formatted}} registros",
+    "records_zero": "{{formatted}} registros",
+    "assets_one": "{{formatted}} ativo",
+    "assets_other": "{{formatted}} ativos",
+    "assets_zero": "{{formatted}} ativos",
+    "errors_one": "{{formatted}} erro",
+    "errors_other": "{{formatted}} erros",
+    "errors_zero": "{{formatted}} erros",
+    "neverRan": "Ainda não rodou.",
+    "pending": "Pedido enviado {{when}}, aguardando o processador.",
+    "pendingStopped": "Ele só roda quando o processador for ligado.",
+    "runNow": "Executar agora",
+    "showHistory": "Ver histórico",
+    "hideHistory": "Esconder histórico",
+    "blocked": {
+      "running": "A tarefa está rodando.",
+      "requested": "Já há um pedido aguardando.",
+      "source_disabled": "Coleta desligada (sem a autorização do Investidor10)."
+    },
+    "requestSent": "Pedido enviado: {{name}}. O processador atende em até 15 segundos.",
+    "finished_one": "Execução terminada: {{name}}, {{status}}, {{formatted}} registro.",
+    "finished_other": "Execução terminada: {{name}}, {{status}}, {{formatted}} registros.",
+    "finished_zero": "Execução terminada: {{name}}, {{status}}, {{formatted}} registros.",
+    "nothing": "{{name}}: nada a fazer agora. {{reason}}",
+    "nothingReason": {
+      "calendario_b3": "Nenhum ano fechado para publicar.",
+      "historico_retroativo": "Nenhum ativo novo sem histórico.",
+      "fechamento_diario": "Nenhum pregão faltando.",
+      "importacao_catalogo": "Nada novo para importar.",
+      "cdi_diario": "Nenhum CDI faltando.",
+      "indices_b3": "Nenhum fechamento faltando.",
+      "investidor10": "Nenhum ativo novo nem com erro na última visita.",
+      "eventos_b3": "Nada a buscar agora.",
+      "cotacao_pregao": "Fora do horário do pregão, ou sem cota."
+    },
+    "processor": {
+      "title": "Processador",
+      "running": "Ligado, visto {{since}}.",
+      "stoppedSince": "Parado desde {{when}}.",
+      "never": "Ainda não deu sinal.",
+      "stoppedHint": "Sem o processador, nenhuma tarefa roda e nenhum pedido é atendido. Ligue o processador no servidor."
+    },
+    "historyTitle": "Histórico: {{name}}",
+    "historyCount_one": "{{shown}} de {{total}} execução",
+    "historyCount_other": "{{shown}} de {{total}} execuções",
+    "errorsCount_one": "{{shown}} de {{total}} erro",
+    "errorsCount_other": "{{shown}} de {{total}} erros",
+    "showMore": "Mostrar mais",
+    "columns": {
+      "started": "Início",
+      "status": "Situação",
+      "numbers": "Registros",
+      "details": "Detalhes",
+      "errors": "Erros"
+    },
+    "period": "Período: {{from}} a {{to}}",
+    "periodDay": "Dia: {{day}}",
+    "quota": "Consultas: {{requests}} (cota: {{remaining}} de {{limit}})",
+    "requests": "Consultas: {{formatted}}",
+    "requestedBy": "Pedida por {{name}}",
+    "requestedByRemoved": "Pedida por uma conta já removida",
+    "showErrors_one": "Ver o erro",
+    "showErrors_other": "Ver os {{formatted}} erros",
+    "hideErrors": "Esconder os erros",
+    "yes": "sim",
+    "no": "não",
+    "totals": {
+      "created": "Criados",
+      "deactivated": "Desativados",
+      "reactivated": "Reativados",
+      "logosSaved": "Logos baixados",
+      "logosMissing": "Sem logo",
+      "logoErrors": "Logos com erro",
+      "notRecent": "Sem negócio nos últimos 3 meses",
+      "outOfFormat": "Ticker fora do formato",
+      "mismatched": "Classe diferente na brapi e na B3",
+      "b3Behind": "Arquivo da B3 atrasado",
+      "published": "Anos publicados",
+      "checked": "Anos conferidos",
+      "classificacoes": "Classificações da B3",
+      "sugestoes": "Sugestões trocadas",
+      "missing": "Ativos fora da lista",
+      "missingTickers": "Fora da lista",
+      "visited": "Visitados",
+      "collected": "Coletados",
+      "noPage": "Sem página",
+      "layoutErrors": "Página sem a tabela",
+      "failed": "Com erro",
+      "stopped": "Parada no meio (403 ou 429)"
     }
   }
 }

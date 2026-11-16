@@ -74,16 +74,10 @@
     "greeting": "Hello, {{name}}!",
     "next": "Your account is ready. You can already search stocks and REITs (FIIs); simulation portfolios are coming in future versions.",
     "logout": "Sign out",
-    "collaboratorNext": "Keep the trading calendar and the asset catalog up to date. Data collection monitoring is coming in future versions.",
+    "collaboratorNext": "Keep the trading calendar and the asset catalog up to date, and follow the tasks that bring data into the app.",
     "profile": "My profile",
     "upcomingTitle": "What is coming",
     "soon": "Coming soon",
-    "collabTools": {
-      "ingestion": {
-        "title": "Data collection monitoring",
-        "text": "See the runs and failures of quote and news collection, and run them again when needed."
-      }
-    },
     "calendarReminder": {
       "missing": "The {{year}} trading calendar hasn't been published. Until it is, entries dated in that year are blocked.",
       "nextYear": "The {{year}} trading calendar hasn't been published yet. Publish it by December 31.",
@@ -132,11 +126,25 @@
       "assets": {
         "title": "Asset catalog",
         "text": "Add and maintain the stocks and REITs (FIIs) users find in the search."
+      },
+      "tasks": {
+        "title": "Data tasks",
+        "text": "See how each task that brings data ran, with its errors, and request a run when you need one."
       }
     },
     "firstPortfolio": {
       "text": "You don't have any portfolios yet. Create one to start simulating.",
       "create": "Create portfolio"
+    },
+    "tasks": {
+      "title": "Data tasks",
+      "running": "processor running",
+      "stoppedSince": "processor stopped since {{when}}",
+      "neverSeen": "the processor has not reported yet",
+      "allGood": "all up to date",
+      "failing_one": "{{count}} task failing",
+      "failing_other": "{{count}} tasks failing",
+      "open": "Open the tasks"
     }
   },
   "profile": {
@@ -267,7 +275,11 @@
     "no_close_that_day": "This asset has no B3 close on that day.",
     "history_pending": "This asset's price history is still being loaded.",
     "copy_breaks_cash": "Without the purchases and sales, a withdrawal would have no balance.",
-    "not_saved_offline": "Not viewed on this computer yet. Connect to see it."
+    "not_saved_offline": "Not viewed on this computer yet. Connect to see it.",
+    "task_not_found": "Task not found.",
+    "run_not_found": "Run not found (runs older than 90 days are deleted).",
+    "run_already_requested": "This task already has a request waiting for the processor.",
+    "run_in_progress": "This task is running now. Request it again when it finishes."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -1294,6 +1306,142 @@
       "lastRun": "B3 import {{when}} · new: {{created}} · deactivated: {{deactivated}} · reactivated: {{reactivated}}",
       "failed": "The last import failed: the brapi list did not respond. The catalog did not change; it runs again at the next scheduled time.",
       "b3Behind": "The B3 files were late: nobody was deactivated in this import."
+    }
+  },
+  "tasks": {
+    "title": "Data tasks",
+    "subtitle": "The tasks that bring data into the app: how the last run of each one went, the history with its errors and the button to run it now.",
+    "back": "Back to home",
+    "loading": "Loading…",
+    "names": {
+      "calendario_b3": "Calendar from the B3 files",
+      "historico_retroativo": "History backfill",
+      "fechamento_diario": "Daily close",
+      "importacao_catalogo": "Catalog import",
+      "cdi_diario": "CDI",
+      "indices_b3": "B3 indexes (Ibovespa and IFIX)",
+      "investidor10": "Investidor10 (indicators and dividends)",
+      "eventos_b3": "Corporate events and sectors",
+      "cotacao_pregao": "Trading session quotes"
+    },
+    "sources": {
+      "b3": "B3",
+      "brapi": "brapi",
+      "bcb": "Central Bank of Brazil",
+      "investidor10": "Investidor10"
+    },
+    "source_one": "Source: {{sources}}",
+    "source_other": "Sources: {{sources}}",
+    "schedule": {
+      "daily": "Every day at {{times}}",
+      "weekly": "Sundays at {{times}}",
+      "every": "Every {{minutes}} minutes",
+      "session": "Every {{minutes}} minutes during the trading session",
+      "sundaysAll": "(all assets on Sundays; only the new ones on other days)"
+    },
+    "status": {
+      "sucesso": "Success",
+      "parcial": "Partial",
+      "falha": "Failed",
+      "aguardando_publicacao": "Waiting for publication",
+      "cota_esgotada": "Quota exhausted",
+      "running": "Running"
+    },
+    "at": {
+      "today": "today at {{time}}",
+      "other": "{{date}} at {{time}}"
+    },
+    "runningSince": "since {{when}}",
+    "records_one": "{{formatted}} record",
+    "records_other": "{{formatted}} records",
+    "records_zero": "{{formatted}} records",
+    "assets_one": "{{formatted}} asset",
+    "assets_other": "{{formatted}} assets",
+    "assets_zero": "{{formatted}} assets",
+    "errors_one": "{{formatted}} error",
+    "errors_other": "{{formatted}} errors",
+    "errors_zero": "{{formatted}} errors",
+    "neverRan": "Has not run yet.",
+    "pending": "Request sent {{when}}, waiting for the processor.",
+    "pendingStopped": "It only runs once the processor is started.",
+    "runNow": "Run now",
+    "showHistory": "Show history",
+    "hideHistory": "Hide history",
+    "blocked": {
+      "running": "The task is running.",
+      "requested": "A request is already waiting.",
+      "source_disabled": "Collection turned off (no Investidor10 authorization)."
+    },
+    "requestSent": "Request sent: {{name}}. The processor picks it up within 15 seconds.",
+    "finished_one": "Run finished: {{name}}, {{status}}, {{formatted}} record.",
+    "finished_other": "Run finished: {{name}}, {{status}}, {{formatted}} records.",
+    "finished_zero": "Run finished: {{name}}, {{status}}, {{formatted}} records.",
+    "nothing": "{{name}}: nothing to do right now. {{reason}}",
+    "nothingReason": {
+      "calendario_b3": "No closed year to publish.",
+      "historico_retroativo": "No new asset without history.",
+      "fechamento_diario": "No trading day missing.",
+      "importacao_catalogo": "Nothing new to import.",
+      "cdi_diario": "No CDI missing.",
+      "indices_b3": "No close missing.",
+      "investidor10": "No new asset and none with an error on the last visit.",
+      "eventos_b3": "Nothing to fetch right now.",
+      "cotacao_pregao": "Outside trading hours, or no quota left."
+    },
+    "processor": {
+      "title": "Processor",
+      "running": "Running, last seen {{since}}.",
+      "stoppedSince": "Stopped since {{when}}.",
+      "never": "Has not reported yet.",
+      "stoppedHint": "Without the processor, no task runs and no request is picked up. Start the processor on the server."
+    },
+    "historyTitle": "History: {{name}}",
+    "historyCount_one": "{{shown}} of {{total}} run",
+    "historyCount_other": "{{shown}} of {{total}} runs",
+    "errorsCount_one": "{{shown}} of {{total}} error",
+    "errorsCount_other": "{{shown}} of {{total}} errors",
+    "showMore": "Show more",
+    "columns": {
+      "started": "Start",
+      "status": "Status",
+      "numbers": "Records",
+      "details": "Details",
+      "errors": "Errors"
+    },
+    "period": "Period: {{from}} to {{to}}",
+    "periodDay": "Day: {{day}}",
+    "quota": "Requests: {{requests}} (quota: {{remaining}} of {{limit}})",
+    "requests": "Requests: {{formatted}}",
+    "requestedBy": "Requested by {{name}}",
+    "requestedByRemoved": "Requested by an account that was removed",
+    "showErrors_one": "See the error",
+    "showErrors_other": "See the {{formatted}} errors",
+    "hideErrors": "Hide the errors",
+    "yes": "yes",
+    "no": "no",
+    "totals": {
+      "created": "Created",
+      "deactivated": "Deactivated",
+      "reactivated": "Reactivated",
+      "logosSaved": "Logos downloaded",
+      "logosMissing": "Without logo",
+      "logoErrors": "Logo errors",
+      "notRecent": "Not traded in the last 3 months",
+      "outOfFormat": "Ticker out of format",
+      "mismatched": "Class differs between brapi and B3",
+      "b3Behind": "B3 file behind",
+      "published": "Years published",
+      "checked": "Years checked",
+      "classificacoes": "B3 classifications",
+      "sugestoes": "Suggestions changed",
+      "missing": "Assets missing from the list",
+      "missingTickers": "Missing from the list",
+      "visited": "Visited",
+      "collected": "Collected",
+      "noPage": "No page",
+      "layoutErrors": "Page without the table",
+      "failed": "Failed",
+      "stopped": "Stopped midway (403 or 429)"
     }
   }
 }

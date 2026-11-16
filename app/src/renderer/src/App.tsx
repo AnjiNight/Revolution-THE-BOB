@@ -17,6 +17,7 @@ import { PortfolioPage, Portfolios, type CopiedCounts } from './components/Portf
 import type { TradeAsset } from './components/TradeForm';
 import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
+import { Tasks } from './components/Tasks';
 import { TradingCalendar } from './components/TradingCalendar';
 import { ConnectionContext } from './connection';
 
@@ -39,6 +40,8 @@ type View =
   | { kind: 'home'; user: PublicUser }
   | { kind: 'profile'; user: PublicUser }
   | { kind: 'calendar'; user: PublicUser; year?: number }
+  /** SPEC-011: as tarefas de dados (colaborador), abertas pelo Início. */
+  | { kind: 'tasks'; user: PublicUser }
   /**
    * `assetId`: a ficha do ativo aberta por cima da lista (SPEC-010). `returnTo`: a ficha foi aberta
    * por uma carteira (SPEC-014), e o Voltar leva de volta a ela.
@@ -170,7 +173,8 @@ export function App() {
     view.kind === 'profile' ||
     view.kind === 'calendar' ||
     view.kind === 'assets' ||
-    view.kind === 'portfolios'
+    view.kind === 'portfolios' ||
+    view.kind === 'tasks'
   ) {
     const { user } = view;
     const openCalendar = (year?: number) =>
@@ -208,6 +212,13 @@ export function App() {
                 onOpenPortfolios={(creating) =>
                   setView({ kind: 'portfolios', user, ...(creating ? { creating: true } : {}) })
                 }
+                onOpenTasks={() => setView({ kind: 'tasks', user })}
+              />
+            )}
+            {view.kind === 'tasks' && (
+              <Tasks
+                onBack={() => setView({ kind: 'home', user })}
+                onSessionExpired={sessionExpired}
               />
             )}
             {view.kind === 'portfolios' &&

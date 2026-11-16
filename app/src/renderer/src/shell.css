@@ -625,6 +625,20 @@
   line-height: 1.5;
 }
 
+/* SPEC-011: o resumo das tarefas de dados, com o botão para a tela Tarefas. */
+.tasks-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+}
+
+.tasks-summary p {
+  flex: 1 1 20rem;
+  margin: 0;
+}
+
 .calendar-reminder ul {
   display: flex;
   flex: 1 1 22rem;

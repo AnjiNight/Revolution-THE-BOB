@@ -24,6 +24,7 @@ import { CatalogImport } from '../modules/market-data/application/catalog-import
 import { CdiStatusService } from '../modules/market-data/application/cdi-status-service.js';
 import { MarketIndexStatusService } from '../modules/market-data/application/market-index-status-service.js';
 import { FundamentalsService } from '../modules/market-data/application/fundamentals-service.js';
+import { TaskMonitorService } from '../modules/market-data/application/task-monitor-service.js';
 import { PortfolioService } from '../modules/portfolios/application/portfolio-service.js';
 import { TradingService } from '../modules/portfolios/application/trading-service.js';
 import {
@@ -46,6 +47,7 @@ import {
   InMemoryIntradayQuoteRepository,
   InMemoryLogoRepository,
   InMemoryQuoteRepository,
+  InMemoryTaskMonitor,
   InMemoryTaskRuns,
 } from '../modules/market-data/testing/fakes.js';
 
@@ -217,6 +219,16 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     runs,
     clock,
   });
+  // SPEC-011: a tela Tarefas sobre as mesmas execuções em memória.
+  const taskMonitor = new InMemoryTaskMonitor(
+    runs,
+    (assetId) => assets.assets.find((asset) => asset.id === assetId)?.ticker ?? null,
+  );
+  const tasks = new TaskMonitorService({
+    monitor: taskMonitor,
+    investidor10Enabled: options.investidor10 !== false,
+    clock,
+  });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -238,6 +250,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     fundamentals,
     portfolios,
     trading,
+    tasks,
     logStream: logs,
   });
 
@@ -307,6 +320,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     syncFundamentalAssets,
     fundamentals,
     events,
+    taskMonitor,
+    tasks,
     ...services,
   };
 }

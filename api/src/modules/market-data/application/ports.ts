@@ -3,6 +3,7 @@ import type {
   CalendarSource,
   FundInfo,
   IndicatorCode,
+  IngestionTaskCode,
   IsoDate,
   NonTradingDay,
   SectorCode,
@@ -132,18 +133,12 @@ export interface QuoteRepository {
   markYearsLoaded(years: LoadedYear[], at: Date): Promise<void>;
 }
 
-/** Tarefas de ingestão (SPECs 008, 009 e 040, §5.1); as SPECs 007 e 027 acrescentam as suas. */
-export type IngestionTask =
-  | 'historico_retroativo'
-  | 'fechamento_diario'
-  | 'cotacao_pregao'
-  | 'importacao_catalogo'
-  | 'calendario_b3'
-  | 'cdi_diario'
-  | 'investidor10'
-  | 'eventos_b3'
-  /** SPEC-020: Ibovespa e IFIX pela B3. */
-  | 'indices_b3';
+/**
+ * Tarefas de ingestão (SPECs 008, 009 e 040, §5.1; as SPECs 005, 007, 020, 041 e 042 acrescentaram
+ * as suas). SPEC-011: a lista fica em `@simulador/shared` (`INGESTION_TASKS`), porque a tela
+ * Tarefas também usa.
+ */
+export type IngestionTask = IngestionTaskCode;
 export type RunStatus = 'sucesso' | 'parcial' | 'falha' | 'aguardando_publicacao' | 'cota_esgotada';
 
 export interface RunError {
@@ -191,6 +186,87 @@ export interface TaskRunReader {
   requestsSince(task: IngestionTask, since: Date): Promise<number>;
   /** Execuções iniciadas desde o instante. */
   runsSince(task: IngestionTask, since: Date): Promise<number>;
+}
+
+/** SPEC-011: uma execução resumida, como a lista da tela Tarefas mostra. */
+export interface StoredRunSummary {
+  id: string;
+  startedAt: Date;
+  finishedAt: Date | null;
+  status: RunStatus | null;
+  records: number;
+  affectedAssets: number;
+  errorCount: number;
+}
+
+/** SPEC-011: uma execução no histórico de uma tarefa. */
+export interface StoredRunDetail extends StoredRunSummary {
+  periodStart: IsoDate | null;
+  periodEnd: IsoDate | null;
+  requests: number;
+  quota: QuoteUsage | null;
+  totals: RunTotals | null;
+  /** Veio de um pedido: o nome de quem pediu (`null` se a conta saiu). Sem pedido, `null`. */
+  request: { name: string | null } | null;
+}
+
+/** SPEC-011: um erro de uma execução, com o ticker do ativo (quando há). */
+export interface StoredRunError {
+  ticker: string | null;
+  date: IsoDate | null;
+  message: string;
+}
+
+/** SPEC-011: o que a tela Tarefas lê e o pedido que ela grava (servidor). */
+export interface TaskMonitorRepository {
+  /** De cada tarefa: a última execução terminada e desde quando roda a que está em andamento. */
+  latestRuns(): Promise<
+    Map<IngestionTask, { finished: StoredRunSummary | null; runningSince: Date | null }>
+  >;
+  /** Os pedidos ainda não atendidos, por tarefa, com o horário do pedido. */
+  pendingRequests(): Promise<Map<IngestionTask, Date>>;
+  /** O último sinal de vida do processador; `null` se ele nunca deu sinal. */
+  processor(): Promise<{ seenAt: Date; intervalSeconds: number } | null>;
+  /** O histórico da tarefa, das mais recentes para as mais antigas. */
+  runs(
+    task: IngestionTask,
+    offset: number,
+    limit: number,
+  ): Promise<{ runs: StoredRunDetail[]; total: number }>;
+  /** Os erros da execução; `null` quando ela não existe (ou já foi limpa). */
+  errors(
+    runId: string,
+    offset: number,
+    limit: number,
+  ): Promise<{ errors: StoredRunError[]; total: number } | null>;
+  /** Grava o pedido; `false` quando a tarefa já tem um pedido pendente. */
+  request(task: IngestionTask, collaboratorId: string, at: Date): Promise<boolean>;
+}
+
+/** SPEC-011: os pedidos de execução, do lado do processador. */
+export interface TaskRequestQueue {
+  pending(): Promise<Array<{ id: string; task: IngestionTask }>>;
+  /**
+   * Marca o pedido como atendido, ligado à execução da tarefa iniciada desde `since`; sem nenhuma,
+   * "nada a fazer".
+   */
+  attend(id: string, task: IngestionTask, since: Date, at: Date): Promise<void>;
+}
+
+/** SPEC-011: o sinal de vida do processador. */
+export interface ProcessorHeartbeat {
+  beat(at: Date, intervalSeconds: number): Promise<void>;
+}
+
+/** SPEC-011: a manutenção do registro das execuções, feita pelo processador. */
+export interface RunMaintenance {
+  /** Fecha como falha as execuções que ficaram sem fim (o processador parou no meio). */
+  closeInterrupted(at: Date): Promise<number>;
+  /**
+   * Apaga as execuções (com os erros) iniciadas antes de `before`, menos a última de cada tarefa, e
+   * os pedidos atendidos antes de `before`. Devolve quantas linhas apagou.
+   */
+  deleteBefore(before: Date): Promise<number>;
 }
 
 /** Nível da cotação (DA16). Esta Spec só coleta o gratuito; o assinante vem na SPEC-026. */
@@ -525,6 +601,8 @@ export interface FundamentalsRepository {
   listActiveAssets(): Promise<FundamentalsAsset[]>;
   /** Ativos que já têm uma visita registrada (com qualquer resultado). */
   visitedAssets(): Promise<Set<string>>;
+  /** SPEC-011: ativos cuja última visita deu erro ("Executar agora" visita de novo). */
+  failedAssets(): Promise<Set<string>>;
   /** Substitui tudo o que o ativo tinha do Investidor10, numa transação. */
   save(collection: AssetCollection, at: Date): Promise<void>;
   /** Visita sem dados: a página não existe ou não deu para ler. O que estava guardado fica. */

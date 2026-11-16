@@ -22,6 +22,8 @@ import type { FundamentalsService } from './modules/market-data/application/fund
 import { registerCalendarRoutes } from './modules/market-data/controllers/calendar-routes.js';
 import { registerFundamentalsRoutes } from './modules/market-data/controllers/fundamentals-routes.js';
 import { registerIndexRoutes } from './modules/market-data/controllers/index-routes.js';
+import type { TaskMonitorService } from './modules/market-data/application/task-monitor-service.js';
+import { registerTaskRoutes } from './modules/market-data/controllers/task-routes.js';
 import type { PortfolioService } from './modules/portfolios/application/portfolio-service.js';
 import type { TradingService } from './modules/portfolios/application/trading-service.js';
 import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfolio-routes.js';
@@ -53,6 +55,8 @@ export interface AppDependencies {
   portfolios: PortfolioService;
   /** SPEC-014: compra e venda na carteira ao vivo. */
   trading: TradingService;
+  /** SPEC-011: tarefas de ingestão (monitoramento e "Executar agora"). */
+  tasks: TaskMonitorService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -111,6 +115,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     trading: deps.trading,
     accessTokens: deps.accessTokens,
   });
+  registerTaskRoutes(app, { tasks: deps.tasks, accessTokens: deps.accessTokens });
 
   return app;
 }

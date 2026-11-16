@@ -22,6 +22,7 @@ import type {
   NewTradeInput,
   PortfolioErrorCode,
   RenamePortfolioInput,
+  TaskErrorCode,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   PublicUser,
@@ -119,6 +120,14 @@ export const PORTFOLIO_CHANNELS = {
   copy: 'portfolios:copy',
 } as const;
 
+/** SPEC-011: as tarefas de ingestão do colaborador (a tela Tarefas). */
+export const TASK_CHANNELS = {
+  list: 'tasks:list',
+  runs: 'tasks:runs',
+  errors: 'tasks:errors',
+  request: 'tasks:request',
+} as const;
+
 /** SPEC-035: os idiomas do app. */
 export type AppLanguage = 'pt-BR' | 'en';
 
@@ -161,6 +170,7 @@ export type ClientAuthError =
   | CatalogErrorCode
   | FundamentalsErrorCode
   | PortfolioErrorCode
+  | TaskErrorCode
   | 'server_unavailable'
   | 'invalid_url'
   | 'unexpected'

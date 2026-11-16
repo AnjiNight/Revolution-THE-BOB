@@ -22,6 +22,9 @@ import type {
   Portfolio,
   PortfolioList,
   PriceHistory,
+  TaskErrorPage,
+  TaskList,
+  TaskRunPage,
   TradingCalendarYear,
   UserProfile,
 } from '@simulador/shared';
@@ -36,6 +39,7 @@ import {
   INDEX_CHANNELS,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
+  TASK_CHANNELS,
   type AuthResult,
   type ClientResult,
   type ConnectionEvent,
@@ -140,6 +144,13 @@ const api: DesktopApi = {
     comparison: (query) => read<PortfolioComparison>(PORTFOLIO_CHANNELS.comparison, query),
     copy: (id, input) =>
       invoke<ClientResult<PortfolioCopyResult>>(PORTFOLIO_CHANNELS.copy, id, input),
+  },
+  tasks: {
+    list: () => invoke<ClientResult<TaskList>>(TASK_CHANNELS.list),
+    runs: (task, offset) => invoke<ClientResult<TaskRunPage>>(TASK_CHANNELS.runs, task, offset),
+    errors: (runId, offset) =>
+      invoke<ClientResult<TaskErrorPage>>(TASK_CHANNELS.errors, runId, offset),
+    request: (task) => invoke<ClientResult<null>>(TASK_CHANNELS.request, task),
   },
   fundamentals: {
     get: (id) => read<AssetFundamentals>(FUNDAMENTALS_CHANNELS.fundamentals, id),
