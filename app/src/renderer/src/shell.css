@@ -722,8 +722,9 @@
     padding-left: 0.375rem;
   }
 
+  /* Os 4 itens do usuário cabem em 480 px com folga (com 0,65rem, sobravam 3 px). */
   .island-links button {
-    padding-inline: 0.65rem;
+    padding-inline: 0.55rem;
   }
 
   /* SPEC-027: com "Notícias", o menu do colaborador tem 5 itens e não cabe em 375 px. A lista
@@ -739,8 +740,66 @@
     display: none;
   }
 
+  /* A lista corta o que passa da borda: o contorno do foco fica por dentro do botão. */
+  .shell .island-links button:focus-visible {
+    outline-offset: -2px;
+  }
+
   .profile-panel-head {
     flex-wrap: wrap;
+  }
+}
+
+/* Com "Notícias" (SPEC-027), o menu do colaborador tem 5 itens: até 719 px, a ilha fica compacta
+   (sem o avatar, o Sair só com o ícone e os espaços apertados) para todos caberem com o Sair dentro
+   dela, até 480 px, a largura mínima da janela (RNF04), com uns 10 px de folga. Abaixo disso, a
+   lista rola de lado. */
+@media (max-width: 719px) {
+  .shell-collaborator .shell-account .avatar {
+    display: none;
+  }
+
+  .shell-collaborator .logout-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .shell-collaborator .pill.logout-button {
+    padding-left: 0.375rem;
+  }
+
+  .shell-collaborator .island {
+    gap: 0.35rem;
+    padding-left: 0.45rem;
+  }
+
+  .shell-collaborator .brand-button {
+    padding-right: 0;
+  }
+
+  .shell-collaborator .island-links {
+    flex: 1 1 auto;
+    gap: 0;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .shell-collaborator .island-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .shell-collaborator .island-links button {
+    padding-inline: 0.4rem;
+    font-size: 0.85rem;
+  }
+
+  .shell-collaborator .island-links button:focus-visible {
+    outline-offset: -2px;
   }
 }
 
