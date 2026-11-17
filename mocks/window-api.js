@@ -138,6 +138,15 @@
 
   window.api = {
     checkServerHealth: () => Promise.resolve({ kind: 'connected', version: 'mock' }),
+    // SPEC-035: o idioma vai para o processo principal; aqui não há nada a fazer.
+    setLanguage: () => Promise.resolve(),
+    // SPEC-032: sempre conectado (o modo consulta não entra nestes testes).
+    connection: {
+      status: () => Promise.resolve({ offline: false }),
+      retry: () => Promise.resolve({ ok: true }),
+      onChange: () => () => {},
+      onSavedAt: () => () => {},
+    },
     auth: group({
       getSession: () => Promise.resolve({ ok: true, user }),
       googleAvailable: () => Promise.resolve(false),

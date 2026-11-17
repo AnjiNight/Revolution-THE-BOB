@@ -16,6 +16,7 @@ import type {
   LoginInput,
   NewAssetInput,
   NewCashEntryInput,
+  NewPortfolioCopyInput,
   NewNewsSourceInput,
   NewPortfolioCopyInput,
   NewPortfolioInput,
@@ -41,7 +42,10 @@ import {
   NEWS_CHANNELS,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
+<<<<<<< Updated upstream
   TASK_CHANNELS,
+=======
+>>>>>>> Stashed changes
   type AppLanguage,
   type ConnectionEvent,
 } from '../shared/auth-ipc.js';
@@ -285,6 +289,7 @@ app.whenReady().then(() => {
   ipcMain.handle(PORTFOLIO_CHANNELS.copy, (_event, id: string, input: NewPortfolioCopyInput) =>
     auth.copyPortfolio(id, input),
   );
+<<<<<<< Updated upstream
 
   // Tarefas de ingestão (SPEC-011): o servidor confere se a conta é de colaborador.
   ipcMain.handle(TASK_CHANNELS.list, () => auth.listTasks());
@@ -295,6 +300,8 @@ app.whenReady().then(() => {
     auth.runErrors(runId, offset),
   );
   ipcMain.handle(TASK_CHANNELS.request, (_event, task: string) => auth.requestTaskRun(task));
+=======
+>>>>>>> Stashed changes
 
   // Série do CDI (SPEC-007): o servidor confere se a conta é de colaborador.
   ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());

@@ -280,10 +280,13 @@
     "history_pending": "O histórico de preços deste ativo ainda está sendo carregado.",
     "copy_breaks_cash": "Sem as compras e vendas, uma retirada ficaria sem saldo.",
     "not_saved_offline": "Ainda não consultado neste computador. Conecte-se para ver.",
+<<<<<<< Updated upstream
     "task_not_found": "Tarefa não encontrada.",
     "run_not_found": "Execução não encontrada (as execuções com mais de 90 dias são apagadas).",
     "run_already_requested": "Esta tarefa já tem um pedido aguardando o processador.",
     "run_in_progress": "Esta tarefa está rodando agora. Peça de novo quando ela terminar.",
+=======
+>>>>>>> Stashed changes
     "news_source_not_found": "Fonte de notícias não encontrada.",
     "source_exists": "Já existe uma fonte com este endereço.",
     "parent_source": "A fonte pai não pode ser alterada pela tela."

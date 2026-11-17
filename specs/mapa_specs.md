@@ -64,12 +64,19 @@
 | 1.54 | SPEC-032 aprovada (Luís, 16/11/2026, como escrita) e implementada: ETag e 304 em todas as leituras do servidor, cópia local cifrada no processo principal (`offline-cache`), modo consulta com a faixa "Sem conexão", os botões de escrita desativados e a volta da conexão a cada 30 s ou no "Tentar agora"; reabrir uma histórica de 10 anos sem mudança: de 139 KB para 0 de corpo; requisitos 1.13 (RF37), decisões técnicas, DA08, drivers e SPEC-034 atualizados. OPEN-10 resolvida; a SPEC-029 entrega a sua parte |
 | 1.55 | SPEC-035 detalhada ([SPEC-035.md](SPEC-035.md)) a pedido do Luís, aprovada com as recomendações no próprio pedido ("vamo faze o md e implementar") e implementada: botão com o globo e o nome do outro idioma no topo da página de entrada e no rodapé das telas, troca na hora (textos, números, moeda, datas, `<html lang>` e título), escolha guardada neste computador e não na conta, e a página do login com Google e o nome do arquivo "Baixar meus dados" seguindo o idioma. OPEN-45 resolvida (o que vem das fontes fica como veio) |
 | 1.56 | SPEC-011 detalhada ([SPEC-011.md](SPEC-011.md)) a pedido do Luís, aguardando a aprovação: tela Tarefas aberta pelo Início do colaborador (as 9 tarefas, o histórico com os erros e o estado do processador), "Executar agora" por pedido gravado no banco e atendido pelo processador a cada 15 s, sinal de vida do processador, execução interrompida fechada como falha e limpeza das execuções com mais de 90 dias (proposta para a OPEN-40) |
+<<<<<<< Updated upstream
 | 1.57 | SPEC-011 aprovada (Luís, 16/11/2026, como escrita) e implementada: tela Tarefas aberta pelo painel "Tarefas de dados" do Início do colaborador (as 9 tarefas com a última execução, o histórico 50 por vez com os erros 100 por vez e o estado do processador), "Executar agora" gravado em `pedido_execucao` e atendido pelo processador em até 15 s, sinal de vida em `estado_processador`, execução interrompida fechada como falha ao iniciar e limpeza diária das execuções com mais de 90 dias, guardando a última de cada tarefa; os horários das tarefas num lugar só do código. OPEN-40 resolvida; EXECUCAO_TAREFA e ERRO_EXECUCAO entram no modelo de domínio, com PEDIDO_EXECUCAO e ESTADO_PROCESSADOR |
 | 1.58 | SPEC-027 detalhada ([SPEC-027.md](SPEC-027.md)) pela Nicoly, aguardando a aprovação: notícias do Investidor10 (autorizadas por telefone em 12/11/2026) pelo sitemap de notícias a cada 30 min e o arquivo desde 22/09/2023 (22.491 notícias); fontes curadas por RSS ou Atom, a primeira a Agência Brasil; propostas para a OPEN-28 (notícias) e a OPEN-29 |
 | 1.59 | SPEC-027 aprovada (Nicoly, 12/11/2026; decisão 1 sem o pedido de e-mail) e implementada: módulo Notícias com a fonte pai (Investidor10, sitemap de notícias a cada 30 min e o arquivo aos poucos) e as fontes curadas por RSS ou Atom (Agência Brasil), tela Notícias do colaborador; coleta real de 251 notícias do Investidor10 e 10 da Agência Brasil. OPEN-28 resolvida e OPEN-29 em parte. Primeira Spec com a validação visual como usuária e o teste de ponta a ponta em `tests/e2e/` (Playwright), com os mocks em `mocks/` |
 | 1.60 | SPEC-028 detalhada ([SPEC-028.md](SPEC-028.md)) pela Nicoly, aguardando a aprovação: só o vínculo notícia–ativo (RF27), pelo ticker citado e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista; o sentimento (RF28, OPEN-30, OPEN-31) proposto para uma nova SPEC-044, para as notícias chegarem antes à ficha (SPEC-029) |
 | 1.61 | Junção, em 16/11/2026, do trabalho da Nicoly (SPECs 027 e 028, que ela tinha numerado 1.51 a 1.53, agora 1.58 a 1.60) com o do Luís (1.51 a 1.57): as 3 tarefas de notícias da SPEC-027 (`noticias_novas`, `noticias_arquivo` e `noticias_feeds`) entram na tela Tarefas da SPEC-011, que passa a mostrar 12 tarefas; as duas do Investidor10 ficam bloqueadas com a coleta desligada |
 | 1.62 | Menu do colaborador em telas estreitas, a pedido do Luís (16/11/2026): com "Notícias" (SPEC-027), até 719 px a ilha fica compacta (sem o avatar, o Sair só com o ícone e espaços menores) e os 5 itens cabem a partir de 480 px, sem o "Meu perfil" escondido nem o Sair fora da ilha; o contorno do foco fica por dentro dos itens; os 4 itens do usuário também ganham folga em 480 px. Nota no §9 da SPEC-027 |
+=======
+| 1.57 | SPEC-027 detalhada ([SPEC-027.md](SPEC-027.md)) pela Nicoly, aguardando a aprovação: notícias do Investidor10 (autorizadas por telefone em 12/11/2026) pelo sitemap de notícias a cada 30 min e o arquivo desde 22/09/2023 (22.491 notícias); fontes curadas por RSS ou Atom, a primeira a Agência Brasil; propostas para a OPEN-28 (notícias) e a OPEN-29 |
+| 1.58 | SPEC-027 aprovada (Nicoly, 12/11/2026; decisão 1 sem o pedido de e-mail) e implementada: módulo Notícias com a fonte pai (Investidor10, sitemap de notícias a cada 30 min e o arquivo aos poucos) e as fontes curadas por RSS ou Atom (Agência Brasil), tela Notícias do colaborador; coleta real de 251 notícias do Investidor10 e 10 da Agência Brasil. OPEN-28 resolvida e OPEN-29 em parte. Primeira Spec com a validação visual como usuária e o teste de ponta a ponta em `tests/e2e/` (Playwright), com os mocks em `mocks/` |
+| 1.59 | SPEC-028 detalhada ([SPEC-028.md](SPEC-028.md)) pela Nicoly, aguardando a aprovação: só o vínculo notícia–ativo (RF27), pelo ticker citado e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista; o sentimento (RF28, OPEN-30, OPEN-31) proposto para uma nova SPEC-044, para as notícias chegarem antes à ficha (SPEC-029) |
+| 1.60 | Junção de 16/11/2026 refeita: o merge das SPECs 027 e 028 (Nicoly) com as SPECs 023, 032, 035 e 011 (Luís) tinha ficado com um lado só em alguns arquivos e apagado parte das SPECs 023, 032 e 035 (tela, traduções e este mapa). As versões 1.51 a 1.56 são do Luís; as da Nicoly passaram a 1.57 a 1.59 |
+>>>>>>> Stashed changes
 ---
 
 ## 0. Como ler este documento
@@ -338,7 +345,11 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
 | OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
 | OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
+<<<<<<< Updated upstream
 | OPEN-40 | ✅ **Resolvida na [SPEC-011](SPEC-011.md) (16/11/2026):** registros de execução, erros e pedidos atendidos por 90 dias, guardando sempre a última execução de cada tarefa. Antes, decididos os backups e logs (no máximo 30 dias, [SPEC-034](SPEC-034.md)), as cotações do pregão (30 dias, [SPEC-009](SPEC-009.md)) e o CDI (para sempre, [SPEC-007](SPEC-007.md)). Original: retenção de backups (× RB04), de registros de execução e de cotações intradiárias | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
+=======
+| OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias. Decidido: backups e logs por no máximo 30 dias ([SPEC-034](SPEC-034.md)); cotações do pregão por 30 dias ([SPEC-009](SPEC-009.md)). Proposta na [SPEC-011](SPEC-011.md) para os registros de execução: 90 dias, guardando sempre a última de cada tarefa | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
+>>>>>>> Stashed changes
 | OPEN-41 | ✅ **Resolvida na [SPEC-006](SPEC-006.md):** a busca procura só nos ativos ativos do catálogo da equipe | INC-09 | 006 |
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
@@ -681,7 +692,11 @@ Visão geral por fase:
 
 #### SPEC-011 — Monitoramento e reexecução das tarefas de ingestão
 
+<<<<<<< Updated upstream
 📄 Detalhada em [SPEC-011.md](SPEC-011.md) — aprovada (Luís, 16/11/2026, como escrita) e implementada.
+=======
+📄 Detalhada em [SPEC-011.md](SPEC-011.md) — aguardando a aprovação.
+>>>>>>> Stashed changes
 
 | Campo | Conteúdo |
 |---|---|
