@@ -2,6 +2,9 @@ import type {
   AssetDetail,
   AssetDividends,
   AssetFundamentals,
+  AssetNewsDays,
+  AssetNewsPage,
+  AssetNewsQuery,
   AssetSearchResult,
   CalendarSuggestion,
   CashEntryResult,
@@ -222,6 +225,10 @@ export interface DesktopApi {
     confirmClassification(id: string): Promise<ClientResult<CatalogAsset>>;
     /** SPEC-040: logo como `data:` URL; `null` sem logo próprio. */
     logo(id: string): Promise<ClientResult<string | null>>;
+    /** SPEC-029: notícias do ativo (10 por vez) ou as de um pregão, com `after` e `until`. */
+    news(id: string, query: Partial<AssetNewsQuery>): Promise<ClientResult<AssetNewsPage>>;
+    /** SPEC-029: notícias por dia de referência, no período do gráfico (os marcadores). */
+    newsDays(id: string, period: PriceHistoryPeriod): Promise<ClientResult<AssetNewsDays>>;
   };
 }
 

@@ -2,6 +2,8 @@ import type {
   AssetDetail,
   AssetDividends,
   AssetFundamentals,
+  AssetNewsDays,
+  AssetNewsPage,
   AssetSearchResult,
   CalendarSuggestion,
   CashEntryResult,
@@ -183,6 +185,8 @@ const api: DesktopApi = {
     confirmClassification: (id) =>
       invoke<ClientResult<CatalogAsset>>(ASSET_CHANNELS.confirmClassification, id),
     logo: (id) => read<string | null>(ASSET_CHANNELS.logo, id),
+    news: (id, query) => read<AssetNewsPage>(ASSET_CHANNELS.news, id, query),
+    newsDays: (id, period) => read<AssetNewsDays>(ASSET_CHANNELS.newsDays, id, period),
   },
 };
 

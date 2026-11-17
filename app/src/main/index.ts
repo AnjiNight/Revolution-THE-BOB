@@ -341,6 +341,13 @@ app.whenReady().then(() => {
     auth.confirmAssetClassification(id),
   );
   ipcMain.handle(ASSET_CHANNELS.logo, (_event, id: string) => auth.assetLogo(id));
+  // SPEC-029: notícias do ativo na ficha e os marcadores do gráfico.
+  ipcMain.handle(ASSET_CHANNELS.news, (_event, id: string, query: unknown) =>
+    auth.assetNews(id, query),
+  );
+  ipcMain.handle(ASSET_CHANNELS.newsDays, (_event, id: string, period: PriceHistoryPeriod) =>
+    auth.assetNewsDays(id, period),
+  );
 
   createWindow();
   app.on('activate', () => {

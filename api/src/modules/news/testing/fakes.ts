@@ -3,6 +3,8 @@ import type { NewsCategory } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type {
   ArchiveProgress,
+  AssetNewsFilter,
+  AssetNewsRow,
   FeedFetcher,
   LatestNewsRow,
   NewsRepository,
@@ -203,6 +205,50 @@ export class InMemoryNewsRepository implements NewsRepository {
       total: this.news.length,
       linked: this.news.filter((item) => item.links.length > 0).length,
     });
+  }
+
+  assetExists(assetId: string): Promise<boolean> {
+    return Promise.resolve(this.catalog.some((asset) => asset.assetId === assetId));
+  }
+
+  assetNews(
+    assetId: string,
+    filter: AssetNewsFilter,
+    page: { offset: number; limit: number },
+  ): Promise<{ total: number; rows: AssetNewsRow[] }> {
+    const found = this.linkedTo(assetId, filter);
+    return Promise.resolve({
+      total: found.length,
+      rows: found.slice(page.offset, page.offset + page.limit).map(({ item, relevance }) => ({
+        id: item.id,
+        title: item.title,
+        summary: item.summary,
+        url: item.url,
+        source: this.list.find((s) => s.id === item.sourceId)?.name ?? '',
+        publishedAt: item.publishedAt,
+        relevance,
+      })),
+    });
+  }
+
+  assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<Date[]> {
+    return Promise.resolve(this.linkedTo(assetId, filter).map(({ item }) => item.publishedAt));
+  }
+
+  /** As notícias ligadas ao ativo, com a relevância do vínculo, das mais novas. */
+  private linkedTo(assetId: string, filter: AssetNewsFilter) {
+    return this.news
+      .flatMap((item) => {
+        const link = item.links.find((l) => l.assetId === assetId);
+        return link ? [{ item, relevance: link.relevance }] : [];
+      })
+      .filter(
+        ({ item, relevance }) =>
+          filter.relevances.includes(relevance) &&
+          (!filter.from || item.publishedAt >= filter.from) &&
+          (!filter.to || item.publishedAt < filter.to),
+      )
+      .sort((a, b) => b.item.publishedAt.getTime() - a.item.publishedAt.getTime());
   }
 
   archive(sourceId: string): Promise<ArchiveProgress | null> {

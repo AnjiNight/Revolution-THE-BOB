@@ -70,6 +70,9 @@
 | 1.60 | SPEC-028 detalhada ([SPEC-028.md](SPEC-028.md)) pela Nicoly, aguardando a aprovação: só o vínculo notícia–ativo (RF27), pelo ticker citado e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista; o sentimento (RF28, OPEN-30, OPEN-31) proposto para uma nova SPEC-044, para as notícias chegarem antes à ficha (SPEC-029) |
 | 1.61 | Junção, em 16/11/2026, do trabalho da Nicoly (SPECs 027 e 028, que ela tinha numerado 1.51 a 1.53, agora 1.58 a 1.60) com o do Luís (1.51 a 1.57): as 3 tarefas de notícias da SPEC-027 (`noticias_novas`, `noticias_arquivo` e `noticias_feeds`) entram na tela Tarefas da SPEC-011, que passa a mostrar 12 tarefas; as duas do Investidor10 ficam bloqueadas com a coleta desligada |
 | 1.62 | Menu do colaborador em telas estreitas, a pedido do Luís (16/11/2026): com "Notícias" (SPEC-027), até 719 px a ilha fica compacta (sem o avatar, o Sair só com o ícone e espaços menores) e os 5 itens cabem a partir de 480 px, sem o "Meu perfil" escondido nem o Sair fora da ilha; o contorno do foco fica por dentro dos itens; os 4 itens do usuário também ganham folga em 480 px. Nota no §9 da SPEC-027 |
+| 1.63 | SPEC-028 aprovada (Nicoly) e implementada, validada como usuária em 17/11/2026: vínculo notícia–ativo pelo ticker e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista, e as últimas notícias na tela do colaborador; 261 notícias reais vinculadas, 154 com ativo. Entra a SPEC-044 (sentimento, RF28, OPEN-30 e OPEN-31); a SPEC-029 passa a depender só do vínculo |
+| 1.64 | SPEC-029 detalhada ([SPEC-029.md](SPEC-029.md)) pela Nicoly com o Claude, aguardando a aprovação: notícias principal e citado na ficha do ativo (as de lista num grupo à parte), marcadores por pregão no gráfico de preço, notícia depois das 18h contando para o pregão seguinte, e a variação no pregão e 5 pregões depois; sem sentimento (SPEC-044); entrega a sua parte da consulta sem conexão (SPEC-032) |
+| 1.65 | SPEC-029 aprovada (Nicoly, 17/11/2026, "Aprovar e fazer") e implementada: seção Notícias na ficha do ativo (10 por vez, listas num grupo fechado), marcadores no gráfico com clique, toque e teclado (N, Shift+N, Enter), painel do pregão com a variação no pregão e 5 pregões depois, e as duas leituras na cópia local (SPEC-032 §5.1 atualizada). A conferência com dados reais achou e corrigiu a leitura dos horários com 3 horas a menos num PostgreSQL fora de UTC (a conexão agora é sempre UTC) |
 ---
 
 ## 0. Como ler este documento
@@ -205,8 +208,8 @@ Invariantes vindos das ADRs (não estão em `requisições.md`, ver OPEN-09 e OP
 | DA16 | A interface nunca exibe "tempo real"; toda cotação mostra o horário | 009, 010, 026 |
 | DA16, DA12 | Usuário só recebe cotações compatíveis com o plano | 026 |
 | DA19 | A fonte pai não pode ser desativada nem trocada pelo usuário | 027, 030 |
-| DA19, DA20 | Fontes do usuário nunca entram no treino nem nas probabilidades oficiais | 028, 030, 031 |
-| DA20 | Toda classificação registra a versão do modelo | 028 |
+| DA19, DA20 | Fontes do usuário nunca entram no treino nem nas probabilidades oficiais | 044, 030, 031 |
+| DA20 | Toda classificação registra a versão do modelo | 044 |
 | DA21 | Cenário com n abaixo do mínimo exibe "dados insuficientes" | 031 |
 
 ### 1.5 Requisitos não funcionais e onde se aplicam
@@ -328,8 +331,8 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
 | OPEN-28 | ✅ **Resolvida.** Dados (04/11/2026): autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)). Notícias (12/11/2026): autorizadas por telefone para fins universitários, nas mesmas condições ([SPEC-027 §4.1](SPEC-027.md)). Original: autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta | PE07 | 027, 041, 042 |
 | OPEN-29 | ⏳ **Em parte resolvida na [SPEC-027](SPEC-027.md):** fontes curadas por RSS ou Atom, cadastradas pelo colaborador com categoria, confiabilidade de 1 a 5 (critério da equipe) e licença conferida; a primeira é a Agência Brasil – Economia. As outras fontes ficam com a equipe. Original: lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
-| OPEN-30 | Implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 028 |
-| OPEN-31 | Fonte do histórico de notícias e janela de treino | PE09, PE11 | 028, 031 |
+| OPEN-30 | Implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 044 |
+| OPEN-31 | Fonte do histórico de notícias e janela de treino | PE09, PE11 | 044, 031 |
 | OPEN-32 | RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
 | OPEN-33 | Aprovação de DA21 (**Proposta**); horizontes, limite de estabilidade, n mínimo; cenário com sentimento personalizado | DA21, PE12 | 031 |
 | OPEN-34 | Cenário por ativo ou por carteira; reescrita de RF30/RF31 | INC-06 | 031 |
@@ -995,31 +998,53 @@ Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
 | Em aberto | **OPEN-28 (crítico)**, OPEN-29 |
 | Prioridade derivada | Could |
 
-#### SPEC-028 — Vínculo notícia–ativo e classificação de sentimento
+#### SPEC-028 — Vínculo notícia–ativo
 
-Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de ficar só com o vínculo (RF27) e passar o sentimento (RF28) para uma nova SPEC-044.
+📄 Detalhada em [SPEC-028.md](SPEC-028.md) — aprovada (Nicoly) e implementada; validada como usuária em 17/11/2026. Ficou só com o vínculo (RF27); o sentimento (RF28) passou para a SPEC-044.
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Para cada notícia coletada, identificar os ativos citados e classificar o sentimento, registrando a versão do modelo; notícias não classificadas ficam pendentes |
+| Objetivo | Para cada notícia coletada, identificar os ativos citados (pelo ticker e pelas empresas marcadas pelo Investidor10), com a relevância principal, citado ou lista |
+| Valor | **Sistema:** dado central da pesquisa do projeto (OBJ03); base das notícias na ficha (029) |
+| RF | RF27 |
+| RB | — |
+| RNF | RNF13, RNF16 |
+| Caso de uso / fluxo | UC: Ler notícias do ativo (lado do sistema); fluxo 7.4 (vínculo) |
+| Entidades | NOTICIA, NOTICIA_ATIVO, ATIVO |
+| Drivers | OBJ02, OBJ03, FAS04, PA04 |
+| ADRs | DA10, DA11, DA19 |
+| Depende de | SPEC-006, SPEC-027, SPEC-040 |
+| Posição | Precede as notícias na ficha (029) e o sentimento (044) |
+| Em aberto | — |
+| Prioridade derivada | Could |
+
+#### SPEC-044 — Classificação de sentimento das notícias
+
+Separada da SPEC-028 em 12/11/2026 (escolha da Nicoly), ainda não detalhada.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Classificar o sentimento de cada notícia vinculada, registrando a versão do modelo; notícias não classificadas ficam pendentes |
 | Valor | **Sistema:** dado central da pesquisa do projeto (OBJ03) |
-| RF | RF27, RF28 |
+| RF | RF28 |
 | RB | — |
 | RNF | RNF13 |
-| Caso de uso / fluxo | UC: Analisar sentimento das notícias (inclui Ler notícias do ativo); fluxo 7.4 (classificação) |
-| Entidades | NOTICIA, NOTICIA_ATIVO, ATIVO, VERSAO_MODELO† |
+| Caso de uso / fluxo | UC: Analisar sentimento das notícias; fluxo 7.4 (classificação) |
+| Entidades | NOTICIA, NOTICIA_ATIVO, VERSAO_MODELO† |
 | Drivers | OBJ03, FAS04, PA04, QA09 |
 | ADRs | DA11, DA19, DA20 |
-| Depende de | SPEC-006, SPEC-027 |
-| Posição | Precede a exibição com sentimento (029), o sentimento personalizado (030) e os cenários (031) |
+| Depende de | SPEC-028 |
+| Posição | Pode vir depois da 029, que mostra as notícias sem sentimento; precede o sentimento personalizado (030) e os cenários (031) |
 | Em aberto | OPEN-30, OPEN-31 |
 | Prioridade derivada | Could |
 
 #### SPEC-029 — Notícias na ficha do ativo e gráfico Notícias × Preço
 
+📄 Detalhada em [SPEC-029.md](SPEC-029.md) — aprovada (Nicoly, 17/11/2026) e implementada; validada como usuária. Sem o sentimento, que vem com a SPEC-044.
+
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Exibir na ficha do ativo as notícias relacionadas com sentimento, e marcá-las no gráfico de preço; ao selecionar um marcador, mostrar fonte, data, sentimento e comportamento posterior do ativo |
+| Objetivo | Exibir na ficha do ativo as notícias relacionadas e marcá-las no gráfico de preço; ao selecionar um marcador, mostrar as notícias do pregão (fonte, data, resumo e link) e o comportamento posterior do ativo (no pregão e 5 pregões depois). O sentimento entra com a SPEC-044 |
 | Valor | **Usuário:** relaciona acontecimentos e preço (principal diferencial — Visão §5, §19) |
 | RF | RF29 |
 | RB | — |
@@ -1064,7 +1089,7 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 | Entidades | SIMULACAO, CENARIO†, SENTIMENTO_DIARIO† |
 | Drivers | OBJ03, OBJ07, FAS11, RES04 |
 | ADRs | DA12, DA15, DA19, DA20, DA21 (Proposta) |
-| Depende de | SPEC-005, SPEC-008, SPEC-025, SPEC-028 |
+| Depende de | SPEC-005, SPEC-008, SPEC-025, SPEC-044 (sentimento) |
 | Posição | Exige plano (025), histórico de preços (008) e notícias classificadas (028) |
 | Em aberto | **OPEN-33 e OPEN-34 (bloqueantes)**, OPEN-31 |
 | Prioridade derivada | Could |
@@ -1260,7 +1285,7 @@ Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora.
 | RF05 | 003 | RF15 | 019 | RF25 | ⏸ adiado | RF35 | 033 |
 | RF06 | 034 | RF16 | 020 | RF26 | 027 | RF36 | 032 |
 | RF07 | 006, 040 | RF17 | 019 | RF27 | 028 | RF37 | 032 |
-| RF08 | 010 | RF18 | 021 | RF28 | 028 | RF38 | 035 |
+| RF08 | 010 | RF18 | 021 | RF28 | 044 | RF38 | 035 |
 | RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006, 040 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
 

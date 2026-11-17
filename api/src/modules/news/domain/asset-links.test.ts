@@ -93,6 +93,16 @@ describe('vínculo notícia–ativo (SPEC-028 §4.1)', () => {
     );
     expect(links).toHaveLength(1);
   });
+
+  it('ticker desativado no catálogo também vira vínculo (notícia antiga do ativo)', () => {
+    const links = linkNewsToAssets(
+      news({ title: 'Empresa Antiga (VELH3) fecha capital' }),
+      catalog,
+    );
+    expect(links).toEqual([
+      { assetId: 'velha3', ticker: 'VELH3', relevance: 'principal', origin: 'ticker_titulo' },
+    ]);
+  });
 });
 
 describe('empresa marcada × nome no catálogo (SPEC-028 §4.1, decisão 4)', () => {

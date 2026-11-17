@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
+  ASSET_NEWS_PATHS,
   ASSET_PATHS,
   assetPath,
   AUTH_PATHS,
@@ -238,6 +239,10 @@ class FakeServer {
         return json(404, { error: 'asset_not_found', message: 'x' });
       case assetPath(ASSET_PATHS.history, ASSET.id):
         return json(200, { period: url.searchParams.get('period'), points: [] });
+      case assetPath(ASSET_NEWS_PATHS.list, ASSET.id):
+        return json(200, { total: 0, listTotal: 0, news: [] });
+      case assetPath(ASSET_NEWS_PATHS.days, ASSET.id):
+        return json(200, { period: url.searchParams.get('period'), days: [] });
       case assetPath(ASSET_PATHS.logo, NO_LOGO_ID):
         return json(404, { error: 'logo_not_found', message: 'x' });
       case assetPath(ASSET_PATHS.logo, HTML_LOGO_ID):
@@ -736,6 +741,44 @@ describe('ficha do ativo (SPEC-010)', () => {
   });
 });
 
+describe('notícias na ficha (SPEC-029)', () => {
+  it('manda só a consulta conferida: grupo, página, intervalo e o período dos marcadores', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.assetNews(ASSET.id, {})).resolves.toEqual({
+      ok: true,
+      data: { total: 0, listTotal: 0, news: [] },
+    });
+    expect(server.calls.at(-1)?.path).toBe(assetPath(ASSET_NEWS_PATHS.list, ASSET.id));
+    expect(server.calls.at(-1)?.search || '').toBe('');
+    await client.assetNews(ASSET.id, { group: 'list', offset: '10' });
+    expect(server.calls.at(-1)?.search).toBe('?group=list&offset=10');
+    await client.assetNews(ASSET.id, { after: '2026-11-10', until: '2026-11-11' });
+    expect(server.calls.at(-1)?.search).toBe('?after=2026-11-10&until=2026-11-11');
+    await expect(client.assetNewsDays(ASSET.id, 'max')).resolves.toEqual({
+      ok: true,
+      data: { period: 'max', days: [] },
+    });
+    expect(server.calls.at(-1)?.search).toBe('?period=max');
+
+    const before = server.calls.length;
+    for (const query of [{ group: 'outro' }, { offset: '3' }, { after: '2026-11-10' }]) {
+      await expect(client.assetNews(ASSET.id, query)).resolves.toEqual({
+        ok: false,
+        error: 'unexpected',
+      });
+    }
+    await expect(client.assetNews('../../me', {})).resolves.toEqual({
+      ok: false,
+      error: 'unexpected',
+    });
+    await expect(client.assetNewsDays(ASSET.id, '1y&x=1' as PriceHistoryPeriod)).resolves.toEqual({
+      ok: false,
+      error: 'unexpected',
+    });
+    expect(server.calls).toHaveLength(before);
+  });
+});
+
 describe('comparação de carteiras (SPEC-022)', () => {
   const A = '0d9e1f7a-1111-4222-8333-00000000000a';
   const B = '0d9e1f7a-1111-4222-8333-00000000000b';
@@ -821,6 +864,31 @@ describe('consulta sem conexão (SPEC-032)', () => {
     expect(server.notModified).toBe(1);
     expect(client.isOffline).toBe(false);
     expect(events).toEqual([]);
+  });
+
+  it('SPEC-029: as notícias da ficha e os marcadores também ficam na cópia local (CA06)', async () => {
+    await signIn();
+    await client.assetNews(ASSET.id, {});
+    await client.assetNewsDays(ASSET.id, '1y');
+    server.down = true;
+    await expect(client.assetNews(ASSET.id, {})).resolves.toEqual({
+      ok: true,
+      data: { total: 0, listTotal: 0, news: [] },
+      savedAt: T1.toISOString(),
+    });
+    await expect(client.assetNewsDays(ASSET.id, '1y')).resolves.toMatchObject({
+      data: { period: '1y', days: [] },
+      savedAt: T1.toISOString(),
+    });
+    // Página, grupo ou período nunca abertos neste computador.
+    await expect(client.assetNews(ASSET.id, { offset: '10' })).resolves.toEqual({
+      ok: false,
+      error: 'not_saved_offline',
+    });
+    await expect(client.assetNewsDays(ASSET.id, '5y')).resolves.toEqual({
+      ok: false,
+      error: 'not_saved_offline',
+    });
   });
 
   it('a conexão cai: a leitura vem da cópia com a data, e o app entra em modo consulta (CA05)', async () => {

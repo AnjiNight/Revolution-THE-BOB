@@ -300,7 +300,10 @@ function LatestNewsList({ onSessionExpired }: { onSessionExpired: () => void }) 
           {t(`authErrors.${state.error}`)}
         </p>
       )}
-      {state.status === 'ready' && (
+      {state.status === 'ready' && state.data.news.length === 0 && (
+        <p className="assets-empty">{t('news.latest.empty')}</p>
+      )}
+      {state.status === 'ready' && state.data.news.length > 0 && (
         <>
           <p className="field-hint">
             {t('news.latest.linked', {
@@ -308,37 +311,33 @@ function LatestNewsList({ onSessionExpired }: { onSessionExpired: () => void }) 
               total: number(state.data.total),
             })}
           </p>
-          {state.data.news.length === 0 ? (
-            <p className="assets-empty">{t('news.latest.empty')}</p>
-          ) : (
-            <ol className="latest-news-list">
-              {state.data.news.map((item) => (
-                <li key={item.id}>
-                  <a href={item.url} target="_blank" rel="noreferrer">
-                    {item.title}
-                  </a>
-                  <span className="position-name">
-                    {item.source} · {dateTime(item.publishedAt)}
-                  </span>
-                  {item.links.length > 0 ? (
-                    <ul className="news-links" aria-label={t('news.latest.assets')}>
-                      {item.links.map((link) => (
-                        <li key={link.ticker} className={`news-link is-${link.relevance}`}>
-                          {link.ticker}
-                          <span className="visually-hidden">
-                            {' '}
-                            ({t(`news.latest.relevance.${link.relevance}`)})
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="position-name">{t('news.latest.noLinks')}</span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
+          <ol className="latest-news-list">
+            {state.data.news.map((item) => (
+              <li key={item.id}>
+                <a href={item.url} target="_blank" rel="noreferrer">
+                  {item.title}
+                </a>
+                <span className="position-name">
+                  {item.source} · {dateTime(item.publishedAt)}
+                </span>
+                {item.links.length > 0 ? (
+                  <ul className="news-links" aria-label={t('news.latest.assets')}>
+                    {item.links.map((link) => (
+                      <li key={link.ticker} className={`news-link is-${link.relevance}`}>
+                        {link.ticker}
+                        <span className="visually-hidden">
+                          {' '}
+                          ({t(`news.latest.relevance.${link.relevance}`)})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="position-name">{t('news.latest.noLinks')}</span>
+                )}
+              </li>
+            ))}
+          </ol>
           <p className="field-hint news-links-legend">
             <span className="news-link is-principal">{t('news.latest.relevance.principal')}</span>
             <span className="news-link is-citado">{t('news.latest.relevance.citado')}</span>

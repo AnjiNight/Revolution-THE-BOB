@@ -27,6 +27,7 @@ import { registerTaskRoutes } from './modules/market-data/controllers/task-route
 import type { PortfolioService } from './modules/portfolios/application/portfolio-service.js';
 import type { TradingService } from './modules/portfolios/application/trading-service.js';
 import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfolio-routes.js';
+import type { AssetNewsService } from './modules/news/application/asset-news-service.js';
 import type { NewsSourcesService } from './modules/news/application/news-sources-service.js';
 import { registerNewsRoutes } from './modules/news/controllers/news-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
@@ -61,6 +62,8 @@ export interface AppDependencies {
   tasks: TaskMonitorService;
   /** SPEC-027: fontes de notícias (colaborador). Sem ele, as rotas de notícias não existem. */
   newsSources?: NewsSourcesService;
+  /** SPEC-029: notícias do ativo na ficha; vem junto com `newsSources`. */
+  assetNews?: AssetNewsService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -120,8 +123,12 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     accessTokens: deps.accessTokens,
   });
   registerTaskRoutes(app, { tasks: deps.tasks, accessTokens: deps.accessTokens });
-  if (deps.newsSources) {
-    registerNewsRoutes(app, { sources: deps.newsSources, accessTokens: deps.accessTokens });
+  if (deps.newsSources && deps.assetNews) {
+    registerNewsRoutes(app, {
+      sources: deps.newsSources,
+      assetNews: deps.assetNews,
+      accessTokens: deps.accessTokens,
+    });
   }
 
   return app;

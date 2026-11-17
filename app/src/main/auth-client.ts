@@ -1,4 +1,5 @@
 import {
+  ASSET_NEWS_PATHS,
   ASSET_PATHS,
   assetPath,
   AUTH_PATHS,
@@ -21,9 +22,12 @@ import {
   TASK_PATHS,
   taskPath,
   TERMS_VERSION,
+  validateAssetNewsQuery,
   type AccountDeletionConfirmInput,
   type AccountDeletionRequestInput,
   type AssetDetail,
+  type AssetNewsDays,
+  type AssetNewsPage,
   type AssetDividends,
   type AssetFundamentals,
   type AssetSearchQuery,
@@ -675,6 +679,36 @@ export class AuthClient {
     return this.read<AssetDividends>(() => {
       if (!isDividendPeriod(period)) throw new RequestFailed('unexpected');
       return `${assetUrl(FUNDAMENTALS_PATHS.dividends, id)}?period=${period}`;
+    });
+  }
+
+  /**
+   * SPEC-029: notícias do ativo, 10 por vez, do grupo principal ou das listas; com `after` e
+   * `until`, as de um pregão (o painel do marcador).
+   */
+  assetNews(id: string, query: unknown): Promise<ClientResult<AssetNewsPage>> {
+    return this.read<AssetNewsPage>(() => {
+      // A consulta vem da interface: só o que passa na validação entra na query string.
+      const checked = validateAssetNewsQuery(query);
+      if (!checked.success) throw new RequestFailed('unexpected');
+      const { group, offset, after, until } = checked.data;
+      const params = new URLSearchParams();
+      if (group !== 'main') params.set('group', group);
+      if (offset > 0) params.set('offset', String(offset));
+      if (after && until) {
+        params.set('after', after);
+        params.set('until', until);
+      }
+      const search = params.toString();
+      return `${assetUrl(ASSET_NEWS_PATHS.list, id)}${search ? `?${search}` : ''}`;
+    });
+  }
+
+  /** SPEC-029: quantas notícias por dia de referência, no período do gráfico (os marcadores). */
+  assetNewsDays(id: string, period: PriceHistoryPeriod): Promise<ClientResult<AssetNewsDays>> {
+    return this.read<AssetNewsDays>(() => {
+      if (!isPriceHistoryPeriod(period)) throw new RequestFailed('unexpected');
+      return `${assetUrl(ASSET_NEWS_PATHS.days, id)}?period=${period}`;
     });
   }
 

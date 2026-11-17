@@ -1,4 +1,6 @@
+import { isPriceHistoryPeriod, type PriceHistoryPeriod } from './asset-detail.js';
 import type { FieldErrors, ValidationResult } from './auth.js';
+import { addDays, isIsoDate, isoDateInBrasilia, type IsoDate } from './calendar.js';
 
 /** Rotas das fontes de notícias (SPEC-027 §5.1), só para o colaborador. */
 export const NEWS_PATHS = {
@@ -38,6 +40,128 @@ export interface LatestNews {
 
 /** Notícias por página na lista do colaborador. */
 export const LATEST_NEWS_LIMIT = 20;
+
+/** SPEC-029: notícias do ativo na ficha. `:id` vira o id do ativo com `assetPath`. */
+export const ASSET_NEWS_PATHS = {
+  list: '/api/assets/:id/news',
+  days: '/api/assets/:id/news/days',
+} as const;
+
+/** `main`: o ativo é o assunto ou é citado; `list`: a notícia é uma lista (SPEC-029 §4.1, decisão 2). */
+export const ASSET_NEWS_GROUPS = ['main', 'list'] as const;
+export type AssetNewsGroup = (typeof ASSET_NEWS_GROUPS)[number];
+
+/** Notícias por página na ficha (SPEC-029 §4.2). */
+export const ASSET_NEWS_PAGE_SIZE = 10;
+/** Distância máxima entre `after` e `until`, no painel de um pregão. */
+export const ASSET_NEWS_MAX_RANGE_DAYS = 31;
+/** Depois desta hora de Brasília, a notícia conta para o pregão seguinte (§4.1, decisão 3). */
+export const NEWS_SESSION_CUTOFF_HOUR = 18;
+
+export interface AssetNewsItem {
+  id: string;
+  title: string;
+  summary: string | null;
+  url: string;
+  source: string;
+  /** ISO 8601. */
+  publishedAt: string;
+  relevance: NewsLinkRelevance;
+}
+
+/** Corpo de `GET /api/assets/:id/news`. */
+export interface AssetNewsPage {
+  /** Notícias do grupo pedido (e do intervalo, se houver). */
+  total: number;
+  /** Notícias de lista do ativo, para o título do grupo fechado. */
+  listTotal: number;
+  news: AssetNewsItem[];
+}
+
+export interface AssetNewsQuery {
+  group: AssetNewsGroup;
+  offset: number;
+  /** Dias de referência: depois de `after` até `until` (o painel de um pregão). */
+  after?: IsoDate;
+  until?: IsoDate;
+}
+
+export interface AssetNewsDay {
+  /** Dia de referência (`newsReferenceDay`). */
+  day: IsoDate;
+  count: number;
+}
+
+/** Corpo de `GET /api/assets/:id/news/days`: as notícias principal e citado por dia. */
+export interface AssetNewsDays {
+  period: PriceHistoryPeriod;
+  days: AssetNewsDay[];
+}
+
+/**
+ * Dia de referência da notícia (SPEC-029 §4.1, decisão 3): a data de Brasília depois de somar 6
+ * horas. Até as 18h, o próprio dia; depois, o seguinte. O pregão da notícia é o primeiro pregão
+ * nesse dia ou depois (fim de semana e feriado passam para o próximo).
+ */
+export function newsReferenceDay(publishedAt: Date): IsoDate {
+  const shift = (24 - NEWS_SESSION_CUTOFF_HOUR) * 3_600_000;
+  return isoDateInBrasilia(new Date(publishedAt.getTime() + shift));
+}
+
+/**
+ * Primeiro instante do dia de referência: as 18h de Brasília da véspera. Brasília está em UTC−3,
+ * sem horário de verão desde 2019 (as notícias começam em 2023).
+ */
+export function newsReferenceDayStart(day: IsoDate): Date {
+  return new Date(`${addDays(day, -1)}T${NEWS_SESSION_CUTOFF_HOUR}:00:00-03:00`);
+}
+
+function isIsoDay(value: unknown): value is IsoDate {
+  return typeof value === 'string' && isIsoDate(value);
+}
+
+export function validateAssetNewsQuery(input: unknown): ValidationResult<AssetNewsQuery> {
+  const record = asRecord(input);
+  const fields: FieldErrors = {};
+  const group = record.group ?? 'main';
+  if (typeof group !== 'string' || !(ASSET_NEWS_GROUPS as readonly string[]).includes(group)) {
+    fields.group = 'invalid_option';
+  }
+  // Da query string vem texto; múltiplo de 10 (a página).
+  const offsetText = record.offset ?? '0';
+  const offset =
+    typeof offsetText === 'string' && /^\d{1,6}$/.test(offsetText) ? Number(offsetText) : NaN;
+  if (!Number.isInteger(offset) || offset % ASSET_NEWS_PAGE_SIZE !== 0) {
+    fields.offset = 'invalid_option';
+  }
+  const { after, until } = record;
+  if (after !== undefined || until !== undefined) {
+    if (!isIsoDay(after)) fields.after = 'invalid_date';
+    if (!isIsoDay(until)) fields.until = 'invalid_date';
+    if (isIsoDay(after) && isIsoDay(until)) {
+      if (after >= until) fields.until = 'before_start';
+      else if (addDays(after, ASSET_NEWS_MAX_RANGE_DAYS) < until) fields.until = 'too_long';
+    }
+  }
+  if (Object.keys(fields).length > 0) return { success: false, fields };
+  return {
+    success: true,
+    data: {
+      group: group as AssetNewsGroup,
+      offset,
+      ...(isIsoDay(after) && isIsoDay(until) ? { after, until } : {}),
+    },
+  };
+}
+
+export function validateAssetNewsDaysQuery(
+  input: unknown,
+): ValidationResult<{ period: PriceHistoryPeriod }> {
+  const period = asRecord(input).period ?? '1y';
+  if (!isPriceHistoryPeriod(period))
+    return { success: false, fields: { period: 'invalid_option' } };
+  return { success: true, data: { period } };
+}
 
 export function newsSourcePath(id: string): string {
   return NEWS_PATHS.source.replace(':id', encodeURIComponent(id));

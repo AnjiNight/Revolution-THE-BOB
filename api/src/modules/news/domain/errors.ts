@@ -22,6 +22,14 @@ export class ParentSourceError extends DomainError {
   }
 }
 
+/** SPEC-029: notícias de um ativo que não está no catálogo. */
+export class NewsAssetNotFoundError extends DomainError {
+  readonly code = 'asset_not_found';
+  constructor() {
+    super('ativo não encontrado');
+  }
+}
+
 /** O feed não passou no teste: o motivo vai para o campo `url` (SPEC-027 §5.1). */
 export class FeedRejectedError extends DomainError {
   readonly code = 'validation_error';

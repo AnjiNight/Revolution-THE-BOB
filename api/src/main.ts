@@ -42,6 +42,7 @@ import { B3IndexHttpSource } from './modules/market-data/infrastructure/b3-index
 import { BcbSgsSource } from './modules/market-data/infrastructure/bcb-sgs-source.js';
 import { Investidor10HttpSource } from './modules/market-data/infrastructure/investidor10-source.js';
 import { PrismaEventRepository } from './modules/market-data/infrastructure/prisma-event-repository.js';
+import { AssetNewsService } from './modules/news/application/asset-news-service.js';
 import { NewsCollection, type RunSummary } from './modules/news/application/news-collection.js';
 import { NewsLinker } from './modules/news/application/news-linker.js';
 import { NewsSourcesService } from './modules/news/application/news-sources-service.js';
@@ -285,6 +286,7 @@ async function main(): Promise<void> {
         feeds: feedFetcher,
         parentEnabled: config.investidor10.enabled,
       }),
+      assetNews: new AssetNewsService({ news: newsRepo }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
