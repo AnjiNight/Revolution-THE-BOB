@@ -157,6 +157,8 @@
     indexes: group({}),
     fundamentals: group({}),
     portfolios: group({}),
+    // SPEC-011: o painel "Tarefas de dados" do Início aparece como servidor fora do ar.
+    tasks: group({}),
     assets: group({ logo: () => Promise.resolve({ ok: true, data: null }) }),
     // SPEC-027: fontes de notícias, com as mesmas recusas do servidor.
     news: group({

@@ -208,10 +208,6 @@ export function App() {
         >
           {/* SPEC-032: quando a conexão volta, a tela é montada de novo e relê tudo. */}
           <Fragment key={screenVersion}>
-<<<<<<< Updated upstream
-=======
-            {/* SPEC-027 e SPEC-028: fontes e últimas notícias (colaborador). */}
->>>>>>> Stashed changes
             {view.kind === 'news' && <NewsSources onSessionExpired={sessionExpired} />}
             {view.kind === 'home' && (
               <Home
@@ -222,7 +218,6 @@ export function App() {
                 onOpenPortfolios={(creating) =>
                   setView({ kind: 'portfolios', user, ...(creating ? { creating: true } : {}) })
                 }
-<<<<<<< Updated upstream
                 onOpenTasks={() => setView({ kind: 'tasks', user })}
               />
             )}
@@ -306,84 +301,6 @@ export function App() {
                 onSessionExpired={sessionExpired}
               />
             )}
-=======
-              />
-            )}
-            {view.kind === 'portfolios' &&
-              (view.compare ? (
-                <PortfolioComparison
-                  key={view.compare.join(',')}
-                  ids={view.compare}
-                  onBack={() => setView({ kind: 'portfolios', user })}
-                  onOpen={(portfolioId) =>
-                    setView({
-                      kind: 'portfolios',
-                      user,
-                      portfolioId,
-                      ...(view.compare ? { fromComparison: view.compare } : {}),
-                    })
-                  }
-                  onSessionExpired={sessionExpired}
-                />
-              ) : view.portfolioId ? (
-                <PortfolioPage
-                  key={view.portfolioId}
-                  portfolioId={view.portfolioId}
-                  buyAsset={view.buyAsset ?? null}
-                  {...(view.fromComparison
-                    ? { backLabel: t('portfolios.comparison.backToComparison') }
-                    : {})}
-                  onBack={() =>
-                    setView(
-                      view.fromComparison
-                        ? { kind: 'portfolios', user, compare: view.fromComparison }
-                        : { kind: 'portfolios', user },
-                    )
-                  }
-                  onOpenAsset={(assetId) =>
-                    setView({
-                      kind: 'assets',
-                      user,
-                      assetId,
-                      ...(view.portfolioId ? { returnTo: view.portfolioId } : {}),
-                    })
-                  }
-                  justCopied={view.copied ?? null}
-                  onOpenPortfolio={(portfolioId, copied) =>
-                    setView({
-                      kind: 'portfolios',
-                      user,
-                      portfolioId,
-                      ...(copied ? { copied } : {}),
-                    })
-                  }
-                  onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
-                  onSessionExpired={sessionExpired}
-                />
-              ) : (
-                <Portfolios
-                  startCreating={view.creating === true}
-                  onOpen={(portfolioId, copied) =>
-                    setView({
-                      kind: 'portfolios',
-                      user,
-                      portfolioId,
-                      ...(copied ? { copied } : {}),
-                    })
-                  }
-                  onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
-                  onSessionExpired={sessionExpired}
-                />
-              ))}
-            {view.kind === 'calendar' && (
-              // A chave reabre a tela no ano pedido pelo aviso do Início.
-              <TradingCalendar
-                key={view.year ?? 'atual'}
-                initialYear={view.year}
-                onSessionExpired={sessionExpired}
-              />
-            )}
->>>>>>> Stashed changes
             {view.kind === 'assets' && (
               <>
                 {/* Com a ficha aberta, a lista fica escondida, mas montada: a busca não se perde. */}

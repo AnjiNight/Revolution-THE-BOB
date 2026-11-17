@@ -280,13 +280,10 @@
     "history_pending": "This asset's price history is still being loaded.",
     "copy_breaks_cash": "Without the purchases and sales, a withdrawal would have no balance.",
     "not_saved_offline": "Not viewed on this computer yet. Connect to see it.",
-<<<<<<< Updated upstream
     "task_not_found": "Task not found.",
     "run_not_found": "Run not found (runs older than 90 days are deleted).",
     "run_already_requested": "This task already has a request waiting for the processor.",
     "run_in_progress": "This task is running now. Request it again when it finishes.",
-=======
->>>>>>> Stashed changes
     "news_source_not_found": "News source not found.",
     "source_exists": "There is already a source with this address.",
     "parent_source": "The parent source can't be changed here."
