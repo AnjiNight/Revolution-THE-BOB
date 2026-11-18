@@ -73,6 +73,8 @@
 | 1.63 | SPEC-028 aprovada (Nicoly) e implementada, validada como usuária em 17/11/2026: vínculo notícia–ativo pelo ticker e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista, e as últimas notícias na tela do colaborador; 261 notícias reais vinculadas, 154 com ativo. Entra a SPEC-044 (sentimento, RF28, OPEN-30 e OPEN-31); a SPEC-029 passa a depender só do vínculo |
 | 1.64 | SPEC-029 detalhada ([SPEC-029.md](SPEC-029.md)) pela Nicoly com o Claude, aguardando a aprovação: notícias principal e citado na ficha do ativo (as de lista num grupo à parte), marcadores por pregão no gráfico de preço, notícia depois das 18h contando para o pregão seguinte, e a variação no pregão e 5 pregões depois; sem sentimento (SPEC-044); entrega a sua parte da consulta sem conexão (SPEC-032) |
 | 1.65 | SPEC-029 aprovada (Nicoly, 17/11/2026, "Aprovar e fazer") e implementada: seção Notícias na ficha do ativo (10 por vez, listas num grupo fechado), marcadores no gráfico com clique, toque e teclado (N, Shift+N, Enter), painel do pregão com a variação no pregão e 5 pregões depois, e as duas leituras na cópia local (SPEC-032 §5.1 atualizada). A conferência com dados reais achou e corrigiu a leitura dos horários com 3 horas a menos num PostgreSQL fora de UTC (a conexão agora é sempre UTC) |
+| 1.66 | SPEC-038 detalhada ([SPEC-038.md](SPEC-038.md)) a pedido do Luís, aguardando a aprovação: botão "Baixar relatório (PDF)" na tela da carteira, com o período da Rentabilidade; o relatório é a fotografia da tela (resumo com o CDI, o Ibovespa e o IFIX, os dois gráficos, posições e distribuição de hoje, proventos, extrato do período do mais antigo para o mais recente, sem os estornados, e os avisos), em A4 e tema claro, no idioma da interface, sem dado pessoal, gerado pelo próprio app (`printToPDF` do Electron) e gravado com "Salvar como"; proposta para a OPEN-38 |
+| 1.67 | SPEC-038 aprovada (Luís, 17/11/2026, com as recomendações) e implementada: botão "Baixar relatório (PDF)" ao lado de "Copiar carteira", com o período da Rentabilidade; o documento só existe na impressão (cabeçalho, resumo com o CDI, o Ibovespa e o IFIX, os dois gráficos, posições e distribuição de hoje, proventos, extrato do período e avisos), em A4 e tema claro, PDF marcado com rodapé numerado, gerado pelo `printToPDF` do Electron e gravado com "Salvar como"; sem conexão, sai com os dados guardados e a data deles. OPEN-38 resolvida |
 ---
 
 ## 0. Como ler este documento
@@ -339,7 +341,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-35 | Limiar de "variação relevante", antecedência do aviso de vencimento, notificação com o app fechado | RF34, RF35 | 033 |
 | OPEN-36 | Escopo de RF04 por sistema operacional | INC-12 | 036 |
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
-| OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
+| OPEN-38 | ✅ **Resolvida na [SPEC-038](SPEC-038.md) (17/11/2026):** a fotografia da carteira no período escolhido na Rentabilidade (resumo com as referências, gráficos, posições e distribuição de hoje, proventos e extrato do período) com os avisos. Original: conteúdo do relatório PDF (RF22) | Lacuna | 038 |
 | OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
 | OPEN-40 | ✅ **Resolvida na [SPEC-011](SPEC-011.md) (16/11/2026):** registros de execução, erros e pedidos atendidos por 90 dias, guardando sempre a última execução de cada tarefa. Antes, decididos os backups e logs (no máximo 30 dias, [SPEC-034](SPEC-034.md)), as cotações do pregão (30 dias, [SPEC-009](SPEC-009.md)) e o CDI (para sempre, [SPEC-007](SPEC-007.md)). Original: retenção de backups (× RB04), de registros de execução e de cotações intradiárias | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
 | OPEN-41 | ✅ **Resolvida na [SPEC-006](SPEC-006.md):** a busca procura só nos ativos ativos do catálogo da equipe | INC-09 | 006 |
@@ -1194,6 +1196,8 @@ Separada da SPEC-028 em 12/11/2026 (escolha da Nicoly), ainda não detalhada.
 
 #### SPEC-038 — Relatório da carteira em PDF
 
+📄 Detalhada em [SPEC-038.md](SPEC-038.md) — aprovada (Luís, 17/11/2026) e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário exporta um relatório da carteira em PDF |
@@ -1207,7 +1211,7 @@ Separada da SPEC-028 em 12/11/2026 (escolha da Nicoly), ainda não detalhada.
 | ADRs | DA15 (se o relatório incluir cenários) |
 | Depende de | SPEC-019, SPEC-020, SPEC-021 |
 | Posição | Consolida visões já existentes |
-| Em aberto | **OPEN-38 (bloqueante)** |
+| Em aberto | OPEN-43 (OPEN-38 resolvida) |
 | Prioridade derivada | Could |
 
 ---

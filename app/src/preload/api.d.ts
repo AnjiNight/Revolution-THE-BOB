@@ -68,6 +68,8 @@ import type {
   PasswordResetRequestInput,
   RegisterInput,
   RenamePortfolioInput,
+  ReportSaveRequest,
+  ReportSaveResult,
   UpdateNameInput,
 } from '../shared/auth-ipc.js';
 import type { ServerStatus } from '../shared/server-status.js';
@@ -165,6 +167,14 @@ export interface DesktopApi {
     comparison(query: ComparisonQuery): Promise<ClientResult<PortfolioComparison>>;
     /** SPEC-023: nova carteira a partir desta; `copy_breaks_cash` traz em details a retirada. */
     copy(id: string, input: NewPortfolioCopyInput): Promise<ClientResult<PortfolioCopyResult>>;
+  };
+  /**
+   * SPEC-038: o relatório da carteira em PDF. `save` imprime esta janela (o documento do relatório
+   * já montado) e grava onde a pessoa escolher; `open` abre o último relatório gravado.
+   */
+  report: {
+    save(request: ReportSaveRequest): Promise<ClientResult<ReportSaveResult>>;
+    open(): Promise<boolean>;
   };
   /** SPEC-011: as tarefas de ingestão, só colaborador (403 para usuário). */
   tasks: {

@@ -28,6 +28,7 @@ import type {
   RenamePortfolioInput,
   UpdateNameInput,
 } from '@simulador/shared';
+import { isoDateInBrasilia } from '@simulador/shared';
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
 import {
   APP_CHANNELS,
@@ -41,6 +42,7 @@ import {
   NEWS_CHANNELS,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
+  REPORT_CHANNELS,
   TASK_CHANNELS,
   type AppLanguage,
   type ConnectionEvent,
@@ -52,6 +54,7 @@ import { saveDataExport } from './data-export.js';
 import { GoogleOAuthClient } from './google-oauth.js';
 import { GoogleSignIn } from './google-sign-in.js';
 import { EncryptedFileOfflineCache } from './offline-cache.js';
+import { savePortfolioReport } from './portfolio-report.js';
 import { EncryptedFileSecretStore, type OsEncryption } from './secret-store.js';
 import { checkServerHealth } from './server-health.js';
 
@@ -227,6 +230,37 @@ app.whenReady().then(() => {
       uiLanguage,
     ),
   );
+
+  // Relatório da carteira em PDF (SPEC-038): o Chromium imprime a própria janela de quem pediu
+  // (o documento do relatório só aparece na impressão), e o arquivo vai para onde a pessoa
+  // escolher. O caminho gravado fica só aqui: o "Abrir" não aceita caminho vindo da interface.
+  let lastReport: string | null = null;
+  ipcMain.handle(REPORT_CHANNELS.save, async (event, request: unknown) => {
+    const { result, path } = await savePortfolioReport(
+      request,
+      {
+        chooseFile: async (defaultPath) => {
+          const window = BrowserWindow.fromWebContents(event.sender);
+          const options = { defaultPath, filters: [{ name: 'PDF', extensions: ['pdf'] }] };
+          const choice = window
+            ? await dialog.showSaveDialog(window, options)
+            : await dialog.showSaveDialog(options);
+          return choice.canceled || !choice.filePath ? null : choice.filePath;
+        },
+        printToPdf: (options) => event.sender.printToPDF(options),
+        writeFile: (path, contents) => writeFile(path, contents),
+      },
+      app.getPath('downloads'),
+      uiLanguage,
+      isoDateInBrasilia(new Date()),
+    );
+    if (path) lastReport = path;
+    return result;
+  });
+  ipcMain.handle(REPORT_CHANNELS.open, async () =>
+    lastReport ? (await shell.openPath(lastReport)) === '' : false,
+  );
+
   ipcMain.handle(PROFILE_CHANNELS.requestDeletion, (_event, input: AccountDeletionRequestInput) =>
     auth.requestDeletion(input),
   );

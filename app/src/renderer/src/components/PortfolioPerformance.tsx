@@ -49,11 +49,14 @@ const TOOLTIP_HEIGHT = 64;
 export function PortfolioPerformance({
   portfolio,
   version,
+  onQueryChange,
   onSessionExpired,
 }: {
   portfolio: Portfolio;
   /** Muda a cada lançamento novo: a conta é pedida de novo. */
   version: number;
+  /** SPEC-038: o relatório em PDF usa o período escolhido aqui. */
+  onQueryChange?: (query: PerformanceQuery) => void;
   onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -96,12 +99,14 @@ export function PortfolioPerformance({
     setCustom(false);
     setState({ status: 'loading' });
     setQuery({ period });
+    onQueryChange?.({ period });
   };
 
   const apply = (event: FormEvent) => {
     event.preventDefault();
     setState({ status: 'loading' });
     setQuery({ from, to });
+    onQueryChange?.({ from, to });
   };
 
   const data = state.status === 'ready' ? state.data : null;
@@ -325,9 +330,9 @@ export function signed(value: string): string {
 /**
  * SPEC-020: as referências no mesmo período (CDI, Ibovespa e, com FII, IFIX), o "% do CDI" e as
  * fontes. A referência que para antes do último ponto diz até quando; a que ainda não foi carregada
- * diz isso, sem quebrar o painel.
+ * diz isso, sem quebrar o painel. O relatório em PDF (SPEC-038) mostra o mesmo bloco.
  */
-function Benchmarks({ data }: { data: PerformanceData }) {
+export function Benchmarks({ data }: { data: PerformanceData }) {
   const { t, i18n } = useTranslation();
   const language = i18n.language;
   if (data.benchmarks.length === 0) return null;
