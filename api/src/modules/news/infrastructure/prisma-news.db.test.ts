@@ -211,6 +211,84 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
     await prisma.ativo.delete({ where: { id: asset.id } });
   });
 
+  it('SPEC-029: notícias do ativo por relevância, página e intervalo; horários para os marcadores', async () => {
+    const parent = (await repo.parentSource())?.id as string;
+    const asset = await prisma.ativo.create({
+      data: {
+        ticker: `Y${randomUUID().replace(/\D/g, '').slice(0, 3)}3`.slice(0, 5),
+        nome: 'EMPRESA NOTICIADA S.A.',
+        classe: 'acao',
+        setor: 'bens_industriais',
+        atualizadoEm: at,
+      },
+    });
+    const hours = ['2026-11-10T22:00:00Z', '2026-11-11T17:00:00Z', '2026-11-11T22:00:00Z'];
+    await repo.saveNews(
+      parent,
+      hours.map((hour, i) => item(i + 1, { publishedAt: new Date(hour) })),
+      at,
+    );
+    const ids = new Map(
+      (await prisma.noticia.findMany({ select: { id: true, titulo: true } })).map((n) => [
+        n.titulo,
+        n.id,
+      ]),
+    );
+    const relevances = ['principal', 'citado', 'lista'] as const;
+    for (const [i, relevance] of relevances.entries()) {
+      await repo.saveLinks(
+        ids.get(`Notícia ${i + 1}`) as string,
+        [{ assetId: asset.id, relevance, origin: 'ticker_texto' }],
+        1,
+        at,
+      );
+    }
+
+    expect(await repo.assetExists(asset.id)).toBe(true);
+    expect(await repo.assetExists(randomUUID())).toBe(false);
+    const main = await repo.assetNews(
+      asset.id,
+      { relevances: ['principal', 'citado'] },
+      { offset: 0, limit: 10 },
+    );
+    expect(main.total).toBe(2);
+    expect(main.rows).toMatchObject([
+      { title: 'Notícia 2', summary: 'Resumo', source: 'Investidor10', relevance: 'citado' },
+      { title: 'Notícia 1', relevance: 'principal' },
+    ]);
+    expect(
+      (
+        await repo.assetNews(
+          asset.id,
+          { relevances: ['principal', 'citado'] },
+          { offset: 1, limit: 10 },
+        )
+      ).rows.map((r) => r.title),
+    ).toEqual(['Notícia 1']);
+    expect(
+      await repo.assetNews(asset.id, { relevances: ['lista'] }, { offset: 0, limit: 0 }),
+    ).toEqual({ total: 1, rows: [] });
+    // Intervalo [from, to): a quarta (dia de referência) começa às 18h da terça.
+    const wednesday = await repo.assetNews(
+      asset.id,
+      {
+        relevances: ['principal', 'citado', 'lista'],
+        from: new Date('2026-11-10T21:00:00Z'),
+        to: new Date('2026-11-11T21:00:00Z'),
+      },
+      { offset: 0, limit: 10 },
+    );
+    expect(wednesday.rows.map((r) => r.title)).toEqual(['Notícia 2', 'Notícia 1']);
+    const dates = await repo.assetNewsDates(asset.id, {
+      relevances: ['principal', 'citado'],
+      from: new Date('2026-11-11T00:00:00Z'),
+    });
+    expect(dates.map((d) => d.toISOString())).toEqual(['2026-11-11T17:00:00.000Z']);
+
+    await repo.clearParent();
+    await prisma.ativo.delete({ where: { id: asset.id } });
+  });
+
   it('andamento do arquivo e a limpeza do fim da autorização (CA07)', async () => {
     const parent = (await repo.parentSource())?.id as string;
     const agency = (await repo.sources())[1]?.id as string;

@@ -2,7 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 /**
  * SPEC-027 — Fontes de notícias (Área do colaborador), o mesmo roteiro da validação visual de
- * 12/11/2026, com o `window.api` falso de `mocks/window-api.js` (dados fictícios).
+ * 12/11/2026, e SPEC-028 — as últimas notícias com os ativos vinculados (validação de 17/11/2026),
+ * com o `window.api` falso de `mocks/window-api.js` (dados fictícios).
  */
 
 async function openNews(page: Page, mock: Record<string, unknown> = {}): Promise<void> {
@@ -110,6 +111,51 @@ test('carregamento lento e lista vazia com a coleta desligada (CA07)', async ({ 
   await expect(page.getByText(/Arquivo do Investidor10/)).toHaveCount(0);
 });
 
+// SPEC-028: as últimas notícias com os ativos vinculados, abaixo das fontes.
+test('últimas notícias: tickers com a relevância e notícia sem ativo (CA06)', async ({ page }) => {
+  await openNews(page);
+  const latest = page.getByRole('region', { name: 'Últimas notícias' });
+  await expect(latest.getByText('Com ativo vinculado: 154 de 261 notícias.')).toBeVisible();
+  const items = latest.locator('.latest-news-list > li');
+  await expect(items).toHaveCount(3);
+  await expect(items.nth(0).getByRole('link')).toHaveAttribute('target', '_blank');
+  await expect(items.nth(0).getByRole('list', { name: 'Ativos da notícia' })).toHaveText(
+    /PETR4 \(Principal\)\s*PRIO3 \(Citado\)/,
+  );
+  await expect(items.nth(1).locator('.news-link.is-lista')).toHaveCount(9);
+  await expect(items.nth(2)).toContainText('Sem ativo vinculado');
+});
+
+test('últimas notícias: carregando, vazia e servidor fora do ar', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { __MOCK__: unknown }).__MOCK__ = { scenario: 'vazio', delayMs: 1500 };
+  });
+  await page.addInitScript({ path: 'mocks/window-api.js' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Notícias', exact: true }).click();
+  const latest = page.getByRole('region', { name: 'Últimas notícias' });
+  await expect(latest.getByText('Carregando as notícias…')).toBeVisible();
+  await expect(latest.getByText('Nenhuma notícia coletada ainda.')).toBeVisible();
+  await expect(latest.getByText(/Com ativo vinculado/)).toHaveCount(0);
+
+  const failing = await page.context().newPage();
+  await failing.addInitScript({ path: 'mocks/window-api.js' });
+  await failing.addInitScript(() => {
+    const api = (window as unknown as { api: { news: Record<string, unknown> } }).api;
+    api.news = new Proxy(api.news, {
+      get: (target, key) =>
+        key === 'latest'
+          ? () => Promise.resolve({ ok: false, error: 'server_unavailable' })
+          : target[key as string],
+    });
+  });
+  await failing.goto('/');
+  await failing.getByRole('button', { name: 'Notícias', exact: true }).click();
+  await expect(
+    failing.getByRole('region', { name: 'Últimas notícias' }).getByRole('alert'),
+  ).toHaveText('Não foi possível falar com o servidor. Tente novamente.');
+});
+
 test('celular (375 px): sem rolagem lateral, menu alcançável e fontes em cartões', async ({
   page,
 }) => {
@@ -125,4 +171,9 @@ test('celular (375 px): sem rolagem lateral, menu alcançável e fontes em cart�
   await expect(page.getByRole('button', { name: 'Sair da conta' })).toBeInViewport();
   await page.getByRole('button', { name: 'Nova fonte' }).click();
   await expect(page.getByRole('button', { name: 'Testar e cadastrar' })).toBeVisible();
+  await page.getByRole('region', { name: 'Últimas notícias' }).scrollIntoViewIfNeeded();
+  const stillFits = await page.evaluate(
+    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  );
+  expect(stillFits).toBe(true);
 });

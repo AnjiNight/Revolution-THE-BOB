@@ -297,6 +297,118 @@ button.period-button[aria-pressed='true'] {
   stroke-width: 1;
 }
 
+/* SPEC-029: pregão com notícia, na base do gráfico; o escolhido fica cheio. */
+.chart-news {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+.chart-news.is-selected {
+  fill: var(--accent);
+}
+
+.chart-news-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.chart-news-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+}
+
+.asset-news-session {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+
+.asset-news-session h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.asset-news-session h3:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button.asset-news-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.asset-news-list {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0.75rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.asset-news-item {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.asset-news-item p {
+  margin: 0;
+}
+
+.asset-news-title {
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+/* O resumo da Agência Brasil chega a 999 caracteres: 3 linhas na lista. */
+.asset-news-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.asset-news-read {
+  justify-self: start;
+  font-size: 0.85rem;
+}
+
+.asset-news-language {
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.asset-news-lists {
+  margin-top: 0.5rem;
+}
+
+.asset-news-failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
 .chart-dot {
   fill: var(--accent);
   stroke: var(--surface);

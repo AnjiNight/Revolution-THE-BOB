@@ -87,6 +87,35 @@ export interface NewsRepository {
   latestNews(limit: number): Promise<LatestNewsRow[]>;
   /** Quantas notícias há e quantas têm pelo menos um vínculo. */
   linkCounts(): Promise<{ total: number; linked: number }>;
+  /** SPEC-029: o ativo está no catálogo (ativo ou desativado). */
+  assetExists(assetId: string): Promise<boolean>;
+  /**
+   * As notícias do ativo com essas relevâncias, publicadas em [`from`, `to`), das mais novas, e
+   * quantas são ao todo.
+   */
+  assetNews(
+    assetId: string,
+    filter: AssetNewsFilter,
+    page: { offset: number; limit: number },
+  ): Promise<{ total: number; rows: AssetNewsRow[] }>;
+  /** Os horários de publicação das notícias do ativo com essas relevâncias, desde `from`. */
+  assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<Date[]>;
+}
+
+export interface AssetNewsFilter {
+  relevances: readonly LinkRelevance[];
+  from?: Date;
+  to?: Date;
+}
+
+export interface AssetNewsRow {
+  id: string;
+  title: string;
+  summary: string | null;
+  url: string;
+  source: string;
+  publishedAt: Date;
+  relevance: LinkRelevance;
 }
 
 export interface NewsToLink {

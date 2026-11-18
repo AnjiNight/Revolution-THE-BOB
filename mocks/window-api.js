@@ -6,7 +6,9 @@
  * - Playwright: `page.addInitScript({ path: 'mocks/window-api.js' })` antes de abrir
  *   http://localhost:5173 (o renderer do `npm run dev:app`).
  * - Opções, antes deste script: `window.__MOCK__ = { delayMs: 1500, scenario: 'vazio' }`.
- *   `scenario`: `normal` (padrão) ou `vazio` (só a fonte pai, sem arquivo, coleta desligada).
+ *   `scenario`: `normal` (padrão) ou `vazio` (só a fonte pai, sem arquivo, coleta desligada; e a
+ *   ficha sem notícias). `role: 'user'` entra como usuária, para a ficha do ativo (SPEC-029).
+ *   `failNews: true` faz as leituras de notícias da ficha falharem (servidor fora do ar).
  * - As chamadas ficam em `window.__MOCK_CALLS__` (ex.: para conferir o clique duplo).
  */
 (() => {
@@ -26,13 +28,21 @@
   const notMocked = () => Promise.resolve({ ok: false, error: 'server_unavailable' });
   const group = (handlers) => new Proxy(handlers, { get: (t, k) => t[k] ?? notMocked });
 
-  // Colaboradora fictícia.
-  const user = {
-    id: '00000000-0000-4000-8000-0000000000c1',
-    name: 'Colaboradora Teste',
-    email: 'colaboradora@exemplo.test',
-    role: 'collaborator',
-  };
+  // Colaboradora fictícia ou, com `role: 'user'`, usuária fictícia.
+  const user =
+    options.role === 'user'
+      ? {
+          id: '00000000-0000-4000-8000-0000000000u1',
+          name: 'Usuária Teste',
+          email: 'usuaria@exemplo.test',
+          role: 'user',
+        }
+      : {
+          id: '00000000-0000-4000-8000-0000000000c1',
+          name: 'Colaboradora Teste',
+          email: 'colaboradora@exemplo.test',
+          role: 'collaborator',
+        };
 
   const minutesAgo = (m) => new Date(Date.now() - m * 60_000).toISOString();
   const parent = {
@@ -136,6 +146,152 @@
           ],
         };
 
+  // SPEC-029: ficha de um ativo fictício, com um ano de pregões (dias úteis até 16/11/2026).
+  const asset = {
+    id: '00000000-0000-4000-8000-0000000000a1',
+    ticker: 'PETR4',
+    name: 'PETRÓLEO FICTÍCIO S.A.',
+    class: 'stock',
+    sector: 'petroleo_gas_biocombustiveis',
+    quote: null,
+    hasLogo: false,
+  };
+  const points = [];
+  for (let day = new Date('2025-11-17T00:00:00Z'); day <= new Date('2026-11-16T00:00:00Z');) {
+    if (day.getUTCDay() % 6 !== 0) {
+      const i = points.length;
+      const close = 30 + 3 * Math.sin(i / 15) + i * 0.01;
+      points.push({ date: day.toISOString().slice(0, 10), close: close.toFixed(2) });
+    }
+    day = new Date(day.getTime() + 86_400_000);
+  }
+  const lastPoint = points[points.length - 1];
+  const detail = {
+    ...asset,
+    active: true,
+    deactivatedAt: null,
+    lastSession: null,
+    history: { status: 'loaded', from: points[0].date, to: lastPoint.date },
+  };
+  const longSummary =
+    'Resumo fictício e longo de uma fonte curada, para conferir que a lista mostra só três linhas. '.repeat(
+      10,
+    );
+  const assetNews = (id, title, publishedAt, relevance, source = 'Investidor10', summary) => ({
+    id,
+    title,
+    summary: summary ?? `Resumo fictício: ${title.toLowerCase()}.`,
+    url: `https://investidor10.com.br/noticias/exemplo-ficticio-${id}/`,
+    source,
+    publishedAt,
+    relevance,
+  });
+  const mainNews =
+    scenario === 'vazio'
+      ? []
+      : [
+          assetNews(
+            'a1',
+            'Petróleo Fictício (PETR4) anuncia dividendos extraordinários',
+            '2026-11-16T13:00:00Z',
+            'principal',
+          ),
+          assetNews(
+            'a2',
+            'Petróleo sobe no fim de semana fictício',
+            '2026-11-14T15:00:00Z',
+            'citado',
+          ),
+          assetNews(
+            'a3',
+            'PETR4 divulga resultado fictício do 3º trimestre à noite',
+            '2026-11-11T22:30:00Z',
+            'principal',
+          ),
+          assetNews(
+            'a4',
+            'Petróleo Fictício (PETR4) aprova nova plataforma',
+            '2026-11-11T17:00:00Z',
+            'principal',
+          ),
+          assetNews(
+            'a5',
+            'Ibovespa fictício fecha em alta com bancos e PETR4',
+            '2026-11-11T14:00:00Z',
+            'citado',
+          ),
+          assetNews(
+            'a6',
+            'Analistas fictícios revisam preço-alvo do setor',
+            '2026-11-05T16:00:00Z',
+            'citado',
+          ),
+          assetNews(
+            'a7',
+            'PETR4 fictícia anuncia recompra de ações',
+            '2026-10-28T18:00:00Z',
+            'principal',
+          ),
+          assetNews(
+            'a8',
+            'Produção de petróleo fictícia cresce no mês',
+            '2026-10-20T13:00:00Z',
+            'citado',
+            'Agência Brasil – Economia',
+            longSummary,
+          ),
+          assetNews(
+            'a9',
+            'Petróleo Fictício (PETR4) muda diretoria',
+            '2026-10-02T15:00:00Z',
+            'principal',
+          ),
+          assetNews(
+            'a10',
+            'Combustíveis fictícios ficam mais caros',
+            '2026-09-15T15:00:00Z',
+            'citado',
+          ),
+          assetNews(
+            'a11',
+            'PETR4 fictícia paga juros sobre capital próprio',
+            '2026-08-03T15:00:00Z',
+            'principal',
+          ),
+          assetNews('a12', 'Setor de energia fictício em foco', '2026-06-10T15:00:00Z', 'citado'),
+        ];
+  const listNews =
+    scenario === 'vazio'
+      ? []
+      : [
+          assetNews(
+            'l1',
+            'Agenda fictícia: 40 empresas divulgam resultados',
+            '2026-11-09T12:00:00Z',
+            'lista',
+          ),
+          assetNews('l2', 'Ranking fictício de dividendos do mês', '2026-10-30T12:00:00Z', 'lista'),
+          assetNews(
+            'l3',
+            'Carteira fictícia recomendada de novembro',
+            '2026-11-02T12:00:00Z',
+            'lista',
+          ),
+        ];
+  // Dia de referência (SPEC-029 §4.1, decisão 3): Brasília (UTC−3) mais 6 horas = UTC mais 3 horas.
+  const referenceDay = (iso) =>
+    new Date(Date.parse(iso) + 3 * 3_600_000).toISOString().slice(0, 10);
+  const newsDays = () => {
+    const counts = new Map();
+    for (const item of mainNews) {
+      const day = referenceDay(item.publishedAt);
+      counts.set(day, (counts.get(day) ?? 0) + 1);
+    }
+    return [...counts]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, count]) => ({ day, count }));
+  };
+
   window.api = {
     checkServerHealth: () => Promise.resolve({ kind: 'connected', version: 'mock' }),
     // SPEC-035: o idioma vai para o processo principal; aqui não há nada a fazer.
@@ -159,7 +315,46 @@
     portfolios: group({}),
     // SPEC-011: o painel "Tarefas de dados" do Início aparece como servidor fora do ar.
     tasks: group({}),
-    assets: group({ logo: () => Promise.resolve({ ok: true, data: null }) }),
+    assets: group({
+      logo: () => Promise.resolve({ ok: true, data: null }),
+      // SPEC-029: a busca, a ficha e o histórico do ativo fictício.
+      search: () => ok({ assets: [asset], hasMore: false, total: 1 }),
+      detail: () => ok(structuredClone(detail)),
+      history: (_id, period, adjusted) =>
+        ok({
+          period,
+          adjusted: adjusted !== false,
+          events: [],
+          from: points[0].date,
+          to: lastPoint.date,
+          shorterThanPeriod: false,
+          points: structuredClone(points),
+          summary: null,
+          jumps: [],
+        }),
+      news: (_id, query = {}) => {
+        calls.push(['assetNews', query]);
+        if (options.failNews) return fail('server_unavailable');
+        const offset = Number(query.offset ?? 0);
+        let found = query.group === 'list' ? listNews : mainNews;
+        if (query.after && query.until) {
+          found = found.filter((item) => {
+            const day = referenceDay(item.publishedAt);
+            return day > query.after && day <= query.until;
+          });
+        }
+        return ok({
+          total: found.length,
+          listTotal: listNews.length,
+          news: structuredClone(found.slice(offset, offset + 10)),
+        });
+      },
+      newsDays: (_id, period) => {
+        calls.push(['assetNewsDays', period]);
+        if (options.failNews) return fail('server_unavailable');
+        return ok({ period, days: newsDays() });
+      },
+    }),
     // SPEC-027: fontes de notícias, com as mesmas recusas do servidor.
     news: group({
       sources: () => {

@@ -120,7 +120,9 @@ O gráfico da ficha passa a abrir **ajustado** por desdobramentos, grupamentos e
 - **Investidor10, a fonte pai:** autorizado para fins universitários (por telefone, em 12/11/2026), nas mesmas condições dos dados. As notícias novas vêm a cada 30 minutos, pelo sitemap de notícias do site. O arquivo desde setembro de 2023 (cerca de 22.500 notícias) é carregado aos poucos, uma página a cada 3 segundos (umas 19 horas no total, divididas em partes de meia hora). Só com `INVESTIDOR10_ENABLED=true`, e o `investidor10:apagar` apaga as notícias também.
 - **Fontes curadas:** feeds RSS ou Atom, a cada 30 minutos. A primeira é a Agência Brasil – Economia.
 
-Na Área do colaborador, **Notícias** mostra as fontes, a última coleta de cada uma, quantas notícias há e o andamento do arquivo. Por lá também se cadastra uma fonte curada (o feed é testado antes de gravar; só `https` público) e se ativa ou desativa uma fonte. As notícias ainda não aparecem para o usuário: o vínculo com os ativos e o sentimento vêm na SPEC-028, e a ficha na SPEC-029.
+Na Área do colaborador, **Notícias** mostra as fontes, a última coleta de cada uma, quantas notícias há e o andamento do arquivo. Por lá também se cadastra uma fonte curada (o feed é testado antes de gravar; só `https` público) e se ativa ou desativa uma fonte. Depois de cada coleta, e a cada 30 minutos, o processador liga cada notícia aos ativos que ela cita ([SPEC-028](specs/SPEC-028.md)), pelo ticker e pelas empresas marcadas pelo Investidor10, como **principal**, **citado** ou **lista**. A tela mostra as 20 últimas notícias com esses ativos, para conferir.
+
+Na **ficha do ativo** ([SPEC-029](specs/SPEC-029.md)), quem usa o app vê as notícias sobre o ativo (título, resumo e o link para a fonte, nunca a matéria inteira), e o gráfico de preço marca os pregões com notícia. Ao escolher um marcador, aparecem as notícias daquele pregão e o que o preço fez no pregão e 5 pregões depois. A notícia publicada depois das 18h conta para o pregão seguinte. O sentimento das notícias vem na SPEC-044.
 
 ### Token da brapi (opcional)
 

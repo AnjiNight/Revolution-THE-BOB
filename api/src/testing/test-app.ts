@@ -9,6 +9,7 @@ import type { DatabaseProbe } from '../modules/health/application/get-health.js'
 import { EmailCodeHasher } from '../modules/identity/application/email-code.js';
 import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
+import { AssetNewsService } from '../modules/news/application/asset-news-service.js';
 import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
 import { FakeFeedFetcher, InMemoryNewsRepository } from '../modules/news/testing/fakes.js';
 import { JwtAccessTokenService } from '../modules/identity/infrastructure/jwt-access-token-service.js';
@@ -263,6 +264,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     trading,
     tasks,
     newsSources,
+    assetNews: new AssetNewsService({ news: newsRepo, clock }),
     logStream: logs,
   });
 

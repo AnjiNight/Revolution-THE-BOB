@@ -4,6 +4,8 @@ import type { AuditEntry } from '../../audit/application/audit.js';
 import { auditRow } from '../../audit/infrastructure/prisma-audit.js';
 import type {
   ArchiveProgress,
+  AssetNewsFilter,
+  AssetNewsRow,
   LatestNewsRow,
   NewsRepository,
   NewsToLink,
@@ -33,6 +35,24 @@ function toStored(row: FonteNoticia): StoredNewsSource {
           : null,
     lastError: row.ultimoErro,
     failures: row.falhasSeguidas,
+  };
+}
+
+/** SPEC-029: os vínculos do ativo com as relevâncias pedidas, pela data de publicação. */
+function linkWhere(assetId: string, filter: AssetNewsFilter): Prisma.NoticiaAtivoWhereInput {
+  return {
+    ativoId: assetId,
+    relevancia: { in: [...filter.relevances] },
+    ...(filter.from || filter.to
+      ? {
+          noticia: {
+            publicadaEm: {
+              ...(filter.from ? { gte: filter.from } : {}),
+              ...(filter.to ? { lt: filter.to } : {}),
+            },
+          },
+        }
+      : {}),
   };
 }
 
@@ -291,6 +311,62 @@ export class PrismaNewsRepository implements NewsRepository {
       this.prisma.noticia.count({ where: { ativos: { some: {} } } }),
     ]);
     return { total, linked };
+  }
+
+  async assetExists(assetId: string): Promise<boolean> {
+    return (await this.prisma.ativo.count({ where: { id: assetId } })) > 0;
+  }
+
+  async assetNews(
+    assetId: string,
+    filter: AssetNewsFilter,
+    page: { offset: number; limit: number },
+  ): Promise<{ total: number; rows: AssetNewsRow[] }> {
+    const where = linkWhere(assetId, filter);
+    const [total, rows] = await Promise.all([
+      this.prisma.noticiaAtivo.count({ where }),
+      page.limit === 0
+        ? Promise.resolve([])
+        : this.prisma.noticiaAtivo.findMany({
+            where,
+            orderBy: [{ noticia: { publicadaEm: 'desc' } }, { noticiaId: 'asc' }],
+            skip: page.offset,
+            take: page.limit,
+            select: {
+              relevancia: true,
+              noticia: {
+                select: {
+                  id: true,
+                  titulo: true,
+                  resumo: true,
+                  url: true,
+                  publicadaEm: true,
+                  fonte: { select: { nome: true } },
+                },
+              },
+            },
+          }),
+    ]);
+    return {
+      total,
+      rows: rows.map(({ relevancia, noticia }) => ({
+        id: noticia.id,
+        title: noticia.titulo,
+        summary: noticia.resumo,
+        url: noticia.url,
+        source: noticia.fonte.nome,
+        publishedAt: noticia.publicadaEm,
+        relevance: relevancia,
+      })),
+    };
+  }
+
+  async assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<Date[]> {
+    const rows = await this.prisma.noticiaAtivo.findMany({
+      where: linkWhere(assetId, filter),
+      select: { noticia: { select: { publicadaEm: true } } },
+    });
+    return rows.map((row) => row.noticia.publicadaEm);
   }
 
   async clearParent(): Promise<number> {

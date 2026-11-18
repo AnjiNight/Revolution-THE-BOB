@@ -1,4 +1,5 @@
 import {
+  ASSET_NEWS_PATHS,
   ASSET_PATHS,
   assetPath,
   AUTH_PATHS,
@@ -186,6 +187,7 @@ describe('ETag nas leituras que o app guarda (SPEC-032 CA02)', () => {
       now,
     );
     t.fundamentalsRepo.assets.push({ id: petr4.id, ticker: 'PETR4', assetClass: 'stock' });
+    t.newsRepo.catalog.push({ assetId: petr4.id, ticker: 'PETR4', name: 'PETR4', active: true });
 
     ana = await t.registerConfirmed();
     t.market.assets.set(petr4.id, {
@@ -230,6 +232,9 @@ describe('ETag nas leituras que o app guarda (SPEC-032 CA02)', () => {
     assetPath(FUNDAMENTALS_PATHS.fundamentals, petr4.id),
     `${assetPath(FUNDAMENTALS_PATHS.dividends, petr4.id)}?period=12m`,
     assetPath(ASSET_PATHS.logo, petr4.id),
+    // SPEC-029: as notícias da ficha também ficam na cópia local.
+    assetPath(ASSET_NEWS_PATHS.list, petr4.id),
+    `${assetPath(ASSET_NEWS_PATHS.days, petr4.id)}?period=1y`,
     PROFILE_PATHS.profile,
     PROFILE_PATHS.consents,
   ];

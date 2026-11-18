@@ -75,6 +75,9 @@ export const ASSET_CHANNELS = {
   detail: 'assets:detail',
   history: 'assets:history',
   logo: 'assets:logo',
+  /** SPEC-029: notícias do ativo e os marcadores do gráfico. */
+  news: 'assets:news',
+  newsDays: 'assets:news-days',
   catalog: 'assets:catalog',
   create: 'assets:create',
   update: 'assets:update',

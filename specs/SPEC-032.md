@@ -141,7 +141,7 @@ As leituras que o app **guarda** (o resto passa direto):
 | Proventos | `GET /api/assets/:id/dividends` | Ativo e período |
 | Logo | `GET /api/assets/:id/logo` | Ativo |
 | Perfil e consentimentos | `GET /api/me`, `GET /api/me/consents` | Usuário |
-| Notícias | As rotas da SPEC-029 | A SPEC-029 diz |
+| Notícias (SPEC-029) | `GET /api/assets/:id/news`, `GET /api/assets/:id/news/days` | Ativo, grupo, página e intervalo (lista); ativo e período (marcadores) |
 
 ### 5.2 Entre a interface e o processo principal
 
