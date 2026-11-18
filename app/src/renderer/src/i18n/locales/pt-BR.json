@@ -1530,5 +1530,63 @@
         "lista": "Lista"
       }
     }
+  },
+  "report": {
+    "button": "Baixar relatório (PDF)",
+    "hint": "Do período da Rentabilidade: {{period}}",
+    "customPeriod": "{{label}} ({{from}} a {{to}})",
+    "noEntries": "Ainda não há lançamentos para o relatório.",
+    "generating": "Gerando o relatório…",
+    "saved": "Relatório salvo em {{folder}}.",
+    "open": "Abrir",
+    "openLabel": "Abrir o relatório {{file}}",
+    "openFailed": "O sistema não conseguiu abrir o arquivo. Ele está em {{folder}}.",
+    "failed": "Não foi possível gerar o relatório. Tente novamente.",
+    "needsConnection": "Precisa de conexão: {{missing}}.",
+    "missing": {
+      "performance": "a rentabilidade deste período não está guardada neste computador",
+      "positions": "as posições não estão guardadas neste computador",
+      "statement": "o extrato completo não está guardado neste computador"
+    },
+    "documentTitle": "Relatório da carteira {{name}}",
+    "title": "Relatório da carteira",
+    "periodLabel": "Período",
+    "period": "{{from}} a {{to}} ({{label}})",
+    "generatedLabel": "Gerado em",
+    "dataLabel": "Dados",
+    "dataFrom": "De {{date}}, guardados neste computador (sem conexão)",
+    "summary": "Resumo",
+    "evolution": "Evolução",
+    "equityDescription": "Patrimônio de {{start}} em {{from}} a {{end}} em {{to}}; total aportado no fim: {{invested}}.",
+    "returnDescription": "Rentabilidade no período: {{values}}.",
+    "positionsDate": "Posições e distribuição em {{date}}, com o último preço de cada ativo.",
+    "noPositions": "Nenhum ativo na carteira.",
+    "allocation": {
+      "stock": "Setor",
+      "fii": "Segmento",
+      "ofClass": "Da classe",
+      "ofTotal": "Do patrimônio",
+      "value": "Valor"
+    },
+    "income": {
+      "title": "Proventos",
+      "received": "Recebidos no período",
+      "pending": "A receber"
+    },
+    "statement": {
+      "title": "Extrato do período",
+      "order": "Do mais antigo para o mais recente, com o saldo depois de cada lançamento.",
+      "empty": "Nenhum lançamento no período.",
+      "reversed_one": "{{count}} lançamento estornado não aparece (não conta no saldo).",
+      "reversed_other": "{{count}} lançamentos estornados não aparecem (não contam no saldo)."
+    },
+    "notices": {
+      "title": "Avisos",
+      "sources": "Fontes: cotações e índices da B3 e da brapi, CDI do Banco Central e proventos do Investidor10 (com autorização só para este projeto acadêmico)."
+    },
+    "footer": {
+      "notice": "Simulação educacional, sem recomendação de investimento",
+      "page": "Página {{page}} de {{pages}}"
+    }
   }
 }

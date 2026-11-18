@@ -1530,5 +1530,63 @@
         "lista": "List"
       }
     }
+  },
+  "report": {
+    "button": "Download report (PDF)",
+    "hint": "For the Performance period: {{period}}",
+    "customPeriod": "{{label}} ({{from}} to {{to}})",
+    "noEntries": "There are no entries for a report yet.",
+    "generating": "Generating the report…",
+    "saved": "Report saved in {{folder}}.",
+    "open": "Open",
+    "openLabel": "Open the report {{file}}",
+    "openFailed": "The system could not open the file. It is in {{folder}}.",
+    "failed": "Could not generate the report. Try again.",
+    "needsConnection": "Needs a connection: {{missing}}.",
+    "missing": {
+      "performance": "the performance for this period is not saved on this computer",
+      "positions": "the positions are not saved on this computer",
+      "statement": "the full statement is not saved on this computer"
+    },
+    "documentTitle": "{{name}} portfolio report",
+    "title": "Portfolio report",
+    "periodLabel": "Period",
+    "period": "{{from}} to {{to}} ({{label}})",
+    "generatedLabel": "Generated on",
+    "dataLabel": "Data",
+    "dataFrom": "From {{date}}, saved on this computer (offline)",
+    "summary": "Summary",
+    "evolution": "Evolution",
+    "equityDescription": "Equity from {{start}} on {{from}} to {{end}} on {{to}}; total invested at the end: {{invested}}.",
+    "returnDescription": "Return in the period: {{values}}.",
+    "positionsDate": "Positions and allocation on {{date}}, with each asset's latest price.",
+    "noPositions": "No assets in the portfolio.",
+    "allocation": {
+      "stock": "Sector",
+      "fii": "Segment",
+      "ofClass": "Of the class",
+      "ofTotal": "Of the portfolio",
+      "value": "Value"
+    },
+    "income": {
+      "title": "Income",
+      "received": "Received in the period",
+      "pending": "To receive"
+    },
+    "statement": {
+      "title": "Statement for the period",
+      "order": "From oldest to newest, with the balance after each entry.",
+      "empty": "No entries in the period.",
+      "reversed_one": "{{count}} reversed entry is not shown (it does not count in the balance).",
+      "reversed_other": "{{count}} reversed entries are not shown (they do not count in the balance)."
+    },
+    "notices": {
+      "title": "Notices",
+      "sources": "Sources: quotes and indexes from B3 and brapi, CDI from the Central Bank of Brazil and income from Investidor10 (authorized only for this academic project)."
+    },
+    "footer": {
+      "notice": "Educational simulation, not investment advice",
+      "page": "Page {{page}} of {{pages}}"
+    }
   }
 }

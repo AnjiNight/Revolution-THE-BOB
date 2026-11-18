@@ -44,11 +44,13 @@ import {
   INDEX_CHANNELS,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
+  REPORT_CHANNELS,
   TASK_CHANNELS,
   type AuthResult,
   type ClientResult,
   type ConnectionEvent,
   type ReconnectResult,
+  type ReportSaveResult,
 } from '../shared/auth-ipc.js';
 import { CHECK_SERVER_CHANNEL, type ServerStatus } from '../shared/server-status.js';
 import type { DesktopApi } from './api.js';
@@ -149,6 +151,10 @@ const api: DesktopApi = {
     comparison: (query) => read<PortfolioComparison>(PORTFOLIO_CHANNELS.comparison, query),
     copy: (id, input) =>
       invoke<ClientResult<PortfolioCopyResult>>(PORTFOLIO_CHANNELS.copy, id, input),
+  },
+  report: {
+    save: (request) => invoke<ClientResult<ReportSaveResult>>(REPORT_CHANNELS.save, request),
+    open: () => invoke<boolean>(REPORT_CHANNELS.open),
   },
   tasks: {
     list: () => invoke<ClientResult<TaskList>>(TASK_CHANNELS.list),

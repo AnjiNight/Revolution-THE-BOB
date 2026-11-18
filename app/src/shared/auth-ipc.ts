@@ -138,6 +138,27 @@ export const TASK_CHANNELS = {
   request: 'tasks:request',
 } as const;
 
+/**
+ * SPEC-038: o relatório da carteira em PDF. A interface monta o documento (só para a impressão) e
+ * o processo principal imprime a própria janela e grava o arquivo; `open` abre o último gravado.
+ */
+export const REPORT_CHANNELS = {
+  save: 'report:save',
+  open: 'report:open',
+} as const;
+
+/** O que o processo principal precisa, já no idioma da interface: o nome e o rodapé das páginas. */
+export interface ReportSaveRequest {
+  portfolioName: string;
+  /** O aviso curto do rodapé de cada página. */
+  footerNotice: string;
+  /** "Página {page} de {pages}": os marcadores viram o número da página e o total. */
+  footerPage: string;
+}
+
+/** Gravado (com o nome do arquivo e a pasta), ou não (a pessoa cancelou o "Salvar como"). */
+export type ReportSaveResult = { saved: false } | { saved: true; file: string; folder: string };
+
 /** SPEC-035: os idiomas do app. */
 export type AppLanguage = 'pt-BR' | 'en';
 
