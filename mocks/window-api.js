@@ -313,6 +313,12 @@
     indexes: group({}),
     fundamentals: group({}),
     portfolios: group({}),
+    // SPEC-033: nenhum aviso de variação nestes testes (a variação do dia é lida das carteiras,
+    // que aqui respondem como servidor fora do ar).
+    notifications: {
+      show: () => Promise.resolve(false),
+      onClick: () => () => {},
+    },
     // SPEC-011: o painel "Tarefas de dados" do Início aparece como servidor fora do ar.
     tasks: group({}),
     assets: group({
