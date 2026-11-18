@@ -60,10 +60,15 @@ function linkWhere(assetId: string, filter: AssetNewsFilter): Prisma.NoticiaAtiv
 export class PrismaNewsRepository implements NewsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /**
+   * A pai primeiro (a ordem do tipo no banco), depois as curadas na ordem de cadastro. Só pela
+   * data não bastava: num banco novo, as duas da migração nascem no mesmo milissegundo.
+   */
   async sources(): Promise<StoredNewsSource[]> {
-    return (await this.prisma.fonteNoticia.findMany({ orderBy: { criadaEm: 'asc' } })).map(
-      toStored,
-    );
+    const rows = await this.prisma.fonteNoticia.findMany({
+      orderBy: [{ tipo: 'asc' }, { criadaEm: 'asc' }, { nome: 'asc' }],
+    });
+    return rows.map(toStored);
   }
 
   async source(id: string): Promise<StoredNewsSource | null> {

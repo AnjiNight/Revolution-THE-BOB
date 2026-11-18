@@ -60,6 +60,24 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
     expect(sources[1]).toMatchObject({ category: 'economia', reliability: 5 });
   });
 
+  it('a fonte pai vem primeiro, qualquer que seja a data de criação', async () => {
+    // Num banco novo (o da CI), as duas da migração nascem no mesmo milissegundo, e a ordem só
+    // pela data variava. Aqui a pai fica 1 ms mais nova que a Agência Brasil.
+    const created = await prisma.fonteNoticia.findMany({ select: { id: true, criadaEm: true } });
+    try {
+      await prisma.fonteNoticia.updateMany({ where: { tipo: 'curada' }, data: { criadaEm: at } });
+      await prisma.fonteNoticia.updateMany({
+        where: { tipo: 'pai' },
+        data: { criadaEm: new Date(at.getTime() + 1) },
+      });
+      expect((await repo.sources()).map((s) => s.kind)).toEqual(['parent', 'curated']);
+    } finally {
+      for (const { id, criadaEm } of created) {
+        await prisma.fonteNoticia.update({ where: { id }, data: { criadaEm } });
+      }
+    }
+  });
+
   it('grava sem duplicar; a atualização muda o texto e mantém a publicação (CA03)', async () => {
     const parent = (await repo.parentSource())?.id as string;
     expect(await repo.saveNews(parent, [item(1), item(2)], at)).toBe(2);
