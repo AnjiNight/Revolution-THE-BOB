@@ -1,5 +1,6 @@
 import type { IsoDate, MarketIndexCode } from '@simulador/shared';
 import type { StoredAsset } from './modules/asset-catalog/domain/asset.js';
+import { percentChange } from './modules/financial-calculation/decimal.js';
 import type { PriceEventInput } from './modules/financial-calculation/price-adjustment.js';
 import type { ParsedDividend } from './modules/market-data/domain/investidor10-page.js';
 import type {
@@ -66,7 +67,16 @@ export function portfolioMarket(sources: PortfolioMarketSources): PortfolioMarke
         assetId,
       );
       if (!quote) return null;
-      return { price: quote.price, at: quote.at, level, source: 'brapi' };
+      // SPEC-033: a variação do dia, como na lista Ativos (SPEC-009): sobre o fechamento guardado
+      // antes do dia da cotação, ou o que a fonte informou.
+      const previous = quote.storedPreviousClose ?? quote.previousClose;
+      return {
+        price: quote.price,
+        at: quote.at,
+        level,
+        source: 'brapi',
+        change: previous ? percentChange(quote.price, previous) : null,
+      };
     },
     async lastClose(assetId) {
       const [last] = await sources.history.sessions(assetId, 1);

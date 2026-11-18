@@ -21,6 +21,7 @@ import { RegisterForm } from './components/RegisterForm';
 import { Tasks } from './components/Tasks';
 import { TradingCalendar } from './components/TradingCalendar';
 import { ConnectionContext } from './connection';
+import { useVariationNotices } from './useVariationNotices';
 
 /** SPEC-032: por quanto tempo o aviso "Conexão de volta" fica na tela. */
 const RECONNECTED_NOTICE_MS = 8000;
@@ -148,6 +149,21 @@ export function App() {
   }, [reconnected]);
 
   const connectionValue = useMemo(() => ({ offline }), [offline]);
+
+  // SPEC-033: avisos de variação, só para a conta de usuário. O clique no aviso abre a ficha do
+  // ativo (ou Carteiras, no aviso agrupado); o processo principal já trouxe a janela para a frente.
+  const noticeUser = 'user' in view && view.user.role === 'user' ? view.user : null;
+  useVariationNotices(noticeUser?.id ?? null, offline);
+  useEffect(() => {
+    if (!noticeUser) return;
+    return window.api.notifications.onClick((target) =>
+      setView(
+        target.kind === 'asset'
+          ? { kind: 'assets', user: noticeUser, assetId: target.assetId }
+          : { kind: 'portfolios', user: noticeUser },
+      ),
+    );
+  }, [noticeUser, setView]);
 
   const signedIn = (user: PublicUser) => {
     setOffline(false);

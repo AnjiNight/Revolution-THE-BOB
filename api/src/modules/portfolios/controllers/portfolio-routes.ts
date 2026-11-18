@@ -132,6 +132,12 @@ export function registerPortfolioRoutes(
     return reply.send(result);
   });
 
+  // SPEC-033 §5.1: a variação do dia dos ativos das carteiras, para os avisos do app. Só leitura,
+  // com ETag (o app confere a cada 5 minutos; quase sempre volta 304).
+  app.get(PORTFOLIO_PATHS.dayChanges, userOnly, async (request, reply) => {
+    return reply.send(await trading.dayChanges(requireAuth(request).userId));
+  });
+
   app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.item, userOnly, async (request, reply) => {
     const id = portfolioId(request);
     const portfolio = await owned(request, () => portfolios.get(requireAuth(request).userId, id));

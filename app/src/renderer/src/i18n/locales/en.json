@@ -1588,5 +1588,29 @@
       "notice": "Educational simulation, not investment advice",
       "page": "Page {{page}} of {{pages}}"
     }
+  },
+  "alerts": {
+    "settings": {
+      "title": "Price move alerts",
+      "enabled": "Notify me when an asset in my portfolios rises or falls sharply during the day",
+      "threshold": "Minimum daily move",
+      "levels": {
+        "3": "{{percent}} (more alerts)",
+        "5": "{{percent}} (default)",
+        "10": "{{percent}} (extremes only)"
+      },
+      "hint": "Only while the app is open (it can be minimized), during trading hours. Quotes are delayed by up to {{delay}} minutes. Alerts follow your Windows notification settings."
+    },
+    "notice": {
+      "up": "{{ticker}} rose {{change}} today",
+      "down": "{{ticker}} fell {{change}} today",
+      "quote": "{{price}} at {{time}} (up to {{delay}} min delay)",
+      "portfolios_one": "Portfolio: {{names}}",
+      "portfolios_other": "Portfolios: {{names}}",
+      "more": "{{items}} and {{more}} more",
+      "groupUp": "{{total}} assets in your portfolios rose {{threshold}} or more today",
+      "groupDown": "{{total}} assets in your portfolios fell {{threshold}} or more today",
+      "groupMixed": "{{total}} assets in your portfolios moved {{threshold}} or more today"
+    }
   }
 }

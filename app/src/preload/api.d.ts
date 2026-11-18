@@ -7,6 +7,7 @@ import type {
   CashEntryResult,
   CashStatement,
   ComparisonQuery,
+  DayChanges,
   PerformanceQuery,
   PortfolioComparison,
   PortfolioCopyResult,
@@ -67,6 +68,8 @@ import type {
   RenamePortfolioInput,
   ReportSaveRequest,
   ReportSaveResult,
+  NoticeTarget,
+  VariationNotice,
   UpdateNameInput,
 } from '../shared/auth-ipc.js';
 import type { ServerStatus } from '../shared/server-status.js';
@@ -151,6 +154,8 @@ export interface DesktopApi {
     addCash(id: string, input: NewCashEntryInput): Promise<ClientResult<CashEntryResult>>;
     /** SPEC-014: posições, com o caixa e o total. */
     positions(id: string): Promise<ClientResult<PortfolioPositions>>;
+    /** SPEC-033: os ativos das carteiras com a cotação do pregão de hoje e a variação do dia. */
+    dayChanges(): Promise<ClientResult<DayChanges>>;
     /** SPEC-014: o preço que a negociação usaria agora, ou o motivo de não dar. */
     /** SPEC-016: na histórica, com a data da negociação. */
     tradeQuote(id: string, assetId: string, date?: string): Promise<ClientResult<TradeQuote>>;
@@ -172,6 +177,14 @@ export interface DesktopApi {
   report: {
     save(request: ReportSaveRequest): Promise<ClientResult<ReportSaveResult>>;
     open(): Promise<boolean>;
+  };
+  /**
+   * SPEC-033: os avisos de variação. `show` mostra o aviso do sistema (devolve `false` se o sistema
+   * não aceita avisos); `onClick` diz para onde ir quando a pessoa clica nele.
+   */
+  notifications: {
+    show(notice: VariationNotice): Promise<boolean>;
+    onClick(listener: (target: NoticeTarget) => void): () => void;
   };
   /** SPEC-011: as tarefas de ingestão, só colaborador (403 para usuário). */
   tasks: {

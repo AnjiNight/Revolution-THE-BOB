@@ -1588,5 +1588,29 @@
       "notice": "Simulação educacional, sem recomendação de investimento",
       "page": "Página {{page}} de {{pages}}"
     }
+  },
+  "alerts": {
+    "settings": {
+      "title": "Avisos de variação",
+      "enabled": "Avisar quando um ativo das minhas carteiras subir ou cair muito no dia",
+      "threshold": "Variação mínima no dia",
+      "levels": {
+        "3": "{{percent}} (mais avisos)",
+        "5": "{{percent}} (padrão)",
+        "10": "{{percent}} (só os extremos)"
+      },
+      "hint": "Só com o app aberto (pode estar minimizado), durante o pregão. As cotações têm atraso de até {{delay}} minutos. Os avisos seguem as configurações de notificação do Windows."
+    },
+    "notice": {
+      "up": "{{ticker}} subiu {{change}} hoje",
+      "down": "{{ticker}} caiu {{change}} hoje",
+      "quote": "{{price}} às {{time}} (atraso de até {{delay}} min)",
+      "portfolios_one": "Carteira: {{names}}",
+      "portfolios_other": "Carteiras: {{names}}",
+      "more": "{{items}} e mais {{more}}",
+      "groupUp": "{{total}} ativos das suas carteiras subiram {{threshold}} ou mais hoje",
+      "groupDown": "{{total}} ativos das suas carteiras caíram {{threshold}} ou mais hoje",
+      "groupMixed": "{{total}} ativos das suas carteiras variaram {{threshold}} ou mais hoje"
+    }
   }
 }

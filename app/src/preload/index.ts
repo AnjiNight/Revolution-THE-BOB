@@ -6,6 +6,7 @@ import type {
   CalendarSuggestion,
   CashEntryResult,
   CashStatement,
+  DayChanges,
   PortfolioComparison,
   PortfolioCopyResult,
   PortfolioPerformance,
@@ -43,12 +44,14 @@ import {
   NEWS_CHANNELS,
   INDEX_CHANNELS,
   PORTFOLIO_CHANNELS,
+  NOTIFY_CHANNELS,
   PROFILE_CHANNELS,
   REPORT_CHANNELS,
   TASK_CHANNELS,
   type AuthResult,
   type ClientResult,
   type ConnectionEvent,
+  type NoticeTarget,
   type ReconnectResult,
   type ReportSaveResult,
 } from '../shared/auth-ipc.js';
@@ -141,6 +144,8 @@ const api: DesktopApi = {
     addCash: (id, input) =>
       invoke<ClientResult<CashEntryResult>>(PORTFOLIO_CHANNELS.addCash, id, input),
     positions: (id) => read<PortfolioPositions>(PORTFOLIO_CHANNELS.positions, id),
+    // SPEC-033: conferência em segundo plano; não mexe na data da faixa do modo consulta.
+    dayChanges: () => invoke<ClientResult<DayChanges>>(PORTFOLIO_CHANNELS.dayChanges),
     tradeQuote: (id, assetId, date) =>
       invoke<ClientResult<TradeQuote>>(PORTFOLIO_CHANNELS.tradeQuote, id, assetId, date),
     trade: (id, input) => invoke<ClientResult<TradeResult>>(PORTFOLIO_CHANNELS.trade, id, input),
@@ -155,6 +160,16 @@ const api: DesktopApi = {
   report: {
     save: (request) => invoke<ClientResult<ReportSaveResult>>(REPORT_CHANNELS.save, request),
     open: () => invoke<boolean>(REPORT_CHANNELS.open),
+  },
+  notifications: {
+    show: (notice) => invoke<boolean>(NOTIFY_CHANNELS.show, notice),
+    onClick: (listener) => {
+      const handler = (_event: unknown, target: NoticeTarget) => listener(target);
+      ipcRenderer.on(NOTIFY_CHANNELS.clicked, handler);
+      return () => {
+        ipcRenderer.removeListener(NOTIFY_CHANNELS.clicked, handler);
+      };
+    },
   },
   tasks: {
     list: () => invoke<ClientResult<TaskList>>(TASK_CHANNELS.list),

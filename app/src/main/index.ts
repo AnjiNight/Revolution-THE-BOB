@@ -29,7 +29,7 @@ import type {
   UpdateNameInput,
 } from '@simulador/shared';
 import { isoDateInBrasilia } from '@simulador/shared';
-import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Notification, safeStorage, shell } from 'electron';
 import {
   APP_CHANNELS,
   ASSET_CHANNELS,
@@ -40,6 +40,7 @@ import {
   INDEX_CHANNELS,
   isAppLanguage,
   NEWS_CHANNELS,
+  NOTIFY_CHANNELS,
   PORTFOLIO_CHANNELS,
   PROFILE_CHANNELS,
   REPORT_CHANNELS,
@@ -55,6 +56,7 @@ import { GoogleOAuthClient } from './google-oauth.js';
 import { GoogleSignIn } from './google-sign-in.js';
 import { EncryptedFileOfflineCache } from './offline-cache.js';
 import { savePortfolioReport } from './portfolio-report.js';
+import { isVariationNotice } from './variation-notice.js';
 import { EncryptedFileSecretStore, type OsEncryption } from './secret-store.js';
 import { checkServerHealth } from './server-health.js';
 
@@ -127,6 +129,13 @@ function createWindow(): void {
   }
 }
 
+// SPEC-033: no Windows, o aviso do sistema sai com o nome e o ícone do app (o `appId` do
+// instalador); sem isso, durante o desenvolvimento ele aparece como "Electron".
+if (process.platform === 'win32') app.setAppUserModelId('br.mackenzie.simulador-investimentos');
+
+/** SPEC-033: quantos avisos de variação ficam guardados para o clique (uns poucos por dia). */
+const NOTICES_KEPT = 30;
+
 app.whenReady().then(() => {
   const allowInsecureLocalhost = !app.isPackaged;
 
@@ -184,7 +193,14 @@ app.whenReady().then(() => {
   ipcMain.handle(AUTH_CHANNELS.googleAvailable, () => google.available);
   ipcMain.handle(AUTH_CHANNELS.googleSignIn, () => google.signIn());
   ipcMain.handle(AUTH_CHANNELS.googleAcceptTerms, () => google.acceptTermsAndContinue());
-  ipcMain.handle(AUTH_CHANNELS.logout, () => auth.logout());
+  // SPEC-033: os avisos de variação ficam guardados até o clique, mesmo depois de saírem da tela
+  // para a Central de Ações: sem a referência, o clique se perde. Ao sair da conta, eles saem da
+  // Central de Ações (têm os nomes das carteiras).
+  const notices: Notification[] = [];
+  ipcMain.handle(AUTH_CHANNELS.logout, async () => {
+    for (const notification of notices.splice(0)) notification.close();
+    await auth.logout();
+  });
 
   // Recuperação de senha (SPEC-004): o código é digitado no app e nunca fica guardado.
   ipcMain.handle(AUTH_CHANNELS.passwordResetRequest, (_event, input: PasswordResetRequestInput) =>
@@ -296,6 +312,29 @@ app.whenReady().then(() => {
   );
   // Compra e venda (SPEC-014): o servidor confere bolsa, cotação, caixa e posição.
   ipcMain.handle(PORTFOLIO_CHANNELS.positions, (_event, id: string) => auth.portfolioPositions(id));
+  // Avisos de variação (SPEC-033): a interface confere a variação do dia e pede o aviso do
+  // sistema; o clique traz a janela para a frente e diz à interface para onde ir.
+  ipcMain.handle(PORTFOLIO_CHANNELS.dayChanges, () => auth.dayChanges());
+  ipcMain.handle(NOTIFY_CHANNELS.show, (event, notice: unknown) => {
+    if (!isVariationNotice(notice) || !Notification.isSupported()) return false;
+    const sender = event.sender;
+    const notification = new Notification({ title: notice.title, body: notice.body });
+    notices.push(notification);
+    if (notices.length > NOTICES_KEPT) notices.shift();
+    notification.on('click', () => {
+      const window = BrowserWindow.fromWebContents(sender);
+      if (window) {
+        if (window.isMinimized()) window.restore();
+        window.show();
+        window.focus();
+      }
+      if (!sender.isDestroyed()) sender.send(NOTIFY_CHANNELS.clicked, notice.target);
+      const index = notices.indexOf(notification);
+      if (index >= 0) notices.splice(index, 1);
+    });
+    notification.show();
+    return true;
+  });
   ipcMain.handle(
     PORTFOLIO_CHANNELS.tradeQuote,
     (_event, id: string, assetId: string, date?: string) => auth.tradeQuote(id, assetId, date),

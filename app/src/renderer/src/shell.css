@@ -548,6 +548,16 @@
   margin-top: 1.25rem;
 }
 
+/* ---------- Avisos de variação (SPEC-033) ---------- */
+
+.alerts-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 30rem;
+  margin-top: 1rem;
+}
+
 /* ---------- Aviso de termos novos (SPEC-003) ---------- */
 
 .terms-notice {

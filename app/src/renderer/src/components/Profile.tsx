@@ -18,6 +18,7 @@ import type { ClientAuthError, ClientResult } from '../../../shared/auth-ipc';
 import { useNeedsConnection } from '../connection';
 import { emailLocale, formatDate, initials } from '../format';
 import { TextField } from './TextField';
+import { VariationAlerts } from './VariationAlerts';
 
 interface ProfileProps {
   /** Nome ou e-mail mudou: atualiza o restante do app. */
@@ -152,6 +153,8 @@ export function Profile({ onUserChanged, onSessionExpired, onAccountDeleted }: P
                 <p className="profile-value">{t('profile.googleOnly', { email: user.email })}</p>
               </section>
             )}
+
+            {user.role === 'user' && <VariationAlerts userId={user.id} />}
 
             {consents && (
               <Consents

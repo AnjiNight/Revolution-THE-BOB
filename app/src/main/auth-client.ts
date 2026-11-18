@@ -39,6 +39,7 @@ import {
   type CatalogListResult,
   type CatalogQuery,
   type CdiStatus,
+  type DayChanges,
   type MarketIndexStatus,
   type ChangeEmailInput,
   type ChangePasswordInput,
@@ -491,6 +492,14 @@ export class AuthClient {
   /** SPEC-014: posições da carteira, com o caixa e o total. */
   portfolioPositions(id: string): Promise<ClientResult<PortfolioPositions>> {
     return this.read<PortfolioPositions>(() => portfolioRouteUrl(PORTFOLIO_PATHS.positions, id));
+  }
+
+  /**
+   * SPEC-033: a variação do dia dos ativos das carteiras, para os avisos. Conferida a cada 5
+   * minutos: com o ETag, quase sempre volta "nada mudou".
+   */
+  dayChanges(): Promise<ClientResult<DayChanges>> {
+    return this.read<DayChanges>(() => PORTFOLIO_PATHS.dayChanges);
   }
 
   /**

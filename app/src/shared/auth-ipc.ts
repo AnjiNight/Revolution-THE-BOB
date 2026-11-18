@@ -128,7 +128,28 @@ export const PORTFOLIO_CHANNELS = {
   comparison: 'portfolios:comparison',
   // SPEC-023: nova carteira a partir de outra.
   copy: 'portfolios:copy',
+  // SPEC-033: a variação do dia dos ativos das carteiras, para os avisos.
+  dayChanges: 'portfolios:day-changes',
 } as const;
+
+/**
+ * SPEC-033: os avisos de variação. A interface prepara o texto (no idioma dela) e pede o aviso do
+ * sistema; o processo principal avisa a interface quando a pessoa clica nele.
+ */
+export const NOTIFY_CHANNELS = {
+  show: 'notify:show',
+  clicked: 'notify:clicked',
+} as const;
+
+/** Para onde o clique no aviso leva: a ficha do ativo, ou a tela Carteiras (aviso agrupado). */
+export type NoticeTarget = { kind: 'asset'; assetId: string } | { kind: 'portfolios' };
+
+/** Um aviso do sistema, já no idioma da interface. */
+export interface VariationNotice {
+  title: string;
+  body: string;
+  target: NoticeTarget;
+}
 
 /** SPEC-011: as tarefas de ingestão do colaborador (a tela Tarefas). */
 export const TASK_CHANNELS = {

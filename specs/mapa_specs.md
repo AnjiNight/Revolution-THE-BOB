@@ -72,6 +72,8 @@
 | 1.62 | Menu do colaborador em telas estreitas, a pedido do Luís (16/11/2026): com "Notícias" (SPEC-027), até 719 px a ilha fica compacta (sem o avatar, o Sair só com o ícone e espaços menores) e os 5 itens cabem a partir de 480 px, sem o "Meu perfil" escondido nem o Sair fora da ilha; o contorno do foco fica por dentro dos itens; os 4 itens do usuário também ganham folga em 480 px. Nota no §9 da SPEC-027 |
 | 1.63 | SPEC-038 detalhada ([SPEC-038.md](SPEC-038.md)) a pedido do Luís, aguardando a aprovação: botão "Baixar relatório (PDF)" na tela da carteira, com o período da Rentabilidade; o relatório é a fotografia da tela (resumo com o CDI, o Ibovespa e o IFIX, os dois gráficos, posições e distribuição de hoje, proventos, extrato do período do mais antigo para o mais recente, sem os estornados, e os avisos), em A4 e tema claro, no idioma da interface, sem dado pessoal, gerado pelo próprio app (`printToPDF` do Electron) e gravado com "Salvar como"; proposta para a OPEN-38 |
 | 1.64 | SPEC-038 aprovada (Luís, 17/11/2026, com as recomendações) e implementada: botão "Baixar relatório (PDF)" ao lado de "Copiar carteira", com o período da Rentabilidade; o documento só existe na impressão (cabeçalho, resumo com o CDI, o Ibovespa e o IFIX, os dois gráficos, posições e distribuição de hoje, proventos, extrato do período e avisos), em A4 e tema claro, PDF marcado com rodapé numerado, gerado pelo `printToPDF` do Electron e gravado com "Salvar como"; sem conexão, sai com os dados guardados e a data deles. OPEN-38 resolvida |
+| 1.65 | SPEC-033 detalhada ([SPEC-033.md](SPEC-033.md)) a pedido do Luís, aguardando a aprovação: aviso do Windows quando um ativo em posição nas carteiras (ao vivo e históricas) sobe ou cai 5% ou mais no dia (3% ou 10% à escolha em Meu perfil, ou desligado), com o app aberto ou minimizado, durante o pregão; um aviso por ativo por dia em cada sentido, agrupado acima de 3; o clique abre a ficha; a escolha fica neste computador; nova rota de leitura `GET /api/portfolios/day-changes`, sem mudança no banco; nenhum aviso com o app fechado. Proposta para a OPEN-35 |
+| 1.66 | SPEC-033 aprovada (Luís, 17/11/2026, com as recomendações) e implementada: aviso do Windows, com o app aberto ou minimizado, quando um ativo em posição nas carteiras (ao vivo e históricas) sobe ou cai a partir do limiar escolhido em Meu perfil (5% por padrão, 3% ou 10%, ou desligado); a interface lê a rota `GET /api/portfolios/day-changes` a cada 5 minutos nos dias úteis das 10:30 às 18:30, e não lê sem conexão; um aviso por ativo por dia em cada sentido, agrupado acima de 3, sem valores da carteira; o clique abre a ficha (ou Carteiras, no agrupado); ao sair da conta, os avisos saem da Central de Ações. OPEN-35 resolvida para o RF35 |
 ---
 
 ## 0. Como ler este documento
@@ -335,7 +337,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-32 | RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
 | OPEN-33 | Aprovação de DA21 (**Proposta**); horizontes, limite de estabilidade, n mínimo; cenário com sentimento personalizado | DA21, PE12 | 031 |
 | OPEN-34 | Cenário por ativo ou por carteira; reescrita de RF30/RF31 | INC-06 | 031 |
-| OPEN-35 | Limiar de "variação relevante", antecedência do aviso de vencimento, notificação com o app fechado | RF34, RF35 | 033 |
+| OPEN-35 | ✅ **Resolvida para o RF35 na [SPEC-033](SPEC-033.md) (17/11/2026):** 5% no dia (3% ou 10% à escolha em Meu perfil, ou desligado) e nenhum aviso com o app fechado; a antecedência do aviso de vencimento (RF34) fica com a renda fixa (DA22). Original: limiar de "variação relevante", antecedência do aviso de vencimento, notificação com o app fechado | RF34, RF35 | 033 |
 | OPEN-36 | Escopo de RF04 por sistema operacional | INC-12 | 036 |
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
 | OPEN-38 | ✅ **Resolvida na [SPEC-038](SPEC-038.md) (17/11/2026):** a fotografia da carteira no período escolhido na Rentabilidade (resumo com as referências, gráficos, posições e distribuição de hoje, proventos e extrato do período) com os avisos. Original: conteúdo do relatório PDF (RF22) | Lacuna | 038 |
@@ -1097,6 +1099,8 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 
 #### SPEC-033 — Notificações de variação relevante
 
+📄 Detalhada em [SPEC-033.md](SPEC-033.md) — aprovada (Luís, 17/11/2026) e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Notificar o usuário de variações relevantes em ativos das suas carteiras (o aviso de vencimento de renda fixa, RF34, entra na fase de renda fixa) |
@@ -1110,7 +1114,7 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 | ADRs | DA03 (notificações do SO), DA07 |
 | Depende de | SPEC-009, SPEC-014 |
 | Posição | Depende de posições existentes |
-| Em aberto | OPEN-35 |
+| Em aberto | OPEN-43 (OPEN-35 resolvida para o RF35) |
 | Prioridade derivada | Could |
 
 #### SPEC-035 — Alternância de idioma
