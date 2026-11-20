@@ -42,6 +42,18 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
     intraday: {
       latestOf: (level, assetId) => {
         levels.push(level);
+        // SPEC-033: com o fechamento guardado da B3 (a4) e só com o que a fonte informou (a5).
+        if (assetId === 'a4') {
+          return Promise.resolve({
+            ...intradayQuote,
+            assetId,
+            previousClose: '29.00',
+            storedPreviousClose: '30.00',
+          });
+        }
+        if (assetId === 'a5') {
+          return Promise.resolve({ ...intradayQuote, assetId, previousClose: '32.50' });
+        }
         return Promise.resolve(assetId === 'a1' ? intradayQuote : null);
       },
     },
@@ -194,11 +206,18 @@ describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
       at: new Date('2026-11-05T14:30:00Z'),
       level: 'free',
       source: 'brapi',
+      // SPEC-033: sem fechamento anterior, sem variação.
+      change: null,
     });
     await market.latestQuote('a1', 'subscriber');
     expect(levels).toEqual(['gratuito', 'assinante']);
     expect(await market.latestQuote('a3', 'free')).toBeNull();
     expect(await market.lastClose('a1')).toEqual({ date: '2026-11-04', close: '31.50' });
     expect(await market.lastClose('a3')).toBeNull();
+  });
+
+  it('a variação do dia, como na lista Ativos: sobre o fechamento guardado, ou o da fonte (SPEC-033)', async () => {
+    expect((await market.latestQuote('a4', 'free'))?.change).toBe('4.00');
+    expect((await market.latestQuote('a5', 'free'))?.change).toBe('-4.00');
   });
 });

@@ -117,6 +117,11 @@ export interface MarketQuote {
   at: Date;
   level: QuoteLevelCode;
   source: 'brapi';
+  /**
+   * SPEC-033: a variação do dia sobre o fechamento do pregão anterior, em %, com 2 casas (a mesma
+   * da lista Ativos, SPEC-009); `null` sem esse fechamento.
+   */
+  change?: string | null;
 }
 
 /**

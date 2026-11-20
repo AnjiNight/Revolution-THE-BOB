@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | 📝 Escrita em 12/11/2026 pela Nicoly, aguardando a aprovação das decisões do §4.1 |
+| Status | ✅ Escrita em 12/11/2026 pela Nicoly; aprovada por ela com as recomendações do §4.1 e as propostas do §4.2; implementada e validada como usuária em 17/11/2026 (§9) |
 | Fase | 7 — Notícias e cenários ([mapa de specs](mapa_specs.md)), depois da SPEC-027 |
 | Prioridade | Could (RF27); caminho para as notícias na ficha (SPEC-029), que a Visão §24 destaca |
 | Depende de | [SPEC-006](SPEC-006.md) e [SPEC-040](SPEC-040.md) (catálogo de ativos), [SPEC-027](SPEC-027.md) (notícias coletadas) |
@@ -127,3 +127,40 @@ A migração tem `down.sql` (RNF17). `NOTICIA_ATIVO` já está no modelo de dom�
 | OPEN-30 | Vai para a SPEC-044 (modelo de sentimento) |
 | OPEN-31 | Vai para a SPEC-044 (histórico e janela de treino); o arquivo do Investidor10 começa em 22/09/2023 |
 | — | Vínculo pelo nome da empresa no texto (para a Agência Brasil): fica para depois, se fizer falta |
+
+## 9. Verificação (17/11/2026)
+
+**Como ficou:**
+- **Regra:** `api/src/modules/news/domain/asset-links.ts`, função pura `linkNewsToAssets` (`LINK_RULE_VERSION = 1`, lista acima de 8 ativos). O ticker é `\b[A-Z]{4}\d{1,2}\b` conferido no catálogo: o padrão ficou mais largo que o do §4.2 para pegar classes como RAIZ55, e o catálogo continua sendo o filtro. A empresa marcada é ligada ao nome do ativo sem acento, sem maiúscula, sem palavras genéricas ("S.A.", "Participações") e aceitando o apelido entre parênteses.
+- **Execução:** `application/news-linker.ts` vincula em lotes de 500 depois de cada coleta e na tarefa "vínculo notícia–ativo" do processador, a cada 30 minutos. Chamadas ao mesmo tempo dividem uma execução só. A notícia atualizada na fonte volta a ficar sem vínculo calculado (`vinculada_em` e `versao_vinculo` vazios), e a próxima rodada refaz o vínculo.
+- **Banco:** migração `20261113120000_noticia_ativo`, com `down.sql`. Relevância e origem são enums, os vínculos saem com a notícia (cascade) e há índice por (`ativo_id`, `relevancia`). Uma restrição garante que `vinculada_em` e `versao_vinculo` estão os dois preenchidos ou os dois vazios.
+- **Rota e tela:** `GET /api/news/latest` (403 para o usuário); a seção "Últimas notícias" na tela Notícias do colaborador.
+
+| CA | Resultado |
+|---|---|
+| CA01 | ✅ Testes de unidade: ticker do catálogo no título e no texto, padrão fora do catálogo ignorado, ticker desativado aceito |
+| CA02 | ✅ Testes de unidade com os exemplos do §4.3 (lista acima de 8, principal no título ou marcada, citado no resto) |
+| CA03 | ✅ Empresa marcada sem ticker liga a todos os tickers ativos dela (teste de unidade) |
+| CA04 | ✅ Vínculo logo depois da coleta e pela tarefa de 30 minutos; refeito quando o texto muda (teste com banco) ou quando sobe a versão da regra |
+| CA05 | ✅ Banco de desenvolvimento: 261 notícias vinculadas em cerca de 0,6 s, 154 com pelo menos um ativo. Principal: 106 vínculos em 99 notícias; citado: 139 em 77; lista: 454 em 22. Conferência à mão de 20 vínculos sorteados: 18 certos e 2 discutíveis, nos limites abaixo |
+| CA06 | ✅ Rota com 403 para o usuário (teste de rota); a lista das 20 últimas com os tickers e a relevância |
+| CA07 | ✅ Testes com o `simulador_test`: chave, enums, cascade ao apagar a notícia, migração desfeita e refeita |
+| CA08 | ✅ Regra pura com testes de unidade (RNF16) |
+| CA09 | ✅ Validação visual abaixo e o roteiro em `tests/e2e/news-sources.e2e.ts` |
+
+**Validação visual (navegador do Claude, com `mocks/window-api.js`):**
+
+| Caso | Resultado |
+|---|---|
+| Lista com vínculos | ✅ "Com ativo vinculado: 154 de 261 notícias"; etiquetas Principal em destaque, Citado e Lista discretas; leitor de tela ouve a relevância; notícia sem ativo diz "Sem ativo vinculado"; o título abre a fonte em outra janela |
+| Lista vazia | ✅ Só "Nenhuma notícia coletada ainda.". Antes mostrava "0 de 0 notícias" e a legenda das etiquetas; corrigido |
+| Carregamento lento | ✅ "Carregando as notícias…" até a resposta |
+| Servidor fora do ar | ✅ Aviso "Não foi possível falar com o servidor" só na seção, e as fontes continuam na tela |
+| 375 px | ✅ Sem rolagem para o lado; as etiquetas quebram linha |
+| Ponta a ponta | ✅ 8 testes (Playwright, Edge), 2 deles novos para as últimas notícias, e o de 375 px passando pela seção |
+
+**Limites conhecidos:**
+- A empresa marcada "CSN" liga à CMIN3 (CSN Mineração), mas não à CSNA3, cujo nome no catálogo é "Siderúrgica Nacional". Para corrigir, seria preciso uma lista de apelidos.
+- Um FII sem ticker no título ("FII vende imóvel para Coca-Cola…", ALZR11) fica como **citado**, embora seja o assunto.
+- "Santander (SANB11) e mais 5 empresas pagam dividendos" vira **lista**, porque o texto cita mais de 8 tickers (várias classes das mesmas empresas).
+- Os três casos ficam para uma próxima versão da regra, se fizerem falta na ficha (SPEC-029).

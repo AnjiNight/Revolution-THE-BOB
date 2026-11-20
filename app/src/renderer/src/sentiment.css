@@ -1,0 +1,191 @@
+/* SPEC-044: sentimento das notícias (tela Notícias do colaborador e a etiqueta na ficha). */
+
+/* O tom vai no texto e no ícone; a cor só reforça (RNF04). */
+.sentiment-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sentiment-tag.is-positive {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.sentiment-tag.is-negative {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.sentiment-panel {
+  margin-top: 1.5rem;
+}
+
+.sentiment-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin: 1rem 0;
+}
+
+.sentiment-stats dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.sentiment-stats dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tabela pequena (3 × 3): fica tabela até 375 px, com os cabeçalhos quebrando linha. */
+.sentiment-matrix {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.sentiment-matrix caption {
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding-bottom: 0.4rem;
+}
+
+.sentiment-matrix th,
+.sentiment-matrix td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+
+.sentiment-matrix thead th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  vertical-align: bottom;
+}
+
+.sentiment-matrix th:first-child {
+  text-align: left;
+}
+
+.sentiment-matrix th[scope='row'] {
+  font-weight: 600;
+}
+
+.sentiment-matrix td.is-hit {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sentiment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.sentiment-actions p {
+  margin: 0;
+}
+
+.sentiment-labeling,
+.sentiment-recent {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.sentiment-labeling h3,
+.sentiment-recent h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+.sentiment-card {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface-sunken);
+}
+
+.sentiment-card > a {
+  color: var(--text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.sentiment-summary {
+  margin: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.sentiment-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.sentiment-button {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sentiment-button.is-positive {
+  border-color: var(--ok);
+}
+
+.sentiment-button.is-negative {
+  border-color: var(--error);
+}
+
+.sentiment-buttons kbd {
+  margin-left: 0.4rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.sentiment-recent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sentiment-select {
+  min-height: 2rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+/* Na ficha: as contagens do pregão. */
+.asset-news-tones {
+  margin: 0.25rem 0 0.75rem;
+  font-weight: 600;
+}

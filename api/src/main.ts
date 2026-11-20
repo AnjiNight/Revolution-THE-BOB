@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { INGESTION_TASKS, type IngestionTaskCode } from '@simulador/shared';
 import { pino } from 'pino';
 import { buildApp } from './app.js';
 import { AssetCatalogService } from './modules/asset-catalog/application/asset-catalog-service.js';
@@ -29,14 +30,24 @@ import { MarketIndexStatusService } from './modules/market-data/application/mark
 import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
 import { IntradayCollection } from './modules/market-data/application/intraday-collection.js';
 import { HistoryStatusService } from './modules/market-data/application/history-status-service.js';
+import type { RunResult } from './modules/market-data/application/ports.js';
+import {
+  RUN_RETENTION_DAYS,
+  TaskMonitorService,
+} from './modules/market-data/application/task-monitor-service.js';
+import { INGESTION_SCHEDULE, workerTiming } from './modules/market-data/domain/task-schedule.js';
 import { B3CotahistSource } from './modules/market-data/infrastructure/b3-cotahist-source.js';
 import { B3CompanyHttpSource } from './modules/market-data/infrastructure/b3-company-source.js';
 import { B3IndexHttpSource } from './modules/market-data/infrastructure/b3-index-source.js';
 import { BcbSgsSource } from './modules/market-data/infrastructure/bcb-sgs-source.js';
 import { Investidor10HttpSource } from './modules/market-data/infrastructure/investidor10-source.js';
 import { PrismaEventRepository } from './modules/market-data/infrastructure/prisma-event-repository.js';
-import { NewsCollection } from './modules/news/application/news-collection.js';
+import { AssetNewsService } from './modules/news/application/asset-news-service.js';
+import { NewsCollection, type RunSummary } from './modules/news/application/news-collection.js';
 import { NewsLinker } from './modules/news/application/news-linker.js';
+import { NewsSentimentClassifier } from './modules/news/application/news-sentiment-classifier.js';
+import { SentimentService } from './modules/news/application/sentiment-service.js';
+import { PrismaSentimentRepository } from './modules/news/infrastructure/prisma-sentiment-repository.js';
 import { NewsSourcesService } from './modules/news/application/news-sources-service.js';
 import { HttpFeedFetcher } from './modules/news/infrastructure/http-feed-fetcher.js';
 import { Investidor10NewsHttpSource } from './modules/news/infrastructure/investidor10-news-source.js';
@@ -52,6 +63,7 @@ import { PrismaClassificationRepository } from './modules/market-data/infrastruc
 import { PrismaIndexRateRepository } from './modules/market-data/infrastructure/prisma-index-rate-repository.js';
 import { PrismaLogoRepository } from './modules/market-data/infrastructure/prisma-logo-repository.js';
 import { PrismaMarketIndexRepository } from './modules/market-data/infrastructure/prisma-market-index-repository.js';
+import { PrismaTaskMonitorRepository } from './modules/market-data/infrastructure/prisma-task-monitor-repository.js';
 import {
   PrismaQuoteRepository,
   PrismaTaskRunRepository,
@@ -172,14 +184,27 @@ async function main(): Promise<void> {
   const feedFetcher = new HttpFeedFetcher();
   // SPEC-028: vínculo notícia–ativo, depois de cada coleta e a cada 30 minutos.
   const newsLinker = new NewsLinker({ news: newsRepo });
+  // SPEC-044: sentimento das notícias, logo depois do vínculo e a cada 30 minutos.
+  const sentimentRepo = new PrismaSentimentRepository(prisma);
+  const newsSentiment = new NewsSentimentClassifier({ sentiment: sentimentRepo });
   const news = new NewsCollection({
     parentEnabled: config.investidor10.enabled,
     parent: new Investidor10NewsHttpSource({ baseUrl: config.investidor10.baseUrl }),
     feeds: feedFetcher,
     news: newsRepo,
     runs,
-    linker: newsLinker,
+    linker: {
+      run: async () => {
+        const linked = await newsLinker.run();
+        // Falha na classificação não derruba o vínculo nem a coleta (RNF13).
+        await newsSentiment.run().catch(() => 0);
+        return linked;
+      },
+    },
   });
+
+  // SPEC-011: o registro das execuções, os pedidos de "Executar agora" e o sinal de vida.
+  const taskMonitor = new PrismaTaskMonitorRepository(prisma);
 
   if (mode === 'server') {
     const accessTokens = new JwtAccessTokenService(config.jwtSecret, config.accessTokenTtlMinutes);
@@ -222,6 +247,8 @@ async function main(): Promise<void> {
       calendar,
       market,
     });
+    // SPEC-044: a amostra rotulada, a avaliação e qual versão o usuário vê.
+    const sentiment = new SentimentService({ sentiment: sentimentRepo });
     const { auth, profile, passwordReset, accountData } = createIdentityServices({
       portfolios,
       users: new PrismaUserRepository(prisma),
@@ -265,11 +292,17 @@ async function main(): Promise<void> {
         fundamentals: fundamentalsRepo,
         runs,
       }),
+      tasks: new TaskMonitorService({
+        monitor: taskMonitor,
+        investidor10Enabled: config.investidor10.enabled,
+      }),
       newsSources: new NewsSourcesService({
         news: newsRepo,
         feeds: feedFetcher,
         parentEnabled: config.investidor10.enabled,
       }),
+      assetNews: new AssetNewsService({ news: newsRepo, sentiment }),
+      sentiment,
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -278,10 +311,75 @@ async function main(): Promise<void> {
   } else {
     const logger = pino(loggerOptions(config.logLevel));
     const users = new PrismaUserRepository(prisma);
+    // SPEC-011: a execução que ficou sem fim (o processador parou no meio) vira falha, antes de as
+    // tarefas rodarem de novo ao iniciar.
+    const interrupted = await taskMonitor.closeInterrupted(new Date());
+    if (interrupted > 0)
+      logger.warn({ interrupted }, 'execuções interrompidas fechadas como falha');
+
+    // O número que vai para o log do processador: os registros; nas notícias, as que chegaram.
+    const records = async (run: Promise<RunResult | null>) => (await run)?.records ?? 0;
+    const collected = async (run: Promise<RunSummary | null>) => (await run)?.collected ?? 0;
+
+    // Cada tarefa de ingestão: o que roda no horário e o que o "Executar agora" faz (SPEC-011 §4.2).
+    const ingestion: Record<
+      IngestionTaskCode,
+      { name: string; run: () => Promise<number>; runNow?: () => Promise<number> }
+    > = {
+      calendario_b3: {
+        name: 'calendário pelos arquivos da B3',
+        run: () => records(calendarImport.run()),
+      },
+      historico_retroativo: {
+        name: 'histórico retroativo',
+        run: () => records(history.loadRetroactive()),
+      },
+      fechamento_diario: { name: 'fechamento diário', run: () => records(history.updateDaily()) },
+      importacao_catalogo: {
+        name: 'importação do catálogo',
+        run: () => records(catalogImport.run()),
+      },
+      cdi_diario: { name: 'CDI', run: () => records(cdi.run()) },
+      indices_b3: { name: 'índices da B3', run: () => records(marketIndexIngestion.run()) },
+      // SPEC-041: no domingo, todos; nos outros dias, só os nunca visitados. Desligado sem a
+      // autorização. "Executar agora": os nunca visitados e os que deram erro.
+      investidor10: {
+        name: 'indicadores e proventos (Investidor10)',
+        run: () => records(investidor10.scheduled()),
+        runNow: () => records(investidor10.run('retry')),
+      },
+      // SPEC-042: no domingo, ou se nunca rodou. "Executar agora": roda já.
+      eventos_b3: {
+        name: 'eventos corporativos (B3)',
+        run: () => records(b3Events.scheduled()),
+        runNow: () => records(b3Events.run()),
+      },
+      // SPEC-009: confere a cada 5 minutos se chegou a vez da coleta. "Executar agora": coleta já,
+      // só no horário do pregão e com a regra da cota.
+      cotacao_pregao: {
+        name: 'cotações do pregão',
+        run: () => records(intraday.collect()),
+        runNow: () => records(intraday.collect({ force: true })),
+      },
+      // SPEC-027: notícias novas e feeds a cada 30 minutos; o arquivo do Investidor10 aos poucos
+      // (cerca de 30 minutos de páginas por vez), na mesma fila de uma página a cada 3 segundos.
+      noticias_novas: {
+        name: 'notícias novas (Investidor10)',
+        run: () => collected(news.latest()),
+      },
+      noticias_arquivo: {
+        name: 'arquivo de notícias (Investidor10)',
+        run: () => collected(news.archive()),
+      },
+      noticias_feeds: { name: 'notícias das fontes curadas', run: () => collected(news.feeds()) },
+    };
     const worker = startWorker({
       logger,
       probe,
       heartbeatSeconds: config.workerHeartbeatSeconds,
+      // SPEC-011: o sinal de vida e os pedidos de "Executar agora" (a cada 15 segundos).
+      heartbeat: (at, intervalSeconds) => taskMonitor.beat(at, intervalSeconds),
+      requests: taskMonitor,
       // SPEC-039 (RB23): uma vez por dia, apaga as contas nunca confirmadas há mais de 7 dias.
       dailyTasks: [
         {
@@ -290,87 +388,31 @@ async function main(): Promise<void> {
         },
         // SPEC-009 (OPEN-40): cotações do pregão ficam 30 dias.
         { name: 'limpeza das cotações do pregão', run: () => intraday.cleanup() },
+        // SPEC-011 (OPEN-40): execuções por 90 dias, sempre com a última de cada tarefa.
+        {
+          name: 'limpeza das execuções antigas',
+          run: () =>
+            taskMonitor.deleteBefore(
+              new Date(Date.now() - RUN_RETENTION_DAYS * 24 * 60 * 60 * 1000),
+            ),
+        },
       ],
-      // SPEC-008: histórico de ativo novo a cada 15 minutos; pregões que faltam às 08:00.
       scheduledTasks: [
-        // SPEC-005 §10: anos fechados do calendário pelo arquivo da B3, antes do fechamento diário.
-        {
-          name: 'calendário pelos arquivos da B3',
-          run: async () => (await calendarImport.run())?.records ?? 0,
-          dailyAtHour: 7,
-          dailyAtMinute: 30,
-        },
-        {
-          name: 'histórico retroativo',
-          run: async () => (await history.loadRetroactive())?.records ?? 0,
-          everyMinutes: 15,
-        },
-        {
-          name: 'fechamento diário',
-          run: async () => (await history.updateDaily())?.records ?? 0,
-          dailyAtHour: 8,
-        },
-        // SPEC-040: importação do catálogo às 08:30, depois do fechamento diário das 08:00.
-        {
-          name: 'importação do catálogo',
-          run: async () => (await catalogImport.run())?.records ?? 0,
-          dailyAtHour: 8,
-          dailyAtMinute: 30,
-        },
-        // SPEC-007: CDI às 09:00 e às 18:00 (o do dia sai no dia útil seguinte). As duas rodam ao
-        // iniciar; a segunda encontra a primeira em andamento e não faz nada.
-        { name: 'CDI (manhã)', run: async () => (await cdi.run())?.records ?? 0, dailyAtHour: 9 },
-        { name: 'CDI (tarde)', run: async () => (await cdi.run())?.records ?? 0, dailyAtHour: 18 },
-        // SPEC-020: Ibovespa e IFIX às 08:00 e às 20:00 (o fechamento do dia sai depois do pregão).
-        // As duas rodam ao iniciar; a segunda encontra a primeira em andamento e não faz nada.
-        {
-          name: 'índices da B3 (manhã)',
-          run: async () => (await marketIndexIngestion.run())?.records ?? 0,
-          dailyAtHour: 8,
-        },
-        {
-          name: 'índices da B3 (noite)',
-          run: async () => (await marketIndexIngestion.run())?.records ?? 0,
-          dailyAtHour: 20,
-        },
-        // SPEC-041: Investidor10 às 03:00 (todos no domingo; nos outros dias e ao iniciar, só os
-        // nunca visitados). Desligado sem a autorização.
-        {
-          name: 'indicadores e proventos (Investidor10)',
-          run: async () => (await investidor10.scheduled())?.records ?? 0,
-          dailyAtHour: 3,
-        },
-        // SPEC-042: eventos corporativos da B3 às 04:00 (no domingo, ou se nunca rodou).
-        {
-          name: 'eventos corporativos (B3)',
-          run: async () => (await b3Events.scheduled())?.records ?? 0,
-          dailyAtHour: 4,
-        },
-        // SPEC-027: notícias novas e feeds a cada 30 minutos; o arquivo do Investidor10 aos poucos
-        // (cerca de 30 minutos de páginas por vez), na mesma fila de uma página a cada 3 segundos.
-        {
-          name: 'notícias novas (Investidor10)',
-          run: async () => (await news.latest())?.collected ?? 0,
-          everyMinutes: 30,
-        },
-        {
-          name: 'arquivo de notícias (Investidor10)',
-          run: async () => (await news.archive())?.collected ?? 0,
-          everyMinutes: 35,
-        },
-        {
-          name: 'notícias das fontes curadas',
-          run: async () => (await news.feeds())?.collected ?? 0,
-          everyMinutes: 30,
-        },
-        // SPEC-028: as notícias sem vínculo (o arquivo, as atualizadas, outra versão da regra).
+        ...INGESTION_TASKS.map((task) => {
+          const entry = ingestion[task];
+          return {
+            key: task,
+            name: entry.name,
+            run: entry.run,
+            runNow: entry.runNow ?? entry.run,
+            ...workerTiming(INGESTION_SCHEDULE[task].schedule),
+          };
+        }),
+        // SPEC-028: as notícias sem vínculo (o arquivo, as atualizadas, outra versão da regra). Não
+        // é tarefa de ingestão: não grava execução nem aparece na tela Tarefas.
         { name: 'vínculo notícia–ativo', run: () => newsLinker.run(), everyMinutes: 30 },
-        // SPEC-009: confere a cada 5 minutos se chegou a hora de uma coleta do pregão.
-        {
-          name: 'cotações do pregão',
-          run: async () => (await intraday.collect())?.records ?? 0,
-          everyMinutes: 5,
-        },
+        // SPEC-044: as pendentes e, quando a versão do modelo muda, todas. Também não é ingestão.
+        { name: 'sentimento das notícias', run: () => newsSentiment.run(), everyMinutes: 30 },
       ],
     });
     shutdown = async () => {

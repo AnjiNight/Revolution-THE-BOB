@@ -124,6 +124,33 @@ describe('coleta do Investidor10 (SPEC-041)', () => {
     expect(runs.runs).toEqual([]);
   });
 
+  it('SPEC-011: "Executar agora" visita os nunca visitados e os que deram erro', async () => {
+    await collection().run('all');
+    // PETR4: a última visita deu erro. Um ativo novo, nunca visitado, entra no catálogo.
+    await fundamentals.markVisit(PETR4.id, 'erro', now);
+    fundamentals.assets.push({ id: 'novo-1', ticker: 'NOVO3', assetClass: 'stock' });
+    source.requests.length = 0;
+    const result = await collection().run('retry');
+    expect(result).not.toBeNull();
+    expect(source.requests.filter((path) => !path.startsWith('historico/'))).toEqual([
+      'acoes/novo3',
+      'acoes/petr4',
+    ]);
+    // Sem nada a repetir, não grava execução.
+    source.requests.length = 0;
+    const runsBefore = runs.runs.length;
+    await fundamentals.save(
+      { assetId: 'novo-1', current: new Map(), history: new Map(), fund: null, dividends: [] },
+      now,
+    );
+    await fundamentals.save(
+      { assetId: PETR4.id, current: new Map(), history: new Map(), fund: null, dividends: [] },
+      now,
+    );
+    expect(await collection().run('retry')).toBeNull();
+    expect(runs.runs).toHaveLength(runsBefore);
+  });
+
   it('fora do domingo, só os nunca visitados; sem nenhum, não grava execução', async () => {
     await collection().run('all');
     now = new Date('2026-11-09T06:00:00Z'); // segunda

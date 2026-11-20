@@ -149,6 +149,48 @@ Série histórica do índice: o fechamento de cada pregão, como a B3 publica.
 | data | date | Pregão |
 | valor | decimal | Pontos no fechamento |
 
+### EXECUCAO_TAREFA
+Uma execução de uma tarefa de ingestão do processador ([SPEC-008](specs/SPEC-008.md), [DA14](adr/DA14-registro-execucoes-logs.md)), que o colaborador acompanha na tela Tarefas ([SPEC-011](specs/SPEC-011.md)). Fica por 90 dias, menos a última de cada tarefa, que fica sempre.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| tarefa | enum | Uma das 9 tarefas de ingestão: calendário pelos arquivos da B3, histórico retroativo, fechamento diário, importação do catálogo, CDI, índices da B3, Investidor10, eventos corporativos e cotações do pregão |
+| iniciada_em | datetime | Início |
+| terminada_em | datetime | Fim; vazio enquanto está em andamento |
+| situacao | enum | Sucesso, parcial, falha, aguardando publicação ou cota esgotada; vazia em andamento |
+| registros | integer | Registros gravados |
+| ativos_afetados | integer | Ativos com dados novos |
+| periodo_inicio, periodo_fim | date | O período que a execução cobriu, quando há um |
+| consultas | integer | Consultas feitas à fonte |
+| cota_restante, cota_limite, cota_renova_em | integer, integer, datetime | A cota que a brapi informou por último ([SPEC-009](specs/SPEC-009.md)) |
+| totais | JSON | Os números próprios de cada tarefa (na importação do catálogo: ativos criados, desativados e reativados, logos baixados) |
+
+### ERRO_EXECUCAO
+Um erro de uma execução, como o processador gravou: técnico e em português, para a equipe.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| data | date | O dia a que o erro se refere; vazio quando não é de um dia |
+| mensagem | string (500) | O que deu errado |
+
+### PEDIDO_EXECUCAO
+O **Executar agora** do colaborador ([SPEC-011](specs/SPEC-011.md)): o servidor grava o pedido e o processador o atende em até 15 segundos. Só um pendente por tarefa.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| tarefa | enum | A tarefa pedida |
+| pedido_em | datetime | Quando foi pedido |
+| atendido_em | datetime | Quando o processador atendeu; vazio enquanto pendente |
+| resultado | enum | Executada ou nada a fazer; vazio enquanto pendente |
+
+### ESTADO_PROCESSADOR
+O sinal de vida do processador ([SPEC-011](specs/SPEC-011.md)): uma linha só, regravada a cada batida. Sem sinal há mais de 3 minutos (ou de três batidas, se o intervalo for maior), o app mostra que ele está parado.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| visto_em | datetime | O último sinal |
+| intervalo_segundos | integer | De quanto em quanto tempo ele grava o sinal |
+
 ## Relacionamentos
 
 | Origem | Cardinalidade | Destino | Nome |
@@ -167,6 +209,10 @@ Série histórica do índice: o fechamento de cada pregão, como a B3 publica.
 | NOTICIA | 1 : N | NOTICIA_ATIVO | cita |
 | INDEXADOR | 1 : N | TAXA_DIARIA | registra |
 | INDICE_BOLSA | 1 : N | FECHAMENTO_INDICE | registra |
+| EXECUCAO_TAREFA | 1 : N | ERRO_EXECUCAO | registra |
+| ATIVO | 0..1 : N | ERRO_EXECUCAO | citado_em |
+| USUARIO | 0..1 : N | PEDIDO_EXECUCAO | pede (colaborador; o pedido fica sem ele se a conta sair) |
+| EXECUCAO_TAREFA | 0..1 : N | PEDIDO_EXECUCAO | atende (vazio quando não havia nada a fazer) |
 
 O par ATIVO → NOTICIA_ATIVO ← NOTICIA representa o N:N entre ativos e notícias.
 
@@ -178,3 +224,4 @@ O par ATIVO → NOTICIA_ATIVO ← NOTICIA representa o N:N entre ativos e notíc
 - *(Fase de renda fixa)* `vencimento` só se aplica a ativos de renda fixa, então aceita nulo — alternativa é especializar `ATIVO` em subtipos por `classe`.
 - Ações são classificadas por **setor** e FIIs por **segmento** ([DA23](adr/DA23-classes-de-ativo-acoes-e-fiis.md)); as duas classificações entram junto com SETOR, prevista na arquitetura §9.
 - `sentimento` está como string; se os valores forem fechados (positivo/neutro/negativo), vale usar um enum ou uma tabela de domínio.
+- `PEDIDO_EXECUCAO` tem um índice único parcial em `tarefa` onde `atendido_em` é nulo (um pedido pendente por tarefa); `ESTADO_PROCESSADOR` tem a chave fixa `id = 1` ([SPEC-011](specs/SPEC-011.md)).

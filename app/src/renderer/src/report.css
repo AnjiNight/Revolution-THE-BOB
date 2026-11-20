@@ -1,0 +1,295 @@
+/* ---------- Relatório da carteira em PDF (SPEC-038) ---------- */
+
+/* O botão no topo da carteira, com a dica do período e o resultado embaixo dele. */
+.report-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.report-action > .field-hint {
+  margin: 0;
+}
+
+.report-status {
+  margin: 0;
+}
+
+.report-status.form-success {
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+
+.report-status:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* Na tela, o documento não aparece: ele existe só para a impressão, que vira o PDF. */
+.report {
+  display: none;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  /* Só o relatório vai para o papel: nada do menu, dos botões nem do resto da página. */
+  body > #root {
+    display: none !important;
+  }
+
+  .report {
+    display: block;
+    /* Sempre o tema claro, mesmo com o app no escuro: papel branco e o contraste do claro. */
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-sunken: #f3f5f4;
+    --text: #15191b;
+    --muted: #4f595f;
+    --border: #d5dbd8;
+    --border-strong: #808b87;
+    --accent: #0b6e4f;
+    --accent-soft: #e3efea;
+    --ok: #1d7a45;
+    --warn: #8a4f06;
+    --warn-soft: #f8eedf;
+    --error: #b42318;
+    --error-soft: #fbeceb;
+
+    color-scheme: light;
+    color: var(--text);
+    background: var(--bg);
+    font-size: 10pt;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .report h1 {
+    margin: 0.1rem 0 0.25rem;
+    font-size: 20pt;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .report h2 {
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 13pt;
+    break-after: avoid;
+  }
+
+  .report h3 {
+    margin: 0.7rem 0 0.3rem;
+    font-size: 10.5pt;
+    break-after: avoid;
+  }
+
+  .report p {
+    margin: 0 0 0.4rem;
+  }
+
+  .report-header {
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid var(--accent);
+    break-inside: avoid;
+  }
+
+  .report-kicker {
+    color: var(--accent);
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .report-meta,
+  .report-note,
+  .report-detail,
+  .report-muted {
+    color: var(--muted);
+  }
+
+  .report-note {
+    font-size: 8.5pt;
+  }
+
+  .report-warning {
+    padding: 0.3rem 0.5rem;
+    border-left: 3px solid var(--warn);
+    background: var(--warn-soft);
+    font-size: 8.5pt;
+  }
+
+  .report-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 2rem;
+    margin: 0.6rem 0 0;
+  }
+
+  .report-facts dt {
+    color: var(--muted);
+    font-size: 8pt;
+  }
+
+  .report-facts dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .report-section {
+    margin-top: 1.1rem;
+  }
+
+  .report-totals {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    break-inside: avoid;
+  }
+
+  .report-totals div {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .report-totals dt {
+    color: var(--muted);
+    font-size: 8pt;
+  }
+
+  .report-totals dd {
+    margin: 0.1rem 0 0;
+    font-size: 12pt;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .report-totals .quote-change {
+    font-size: inherit;
+  }
+
+  .report-totals .report-detail {
+    font-size: 8pt;
+    font-weight: 400;
+  }
+
+  .report .performance-benchmarks {
+    break-inside: avoid;
+  }
+
+  .report-figure {
+    margin: 0.4rem 0 0.9rem;
+    break-inside: avoid;
+  }
+
+  .report-chart {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .report .performance-legend {
+    font-size: 8.5pt;
+  }
+
+  .report-table {
+    width: 100%;
+    margin-bottom: 0.4rem;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+  }
+
+  /* O cabeçalho da tabela se repete em cada página, e uma linha nunca se parte no meio. */
+  .report-table thead {
+    display: table-header-group;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+
+  .report-table th,
+  .report-table td {
+    padding: 0.28rem 0.4rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .report-table thead th {
+    border-bottom-color: var(--border-strong);
+    color: var(--muted);
+    font-size: 7.5pt;
+    font-weight: 600;
+  }
+
+  .report-table tbody th {
+    font-weight: 400;
+  }
+
+  .report-table .report-number {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .report-table .quote-change {
+    font-size: inherit;
+  }
+
+  .report-strong {
+    display: block;
+    font-weight: 650;
+  }
+
+  .report-detail {
+    display: block;
+    font-size: 7.5pt;
+    white-space: normal;
+  }
+
+  .report-classes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1.5rem;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .report-classes li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .report-sectors {
+    break-inside: avoid;
+  }
+
+  .report-list {
+    margin: 0 0 0.4rem;
+    padding-left: 1.1rem;
+  }
+
+  .report-list li {
+    margin-bottom: 0.2rem;
+  }
+
+  .report-notices {
+    break-inside: avoid;
+  }
+}

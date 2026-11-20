@@ -64,3 +64,18 @@ export function dueCollection(date: IsoDate, now: Date): number | null {
   });
   return due;
 }
+
+/**
+ * SPEC-011: o horário em que a coleta do pregão roda, da primeira vez (10:30) até a última (meia
+ * hora depois do fechamento). O "Executar agora" só coleta dentro dele.
+ */
+export function withinSession(date: IsoDate, now: Date): boolean {
+  const minutes = collectionMinutes(date);
+  const first = minutes[0];
+  const last = minutes.at(-1);
+  if (first === undefined || last === undefined) return false;
+  const at = now.getTime();
+  return (
+    at >= brasiliaInstant(date, first).getTime() && at <= brasiliaInstant(date, last).getTime()
+  );
+}

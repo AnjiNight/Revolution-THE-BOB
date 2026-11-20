@@ -1,21 +1,46 @@
 import { randomUUID } from 'node:crypto';
-import type { NewsCategory } from '@simulador/shared';
+import type { NewsCategory, NewsSentiment } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type {
   ArchiveProgress,
+  AssetNewsDate,
+  AssetNewsFilter,
+  AssetNewsRow,
+  Classification,
   FeedFetcher,
+  LabelRow,
   LatestNewsRow,
   NewsRepository,
   NewsRunLog,
   NewsTask,
+  NewsToClassify,
   NewsToLink,
   NewsToSave,
   ParentNewsSource,
+  SentimentRepository,
+  StoredClassification,
+  StoredEvaluation,
+  StoredLabel,
   StoredLink,
+  StoredModelVersion,
   StoredNewsSource,
+  StoredNewsToLabel,
 } from '../application/ports.js';
 import type { CatalogTicker } from '../domain/asset-links.js';
-import { NewsSourceExistsError, NewsSourceNotFoundError } from '../domain/errors.js';
+import {
+  NewsNotFoundError,
+  NewsSourceExistsError,
+  NewsSourceNotFoundError,
+} from '../domain/errors.js';
+
+function classificationOf(item: StoredNews): StoredClassification | null {
+  return item.classification
+    ? {
+        sentiment: item.classification.sentiment,
+        modelVersionId: item.classification.modelVersionId,
+      }
+    : null;
+}
 
 type StoredNews = NewsToSave & {
   id: string;
@@ -24,6 +49,8 @@ type StoredNews = NewsToSave & {
   /** SPEC-028: versão da regra do último vínculo, ou `null`. */
   linkVersion: number | null;
   links: StoredLink[];
+  /** SPEC-044: a classificação, ou `null` se a notícia está pendente. */
+  classification: (StoredClassification & { score: number; at: Date }) | null;
 };
 
 /** Fontes e notícias em memória (SPEC-027), com a fonte pai e a Agência Brasil da migração. */
@@ -117,6 +144,7 @@ export class InMemoryNewsRepository implements NewsRepository {
           publishedAt: current.publishedAt,
           collectedAt: at,
           linkVersion: null,
+          classification: null,
         };
       } else {
         this.news.push({
@@ -126,6 +154,7 @@ export class InMemoryNewsRepository implements NewsRepository {
           collectedAt: at,
           linkVersion: null,
           links: [],
+          classification: null,
         });
         created += 1;
       }
@@ -205,6 +234,56 @@ export class InMemoryNewsRepository implements NewsRepository {
     });
   }
 
+  assetExists(assetId: string): Promise<boolean> {
+    return Promise.resolve(this.catalog.some((asset) => asset.assetId === assetId));
+  }
+
+  assetNews(
+    assetId: string,
+    filter: AssetNewsFilter,
+    page: { offset: number; limit: number },
+  ): Promise<{ total: number; rows: AssetNewsRow[] }> {
+    const found = this.linkedTo(assetId, filter);
+    return Promise.resolve({
+      total: found.length,
+      rows: found.slice(page.offset, page.offset + page.limit).map(({ item, relevance }) => ({
+        id: item.id,
+        title: item.title,
+        summary: item.summary,
+        url: item.url,
+        source: this.list.find((s) => s.id === item.sourceId)?.name ?? '',
+        publishedAt: item.publishedAt,
+        relevance,
+        classification: classificationOf(item),
+      })),
+    });
+  }
+
+  assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<AssetNewsDate[]> {
+    return Promise.resolve(
+      this.linkedTo(assetId, filter).map(({ item }) => ({
+        publishedAt: item.publishedAt,
+        classification: classificationOf(item),
+      })),
+    );
+  }
+
+  /** As notícias ligadas ao ativo, com a relevância do vínculo, das mais novas. */
+  private linkedTo(assetId: string, filter: AssetNewsFilter) {
+    return this.news
+      .flatMap((item) => {
+        const link = item.links.find((l) => l.assetId === assetId);
+        return link ? [{ item, relevance: link.relevance }] : [];
+      })
+      .filter(
+        ({ item, relevance }) =>
+          filter.relevances.includes(relevance) &&
+          (!filter.from || item.publishedAt >= filter.from) &&
+          (!filter.to || item.publishedAt < filter.to),
+      )
+      .sort((a, b) => b.item.publishedAt.getTime() - a.item.publishedAt.getTime());
+  }
+
   archive(sourceId: string): Promise<ArchiveProgress | null> {
     return Promise.resolve(this.archives.get(sourceId) ?? null);
   }
@@ -262,6 +341,158 @@ export class InMemoryNewsRepository implements NewsRepository {
     }
     this.archives.delete(this.parent.id);
     return Promise.resolve(before - this.news.length);
+  }
+}
+
+/** SPEC-044 em memória, sobre as notícias do repositório de notícias. */
+export class InMemorySentimentRepository implements SentimentRepository {
+  readonly versions: StoredModelVersion[] = [];
+  readonly labelsById = new Map<string, { label: NewsSentiment; at: Date }>();
+
+  constructor(private readonly newsRepo: InMemoryNewsRepository) {}
+
+  useVersion(name: string, number: number, at: Date): Promise<number> {
+    const found = this.versions.find((v) => v.name === name && v.number === number);
+    if (found?.status === 'in_use') return Promise.resolve(found.id);
+    for (const version of this.versions) version.status = 'retired';
+    if (found) {
+      found.status = 'in_use';
+      return Promise.resolve(found.id);
+    }
+    const id = this.versions.length + 1;
+    this.versions.push({ id, name, number, status: 'in_use', createdAt: at, evaluation: null });
+    return Promise.resolve(id);
+  }
+
+  currentVersion(): Promise<StoredModelVersion | null> {
+    const found = this.versions.find((v) => v.status === 'in_use');
+    return Promise.resolve(found ? { ...found } : null);
+  }
+
+  retiredVersions(): Promise<StoredModelVersion[]> {
+    return Promise.resolve(
+      this.versions
+        .filter((v) => v.status === 'retired')
+        .reverse()
+        .map((v) => ({ ...v })),
+    );
+  }
+
+  newsToClassify(versionId: number, limit: number): Promise<NewsToClassify[]> {
+    return Promise.resolve(
+      [...this.newsRepo.news]
+        .filter((item) => item.classification?.modelVersionId !== versionId)
+        .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+        .slice(0, limit)
+        .map((item) => ({ id: item.id, title: item.title, summary: item.summary })),
+    );
+  }
+
+  saveClassifications(
+    versionId: number,
+    items: readonly Classification[],
+    at: Date,
+  ): Promise<void> {
+    for (const { newsId, sentiment, score } of items) {
+      const item = this.newsRepo.news.find((n) => n.id === newsId);
+      if (item) item.classification = { sentiment, score, modelVersionId: versionId, at };
+    }
+    return Promise.resolve();
+  }
+
+  classifiedCounts(versionId: number | null): Promise<{ total: number; classified: number }> {
+    return Promise.resolve({
+      total: this.newsRepo.news.length,
+      classified: this.newsRepo.news.filter(
+        (item) => versionId !== null && item.classification?.modelVersionId === versionId,
+      ).length,
+    });
+  }
+
+  labels(versionId: number | null): Promise<LabelRow[]> {
+    return Promise.resolve(
+      [...this.labelsById].flatMap(([id, { label }]) => {
+        const item = this.newsRepo.news.find((n) => n.id === id);
+        if (!item) return [];
+        const c = item.classification;
+        return [
+          {
+            publishedAt: item.publishedAt,
+            label,
+            predicted:
+              c && versionId !== null && c.modelVersionId === versionId ? c.sentiment : null,
+          },
+        ];
+      }),
+    );
+  }
+
+  recentLabels(limit: number): Promise<StoredLabel[]> {
+    return Promise.resolve(
+      [...this.labelsById]
+        .sort(([, a], [, b]) => b.at.getTime() - a.at.getTime())
+        .slice(0, limit)
+        .flatMap(([id, { label, at }]) => {
+          const item = this.newsRepo.news.find((n) => n.id === id);
+          return item
+            ? [
+                {
+                  id,
+                  title: item.title,
+                  url: item.url,
+                  publishedAt: item.publishedAt,
+                  label,
+                  labeledAt: at,
+                },
+              ]
+            : [];
+        }),
+    );
+  }
+
+  /** Sem sorteio: a primeira com ativo principal, na ordem guardada. */
+  nextToLabel(skip: readonly string[]): Promise<StoredNewsToLabel | null> {
+    const principal = (item: StoredNews) =>
+      item.links
+        .filter((link) => link.relevance === 'principal')
+        .map(
+          (link) =>
+            this.newsRepo.catalog.find((asset) => asset.assetId === link.assetId)?.ticker ?? '',
+        )
+        .sort();
+    const candidates = this.newsRepo.news.filter(
+      (item) => !this.labelsById.has(item.id) && !skip.includes(item.id),
+    );
+    const item =
+      candidates.find((candidate) => principal(candidate).length > 0) ?? candidates[0] ?? null;
+    if (!item) return Promise.resolve(null);
+    return Promise.resolve({
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+      url: item.url,
+      source: this.newsRepo.list.find((s) => s.id === item.sourceId)?.name ?? '',
+      publishedAt: item.publishedAt,
+      principal: principal(item),
+    });
+  }
+
+  saveLabel(newsId: string, sentiment: NewsSentiment, at: Date): Promise<void> {
+    if (!this.newsRepo.news.some((n) => n.id === newsId)) {
+      return Promise.reject(new NewsNotFoundError());
+    }
+    this.labelsById.set(newsId, { label: sentiment, at });
+    return Promise.resolve();
+  }
+
+  deleteLabel(newsId: string): Promise<boolean> {
+    return Promise.resolve(this.labelsById.delete(newsId));
+  }
+
+  saveEvaluation(versionId: number, evaluation: StoredEvaluation): Promise<void> {
+    const version = this.versions.find((v) => v.id === versionId);
+    if (version) version.evaluation = { ...evaluation };
+    return Promise.resolve();
   }
 }
 

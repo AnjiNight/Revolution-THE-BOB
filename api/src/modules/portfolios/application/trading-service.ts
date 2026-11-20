@@ -10,6 +10,8 @@ import {
   type ComparedPerformance,
   type ComparisonBenchmark,
   type ComparisonQuery,
+  type DayChange,
+  type DayChanges,
   type PerformancePoint,
   type PerformanceQuery,
   type PerformanceWarning,
@@ -158,6 +160,50 @@ export class TradingService {
     // SPEC-015: as negociações e lançamentos estornados não contam.
     const ledger = activeLedger(await this.deps.ledger.ledger(id));
     return this.positionsOf(ledger, isoDateInBrasilia(this.clock()), this.reads());
+  }
+
+  /**
+   * SPEC-033 §5.1: os ativos em posição hoje nas carteiras do usuário (ao vivo e históricas) que já
+   * têm cotação do pregão de hoje, com a variação do dia; cada ativo uma vez, com as carteiras em que
+   * ele está, na ordem da lista de carteiras. É o que os avisos de variação conferem.
+   */
+  async dayChanges(userId: string): Promise<DayChanges> {
+    const today = isoDateInBrasilia(this.clock());
+    const reads = this.reads();
+    const held = new Map<string, Array<{ id: string; name: string }>>();
+    for (const portfolio of await this.deps.portfolios.listByUser(userId)) {
+      const ledger = activeLedger(await this.deps.ledger.ledger(portfolio.id));
+      const line = ledgerTimeline(ledger, await corporateData(reads, reads, ledger), today);
+      for (const holding of line.holdings.values()) {
+        if (holding.quantity <= 0) continue;
+        held.set(holding.assetId, [
+          ...(held.get(holding.assetId) ?? []),
+          { id: portfolio.id, name: portfolio.name },
+        ]);
+      }
+    }
+    const assets = await Promise.all(
+      [...held].map(async ([assetId, portfolios]): Promise<DayChange | null> => {
+        const quote = await reads.latestQuote(assetId, USER_LEVEL);
+        // Sem a cotação de hoje (antes da primeira coleta, feriado, fim de semana), nada a avisar.
+        if (!quote || isoDateInBrasilia(quote.at) !== today) return null;
+        const asset = await reads.asset(assetId);
+        return {
+          assetId,
+          ticker: asset?.ticker ?? '',
+          name: asset?.name ?? '',
+          price: quote.price,
+          change: quote.change ?? null,
+          at: quote.at.toISOString(),
+          portfolios,
+        };
+      }),
+    );
+    return {
+      assets: assets
+        .filter((item): item is DayChange => item !== null)
+        .sort((a, b) => a.ticker.localeCompare(b.ticker)),
+    };
   }
 
   /** As posições de hoje do livro que vale; a comparação (SPEC-022) usa a mesma conta. */

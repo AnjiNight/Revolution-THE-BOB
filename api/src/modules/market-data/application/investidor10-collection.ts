@@ -69,8 +69,11 @@ export class Investidor10Collection {
     return this.run(sunday ? 'all' : 'new');
   }
 
-  /** `all`: todos os ativos ativos; `new`: só os nunca visitados. Sem trabalho, devolve `null`. */
-  async run(scope: 'all' | 'new'): Promise<RunResult | null> {
+  /**
+   * `all`: todos os ativos ativos; `new`: só os nunca visitados; `retry` (o "Executar agora" da
+   * SPEC-011): os nunca visitados e os que deram erro na última visita. Sem trabalho, `null`.
+   */
+  async run(scope: 'all' | 'new' | 'retry'): Promise<RunResult | null> {
     if (!this.deps.enabled || this.running) return null;
     this.running = true;
     try {
@@ -80,14 +83,16 @@ export class Investidor10Collection {
     }
   }
 
-  private async collect(scope: 'all' | 'new'): Promise<RunResult | null> {
+  private async collect(scope: 'all' | 'new' | 'retry'): Promise<RunResult | null> {
     const [assets, volumes] = await Promise.all([
       this.deps.fundamentals.listActiveAssets(),
       this.deps.volumes?.lastVolumes(),
     ]);
-    const visited = scope === 'new' ? await this.deps.fundamentals.visitedAssets() : null;
+    const visited = scope === 'all' ? null : await this.deps.fundamentals.visitedAssets();
+    const failed =
+      scope === 'retry' ? await this.deps.fundamentals.failedAssets() : new Set<string>();
     const work = byVolume(
-      visited ? assets.filter((asset) => !visited.has(asset.id)) : assets,
+      visited ? assets.filter((asset) => !visited.has(asset.id) || failed.has(asset.id)) : assets,
       volumes,
     );
     if (work.length === 0) return null;

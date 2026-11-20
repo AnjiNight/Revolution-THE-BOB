@@ -59,6 +59,13 @@ A implementação será escolhida em [Decisões Técnicas](../decisoes_tecnicas.
 4. Métrica mínima para publicar uma versão nova (ex.: F1 em período de teste).
 5. Fonte do histórico de notícias.
 
+## Atualização (19/11/2026, [SPEC-044](../specs/SPEC-044.md))
+
+- **Pontos 2 e 4:** a primeira versão é um **dicionário de termos** (regras), no processador, sem treino. A nota é a **F1 macro** nas 40% mais novas de uma amostra **rotulada pela equipe**. O usuário só vê o sentimento com F1 macro de 0,60 ou mais em pelo menos 60 notícias de teste. Uma versão nova só substitui a atual se medir melhor na mesma amostra.
+- **Rótulos automáticos pelo preço (proposta acima): não usados.** A SPEC-031 vai testar se o sentimento antecipa o preço; se o sentimento fosse aprendido do próprio preço, o teste daria certo por construção.
+- **Pontos 1, 3 e 5** (janela, retreino e fonte do histórico): ficam para o modelo treinado, que a v1 não tem. O histórico disponível é o arquivo do Investidor10, desde 22/09/2023.
+- A responsabilidade 1 (vínculo notícia–ativo) ficou com regras próprias, na [SPEC-028](../specs/SPEC-028.md), fora do modelo.
+
 ## Impacto nos outros documentos
 
 - **Requisitos:** RF27 e RF28 passam a citar o modelo; novo RNF de qualidade mínima do classificador.

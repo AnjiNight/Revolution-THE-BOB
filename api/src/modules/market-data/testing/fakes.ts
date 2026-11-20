@@ -1,4 +1,5 @@
 import {
+  INGESTION_TASKS,
   isoDateInBrasilia,
   type AssetClass,
   type AssetOrigin,
@@ -12,6 +13,7 @@ import { InMemoryAuditTrail } from '../../audit/testing/fakes.js';
 import type { PriceEventInput } from '../../financial-calculation/price-adjustment.js';
 import type { CorporateEvent } from '../domain/b3-events.js';
 import type { ParsedDividend } from '../domain/investidor10-page.js';
+import { INTERRUPTED_MESSAGE } from '../domain/task-errors.js';
 import {
   QuoteSourceError,
   type AssetCollection,
@@ -53,6 +55,13 @@ import {
   type IndexSource,
   type IndexSourceError,
   type IngestionTask,
+  type ProcessorHeartbeat,
+  type RunMaintenance,
+  type StoredRunDetail,
+  type StoredRunError,
+  type StoredRunSummary,
+  type TaskMonitorRepository,
+  type TaskRequestQueue,
   type IntradayQuote,
   type IntradayQuoteRepository,
   type LatestIntradayQuote,
@@ -86,6 +95,12 @@ export class InMemoryFundamentals implements FundamentalsRepository {
 
   visitedAssets(): Promise<Set<string>> {
     return Promise.resolve(new Set(this.visits.keys()));
+  }
+
+  failedAssets(): Promise<Set<string>> {
+    return Promise.resolve(
+      new Set([...this.visits].filter(([, visit]) => visit.status === 'erro').map(([id]) => id)),
+    );
   }
 
   save(collection: AssetCollection, at: Date): Promise<void> {
@@ -482,7 +497,8 @@ export class InMemoryTaskRuns implements TaskRunRepository, TaskRunReader {
   }> = [];
 
   start(task: IngestionTask, at: Date = new Date()): Promise<string> {
-    const id = `run-${this.runs.length + 1}`;
+    // Um UUID, como no banco (SPEC-011: a rota dos erros só aceita UUID).
+    const id = `00000000-0000-4000-8000-${String(this.runs.length + 1).padStart(12, '0')}`;
     this.runs.push({ id, task, startedAt: at, finishedAt: null, result: null });
     return Promise.resolve(id);
   }
@@ -989,4 +1005,215 @@ export class FakeMarketIndexSource implements MarketIndexSource {
 export function b3Number(value: string): string {
   const [integer = '0', fraction = ''] = value.split('.');
   return `${integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${fraction.padEnd(2, '0')}`;
+}
+
+/** SPEC-011: um pedido de execução em memória. */
+export interface FakeRunRequest {
+  id: string;
+  task: IngestionTask;
+  requestedAt: Date;
+  collaboratorId: string | null;
+  attendedAt: Date | null;
+  runId: string | null;
+  result: 'executada' | 'nada_a_fazer' | null;
+}
+
+/**
+ * SPEC-011: monitoramento em memória, sobre as execuções do `InMemoryTaskRuns`: a tela Tarefas,
+ * os pedidos, o sinal de vida do processador e a manutenção do registro.
+ */
+export class InMemoryTaskMonitor
+  implements TaskMonitorRepository, TaskRequestQueue, ProcessorHeartbeat, RunMaintenance
+{
+  readonly requests: FakeRunRequest[] = [];
+  seen: { at: Date; intervalSeconds: number } | null = null;
+  /** O nome de cada colaborador (no banco, vem do módulo de identidade). */
+  readonly names = new Map<string, string>();
+
+  constructor(
+    private readonly runsOf: InMemoryTaskRuns,
+    private readonly tickerOf: (assetId: string) => string | null = () => null,
+  ) {}
+
+  latestRuns(): Promise<
+    Map<IngestionTask, { finished: StoredRunSummary | null; runningSince: Date | null }>
+  > {
+    const latest = new Map<
+      IngestionTask,
+      { finished: StoredRunSummary | null; runningSince: Date | null }
+    >();
+    for (const task of INGESTION_TASKS) {
+      const runs = this.sorted(task);
+      const finished = runs.find((run) => run.finishedAt !== null);
+      const open = runs.find((run) => run.finishedAt === null);
+      latest.set(task, {
+        finished: finished ? this.summary(finished) : null,
+        runningSince: open?.startedAt ?? null,
+      });
+    }
+    return Promise.resolve(latest);
+  }
+
+  pendingRequests(): Promise<Map<IngestionTask, Date>> {
+    return Promise.resolve(
+      new Map(
+        this.requests
+          .filter((request) => request.attendedAt === null)
+          .map((request) => [request.task, request.requestedAt]),
+      ),
+    );
+  }
+
+  processor(): Promise<{ seenAt: Date; intervalSeconds: number } | null> {
+    return Promise.resolve(
+      this.seen ? { seenAt: this.seen.at, intervalSeconds: this.seen.intervalSeconds } : null,
+    );
+  }
+
+  runs(
+    task: IngestionTask,
+    offset: number,
+    limit: number,
+  ): Promise<{ runs: StoredRunDetail[]; total: number }> {
+    const all = this.sorted(task);
+    return Promise.resolve({
+      total: all.length,
+      runs: all.slice(offset, offset + limit).map((run) => {
+        const request = this.requests.find((item) => item.runId === run.id);
+        const name = request?.collaboratorId
+          ? (this.names.get(request.collaboratorId) ?? null)
+          : null;
+        return {
+          ...this.summary(run),
+          periodStart: run.result?.periodStart ?? null,
+          periodEnd: run.result?.periodEnd ?? null,
+          requests: run.result?.requests ?? 0,
+          quota: run.result?.quota ?? null,
+          totals: run.result?.totals ?? null,
+          request: request ? { name } : null,
+        };
+      }),
+    });
+  }
+
+  errors(
+    runId: string,
+    offset: number,
+    limit: number,
+  ): Promise<{ errors: StoredRunError[]; total: number } | null> {
+    const run = this.runsOf.runs.find((item) => item.id === runId);
+    if (!run) return Promise.resolve(null);
+    const all = run.result?.errors ?? [];
+    return Promise.resolve({
+      total: all.length,
+      errors: all.slice(offset, offset + limit).map((error) => ({
+        ticker: error.assetId ? this.tickerOf(error.assetId) : null,
+        date: error.date ?? null,
+        message: error.message,
+      })),
+    });
+  }
+
+  request(task: IngestionTask, collaboratorId: string, at: Date): Promise<boolean> {
+    if (this.requests.some((item) => item.task === task && item.attendedAt === null)) {
+      return Promise.resolve(false);
+    }
+    this.requests.push({
+      id: `pedido-${this.requests.length + 1}`,
+      task,
+      requestedAt: at,
+      collaboratorId,
+      attendedAt: null,
+      runId: null,
+      result: null,
+    });
+    return Promise.resolve(true);
+  }
+
+  pending(): Promise<Array<{ id: string; task: IngestionTask }>> {
+    return Promise.resolve(
+      this.requests
+        .filter((item) => item.attendedAt === null)
+        .sort((a, b) => a.requestedAt.getTime() - b.requestedAt.getTime())
+        .map((item) => ({ id: item.id, task: item.task })),
+    );
+  }
+
+  attend(id: string, task: IngestionTask, since: Date, at: Date): Promise<void> {
+    const request = this.requests.find((item) => item.id === id && item.attendedAt === null);
+    if (request) {
+      const run = this.sorted(task).find((item) => item.startedAt >= since);
+      request.attendedAt = at;
+      request.runId = run?.id ?? null;
+      request.result = run ? 'executada' : 'nada_a_fazer';
+    }
+    return Promise.resolve();
+  }
+
+  beat(at: Date, intervalSeconds: number): Promise<void> {
+    this.seen = { at, intervalSeconds };
+    return Promise.resolve();
+  }
+
+  closeInterrupted(at: Date): Promise<number> {
+    const open = this.runsOf.runs.filter((run) => run.finishedAt === null);
+    for (const run of open) {
+      run.finishedAt = run.startedAt > at ? run.startedAt : at;
+      run.result = {
+        status: 'falha',
+        records: 0,
+        affectedAssets: 0,
+        periodStart: null,
+        periodEnd: null,
+        errors: [{ message: INTERRUPTED_MESSAGE }],
+      };
+    }
+    return Promise.resolve(open.length);
+  }
+
+  deleteBefore(before: Date): Promise<number> {
+    const keep = new Set(
+      INGESTION_TASKS.flatMap((task) => {
+        const latest = this.sorted(task)[0];
+        return latest ? [latest.id] : [];
+      }),
+    );
+    let deleted = 0;
+    const runs = this.runsOf.runs;
+    for (let index = runs.length - 1; index >= 0; index -= 1) {
+      const run = runs[index];
+      if (run && run.startedAt < before && !keep.has(run.id)) {
+        runs.splice(index, 1);
+        for (const request of this.requests) if (request.runId === run.id) request.runId = null;
+        deleted += 1;
+      }
+    }
+    for (let index = this.requests.length - 1; index >= 0; index -= 1) {
+      const request = this.requests[index];
+      if (request?.attendedAt && request.attendedAt < before) {
+        this.requests.splice(index, 1);
+        deleted += 1;
+      }
+    }
+    return Promise.resolve(deleted);
+  }
+
+  /** As execuções da tarefa, das mais recentes para as mais antigas. */
+  private sorted(task: IngestionTask) {
+    return this.runsOf.runs
+      .filter((run) => run.task === task)
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+  }
+
+  private summary(run: InMemoryTaskRuns['runs'][number]): StoredRunSummary {
+    return {
+      id: run.id,
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt,
+      status: run.result?.status ?? null,
+      records: run.result?.records ?? 0,
+      affectedAssets: run.result?.affectedAssets ?? 0,
+      errorCount: run.result?.errors.length ?? 0,
+    };
+  }
 }

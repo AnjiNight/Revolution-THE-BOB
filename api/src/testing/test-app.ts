@@ -9,8 +9,14 @@ import type { DatabaseProbe } from '../modules/health/application/get-health.js'
 import { EmailCodeHasher } from '../modules/identity/application/email-code.js';
 import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
+import { AssetNewsService } from '../modules/news/application/asset-news-service.js';
 import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
-import { FakeFeedFetcher, InMemoryNewsRepository } from '../modules/news/testing/fakes.js';
+import { SentimentService } from '../modules/news/application/sentiment-service.js';
+import {
+  FakeFeedFetcher,
+  InMemoryNewsRepository,
+  InMemorySentimentRepository,
+} from '../modules/news/testing/fakes.js';
 import { JwtAccessTokenService } from '../modules/identity/infrastructure/jwt-access-token-service.js';
 import {
   BackgroundTasks,
@@ -26,6 +32,7 @@ import { CatalogImport } from '../modules/market-data/application/catalog-import
 import { CdiStatusService } from '../modules/market-data/application/cdi-status-service.js';
 import { MarketIndexStatusService } from '../modules/market-data/application/market-index-status-service.js';
 import { FundamentalsService } from '../modules/market-data/application/fundamentals-service.js';
+import { TaskMonitorService } from '../modules/market-data/application/task-monitor-service.js';
 import { PortfolioService } from '../modules/portfolios/application/portfolio-service.js';
 import { TradingService } from '../modules/portfolios/application/trading-service.js';
 import {
@@ -48,6 +55,7 @@ import {
   InMemoryIntradayQuoteRepository,
   InMemoryLogoRepository,
   InMemoryQuoteRepository,
+  InMemoryTaskMonitor,
   InMemoryTaskRuns,
 } from '../modules/market-data/testing/fakes.js';
 
@@ -219,6 +227,16 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     runs,
     clock,
   });
+  // SPEC-011: a tela Tarefas sobre as mesmas execuções em memória.
+  const taskMonitor = new InMemoryTaskMonitor(
+    runs,
+    (assetId) => assets.assets.find((asset) => asset.id === assetId)?.ticker ?? null,
+  );
+  const tasks = new TaskMonitorService({
+    monitor: taskMonitor,
+    investidor10Enabled: options.investidor10 !== false,
+    clock,
+  });
   // SPEC-027: fontes de notícias em memória; o teste do feed usa o buscador falso.
   const newsRepo = new InMemoryNewsRepository();
   const feedFetcher = new FakeFeedFetcher();
@@ -228,6 +246,9 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     parentEnabled: options.investidor10 !== false,
     clock,
   });
+  // SPEC-044: o sentimento sobre as mesmas notícias em memória.
+  const sentimentRepo = new InMemorySentimentRepository(newsRepo);
+  const sentiment = new SentimentService({ sentiment: sentimentRepo, clock });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -249,7 +270,10 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     fundamentals,
     portfolios,
     trading,
+    tasks,
     newsSources,
+    assetNews: new AssetNewsService({ news: newsRepo, sentiment, clock }),
+    sentiment,
     logStream: logs,
   });
 
@@ -286,6 +310,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     app,
     logs,
     newsRepo,
+    sentimentRepo,
     feedFetcher,
     users,
     refreshTokens,
@@ -321,6 +346,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     syncFundamentalAssets,
     fundamentals,
     events,
+    taskMonitor,
+    tasks,
     ...services,
   };
 }

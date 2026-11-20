@@ -344,7 +344,8 @@ export function PortfolioCash({
 }
 
 /** A data do lançamento como o extrato mostra: na ao vivo, com a hora do registro em Brasília. */
-function entryWhen(entry: CashEntry, live: boolean, language: string): string {
+/** A data do lançamento; na ao vivo, também o horário do registro (o relatório usa o mesmo). */
+export function entryWhen(entry: CashEntry, live: boolean, language: string): string {
   const day = formatCalendarDay(entry.date, language);
   if (!live) return day;
   const time = new Intl.DateTimeFormat(language, {

@@ -2,11 +2,15 @@ import type {
   AssetDetail,
   AssetDividends,
   AssetFundamentals,
+  AssetNewsDays,
+  AssetNewsPage,
+  AssetNewsQuery,
   AssetSearchResult,
   CalendarSuggestion,
   CashEntryResult,
   CashStatement,
   ComparisonQuery,
+  DayChanges,
   PerformanceQuery,
   PortfolioComparison,
   PortfolioCopyResult,
@@ -27,11 +31,18 @@ import type {
   NewsSource,
   NewsSourceCreated,
   NewsSourcesStatus,
+  NewsSentiment,
+  NewsToLabel,
+  SentimentModelVersion,
+  SentimentSummary,
   UpdateNewsSourceInput,
   Portfolio,
   PortfolioList,
   PriceHistory,
   PriceHistoryPeriod,
+  TaskErrorPage,
+  TaskList,
+  TaskRunPage,
   TradingCalendarYear,
   UserProfile,
 } from '@simulador/shared';
@@ -62,6 +73,10 @@ import type {
   PasswordResetRequestInput,
   RegisterInput,
   RenamePortfolioInput,
+  ReportSaveRequest,
+  ReportSaveResult,
+  NoticeTarget,
+  VariationNotice,
   UpdateNameInput,
 } from '../shared/auth-ipc.js';
 import type { ServerStatus } from '../shared/server-status.js';
@@ -146,6 +161,8 @@ export interface DesktopApi {
     addCash(id: string, input: NewCashEntryInput): Promise<ClientResult<CashEntryResult>>;
     /** SPEC-014: posições, com o caixa e o total. */
     positions(id: string): Promise<ClientResult<PortfolioPositions>>;
+    /** SPEC-033: os ativos das carteiras com a cotação do pregão de hoje e a variação do dia. */
+    dayChanges(): Promise<ClientResult<DayChanges>>;
     /** SPEC-014: o preço que a negociação usaria agora, ou o motivo de não dar. */
     /** SPEC-016: na histórica, com a data da negociação. */
     tradeQuote(id: string, assetId: string, date?: string): Promise<ClientResult<TradeQuote>>;
@@ -159,6 +176,32 @@ export interface DesktopApi {
     comparison(query: ComparisonQuery): Promise<ClientResult<PortfolioComparison>>;
     /** SPEC-023: nova carteira a partir desta; `copy_breaks_cash` traz em details a retirada. */
     copy(id: string, input: NewPortfolioCopyInput): Promise<ClientResult<PortfolioCopyResult>>;
+  };
+  /**
+   * SPEC-038: o relatório da carteira em PDF. `save` imprime esta janela (o documento do relatório
+   * já montado) e grava onde a pessoa escolher; `open` abre o último relatório gravado.
+   */
+  report: {
+    save(request: ReportSaveRequest): Promise<ClientResult<ReportSaveResult>>;
+    open(): Promise<boolean>;
+  };
+  /**
+   * SPEC-033: os avisos de variação. `show` mostra o aviso do sistema (devolve `false` se o sistema
+   * não aceita avisos); `onClick` diz para onde ir quando a pessoa clica nele.
+   */
+  notifications: {
+    show(notice: VariationNotice): Promise<boolean>;
+    onClick(listener: (target: NoticeTarget) => void): () => void;
+  };
+  /** SPEC-011: as tarefas de ingestão, só colaborador (403 para usuário). */
+  tasks: {
+    list(): Promise<ClientResult<TaskList>>;
+    /** O histórico da tarefa, 50 por vez a partir de `offset`. */
+    runs(task: string, offset?: number): Promise<ClientResult<TaskRunPage>>;
+    /** Os erros de uma execução, 100 por vez a partir de `offset`. */
+    errors(runId: string, offset?: number): Promise<ClientResult<TaskErrorPage>>;
+    /** "Executar agora": o processador atende o pedido em até 15 segundos. */
+    request(task: string): Promise<ClientResult<null>>;
   };
   /**
    * Indicadores (SPEC-041) e proventos (SPEC-042) do Investidor10, com autorização só neste projeto
@@ -180,6 +223,14 @@ export interface DesktopApi {
       id: string,
       input: UpdateNewsSourceInput,
     ): Promise<ClientResult<{ source: NewsSource }>>;
+    /** SPEC-044: versão do modelo, contagens, avaliação e os últimos rotulados. */
+    sentiment(): Promise<ClientResult<SentimentSummary>>;
+    /** A próxima notícia sem rótulo, sem o que o modelo disse; `null` se acabaram. */
+    nextToLabel(skip: string[]): Promise<ClientResult<{ news: NewsToLabel | null }>>;
+    label(id: string, sentiment: NewsSentiment): Promise<ClientResult<null>>;
+    unlabel(id: string): Promise<ClientResult<null>>;
+    /** Recusada (409) sem versão do modelo ou com poucas notícias de teste. */
+    evaluate(): Promise<ClientResult<{ version: SentimentModelVersion }>>;
   };
   /**
    * Catálogo de ativos (SPECs 006, 010 e 040). Busca, ficha e logos para todos; o resto só
@@ -209,6 +260,10 @@ export interface DesktopApi {
     confirmClassification(id: string): Promise<ClientResult<CatalogAsset>>;
     /** SPEC-040: logo como `data:` URL; `null` sem logo próprio. */
     logo(id: string): Promise<ClientResult<string | null>>;
+    /** SPEC-029: notícias do ativo (10 por vez) ou as de um pregão, com `after` e `until`. */
+    news(id: string, query: Partial<AssetNewsQuery>): Promise<ClientResult<AssetNewsPage>>;
+    /** SPEC-029: notícias por dia de referência, no período do gráfico (os marcadores). */
+    newsDays(id: string, period: PriceHistoryPeriod): Promise<ClientResult<AssetNewsDays>>;
   };
 }
 
