@@ -8,7 +8,11 @@ import {
   FUNDAMENTALS_PATHS,
   INDEX_PATHS,
   NEWS_PATHS,
+  newsLabelPath,
   newsSourcePath,
+  SENTIMENT_PATHS,
+  validateSentimentNextQuery,
+  isNewsSentiment,
   isDividendPeriod,
   isIngestionTask,
   isPriceHistoryPeriod,
@@ -63,6 +67,10 @@ import {
   type NewsSource,
   type NewsSourceCreated,
   type NewsSourcesStatus,
+  type NewsSentiment,
+  type NewsToLabel,
+  type SentimentModelVersion,
+  type SentimentSummary,
   type UpdateNewsSourceInput,
   type CashEntryResult,
   type CashStatement,
@@ -148,6 +156,10 @@ const KNOWN_ERRORS: ReadonlyArray<
   'news_source_not_found',
   'source_exists',
   'parent_source',
+  // SPEC-044
+  'news_not_found',
+  'no_model',
+  'not_enough_labels',
   'email_in_use',
   'invalid_credentials',
   'invalid_refresh_token',
@@ -772,6 +784,53 @@ export class AuthClient {
   /** Colaborador (SPEC-028): as últimas notícias com os vínculos aos ativos. */
   latestNews(): Promise<ClientResult<LatestNews>> {
     return this.call(() => this.authorizedRequest<LatestNews>('GET', NEWS_PATHS.latest));
+  }
+
+  /** Colaborador (SPEC-044): versão do modelo, contagens, avaliação e os últimos rotulados. */
+  sentimentSummary(): Promise<ClientResult<SentimentSummary>> {
+    return this.call(() =>
+      this.authorizedRequest<SentimentSummary>('GET', SENTIMENT_PATHS.summary),
+    );
+  }
+
+  /** Colaborador (SPEC-044): a próxima notícia sem rótulo, fora das puladas. */
+  nextNewsToLabel(skip: readonly string[]): Promise<ClientResult<{ news: NewsToLabel | null }>> {
+    return this.call(() => {
+      const checked = validateSentimentNextQuery({ skip: skip.join(',') });
+      if (!checked.success) throw new RequestFailed('unexpected');
+      const path =
+        checked.data.skip.length > 0
+          ? `${SENTIMENT_PATHS.next}?skip=${checked.data.skip.join(',')}`
+          : SENTIMENT_PATHS.next;
+      return this.authorizedRequest<{ news: NewsToLabel | null }>('GET', path);
+    });
+  }
+
+  /** Colaborador (SPEC-044): grava ou troca o rótulo da notícia. */
+  labelNews(id: string, sentiment: NewsSentiment): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id) || !isNewsSentiment(sentiment)) {
+        throw new RequestFailed('unexpected');
+      }
+      await this.authorizedRequest<undefined>('PUT', newsLabelPath(id), { sentiment });
+      return null;
+    });
+  }
+
+  /** Colaborador (SPEC-044): apaga o rótulo da notícia. */
+  unlabelNews(id: string): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+      await this.authorizedRequest<undefined>('DELETE', newsLabelPath(id));
+      return null;
+    });
+  }
+
+  /** Colaborador (SPEC-044): avalia a versão em uso contra as notícias de teste. */
+  evaluateSentiment(): Promise<ClientResult<{ version: SentimentModelVersion }>> {
+    return this.call(() =>
+      this.authorizedRequest<{ version: SentimentModelVersion }>('POST', SENTIMENT_PATHS.evaluate),
+    );
   }
 
   /** Colaborador (SPEC-027): nova fonte curada; o servidor testa o feed antes de gravar. */

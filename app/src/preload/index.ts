@@ -26,6 +26,9 @@ import type {
   NewsSource,
   NewsSourceCreated,
   NewsSourcesStatus,
+  NewsToLabel,
+  SentimentModelVersion,
+  SentimentSummary,
   Portfolio,
   PortfolioList,
   PriceHistory,
@@ -192,6 +195,13 @@ const api: DesktopApi = {
       invoke<ClientResult<NewsSourceCreated>>(NEWS_CHANNELS.createSource, input),
     updateSource: (id, input) =>
       invoke<ClientResult<{ source: NewsSource }>>(NEWS_CHANNELS.updateSource, id, input),
+    sentiment: () => invoke<ClientResult<SentimentSummary>>(NEWS_CHANNELS.sentiment),
+    nextToLabel: (skip) =>
+      invoke<ClientResult<{ news: NewsToLabel | null }>>(NEWS_CHANNELS.nextToLabel, skip),
+    label: (id, sentiment) => invoke<ClientResult<null>>(NEWS_CHANNELS.label, id, sentiment),
+    unlabel: (id) => invoke<ClientResult<null>>(NEWS_CHANNELS.unlabel, id),
+    evaluate: () =>
+      invoke<ClientResult<{ version: SentimentModelVersion }>>(NEWS_CHANNELS.evaluate),
   },
   assets: {
     search: (query) => invoke<ClientResult<AssetSearchResult>>(ASSET_CHANNELS.search, query),

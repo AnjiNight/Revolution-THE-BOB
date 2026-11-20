@@ -13,6 +13,7 @@ import { Info, Plus, Warning } from '@phosphor-icons/react';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
+import { SentimentPanel } from './NewsSentiment';
 import { SelectField } from './SelectField';
 import { TextField } from './TextField';
 
@@ -244,6 +245,7 @@ export function NewsSources({ onSessionExpired }: { onSessionExpired: () => void
       )}
 
       {data && <LatestNewsList onSessionExpired={onSessionExpired} />}
+      {data && <SentimentPanel onSessionExpired={onSessionExpired} />}
     </div>
   );
 }

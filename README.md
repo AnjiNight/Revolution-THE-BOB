@@ -122,7 +122,9 @@ O gráfico da ficha passa a abrir **ajustado** por desdobramentos, grupamentos e
 
 Na Área do colaborador, **Notícias** mostra as fontes, a última coleta de cada uma, quantas notícias há e o andamento do arquivo. Por lá também se cadastra uma fonte curada (o feed é testado antes de gravar; só `https` público) e se ativa ou desativa uma fonte. Depois de cada coleta, e a cada 30 minutos, o processador liga cada notícia aos ativos que ela cita ([SPEC-028](specs/SPEC-028.md)), pelo ticker e pelas empresas marcadas pelo Investidor10, como **principal**, **citado** ou **lista**. A tela mostra as 20 últimas notícias com esses ativos, para conferir.
 
-Na **ficha do ativo** ([SPEC-029](specs/SPEC-029.md)), quem usa o app vê as notícias sobre o ativo (título, resumo e o link para a fonte, nunca a matéria inteira), e o gráfico de preço marca os pregões com notícia. Ao escolher um marcador, aparecem as notícias daquele pregão e o que o preço fez no pregão e 5 pregões depois. A notícia publicada depois das 18h conta para o pregão seguinte. O sentimento das notícias vem na SPEC-044.
+Na **ficha do ativo** ([SPEC-029](specs/SPEC-029.md)), quem usa o app vê as notícias sobre o ativo (título, resumo e o link para a fonte, nunca a matéria inteira), e o gráfico de preço marca os pregões com notícia. Ao escolher um marcador, aparecem as notícias daquele pregão e o que o preço fez no pregão e 5 pregões depois. A notícia publicada depois das 18h conta para o pregão seguinte.
+
+**Sentimento** ([SPEC-044](specs/SPEC-044.md)): o processador dá a cada notícia um tom (positivo, neutro ou negativo) por um dicionário de termos do mercado, lendo o título e o resumo, e guarda a versão do modelo. Na tela **Notícias**, o colaborador rotula uma amostra (a meta é de 150 notícias) e avalia a versão: as 40% mais novas da amostra dão a nota (F1 macro). O tom só aparece na ficha do ativo quando a versão teve F1 macro de 0,60 ou mais em pelo menos 60 notícias de teste. Até lá, o dado existe só para a pesquisa e para o colaborador.
 
 ### Token da brapi (opcional)
 

@@ -107,6 +107,12 @@ export const NEWS_CHANNELS = {
   updateSource: 'news:update-source',
   // SPEC-028: as últimas notícias com os vínculos.
   latest: 'news:latest',
+  // SPEC-044: a amostra rotulada e a avaliação do sentimento.
+  sentiment: 'news:sentiment',
+  nextToLabel: 'news:next-to-label',
+  label: 'news:label',
+  unlabel: 'news:unlabel',
+  evaluate: 'news:evaluate-sentiment',
 } as const;
 
 /** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */

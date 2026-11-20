@@ -7,21 +7,39 @@ import {
   type AssetNewsDays,
   type AssetNewsPage,
   type AssetNewsQuery,
+  type NewsSentiment,
   type PriceHistoryPeriod,
+  type SentimentCounts,
+  type SentimentModelName,
 } from '@simulador/shared';
 import { periodStart } from '../../financial-calculation/price-history.js';
 import type { LinkRelevance } from '../domain/asset-links.js';
 import { NewsAssetNotFoundError } from '../domain/errors.js';
-import type { AssetNewsFilter, NewsRepository } from './ports.js';
+import type { AssetNewsFilter, NewsRepository, StoredClassification } from './ports.js';
 
 /** O ativo é o assunto ou é citado; as listas ficam num grupo à parte (SPEC-029 §4.1, decisão 2). */
 const MAIN: readonly LinkRelevance[] = ['principal', 'citado'];
 const LIST: readonly LinkRelevance[] = ['lista'];
 
+/** SPEC-044: a versão do modelo cujo sentimento o usuário vê, ou `null`. */
+type VisibleModel = (SentimentModelName & { id: number }) | null;
+
 export interface AssetNewsServiceDeps {
   news: NewsRepository;
+  sentiment?: { visibleModel(): Promise<VisibleModel> };
   clock?: () => Date;
 }
+
+/** O tom só aparece se veio da versão visível; o de outra versão é como pendente. */
+function sentimentFor(
+  classification: StoredClassification | null,
+  model: VisibleModel,
+): NewsSentiment | null {
+  return model && classification?.modelVersionId === model.id ? classification.sentiment : null;
+}
+
+const modelName = (model: VisibleModel): SentimentModelName | null =>
+  model ? { name: model.name, number: model.number } : null;
 
 /** Notícias do ativo na ficha e os marcadores do gráfico (SPEC-029 §5.1). */
 export class AssetNewsService {
@@ -44,16 +62,22 @@ export class AssetNewsService {
         : {}),
     };
     const page = { offset: query.offset, limit: ASSET_NEWS_PAGE_SIZE };
-    const [found, lists] = await Promise.all([
+    const [found, lists, model] = await Promise.all([
       this.deps.news.assetNews(assetId, filter, page),
       query.group === 'list'
         ? null
         : this.deps.news.assetNews(assetId, { relevances: LIST }, { offset: 0, limit: 0 }),
+      this.visibleModel(),
     ]);
     return {
       total: found.total,
       listTotal: lists ? lists.total : found.total,
-      news: found.rows.map((row) => ({ ...row, publishedAt: row.publishedAt.toISOString() })),
+      news: found.rows.map(({ classification, ...row }) => ({
+        ...row,
+        publishedAt: row.publishedAt.toISOString(),
+        sentiment: sentimentFor(classification, model),
+      })),
+      model: modelName(model),
     };
   }
 
@@ -64,21 +88,40 @@ export class AssetNewsService {
   async days(assetId: string, period: PriceHistoryPeriod): Promise<AssetNewsDays> {
     await this.ensureAsset(assetId);
     const start = periodStart(isoDateInBrasilia(this.clock()), period);
-    const dates = await this.deps.news.assetNewsDates(assetId, {
-      relevances: MAIN,
-      ...(start ? { from: newsReferenceDayStart(start) } : {}),
-    });
-    const counts = new Map<string, number>();
+    const [dates, model] = await Promise.all([
+      this.deps.news.assetNewsDates(assetId, {
+        relevances: MAIN,
+        ...(start ? { from: newsReferenceDayStart(start) } : {}),
+      }),
+      this.visibleModel(),
+    ]);
+    const days = new Map<string, { count: number; sentiment: SentimentCounts }>();
     for (const date of dates) {
-      const day = newsReferenceDay(date);
-      counts.set(day, (counts.get(day) ?? 0) + 1);
+      const key = newsReferenceDay(date.publishedAt);
+      const day = days.get(key) ?? {
+        count: 0,
+        sentiment: { positive: 0, neutral: 0, negative: 0 },
+      };
+      day.count += 1;
+      const sentiment = sentimentFor(date.classification, model);
+      if (sentiment) day.sentiment[sentiment] += 1;
+      days.set(key, day);
     }
     return {
       period,
-      days: [...counts]
+      days: [...days]
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([day, count]) => ({ day, count })),
+        .map(([day, { count, sentiment }]) => ({
+          day,
+          count,
+          sentiment: model ? sentiment : null,
+        })),
+      model: modelName(model),
     };
+  }
+
+  private visibleModel(): Promise<VisibleModel> {
+    return this.deps.sentiment?.visibleModel() ?? Promise.resolve(null);
   }
 
   private async ensureAsset(assetId: string): Promise<void> {

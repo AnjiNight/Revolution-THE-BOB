@@ -29,6 +29,7 @@ import type { TradingService } from './modules/portfolios/application/trading-se
 import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfolio-routes.js';
 import type { AssetNewsService } from './modules/news/application/asset-news-service.js';
 import type { NewsSourcesService } from './modules/news/application/news-sources-service.js';
+import type { SentimentService } from './modules/news/application/sentiment-service.js';
 import { registerNewsRoutes } from './modules/news/controllers/news-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { registerEtag } from './shared/http/etag.js';
@@ -64,6 +65,8 @@ export interface AppDependencies {
   newsSources?: NewsSourcesService;
   /** SPEC-029: notícias do ativo na ficha; vem junto com `newsSources`. */
   assetNews?: AssetNewsService;
+  /** SPEC-044: amostra rotulada e avaliação do sentimento; vem junto com `newsSources`. */
+  sentiment?: SentimentService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -123,10 +126,11 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     accessTokens: deps.accessTokens,
   });
   registerTaskRoutes(app, { tasks: deps.tasks, accessTokens: deps.accessTokens });
-  if (deps.newsSources && deps.assetNews) {
+  if (deps.newsSources && deps.assetNews && deps.sentiment) {
     registerNewsRoutes(app, {
       sources: deps.newsSources,
       assetNews: deps.assetNews,
+      sentiment: deps.sentiment,
       accessTokens: deps.accessTokens,
     });
   }

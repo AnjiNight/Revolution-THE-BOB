@@ -45,6 +45,9 @@ import { PrismaEventRepository } from './modules/market-data/infrastructure/pris
 import { AssetNewsService } from './modules/news/application/asset-news-service.js';
 import { NewsCollection, type RunSummary } from './modules/news/application/news-collection.js';
 import { NewsLinker } from './modules/news/application/news-linker.js';
+import { NewsSentimentClassifier } from './modules/news/application/news-sentiment-classifier.js';
+import { SentimentService } from './modules/news/application/sentiment-service.js';
+import { PrismaSentimentRepository } from './modules/news/infrastructure/prisma-sentiment-repository.js';
 import { NewsSourcesService } from './modules/news/application/news-sources-service.js';
 import { HttpFeedFetcher } from './modules/news/infrastructure/http-feed-fetcher.js';
 import { Investidor10NewsHttpSource } from './modules/news/infrastructure/investidor10-news-source.js';
@@ -181,13 +184,23 @@ async function main(): Promise<void> {
   const feedFetcher = new HttpFeedFetcher();
   // SPEC-028: vínculo notícia–ativo, depois de cada coleta e a cada 30 minutos.
   const newsLinker = new NewsLinker({ news: newsRepo });
+  // SPEC-044: sentimento das notícias, logo depois do vínculo e a cada 30 minutos.
+  const sentimentRepo = new PrismaSentimentRepository(prisma);
+  const newsSentiment = new NewsSentimentClassifier({ sentiment: sentimentRepo });
   const news = new NewsCollection({
     parentEnabled: config.investidor10.enabled,
     parent: new Investidor10NewsHttpSource({ baseUrl: config.investidor10.baseUrl }),
     feeds: feedFetcher,
     news: newsRepo,
     runs,
-    linker: newsLinker,
+    linker: {
+      run: async () => {
+        const linked = await newsLinker.run();
+        // Falha na classificação não derruba o vínculo nem a coleta (RNF13).
+        await newsSentiment.run().catch(() => 0);
+        return linked;
+      },
+    },
   });
 
   // SPEC-011: o registro das execuções, os pedidos de "Executar agora" e o sinal de vida.
@@ -234,6 +247,8 @@ async function main(): Promise<void> {
       calendar,
       market,
     });
+    // SPEC-044: a amostra rotulada, a avaliação e qual versão o usuário vê.
+    const sentiment = new SentimentService({ sentiment: sentimentRepo });
     const { auth, profile, passwordReset, accountData } = createIdentityServices({
       portfolios,
       users: new PrismaUserRepository(prisma),
@@ -286,7 +301,8 @@ async function main(): Promise<void> {
         feeds: feedFetcher,
         parentEnabled: config.investidor10.enabled,
       }),
-      assetNews: new AssetNewsService({ news: newsRepo }),
+      assetNews: new AssetNewsService({ news: newsRepo, sentiment }),
+      sentiment,
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -395,6 +411,8 @@ async function main(): Promise<void> {
         // SPEC-028: as notícias sem vínculo (o arquivo, as atualizadas, outra versão da regra). Não
         // é tarefa de ingestão: não grava execução nem aparece na tela Tarefas.
         { name: 'vínculo notícia–ativo', run: () => newsLinker.run(), everyMinutes: 30 },
+        // SPEC-044: as pendentes e, quando a versão do modelo muda, todas. Também não é ingestão.
+        { name: 'sentimento das notícias', run: () => newsSentiment.run(), everyMinutes: 30 },
       ],
     });
     shutdown = async () => {

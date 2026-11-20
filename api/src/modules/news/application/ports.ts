@@ -1,4 +1,4 @@
-import type { NewsCategory } from '@simulador/shared';
+import type { NewsCategory, NewsSentiment } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type { CatalogTicker, LinkOrigin, LinkRelevance } from '../domain/asset-links.js';
 
@@ -98,14 +98,23 @@ export interface NewsRepository {
     filter: AssetNewsFilter,
     page: { offset: number; limit: number },
   ): Promise<{ total: number; rows: AssetNewsRow[] }>;
-  /** Os horários de publicação das notícias do ativo com essas relevâncias, desde `from`. */
-  assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<Date[]>;
+  /**
+   * O horário de publicação e a classificação das notícias do ativo com essas relevâncias, desde
+   * `from`.
+   */
+  assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<AssetNewsDate[]>;
 }
 
 export interface AssetNewsFilter {
   relevances: readonly LinkRelevance[];
   from?: Date;
   to?: Date;
+}
+
+/** SPEC-044: o que o modelo disse e com qual versão; `null` se a notícia está pendente. */
+export interface StoredClassification {
+  sentiment: NewsSentiment;
+  modelVersionId: number;
 }
 
 export interface AssetNewsRow {
@@ -116,6 +125,99 @@ export interface AssetNewsRow {
   source: string;
   publishedAt: Date;
   relevance: LinkRelevance;
+  classification: StoredClassification | null;
+}
+
+export interface AssetNewsDate {
+  publishedAt: Date;
+  classification: StoredClassification | null;
+}
+
+/** SPEC-044: uma versão do modelo como fica guardada (DA20). */
+export interface StoredModelVersion {
+  id: number;
+  name: string;
+  number: number;
+  status: 'in_use' | 'retired';
+  createdAt: Date;
+  evaluation: StoredEvaluation | null;
+}
+
+export interface StoredEvaluation {
+  evaluatedAt: Date;
+  testSize: number;
+  accuracy: number;
+  macroF1: number;
+  matrix: number[][];
+}
+
+export interface NewsToClassify {
+  id: string;
+  title: string;
+  summary: string | null;
+}
+
+export interface Classification {
+  newsId: string;
+  sentiment: NewsSentiment;
+  score: number;
+}
+
+export interface LabelRow {
+  publishedAt: Date;
+  label: NewsSentiment;
+  /** O que a versão pedida disse, ou `null` se ela não classificou a notícia. */
+  predicted: NewsSentiment | null;
+}
+
+export interface StoredLabel {
+  id: string;
+  title: string;
+  url: string;
+  publishedAt: Date;
+  label: NewsSentiment;
+  labeledAt: Date;
+}
+
+export interface StoredNewsToLabel {
+  id: string;
+  title: string;
+  summary: string | null;
+  url: string;
+  source: string;
+  publishedAt: Date;
+  principal: string[];
+}
+
+/** SPEC-044: versões do modelo, classificação das notícias e a amostra rotulada. */
+export interface SentimentRepository {
+  /**
+   * Registra a versão, se é nova, e a deixa em uso; a que estava em uso fica retirada, com a nota.
+   * Devolve o id.
+   */
+  useVersion(name: string, number: number, at: Date): Promise<number>;
+  /** A versão em uso, ou `null` se o processador ainda não registrou nenhuma. */
+  currentVersion(): Promise<StoredModelVersion | null>;
+  /** As versões retiradas, das mais novas. */
+  retiredVersions(): Promise<StoredModelVersion[]>;
+  /** Notícias nunca classificadas ou classificadas por outra versão, das mais novas. */
+  newsToClassify(versionId: number, limit: number): Promise<NewsToClassify[]>;
+  saveClassifications(versionId: number, items: readonly Classification[], at: Date): Promise<void>;
+  /** Quantas notícias há e quantas a versão classificou. */
+  classifiedCounts(versionId: number | null): Promise<{ total: number; classified: number }>;
+  /** Todos os rótulos, com o que a versão disse de cada notícia. */
+  labels(versionId: number | null): Promise<LabelRow[]>;
+  recentLabels(limit: number): Promise<StoredLabel[]>;
+  /**
+   * Uma notícia sem rótulo, fora das puladas; primeiro as que têm ativo principal, em ordem
+   * sorteada. `null` se acabaram.
+   */
+  nextToLabel(skip: readonly string[]): Promise<StoredNewsToLabel | null>;
+  /** Lança NewsNotFoundError se a notícia não existe. */
+  saveLabel(newsId: string, sentiment: NewsSentiment, at: Date): Promise<void>;
+  /** `false` se não havia rótulo. */
+  deleteLabel(newsId: string): Promise<boolean>;
+  saveEvaluation(versionId: number, evaluation: StoredEvaluation): Promise<void>;
 }
 
 export interface NewsToLink {

@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | 📝 Escrita em 17/11/2026 pela Nicoly com o Claude; aguardando a aprovação das recomendações do §4.1 e das propostas do §4.2 |
+| Status | ✅ Escrita em 17/11/2026 pela Nicoly com o Claude; aprovada por ela em 19/11/2026 com as recomendações do §4.1 e as propostas do §4.2; implementada e validada como usuária em 19/11/2026 (§9). Falta a equipe rotular a amostra para a primeira nota |
 | Fase | 7 — Notícias e cenários ([mapa de specs](mapa_specs.md)), depois da SPEC-029 |
 | Prioridade | Could (RF28); dado central da pesquisa (OBJ03) e pré-requisito dos cenários (SPEC-031) |
 | Depende de | [SPEC-027](SPEC-027.md) (notícias coletadas), [SPEC-028](SPEC-028.md) (vínculo), [SPEC-029](SPEC-029.md) (notícias na ficha) |
@@ -143,3 +143,58 @@ A migração tem `down.sql` (RNF17). `VERSAO_MODELO` entra no modelo de domínio
 | OPEN-31 | Em parte: a v1 não treina, então a janela de treino fica para o modelo treinado. O histórico disponível é o arquivo do Investidor10, desde 22/09/2023 |
 | — | Rotular a amostra é trabalho da equipe (Nicoly e Luís), não do código. Até isso acontecer, o sentimento existe só para o colaborador |
 | — | Modelo treinado (FinBERT-PT-BR ajustado com a amostra, ou um modelo de linguagem): próxima versão, se o léxico não passar ou ficar perto do limite |
+
+## 9. Verificação (19/11/2026)
+
+**Como ficou:**
+
+- **Regras:** `api/src/modules/news/domain/sentiment-lexicon.ts`, função pura `classifySentiment` (`lexico` v1). São 94 termos com peso 1 ou 2, e os de mais palavras são procurados primeiro: "reduz prejuízo" vale antes de "prejuízo", e "recuperação judicial" antes de "recuperação". A negação inverte até 3 palavras depois de "não", "sem", "nem" ou "jamais". "Forte" e "muito" multiplicam o termo seguinte por 1,5, e os termos depois de "mas" também pesam 1,5. A pontuação é a soma ÷ (|soma| + 2), de −1 a 1, com a faixa neutra entre −0,2 e 0,2.
+- **Avaliação:** `domain/sentiment-evaluation.ts`, pura: a divisão no tempo (60/40, sem embaralhar), a acurácia, a F1 macro (a classe que não aparece nem no rótulo nem na resposta não entra na média) e a tabela de erros. A regra de visibilidade fica em `hiddenReason`.
+- **Processador:** `application/news-sentiment-classifier.ts`. Registra a versão (`useVersion`) e classifica as pendentes e as de outra versão, das mais novas, em lotes de 500. Roda logo depois do vínculo de cada coleta e na tarefa "sentimento das notícias", a cada 30 minutos. A notícia em que o classificador falha fica pendente e não para as outras; chamadas ao mesmo tempo dividem uma execução só. Texto novo na fonte volta a deixar a notícia pendente, como no vínculo.
+- **Servidor:** `application/sentiment-service.ts` e as rotas do §5.1. Uma notícia classificada por outra versão conta como pendente na ficha.
+- **Banco:** migração `20261119120000_sentimento_noticia`, com `down.sql`. Tem as tabelas `versao_modelo` (uma só em uso, por índice único parcial; a avaliação inteira ou vazia) e `rotulo_noticia` (sai junto com a notícia). A `noticia` ganhou o tom, a pontuação, a data e a versão, todos preenchidos ou todos vazios, com a pontuação entre −1 e 1.
+- **App:** a seção "Sentimento das notícias" na tela Notícias do colaborador (`NewsSentiment.tsx`), com a versão, as contagens, a avaliação, a tabela de erros, a visibilidade, o painel Rotular e os últimos rotulados. Na ficha, a etiqueta "Tom: …" com ícone, as contagens no painel do pregão ("…; e 1 ainda sem tom") e a nota de caráter educacional.
+
+| CA | Resultado |
+|---|---|
+| CA01 | ✅ 9 testes de unidade: termos, negação, intensidade, "mas", peso do título, limites de 0,2 e os exemplos claros do §4.3 |
+| CA02 | ✅ 4 testes do processador (lotes, versão nova reclassifica, falha numa notícia, chamadas juntas) e o teste com banco do texto novo voltando a pendente |
+| CA03 | ✅ 6 testes de unidade da métrica e um teste de rota com 150 rótulos: 90 para ajuste e 60 para teste, tabela conferida, recusa abaixo de 10 de teste |
+| CA04 | ✅ Testes de rota (403 para o usuário, 401 sem sessão, rotular, pular, trocar, apagar, 404, 400) e a validação visual abaixo |
+| CA05 | ✅ Teste de rota: sem avaliação, com 59 de teste e com F1 0,59, nada de tom; com 60 e 0,60, o tom aparece só nas notícias da versão em uso. Validação visual da ficha com e sem modelo visível |
+| CA06 | ✅ Banco de desenvolvimento: as 261 notícias reais classificadas em cerca de 0,3 s, com 79 positivas, 101 neutras e 81 negativas. ⏳ **A avaliação espera a amostra rotulada pela equipe**: os rótulos não podem ser do Claude |
+| CA07 | ✅ 6 testes com o `simulador_test`: uma versão em uso, restrições de preenchido ou vazio, pontuação fora da faixa recusada, rótulo e classificação saindo com a notícia. A migração foi desfeita e refeita, e o schema bate ("No difference detected") |
+| CA08 | ✅ Teste do cliente: sem conexão, a página da ficha volta da cópia local com o tom e o modelo |
+| CA09 | ✅ `decisoes_tecnicas.md` (modelo de sentimento), a atualização na DA20, o mapa v1.69 (OPEN-30 resolvida, OPEN-31 em parte) e o README |
+| CA10 | ✅ Validação visual abaixo e o roteiro em `tests/e2e/news-sentiment.e2e.ts` |
+
+**Validação visual (navegador do Claude, com `mocks/window-api.js`):**
+
+| Caso | Resultado |
+|---|---|
+| Rotular pelo teclado | ✅ 1, 3, 0 e 2 em sequência: grava, pula e o foco vai para a próxima notícia. Antes, o foco caía na página depois do primeiro rótulo e as teclas paravam de valer; corrigido |
+| Clique duplo em "Neutro" | ✅ Um rótulo só (os botões ficam desativados enquanto grava) |
+| O modelo escondido | ✅ Ao rotular, nenhuma etiqueta de tom aparece |
+| Trocar e apagar | ✅ Pelo seletor de cada um dos últimos rotulados, e pelo "Apagar", cujo nome para o leitor de tela inclui o título da notícia |
+| Avaliar com poucas | ✅ "Rotule mais notícias: para avaliar, é preciso ter pelo menos 10 de teste." |
+| Avaliação pronta | ✅ Nota, acurácia e "Visível para os usuários"; a tabela de acertos com cabeçalhos |
+| Lista vazia, sem modelo, lento, servidor fora | ✅ "Todas as notícias foram rotuladas (ou puladas)", com o foco no painel; "Nenhuma ainda" e o botão Avaliar desativado; "Carregando o sentimento…"; o aviso só na seção, e as fontes continuam na tela |
+| Ficha com o modelo visível | ✅ "Tom: Positivo/Neutro/Negativo" com ícone; a pendente sem etiqueta; a nota "pode errar. Não é recomendação."; no pregão de 11/11, "1 positiva, nenhuma neutra, nenhuma negativa; e 1 ainda sem tom." |
+| Ficha sem modelo visível | ✅ Igual à SPEC-029 |
+| 375 px | ✅ Sem rolagem para o lado. Antes, a tabela de erros virava cartões sem cabeçalho (herdava o estilo do extrato); ganhou um estilo próprio |
+| Português | ✅ "0 notícia" corrigido para "Nenhuma notícia ainda" (em pt-BR, o plural trata o 0 como singular); as contagens do pregão dizem "nenhuma positiva" |
+| Ponta a ponta | ✅ 7 testes novos (Playwright, Edge) e os 13 antigos passando |
+
+**Totais:** 1212 testes de unidade, rota e banco; 20 de ponta a ponta. Tipagem, lint e formatação limpos.
+
+**Limites conhecidos:**
+
+- **O que a conferência das notícias reais mostrou:** o dicionário erra frases em que o sentido depende do assunto.
+  - "Dólar cai" e "Inflação perde força" saem como negativas, mas são boas para a bolsa.
+  - "Selic alta" sai como positiva, por causa de "alta".
+  - "Lucro do BTG bate recorde, mas ações caem" sai positiva, porque o resumo repete "recorde de lucro".
+
+  A amostra rotulada vai dizer quanto isso pesa na nota.
+- Um tom só por notícia. Uma notícia boa para um ativo e ruim para outro fica com um tom só (§3.2).
+- O tom no mercado (sem ativo principal) e no ativo usa as mesmas regras.
+- A ficha com dados reais não foi vista no app de verdade, porque o navegador do Claude não faz login. O tom também só aparece ao usuário depois da avaliação.

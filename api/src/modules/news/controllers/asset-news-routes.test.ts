@@ -131,13 +131,14 @@ describe('notícias do ativo na ficha (SPEC-029 §5.1)', () => {
     expect(year).toEqual({
       period: '1y',
       days: [
-        { day: '2026-11-07', count: 1 },
-        { day: '2026-11-11', count: 1 },
-        { day: '2026-11-12', count: 2 },
+        { day: '2026-11-07', count: 1, sentiment: null },
+        { day: '2026-11-11', count: 1, sentiment: null },
+        { day: '2026-11-12', count: 2, sentiment: null },
       ],
+      model: null,
     });
     const all = (await get(days('?period=max'))).json<AssetNewsDays>();
-    expect(all.days[0]).toEqual({ day: '2025-06-01', count: 1 });
+    expect(all.days[0]).toEqual({ day: '2025-06-01', count: 1, sentiment: null });
     // Sem período: 1 ano.
     expect((await get(days())).json<AssetNewsDays>().period).toBe('1y');
   });
@@ -147,10 +148,69 @@ describe('notícias do ativo na ficha (SPEC-029 §5.1)', () => {
       total: 0,
       listTotal: 0,
       news: [],
+      model: null,
     });
     expect((await get(assetPath(ASSET_NEWS_PATHS.days, VALE3))).json()).toEqual({
       period: '1y',
       days: [],
+      model: null,
+    });
+  });
+
+  it('SPEC-044: o tom só aparece quando a versão em uso passou na avaliação (CA05)', async () => {
+    const good = await news('Lucro dispara', '2026-11-11T15:00:00Z', 'principal');
+    const bad = await news('Ações desabam', '2026-11-11T16:00:00Z', 'citado');
+    await news('Ainda pendente', '2026-11-11T17:00:00Z', 'principal');
+    const old = await t.sentimentRepo.useVersion('lexico', 1, NOW);
+    await t.sentimentRepo.saveClassifications(
+      old,
+      [{ newsId: bad, sentiment: 'negative', score: -0.6 }],
+      NOW,
+    );
+    const v2 = await t.sentimentRepo.useVersion('lexico', 2, NOW);
+    await t.sentimentRepo.saveClassifications(
+      v2,
+      [{ newsId: good, sentiment: 'positive', score: 0.6 }],
+      NOW,
+    );
+    const evaluation = (testSize: number, macroF1: number) => ({
+      evaluatedAt: NOW,
+      testSize,
+      accuracy: 0.7,
+      macroF1,
+      matrix: [
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+      ],
+    });
+
+    // Sem avaliação, com poucos testes ou nota baixa: nada de sentimento.
+    for (const [testSize, macroF1] of [
+      [0, 0],
+      [59, 0.9],
+      [60, 0.59],
+    ] as const) {
+      if (testSize > 0) await t.sentimentRepo.saveEvaluation(v2, evaluation(testSize, macroF1));
+      const page = (await get(list())).json<AssetNewsPage>();
+      expect(page.model).toBeNull();
+      expect(page.news.every((n) => n.sentiment === null)).toBe(true);
+    }
+
+    await t.sentimentRepo.saveEvaluation(v2, evaluation(60, 0.6));
+    const page = (await get(list())).json<AssetNewsPage>();
+    expect(page.model).toEqual({ name: 'lexico', number: 2 });
+    // A classificada pela versão antiga conta como pendente.
+    expect(page.news.map((n) => [n.title, n.sentiment])).toEqual([
+      ['Ainda pendente', null],
+      ['Ações desabam', null],
+      ['Lucro dispara', 'positive'],
+    ]);
+    const marked = (await get(days())).json<AssetNewsDays>();
+    expect(marked).toEqual({
+      period: '1y',
+      days: [{ day: '2026-11-11', count: 3, sentiment: { positive: 1, neutral: 0, negative: 0 } }],
+      model: { name: 'lexico', number: 2 },
     });
   });
 

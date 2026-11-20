@@ -6,6 +6,8 @@ import {
   AUTH_PATHS,
   CALENDAR_PATHS,
   calendarPath,
+  newsLabelPath,
+  SENTIMENT_PATHS,
   PORTFOLIO_PATHS,
   portfolioCashPath,
   portfolioPath,
@@ -38,6 +40,26 @@ const ASSET = {
   name: 'Petrobras PN',
   class: 'stock' as const,
   sector: 'petroleo_gas_biocombustiveis' as const,
+};
+
+/** SPEC-029 e SPEC-044: uma notícia da ficha, já com o tom e o modelo visível. */
+const NEWS_ID = '0d9e1f7a-1111-4222-8333-000000000001';
+const NEWS_PAGE = {
+  total: 1,
+  listTotal: 0,
+  news: [
+    {
+      id: NEWS_ID,
+      title: 'Petrobras lucra',
+      summary: null,
+      url: 'https://investidor10.com.br/noticias/x/',
+      source: 'Investidor10',
+      publishedAt: '2026-11-18T15:00:00.000Z',
+      relevance: 'principal',
+      sentiment: 'positive',
+    },
+  ],
+  model: { name: 'lexico', number: 1 },
 };
 
 /** Servidor falso com o comportamento das rotas da SPEC-002. */
@@ -240,7 +262,16 @@ class FakeServer {
       case assetPath(ASSET_PATHS.history, ASSET.id):
         return json(200, { period: url.searchParams.get('period'), points: [] });
       case assetPath(ASSET_NEWS_PATHS.list, ASSET.id):
-        return json(200, { total: 0, listTotal: 0, news: [] });
+        return json(200, NEWS_PAGE);
+      // SPEC-044: as rotas do colaborador para o sentimento.
+      case SENTIMENT_PATHS.summary:
+        return json(200, { total: 1 });
+      case SENTIMENT_PATHS.next:
+        return json(200, { news: null });
+      case SENTIMENT_PATHS.evaluate:
+        return json(409, { error: 'not_enough_labels', message: 'x' });
+      case newsLabelPath(NEWS_ID):
+        return new Response(null, { status: 204 });
       case assetPath(ASSET_NEWS_PATHS.days, ASSET.id):
         return json(200, { period: url.searchParams.get('period'), days: [] });
       case assetPath(ASSET_PATHS.logo, NO_LOGO_ID):
@@ -741,12 +772,46 @@ describe('ficha do ativo (SPEC-010)', () => {
   });
 });
 
+describe('sentimento das notícias (SPEC-044)', () => {
+  it('rotular, pular e avaliar: só manda o que foi conferido', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.sentimentSummary()).resolves.toEqual({ ok: true, data: { total: 1 } });
+
+    await client.nextNewsToLabel([]);
+    expect(server.calls.at(-1)?.path).toBe(SENTIMENT_PATHS.next);
+    expect(server.calls.at(-1)?.search || '').toBe('');
+    await client.nextNewsToLabel([NEWS_ID, ASSET.id]);
+    expect(server.calls.at(-1)?.search).toBe(`?skip=${NEWS_ID},${ASSET.id}`);
+
+    await expect(client.labelNews(NEWS_ID, 'negative')).resolves.toEqual({ ok: true, data: null });
+    expect(server.calls.at(-1)).toMatchObject({ method: 'PUT', path: newsLabelPath(NEWS_ID) });
+    await expect(client.unlabelNews(NEWS_ID)).resolves.toEqual({ ok: true, data: null });
+    expect(server.calls.at(-1)).toMatchObject({ method: 'DELETE' });
+    await expect(client.evaluateSentiment()).resolves.toMatchObject({
+      ok: false,
+      error: 'not_enough_labels',
+    });
+
+    // Entrada estranha não sai do processo principal.
+    const before = server.calls.length;
+    for (const result of [
+      await client.labelNews('../../me', 'positive'),
+      await client.labelNews(NEWS_ID, 'otimo' as 'positive'),
+      await client.unlabelNews('x'),
+      await client.nextNewsToLabel(['nao-e-uuid']),
+    ]) {
+      expect(result).toEqual({ ok: false, error: 'unexpected' });
+    }
+    expect(server.calls.length).toBe(before);
+  });
+});
+
 describe('notícias na ficha (SPEC-029)', () => {
   it('manda só a consulta conferida: grupo, página, intervalo e o período dos marcadores', async () => {
     await client.login({ email: 'ana@exemplo.com', password: 'certa' });
     await expect(client.assetNews(ASSET.id, {})).resolves.toEqual({
       ok: true,
-      data: { total: 0, listTotal: 0, news: [] },
+      data: NEWS_PAGE,
     });
     expect(server.calls.at(-1)?.path).toBe(assetPath(ASSET_NEWS_PATHS.list, ASSET.id));
     expect(server.calls.at(-1)?.search || '').toBe('');
@@ -871,9 +936,10 @@ describe('consulta sem conexão (SPEC-032)', () => {
     await client.assetNews(ASSET.id, {});
     await client.assetNewsDays(ASSET.id, '1y');
     server.down = true;
+    // SPEC-044 (CA08): o tom e o modelo vêm junto na cópia.
     await expect(client.assetNews(ASSET.id, {})).resolves.toEqual({
       ok: true,
-      data: { total: 0, listTotal: 0, news: [] },
+      data: NEWS_PAGE,
       savedAt: T1.toISOString(),
     });
     await expect(client.assetNewsDays(ASSET.id, '1y')).resolves.toMatchObject({

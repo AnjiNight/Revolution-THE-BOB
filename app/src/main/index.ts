@@ -17,6 +17,7 @@ import type {
   NewAssetInput,
   NewCashEntryInput,
   NewNewsSourceInput,
+  NewsSentiment,
   NewPortfolioCopyInput,
   NewPortfolioInput,
   NewTradeInput,
@@ -391,6 +392,16 @@ app.whenReady().then(() => {
   ipcMain.handle(NEWS_CHANNELS.updateSource, (_event, id: string, input: UpdateNewsSourceInput) =>
     auth.updateNewsSource(id, input),
   );
+  // SPEC-044: a amostra rotulada e a avaliação do sentimento (só colaborador).
+  ipcMain.handle(NEWS_CHANNELS.sentiment, () => auth.sentimentSummary());
+  ipcMain.handle(NEWS_CHANNELS.nextToLabel, (_event, skip: string[]) =>
+    auth.nextNewsToLabel(Array.isArray(skip) ? skip : []),
+  );
+  ipcMain.handle(NEWS_CHANNELS.label, (_event, id: string, sentiment: NewsSentiment) =>
+    auth.labelNews(id, sentiment),
+  );
+  ipcMain.handle(NEWS_CHANNELS.unlabel, (_event, id: string) => auth.unlabelNews(id));
+  ipcMain.handle(NEWS_CHANNELS.evaluate, () => auth.evaluateSentiment());
 
   // Catálogo de ativos (SPEC-006): o servidor confere se a conta é de colaborador.
   ipcMain.handle(ASSET_CHANNELS.search, (_event, query: AssetSearchQuery) =>

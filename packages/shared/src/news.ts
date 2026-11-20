@@ -67,6 +67,8 @@ export interface AssetNewsItem {
   /** ISO 8601. */
   publishedAt: string;
   relevance: NewsLinkRelevance;
+  /** SPEC-044: `null` se a notícia está pendente ou se o modelo não passou na avaliação. */
+  sentiment: NewsSentiment | null;
 }
 
 /** Corpo de `GET /api/assets/:id/news`. */
@@ -76,6 +78,8 @@ export interface AssetNewsPage {
   /** Notícias de lista do ativo, para o título do grupo fechado. */
   listTotal: number;
   news: AssetNewsItem[];
+  /** SPEC-044: o modelo cujo sentimento aparece, ou `null` se nenhum passou na avaliação. */
+  model: SentimentModelName | null;
 }
 
 export interface AssetNewsQuery {
@@ -90,12 +94,135 @@ export interface AssetNewsDay {
   /** Dia de referência (`newsReferenceDay`). */
   day: IsoDate;
   count: number;
+  /** SPEC-044: as notícias classificadas do dia por sentimento; `null` sem modelo visível. */
+  sentiment: SentimentCounts | null;
 }
 
 /** Corpo de `GET /api/assets/:id/news/days`: as notícias principal e citado por dia. */
 export interface AssetNewsDays {
   period: PriceHistoryPeriod;
   days: AssetNewsDay[];
+  /** SPEC-044: o modelo cujo sentimento aparece, ou `null`. */
+  model: SentimentModelName | null;
+}
+
+/** SPEC-044: o tom da notícia para o ativo principal (ou para o mercado, sem ativo principal). */
+export const NEWS_SENTIMENTS = ['positive', 'neutral', 'negative'] as const;
+export type NewsSentiment = (typeof NEWS_SENTIMENTS)[number];
+
+export type SentimentCounts = Record<NewsSentiment, number>;
+
+export function isNewsSentiment(value: unknown): value is NewsSentiment {
+  return typeof value === 'string' && (NEWS_SENTIMENTS as readonly string[]).includes(value);
+}
+
+/** Rotas do sentimento (SPEC-044 §5.1), só para o colaborador. */
+export const SENTIMENT_PATHS = {
+  summary: '/api/news/sentiment',
+  next: '/api/news/sentiment/next',
+  evaluate: '/api/news/sentiment/evaluate',
+  label: '/api/news/:id/label',
+} as const;
+
+export function newsLabelPath(id: string): string {
+  return SENTIMENT_PATHS.label.replace(':id', encodeURIComponent(id));
+}
+
+/** Parte mais nova da amostra rotulada, separada para a nota (§4.1, decisão 3). */
+export const SENTIMENT_TEST_SHARE = 0.4;
+/** Notícias de teste e F1 macro mínimas para o usuário ver o sentimento (§4.1, decisão 4). */
+export const SENTIMENT_MIN_TEST = 60;
+export const SENTIMENT_MIN_F1 = 0.6;
+/** Abaixo disso, nem dá para avaliar (409 `not_enough_labels`). */
+export const SENTIMENT_MIN_EVALUATE = 10;
+/** Ids pulados que o colaborador pode mandar ao pedir a próxima notícia. */
+export const SENTIMENT_SKIP_MAX = 50;
+/** Rotulados mais recentes na tela, para trocar ou apagar. */
+export const SENTIMENT_RECENT_LABELS = 20;
+
+export interface SentimentModelName {
+  name: string;
+  number: number;
+}
+
+export interface SentimentEvaluation {
+  /** ISO 8601. */
+  evaluatedAt: string;
+  /** Notícias de teste classificadas pela versão. */
+  testSize: number;
+  accuracy: number;
+  macroF1: number;
+  /** Linhas: o rótulo; colunas: o modelo; as duas na ordem de `NEWS_SENTIMENTS`. */
+  matrix: number[][];
+}
+
+export interface SentimentModelVersion extends SentimentModelName {
+  status: 'in_use' | 'retired';
+  /** ISO 8601 de quando a versão foi registrada. */
+  createdAt: string;
+  evaluation: SentimentEvaluation | null;
+}
+
+/** Por que o usuário não vê o sentimento. */
+export type SentimentHiddenReason = 'no_model' | 'not_evaluated' | 'few_tests' | 'low_score';
+
+export interface LabeledNews {
+  id: string;
+  title: string;
+  url: string;
+  /** ISO 8601. */
+  publishedAt: string;
+  label: NewsSentiment;
+  /** ISO 8601. */
+  labeledAt: string;
+}
+
+/** Corpo de `GET /api/news/sentiment`. */
+export interface SentimentSummary {
+  current: SentimentModelVersion | null;
+  /** Notícias guardadas, e quantas a versão em uso já classificou. */
+  total: number;
+  classified: number;
+  labels: { total: number; tuning: number; test: number };
+  visible: boolean;
+  hiddenReason: SentimentHiddenReason | null;
+  /** As versões retiradas, das mais novas, com a nota que tinham. */
+  history: SentimentModelVersion[];
+  recentLabels: LabeledNews[];
+}
+
+/** Corpo de `GET /api/news/sentiment/next`: sem a classificação do modelo, para não influenciar. */
+export interface NewsToLabel {
+  id: string;
+  title: string;
+  summary: string | null;
+  url: string;
+  source: string;
+  /** ISO 8601. */
+  publishedAt: string;
+  /** Tickers em que a notícia é principal. */
+  principal: string[];
+}
+
+export function validateNewsLabel(input: unknown): ValidationResult<{ sentiment: NewsSentiment }> {
+  const sentiment = asRecord(input).sentiment;
+  if (!isNewsSentiment(sentiment)) {
+    return { success: false, fields: { sentiment: 'invalid_option' } };
+  }
+  return { success: true, data: { sentiment } };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `skip`: ids separados por vírgula, até `SENTIMENT_SKIP_MAX`. */
+export function validateSentimentNextQuery(input: unknown): ValidationResult<{ skip: string[] }> {
+  const text = asRecord(input).skip ?? '';
+  if (typeof text !== 'string') return { success: false, fields: { skip: 'invalid_option' } };
+  const skip = text === '' ? [] : text.split(',');
+  if (skip.length > SENTIMENT_SKIP_MAX || skip.some((id) => !UUID.test(id))) {
+    return { success: false, fields: { skip: 'invalid_option' } };
+  }
+  return { success: true, data: { skip } };
 }
 
 /**
@@ -168,7 +295,14 @@ export function newsSourcePath(id: string): string {
 }
 
 /** Erros das rotas de notícias (SPEC-027 §5.1). */
-export type NewsErrorCode = 'news_source_not_found' | 'source_exists' | 'parent_source';
+export type NewsErrorCode =
+  | 'news_source_not_found'
+  | 'source_exists'
+  | 'parent_source'
+  // SPEC-044
+  | 'news_not_found'
+  | 'no_model'
+  | 'not_enough_labels';
 
 /** Fonte pai (o Investidor10, fixa) ou curada (RSS ou Atom, pelo colaborador), DA19. */
 export type NewsSourceKind = 'parent' | 'curated';

@@ -4,6 +4,7 @@ import type { AuditEntry } from '../../audit/application/audit.js';
 import { auditRow } from '../../audit/infrastructure/prisma-audit.js';
 import type {
   ArchiveProgress,
+  AssetNewsDate,
   AssetNewsFilter,
   AssetNewsRow,
   LatestNewsRow,
@@ -15,6 +16,7 @@ import type {
 } from '../application/ports.js';
 import type { CatalogTicker, LinkRelevance } from '../domain/asset-links.js';
 import { NewsSourceExistsError, NewsSourceNotFoundError } from '../domain/errors.js';
+import { storedClassification } from './prisma-sentiment-repository.js';
 
 function toStored(row: FonteNoticia): StoredNewsSource {
   return {
@@ -121,8 +123,17 @@ export class PrismaNewsRepository implements NewsRepository {
           where: { fonteId_url: { fonteId: sourceId, url: item.url } },
           // A data de publicação de uma notícia já guardada nunca muda (§4.2).
           create: { fonteId: sourceId, url: item.url, publicadaEm: item.publishedAt, ...fields },
-          // SPEC-028: texto atualizado, vínculo refeito (o vinculador pega as sem versão).
-          update: { ...fields, vinculadaEm: null, versaoVinculo: null },
+          // SPEC-028: texto atualizado, vínculo refeito (o vinculador pega as sem versão). SPEC-044:
+          // e a classificação também (a notícia volta a ficar pendente).
+          update: {
+            ...fields,
+            vinculadaEm: null,
+            versaoVinculo: null,
+            sentimento: null,
+            sentimentoPontuacao: null,
+            classificadaEm: null,
+            versaoModeloId: null,
+          },
         });
       }),
     );
@@ -346,6 +357,8 @@ export class PrismaNewsRepository implements NewsRepository {
                   resumo: true,
                   url: true,
                   publicadaEm: true,
+                  sentimento: true,
+                  versaoModeloId: true,
                   fonte: { select: { nome: true } },
                 },
               },
@@ -362,16 +375,22 @@ export class PrismaNewsRepository implements NewsRepository {
         source: noticia.fonte.nome,
         publishedAt: noticia.publicadaEm,
         relevance: relevancia,
+        classification: storedClassification(noticia),
       })),
     };
   }
 
-  async assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<Date[]> {
+  async assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<AssetNewsDate[]> {
     const rows = await this.prisma.noticiaAtivo.findMany({
       where: linkWhere(assetId, filter),
-      select: { noticia: { select: { publicadaEm: true } } },
+      select: {
+        noticia: { select: { publicadaEm: true, sentimento: true, versaoModeloId: true } },
+      },
     });
-    return rows.map((row) => row.noticia.publicadaEm);
+    return rows.map(({ noticia }) => ({
+      publishedAt: noticia.publicadaEm,
+      classification: storedClassification(noticia),
+    }));
   }
 
   async clearParent(): Promise<number> {

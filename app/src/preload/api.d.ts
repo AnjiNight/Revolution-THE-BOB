@@ -31,6 +31,10 @@ import type {
   NewsSource,
   NewsSourceCreated,
   NewsSourcesStatus,
+  NewsSentiment,
+  NewsToLabel,
+  SentimentModelVersion,
+  SentimentSummary,
   UpdateNewsSourceInput,
   Portfolio,
   PortfolioList,
@@ -219,6 +223,14 @@ export interface DesktopApi {
       id: string,
       input: UpdateNewsSourceInput,
     ): Promise<ClientResult<{ source: NewsSource }>>;
+    /** SPEC-044: versão do modelo, contagens, avaliação e os últimos rotulados. */
+    sentiment(): Promise<ClientResult<SentimentSummary>>;
+    /** A próxima notícia sem rótulo, sem o que o modelo disse; `null` se acabaram. */
+    nextToLabel(skip: string[]): Promise<ClientResult<{ news: NewsToLabel | null }>>;
+    label(id: string, sentiment: NewsSentiment): Promise<ClientResult<null>>;
+    unlabel(id: string): Promise<ClientResult<null>>;
+    /** Recusada (409) sem versão do modelo ou com poucas notícias de teste. */
+    evaluate(): Promise<ClientResult<{ version: SentimentModelVersion }>>;
   };
   /**
    * Catálogo de ativos (SPECs 006, 010 e 040). Busca, ficha e logos para todos; o resto só

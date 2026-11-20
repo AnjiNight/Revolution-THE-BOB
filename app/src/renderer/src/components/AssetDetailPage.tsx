@@ -553,6 +553,7 @@ function HistoryContent({
           ticker={ticker}
           points={history.points}
           index={selected}
+          days={newsDays}
           onClose={() => setSelected(null)}
           onSessionExpired={onSessionExpired}
         />

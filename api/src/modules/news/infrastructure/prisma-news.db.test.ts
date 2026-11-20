@@ -31,7 +31,9 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE noticia_ativo, noticia, coleta_noticia_arquivo');
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE rotulo_noticia, noticia_ativo, noticia, versao_modelo, coleta_noticia_arquivo RESTART IDENTITY',
+    );
     await prisma.fonteNoticia.deleteMany({ where: { url: { notIn: SEEDED } } });
     await prisma.fonteNoticia.updateMany({
       data: { ativa: true, ultimaColetaEm: null, ultimaSituacao: null, falhasSeguidas: 0 },
@@ -301,7 +303,9 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
       relevances: ['principal', 'citado'],
       from: new Date('2026-11-11T00:00:00Z'),
     });
-    expect(dates.map((d) => d.toISOString())).toEqual(['2026-11-11T17:00:00.000Z']);
+    expect(dates).toEqual([
+      { publishedAt: new Date('2026-11-11T17:00:00.000Z'), classification: null },
+    ]);
 
     await repo.clearParent();
     await prisma.ativo.delete({ where: { id: asset.id } });

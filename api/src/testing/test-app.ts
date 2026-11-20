@@ -11,7 +11,12 @@ import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
 import { AssetNewsService } from '../modules/news/application/asset-news-service.js';
 import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
-import { FakeFeedFetcher, InMemoryNewsRepository } from '../modules/news/testing/fakes.js';
+import { SentimentService } from '../modules/news/application/sentiment-service.js';
+import {
+  FakeFeedFetcher,
+  InMemoryNewsRepository,
+  InMemorySentimentRepository,
+} from '../modules/news/testing/fakes.js';
 import { JwtAccessTokenService } from '../modules/identity/infrastructure/jwt-access-token-service.js';
 import {
   BackgroundTasks,
@@ -241,6 +246,9 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     parentEnabled: options.investidor10 !== false,
     clock,
   });
+  // SPEC-044: o sentimento sobre as mesmas notícias em memória.
+  const sentimentRepo = new InMemorySentimentRepository(newsRepo);
+  const sentiment = new SentimentService({ sentiment: sentimentRepo, clock });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -264,7 +272,8 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     trading,
     tasks,
     newsSources,
-    assetNews: new AssetNewsService({ news: newsRepo, clock }),
+    assetNews: new AssetNewsService({ news: newsRepo, sentiment, clock }),
+    sentiment,
     logStream: logs,
   });
 
@@ -301,6 +310,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     app,
     logs,
     newsRepo,
+    sentimentRepo,
     feedFetcher,
     users,
     refreshTokens,

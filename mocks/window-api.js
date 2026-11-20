@@ -9,6 +9,8 @@
  *   `scenario`: `normal` (padrão) ou `vazio` (só a fonte pai, sem arquivo, coleta desligada; e a
  *   ficha sem notícias). `role: 'user'` entra como usuária, para a ficha do ativo (SPEC-029).
  *   `failNews: true` faz as leituras de notícias da ficha falharem (servidor fora do ar).
+ *   `sentiment: 'visible'` mostra o tom das notícias na ficha (SPEC-044); `evaluation` força a
+ *   nota do "Avaliar agora" na tela do colaborador.
  * - As chamadas ficam em `window.__MOCK_CALLS__` (ex.: para conferir o clique duplo).
  */
 (() => {
@@ -177,6 +179,11 @@
     'Resumo fictício e longo de uma fonte curada, para conferir que a lista mostra só três linhas. '.repeat(
       10,
     );
+  // SPEC-044: com `sentiment: 'visible'`, a versão do modelo passou e as notícias têm o tom.
+  const sentimentVisible = options.sentiment === 'visible';
+  const model = sentimentVisible ? { name: 'lexico', number: 1 } : null;
+  const tones = ['positive', 'neutral', 'negative', 'positive', null];
+  let toneIndex = 0;
   const assetNews = (id, title, publishedAt, relevance, source = 'Investidor10', summary) => ({
     id,
     title,
@@ -185,6 +192,8 @@
     source,
     publishedAt,
     relevance,
+    // Uma em cada cinco fica pendente (sem tom).
+    sentiment: sentimentVisible ? tones[toneIndex++ % tones.length] : null,
   });
   const mainNews =
     scenario === 'vazio'
@@ -282,14 +291,86 @@
   const referenceDay = (iso) =>
     new Date(Date.parse(iso) + 3 * 3_600_000).toISOString().slice(0, 10);
   const newsDays = () => {
-    const counts = new Map();
+    const days = new Map();
     for (const item of mainNews) {
-      const day = referenceDay(item.publishedAt);
-      counts.set(day, (counts.get(day) ?? 0) + 1);
+      const key = referenceDay(item.publishedAt);
+      const day = days.get(key) ?? { count: 0, tones: { positive: 0, neutral: 0, negative: 0 } };
+      day.count += 1;
+      if (item.sentiment) day.tones[item.sentiment] += 1;
+      days.set(key, day);
     }
-    return [...counts]
+    return [...days]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([day, count]) => ({ day, count }));
+      .map(([day, { count, tones: counts }]) => ({
+        day,
+        count,
+        sentiment: sentimentVisible ? counts : null,
+      }));
+  };
+
+  // SPEC-044: a amostra rotulada pela colaboradora. `scenario: 'vazio'` não tem versão do modelo.
+  const toLabel = [
+    ['Petróleo Fictício (PETR4) lucra mais no trimestre', ['PETR4']],
+    ['Banco Fictício (BBAS3) vê lucro cair 30%', ['BBAS3']],
+    ['Notícia fictícia sobre a agenda do Copom', []],
+    ['Varejista Fictícia (MGLU3) abre 20 lojas', ['MGLU3']],
+    ['Mineradora Fictícia (VALE3) é multada', ['VALE3']],
+  ].map(([title, principal], i) => ({
+    id: `00000000-0000-4000-8000-0000000004${String(i).padStart(2, '0')}`,
+    title,
+    summary: `Resumo fictício: ${title.toLowerCase()}.`,
+    url: `https://investidor10.com.br/noticias/rotular-ficticio-${i}/`,
+    source: 'Investidor10',
+    publishedAt: new Date(Date.UTC(2026, 10, 2 + i, 15)).toISOString(),
+    principal,
+  }));
+  const labels = new Map();
+  let evaluation = null;
+  const summary = () => {
+    const total = labels.size;
+    const test = total - Math.floor(total * 0.6);
+    const current =
+      scenario === 'vazio'
+        ? null
+        : {
+            name: 'lexico',
+            number: 1,
+            status: 'in_use',
+            createdAt: '2026-11-19T12:00:00Z',
+            evaluation,
+          };
+    const hiddenReason = !current
+      ? 'no_model'
+      : !evaluation
+        ? 'not_evaluated'
+        : evaluation.testSize < 60
+          ? 'few_tests'
+          : evaluation.macroF1 < 0.6
+            ? 'low_score'
+            : null;
+    return {
+      current,
+      total: scenario === 'vazio' ? 0 : 261,
+      classified: current ? 261 : 0,
+      labels: { total, tuning: total - test, test },
+      visible: hiddenReason === null,
+      hiddenReason,
+      history: [],
+      recentLabels: [...labels]
+        .reverse()
+        .slice(0, 20)
+        .map(([id, { label, at }]) => {
+          const item = toLabel.find((n) => n.id === id);
+          return {
+            id,
+            title: item.title,
+            url: item.url,
+            publishedAt: item.publishedAt,
+            label,
+            labeledAt: at,
+          };
+        }),
+    };
   };
 
   window.api = {
@@ -353,12 +434,13 @@
           total: found.length,
           listTotal: listNews.length,
           news: structuredClone(found.slice(offset, offset + 10)),
+          model,
         });
       },
       newsDays: (_id, period) => {
         calls.push(['assetNewsDays', period]);
         if (options.failNews) return fail('server_unavailable');
-        return ok({ period, days: newsDays() });
+        return ok({ period, days: newsDays(), model });
       },
     }),
     // SPEC-027: fontes de notícias, com as mesmas recusas do servidor.
@@ -370,6 +452,48 @@
       latest: () => {
         calls.push(['latest']);
         return ok(structuredClone(latest));
+      },
+      sentiment: () => {
+        calls.push(['sentiment']);
+        return ok(summary());
+      },
+      nextToLabel: (skip = []) => {
+        calls.push(['nextToLabel', skip]);
+        const next = toLabel.find((n) => !labels.has(n.id) && !skip.includes(n.id));
+        return ok({ news: next ? structuredClone(next) : null });
+      },
+      label: (id, sentiment) => {
+        calls.push(['label', id, sentiment]);
+        if (!toLabel.some((n) => n.id === id)) return fail('news_not_found');
+        labels.delete(id);
+        labels.set(id, { label: sentiment, at: new Date().toISOString() });
+        return ok(null);
+      },
+      unlabel: (id) => {
+        calls.push(['unlabel', id]);
+        if (!labels.delete(id)) return fail('news_not_found');
+        return ok(null);
+      },
+      // Com 5 rotuladas há 2 de teste: menos de 10, recusado. `window.__MOCK__.evaluation` força
+      // uma avaliação pronta (ex.: { testSize: 60, macroF1: 0.64 }).
+      evaluate: () => {
+        calls.push(['evaluate']);
+        if (scenario === 'vazio') return fail('no_model');
+        const forced = options.evaluation;
+        const test = labels.size - Math.floor(labels.size * 0.6);
+        if (!forced && test < 10) return fail('not_enough_labels');
+        evaluation = {
+          evaluatedAt: new Date().toISOString(),
+          testSize: forced?.testSize ?? test,
+          accuracy: forced?.accuracy ?? 0.7,
+          macroF1: forced?.macroF1 ?? 0.64,
+          matrix: [
+            [14, 4, 2],
+            [3, 17, 2],
+            [1, 6, 11],
+          ],
+        };
+        return ok({ version: summary().current });
       },
       updateSource: (id, input) => {
         calls.push(['updateSource', id, input]);

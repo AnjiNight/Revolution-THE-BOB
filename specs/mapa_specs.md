@@ -80,6 +80,7 @@
 | 1.69 | SPEC-033 aprovada (Luís, 17/11/2026, com as recomendações) e implementada: aviso do Windows, com o app aberto ou minimizado, quando um ativo em posição nas carteiras (ao vivo e históricas) sobe ou cai a partir do limiar escolhido em Meu perfil (5% por padrão, 3% ou 10%, ou desligado); a interface lê a rota `GET /api/portfolios/day-changes` a cada 5 minutos nos dias úteis das 10:30 às 18:30, e não lê sem conexão; um aviso por ativo por dia em cada sentido, agrupado acima de 3, sem valores da carteira; o clique abre a ficha (ou Carteiras, no agrupado); ao sair da conta, os avisos saem da Central de Ações. OPEN-35 resolvida para o RF35 |
 =======
 | 1.68 | SPEC-044 detalhada ([SPEC-044.md](SPEC-044.md)) pela Nicoly com o Claude, aguardando a aprovação: sentimento positivo, neutro ou negativo de cada notícia, com a versão do modelo; v1 por regras com dicionário de termos do mercado, no processador; amostra rotulada pela equipe na tela do colaborador, avaliação separada no tempo (F1 macro) e o tom na ficha do ativo só com F1 de 0,60 ou mais em 60 notícias de teste; proposta para a OPEN-30 |
+| 1.69 | SPEC-044 aprovada (Nicoly, 19/11/2026, "Aprovar e fazer") e implementada: dicionário de termos (`lexico` v1) no processador, logo depois do vínculo e a cada 30 minutos; versões do modelo no banco, com a nota; na tela Notícias do colaborador, rotular (teclas 1, 2, 3 e 0), trocar e apagar rótulos e "Avaliar agora" com a tabela de erros; na ficha, o tom em cada notícia, as contagens do pregão e a nota de caráter educacional, só com a versão aprovada. As 261 notícias reais classificadas em 0,3 s (79 positivas, 101 neutras, 81 negativas). OPEN-30 resolvida; OPEN-31 em parte; DA20 e `decisoes_tecnicas.md` atualizados |
 >>>>>>> Stashed changes
 ---
 
@@ -339,8 +340,8 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
 | OPEN-28 | ✅ **Resolvida.** Dados (04/11/2026): autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)). Notícias (12/11/2026): autorizadas por telefone para fins universitários, nas mesmas condições ([SPEC-027 §4.1](SPEC-027.md)). Original: autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta | PE07 | 027, 041, 042 |
 | OPEN-29 | ⏳ **Em parte resolvida na [SPEC-027](SPEC-027.md):** fontes curadas por RSS ou Atom, cadastradas pelo colaborador com categoria, confiabilidade de 1 a 5 (critério da equipe) e licença conferida; a primeira é a Agência Brasil – Economia. As outras fontes ficam com a equipe. Original: lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
-| OPEN-30 | Implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 044 |
-| OPEN-31 | Fonte do histórico de notícias e janela de treino | PE09, PE11 | 044, 031 |
+| OPEN-30 | ✅ **Resolvida na [SPEC-044](SPEC-044.md) (19/11/2026):** v1 por regras com dicionário, no processador; nota mínima F1 macro 0,60 com 60 notícias de teste da amostra rotulada pela equipe; versão nova só se medir melhor na mesma amostra; retreino não se aplica à v1. Original: implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 044 |
+| OPEN-31 | ⏳ Em parte: a v1 (SPEC-044) não treina; o histórico disponível é o arquivo do Investidor10, desde 22/09/2023. A janela de treino fica para o modelo treinado. Original: fonte do histórico de notícias e janela de treino | PE09, PE11 | 044, 031 |
 | OPEN-32 | RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
 | OPEN-33 | Aprovação de DA21 (**Proposta**); horizontes, limite de estabilidade, n mínimo; cenário com sentimento personalizado | DA21, PE12 | 031 |
 | OPEN-34 | Cenário por ativo ou por carteira; reescrita de RF30/RF31 | INC-06 | 031 |
@@ -1028,7 +1029,7 @@ Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
 
 #### SPEC-044 — Classificação de sentimento das notícias
 
-📄 Detalhada em [SPEC-044.md](SPEC-044.md) — aguardando a aprovação. Separada da SPEC-028 em 12/11/2026 (escolha da Nicoly).
+📄 Detalhada em [SPEC-044.md](SPEC-044.md) — aprovada (Nicoly, 19/11/2026) e implementada; validada como usuária. Separada da SPEC-028 em 12/11/2026 (escolha da Nicoly). O tom só chega ao usuário depois que a equipe rotular a amostra e a versão passar na nota mínima.
 
 | Campo | Conteúdo |
 |---|---|

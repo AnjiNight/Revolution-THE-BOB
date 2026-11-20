@@ -286,7 +286,10 @@
     "run_in_progress": "Esta tarefa está rodando agora. Peça de novo quando ela terminar.",
     "news_source_not_found": "Fonte de notícias não encontrada.",
     "source_exists": "Já existe uma fonte com este endereço.",
-    "parent_source": "A fonte pai não pode ser alterada pela tela."
+    "parent_source": "A fonte pai não pode ser alterada pela tela.",
+    "news_not_found": "Notícia não encontrada.",
+    "no_model": "O processador ainda não classificou nenhuma notícia.",
+    "not_enough_labels": "Rotule mais notícias: para avaliar, é preciso ter pelo menos 10 de teste."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -608,6 +611,19 @@
       "notYet_one": "Ainda não há {{count}} pregão depois",
       "notYet_other": "Ainda não há {{count}} pregões depois",
       "reactionNote": "Variação do fechamento sobre o do pregão anterior à notícia. Mostra o que o preço fez depois, não que a notícia causou a variação.",
+      "tones": "No pregão: {{positive}}, {{neutral}}, {{negative}}.",
+      "tonesPending_one": "No pregão: {{positive}}, {{neutral}}, {{negative}}; e {{count}} ainda sem tom.",
+      "tonesPending_other": "No pregão: {{positive}}, {{neutral}}, {{negative}}; e {{count}} ainda sem tom.",
+      "tonePositive_zero": "nenhuma positiva",
+      "tonePositive_one": "{{count}} positiva",
+      "tonePositive_other": "{{count}} positivas",
+      "toneNeutral_zero": "nenhuma neutra",
+      "toneNeutral_one": "{{count}} neutra",
+      "toneNeutral_other": "{{count}} neutras",
+      "toneNegative_zero": "nenhuma negativa",
+      "toneNegative_one": "{{count}} negativa",
+      "toneNegative_other": "{{count}} negativas",
+      "sentimentNote": "Tom classificado automaticamente ({{model}}); pode errar. Não é recomendação.",
       "sessionEmpty": "Nenhuma notícia neste pregão."
     },
     "history": {
@@ -1563,6 +1579,67 @@
         "citado": "Citado",
         "lista": "Lista"
       }
+    }
+  },
+  "sentiment": {
+    "title": "Sentimento das notícias",
+    "definition": "O tom de cada notícia para o ativo principal (sem ativo principal, para o mercado brasileiro). Positivo: fato bom para quem tem o ativo. Negativo: fato ruim. Neutro: informativo, agenda ou opinião dividida.",
+    "loading": "Carregando o sentimento…",
+    "model": "Versão em uso",
+    "modelName": "{{name}} v{{number}}",
+    "models": {
+      "lexico": "Dicionário de termos"
+    },
+    "noModel": "Nenhuma ainda: o processador registra a versão na primeira classificação.",
+    "classified": "Classificadas",
+    "classifiedValue": "{{classified}} de {{total}} notícias",
+    "sample": "Amostra rotulada",
+    "sampleValue_zero": "Nenhuma notícia ainda. Meta: {{goal}}.",
+    "sampleValue_one": "{{total}} notícia ({{tuning}} para ajuste, {{test}} para teste). Meta: {{goal}}.",
+    "sampleValue_other": "{{total}} notícias ({{tuning}} para ajuste, {{test}} para teste). Meta: {{goal}}.",
+    "evaluation": "Última avaliação",
+    "evaluationValue_one": "F1 macro {{f1}}, acurácia {{accuracy}}, com {{count}} notícia de teste ({{date}})",
+    "evaluationValue_other": "F1 macro {{f1}}, acurácia {{accuracy}}, com {{count}} notícias de teste ({{date}})",
+    "notEvaluated": "A versão em uso ainda não foi avaliada.",
+    "visible": "Visível para os usuários: a ficha do ativo mostra o tom das notícias.",
+    "hidden": {
+      "no_model": "Invisível para os usuários: nenhuma versão em uso ainda.",
+      "not_evaluated": "Invisível para os usuários: a versão em uso ainda não foi avaliada.",
+      "few_tests_one": "Invisível para os usuários: a avaliação teve {{count}} notícia de teste; o mínimo é {{min}}.",
+      "few_tests_other": "Invisível para os usuários: a avaliação teve {{count}} notícias de teste; o mínimo é {{min}}.",
+      "low_score": "Invisível para os usuários: F1 macro {{f1}}, abaixo do mínimo de {{minF1}}."
+    },
+    "matrix": {
+      "caption": "Acertos e erros nas notícias de teste",
+      "corner": "Rótulo da equipe",
+      "predicted": "Modelo: {{value}}",
+      "labeled": "{{value}}"
+    },
+    "evaluate": "Avaliar agora",
+    "evaluating": "Avaliando…",
+    "evaluated": "Avaliação feita e guardada na versão.",
+    "values": {
+      "positive": "Positivo",
+      "neutral": "Neutro",
+      "negative": "Negativo"
+    },
+    "tag": "Tom: {{value}}",
+    "label": {
+      "title": "Rotular notícias",
+      "hint": "Leia e escolha o tom. O que o modelo disse não aparece, para não influenciar. Teclas: 1 positivo, 2 neutro, 3 negativo, 0 pular.",
+      "loading": "Buscando a próxima notícia…",
+      "done": "Todas as notícias foram rotuladas (ou puladas).",
+      "principal": "Ativo principal: {{tickers}}. O tom é para ele.",
+      "market": "Sem ativo principal: o tom é para o mercado brasileiro.",
+      "group": "Tom da notícia",
+      "skip": "Pular",
+      "saved": "Rótulo {{value}} gravado."
+    },
+    "recent": {
+      "title": "Últimos rotulados",
+      "change": "Rótulo de {{title}}",
+      "remove": "Apagar",
+      "removeLabel": "Apagar o rótulo de {{title}}"
     }
   },
   "report": {

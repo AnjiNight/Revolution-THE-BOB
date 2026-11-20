@@ -286,7 +286,10 @@
     "run_in_progress": "This task is running now. Request it again when it finishes.",
     "news_source_not_found": "News source not found.",
     "source_exists": "There is already a source with this address.",
-    "parent_source": "The parent source can't be changed here."
+    "parent_source": "The parent source can't be changed here.",
+    "news_not_found": "News item not found.",
+    "no_model": "The task runner hasn't classified any news yet.",
+    "not_enough_labels": "Label more news: at least 10 test items are needed to evaluate."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -608,6 +611,19 @@
       "notYet_one": "There is no {{count}} session later yet",
       "notYet_other": "There are no {{count}} sessions later yet",
       "reactionNote": "Change of the close over the close of the session before the news. It shows what the price did afterwards, not that the news caused the change.",
+      "tones": "In this session: {{positive}}, {{neutral}}, {{negative}}.",
+      "tonesPending_one": "In this session: {{positive}}, {{neutral}}, {{negative}}; and {{count}} not classified yet.",
+      "tonesPending_other": "In this session: {{positive}}, {{neutral}}, {{negative}}; and {{count}} not classified yet.",
+      "tonePositive_zero": "no positive",
+      "tonePositive_one": "{{count}} positive",
+      "tonePositive_other": "{{count}} positive",
+      "toneNeutral_zero": "no neutral",
+      "toneNeutral_one": "{{count}} neutral",
+      "toneNeutral_other": "{{count}} neutral",
+      "toneNegative_zero": "no negative",
+      "toneNegative_one": "{{count}} negative",
+      "toneNegative_other": "{{count}} negative",
+      "sentimentNote": "Tone classified automatically ({{model}}); it can be wrong. Not a recommendation.",
       "sessionEmpty": "No news in this session."
     },
     "history": {
@@ -1563,6 +1579,67 @@
         "citado": "Mentioned",
         "lista": "List"
       }
+    }
+  },
+  "sentiment": {
+    "title": "News sentiment",
+    "definition": "The tone of each article for its main asset (with no main asset, for the Brazilian market). Positive: good news for holders of the asset. Negative: bad news. Neutral: informational, a schedule, or mixed opinions.",
+    "loading": "Loading the sentiment…",
+    "model": "Version in use",
+    "modelName": "{{name}} v{{number}}",
+    "models": {
+      "lexico": "Word list"
+    },
+    "noModel": "None yet: the task runner registers the version on its first classification.",
+    "classified": "Classified",
+    "classifiedValue": "{{classified}} of {{total}} articles",
+    "sample": "Labeled sample",
+    "sampleValue_zero": "None yet. Goal: {{goal}}.",
+    "sampleValue_one": "{{total}} article ({{tuning}} for tuning, {{test}} for testing). Goal: {{goal}}.",
+    "sampleValue_other": "{{total}} articles ({{tuning}} for tuning, {{test}} for testing). Goal: {{goal}}.",
+    "evaluation": "Last evaluation",
+    "evaluationValue_one": "Macro F1 {{f1}}, accuracy {{accuracy}}, on {{count}} test article ({{date}})",
+    "evaluationValue_other": "Macro F1 {{f1}}, accuracy {{accuracy}}, on {{count}} test articles ({{date}})",
+    "notEvaluated": "The version in use hasn't been evaluated yet.",
+    "visible": "Visible to users: the asset page shows the tone of each article.",
+    "hidden": {
+      "no_model": "Hidden from users: no version in use yet.",
+      "not_evaluated": "Hidden from users: the version in use hasn't been evaluated yet.",
+      "few_tests_one": "Hidden from users: the evaluation had {{count}} test article; the minimum is {{min}}.",
+      "few_tests_other": "Hidden from users: the evaluation had {{count}} test articles; the minimum is {{min}}.",
+      "low_score": "Hidden from users: macro F1 {{f1}}, below the minimum of {{minF1}}."
+    },
+    "matrix": {
+      "caption": "Hits and misses on the test articles",
+      "corner": "Team label",
+      "predicted": "Model: {{value}}",
+      "labeled": "{{value}}"
+    },
+    "evaluate": "Evaluate now",
+    "evaluating": "Evaluating…",
+    "evaluated": "Evaluation done and saved on the version.",
+    "values": {
+      "positive": "Positive",
+      "neutral": "Neutral",
+      "negative": "Negative"
+    },
+    "tag": "Tone: {{value}}",
+    "label": {
+      "title": "Label news",
+      "hint": "Read and pick the tone. The model's answer is hidden so it won't sway you. Keys: 1 positive, 2 neutral, 3 negative, 0 skip.",
+      "loading": "Fetching the next article…",
+      "done": "Every article has been labeled (or skipped).",
+      "principal": "Main asset: {{tickers}}. The tone is for it.",
+      "market": "No main asset: the tone is for the Brazilian market.",
+      "group": "Article tone",
+      "skip": "Skip",
+      "saved": "Label {{value}} saved."
+    },
+    "recent": {
+      "title": "Recently labeled",
+      "change": "Label for {{title}}",
+      "remove": "Remove",
+      "removeLabel": "Remove the label for {{title}}"
     }
   },
   "report": {

@@ -11,7 +11,7 @@ export const REACTION_SESSIONS = 5;
  */
 export function newsSessions(
   points: readonly PricePoint[],
-  days: readonly AssetNewsDay[],
+  days: readonly Pick<AssetNewsDay, 'day' | 'count'>[],
 ): Map<number, number> {
   const sessions = new Map<number, number>();
   const first = points[0]?.date;

@@ -1,11 +1,14 @@
 import {
   CALENDAR_TIME_ZONE,
+  NEWS_SENTIMENTS,
   type AssetNewsDay,
   type AssetNewsItem,
   type AssetNewsPage,
   type AssetNewsQuery,
   type PricePoint,
   type PriceHistoryPeriod,
+  type SentimentCounts,
+  type SentimentModelName,
 } from '@simulador/shared';
 import { X } from '@phosphor-icons/react';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -13,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
 import { formatCalendarDay, formatChange } from '../format';
 import { priceReaction, REACTION_SESSIONS, sessionRange } from '../news-chart';
+import { SentimentTag } from './NewsSentiment';
 import { changeDirection } from './QuoteText';
 
 type ListQuery = Omit<AssetNewsQuery, 'offset'>;
@@ -148,6 +152,13 @@ function NewsItem({ item, ticker }: { item: AssetNewsItem; ticker: string }) {
         <span className={`news-link is-${item.relevance}`}>
           {t(`detail.news.relevance.${item.relevance}`, { ticker })}
         </span>
+        {/* SPEC-044: só quando a versão do modelo passou na avaliação. */}
+        {item.sentiment && (
+          <>
+            {' '}
+            <SentimentTag sentiment={item.sentiment} />
+          </>
+        )}
       </p>
       {item.summary && (
         <p className="asset-news-summary" lang="pt-BR">
@@ -189,6 +200,7 @@ export function AssetNewsSection({
   const listsId = useId();
   const [listTotal, setListTotal] = useState(0);
   const [listsOpen, setListsOpen] = useState(false);
+  const [model, setModel] = useState<SentimentModelName | null>(null);
 
   return (
     <section className="profile-panel asset-news" aria-labelledby={titleId}>
@@ -201,7 +213,10 @@ export function AssetNewsSection({
         ticker={ticker}
         query={{ group: 'main' }}
         empty={t('detail.news.empty', { ticker })}
-        onFirstPage={(page) => setListTotal(page.listTotal)}
+        onFirstPage={(page) => {
+          setListTotal(page.listTotal);
+          setModel(page.model);
+        }}
         onSessionExpired={onSessionExpired}
       />
       {listTotal > 0 && (
@@ -231,9 +246,48 @@ export function AssetNewsSection({
           </div>
         </div>
       )}
+      {model && <SentimentNote model={model} />}
       <p className="field-hint">{t('detail.news.source')}</p>
     </section>
   );
+}
+
+/** Caráter educacional (DA15): o tom é automático, pode errar e não é recomendação. */
+function SentimentNote({ model }: { model: SentimentModelName }) {
+  const { t } = useTranslation();
+  return (
+    <p className="field-hint">
+      {t('detail.news.sentimentNote', {
+        model: t('sentiment.modelName', {
+          name: t(`sentiment.models.${model.name}`, { defaultValue: model.name }),
+          number: model.number,
+        }),
+      })}
+    </p>
+  );
+}
+
+/**
+ * As notícias dos dias de referência do pregão por tom, e as ainda sem tom (pendentes); `null` sem
+ * modelo visível.
+ */
+function sessionSentiment(
+  days: readonly AssetNewsDay[],
+  after: string,
+  until: string,
+): (SentimentCounts & { pending: number }) | null {
+  const counts = { positive: 0, neutral: 0, negative: 0, pending: 0 };
+  let found = false;
+  for (const day of days) {
+    if (day.day <= after || day.day > until || !day.sentiment) continue;
+    found = true;
+    counts.pending += day.count;
+    for (const s of NEWS_SENTIMENTS) {
+      counts[s] += day.sentiment[s];
+      counts.pending -= day.sentiment[s];
+    }
+  }
+  return found ? counts : null;
 }
 
 /**
@@ -274,6 +328,7 @@ export function NewsSessionPanel({
   ticker,
   points,
   index,
+  days,
   onClose,
   onSessionExpired,
 }: {
@@ -281,6 +336,8 @@ export function NewsSessionPanel({
   ticker: string;
   points: readonly PricePoint[];
   index: number;
+  /** SPEC-044: os dias com o tom das notícias, para as contagens do pregão. */
+  days: readonly AssetNewsDay[];
   onClose: () => void;
   onSessionExpired: () => void;
 }) {
@@ -290,6 +347,7 @@ export function NewsSessionPanel({
   const heading = useRef<HTMLHeadingElement>(null);
   const range = sessionRange(points, index);
   const reaction = priceReaction(points, index);
+  const tones = range ? sessionSentiment(days, range.after, range.until) : null;
 
   useEffect(() => {
     heading.current?.focus();
@@ -332,6 +390,16 @@ export function NewsSessionPanel({
         </div>
       </dl>
       <p className="field-hint">{t('detail.news.reactionNote')}</p>
+      {tones && (
+        <p className="asset-news-tones">
+          {t(tones.pending > 0 ? 'detail.news.tonesPending' : 'detail.news.tones', {
+            positive: t('detail.news.tonePositive', { count: tones.positive }),
+            neutral: t('detail.news.toneNeutral', { count: tones.neutral }),
+            negative: t('detail.news.toneNegative', { count: tones.negative }),
+            count: tones.pending,
+          })}
+        </p>
+      )}
       <NewsList
         key={range.until}
         assetId={assetId}
