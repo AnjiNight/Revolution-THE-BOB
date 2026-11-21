@@ -1,0 +1,1727 @@
+{
+  "app": {
+    "title": "Investment Simulator",
+    "subtitle": "Simulate portfolios with real assets, without real money."
+  },
+  "server": {
+    "heading": "Server connection",
+    "checking": "Checking the server…",
+    "connected": "Server connected",
+    "degraded": "Server has database problems",
+    "unavailable": "Server unavailable",
+    "invalidUrl": "Invalid server address",
+    "version": "Server version: {{version}}",
+    "retry": "Try again"
+  },
+  "disclaimer": "Academic, educational project. This is not investment advice.",
+  "loading": "Loading…",
+  "auth": {
+    "loginTitle": "Sign in",
+    "registerTitle": "Create account",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "Use at least 8 characters.",
+    "acceptTerms": "I have read and accept the terms of use and the privacy policy.",
+    "termsTitle": "Terms summary (version {{version}})",
+    "termsSummary": "This is an academic simulation project: no operation uses real money and nothing here is investment advice. We store your name, your email and your password protected by encryption, only to identify your account. You will be able to request the export or deletion of your data.",
+    "submitLogin": "Sign in",
+    "submitRegister": "Create account",
+    "submitting": "Please wait…",
+    "noAccount": "Don't have an account?",
+    "goToRegister": "Create account",
+    "haveAccount": "Already have an account?",
+    "goToLogin": "Sign in",
+    "or": "or",
+    "google": "Continue with Google",
+    "googleWaiting": "Finish signing in in the browser window…",
+    "googleTermsTitle": "First sign-in with Google",
+    "googleTermsIntro": "To create your account, read and accept the terms.",
+    "continue": "Accept and continue",
+    "cancel": "Cancel",
+    "goToCollaborator": "Collaborator area",
+    "collaboratorTitle": "Collaborator area",
+    "collaboratorNote": "Collaborator access is created by the team. It is not possible to sign up here.",
+    "backToLogin": "Back to user sign-in",
+    "forgotPassword": "Forgot your password?",
+    "accountDeleted": "Your account was deleted. Your data was erased."
+  },
+  "reset": {
+    "title": "Reset password",
+    "intro": "Enter your account email. We'll send you a code to create a new password.",
+    "sendCode": "Send code",
+    "codeSent": "If there is an account for {{email}}, we sent a code to that address. It is valid for 15 minutes.",
+    "code": "Code",
+    "codeHint": "8 letters and numbers, like K7QM-4XPD.",
+    "newPassword": "New password",
+    "submit": "Reset password",
+    "resend": "Resend code",
+    "resendIn": "Resend code in {{seconds}} s",
+    "resent": "We sent a new code. Always use the latest one.",
+    "otherEmail": "Use another email",
+    "back": "Back to sign in",
+    "backCollaborator": "Back to the collaborator area",
+    "done": "Password reset. Sign in with your new password."
+  },
+  "confirm": {
+    "title": "Confirm your email",
+    "sent": "We sent a code to {{email}}. It is valid for 15 minutes.",
+    "pendingLogin": "Your account is not confirmed yet. We sent a new code to {{email}}.",
+    "submit": "Confirm and sign in",
+    "fixEmail": "Fix email"
+  },
+  "home": {
+    "greeting": "Hello, {{name}}!",
+    "next": "Your account is ready. You can already search stocks and REITs (FIIs); simulation portfolios are coming in future versions.",
+    "logout": "Sign out",
+    "collaboratorNext": "Keep the trading calendar and the asset catalog up to date, and follow the tasks that bring data into the app.",
+    "profile": "My profile",
+    "upcomingTitle": "What is coming",
+    "soon": "Coming soon",
+    "calendarReminder": {
+      "missing": "The {{year}} trading calendar hasn't been published. Until it is, entries dated in that year are blocked.",
+      "nextYear": "The {{year}} trading calendar hasn't been published yet. Publish it by December 31.",
+      "open": "Open the calendar"
+    },
+    "cdi": {
+      "loaded": "CDI series: from {{from}} to {{to}}",
+      "updated": "updated on {{at}}",
+      "loading": "CDI series: loading (the processor is fetching it from the Central Bank)",
+      "stale": "The CDI series stopped at {{date}}. Check that the processor is running.",
+      "failed": "The last CDI update failed ({{at}}).",
+      "missing_one": "{{count}} trading day has no CDI in the series.",
+      "missing_other": "{{count}} trading days have no CDI in the series."
+    },
+    "indexes": {
+      "range": "{{name}}: {{from}} to {{to}}",
+      "loadingOne": "{{name}}: loading",
+      "loading": "Ibovespa and IFIX: loading (the worker fetches them from B3)",
+      "updated": "updated {{at}}",
+      "stale": "{{name}} stopped at {{date}}. Check that the worker is running.",
+      "failed": "The last Ibovespa and IFIX update failed ({{at}}).",
+      "missing_one": "{{count}} trading day without a {{name}} close.",
+      "missing_other": "{{count}} trading days without a {{name}} close."
+    },
+    "investidor10": {
+      "summary": "Indicators (Investidor10): last collected on {{at}} · {{collected}} of {{total}} assets",
+      "never": "Indicators (Investidor10): not collected yet (the processor visits the pages gradually)",
+      "failed": "The last Investidor10 collection failed. Check the processor log.",
+      "disabled": "Investidor10 indicators and dividends are turned off (INVESTIDOR10_ENABLED). Turn them on only with the written authorization, valid until the presentation."
+    },
+    "availableTitle": "Available now",
+    "open": "Open",
+    "tools": {
+      "portfolios": {
+        "title": "Portfolios",
+        "text": "Create live or historical portfolios and simulate your investments."
+      },
+      "search": {
+        "title": "Search assets",
+        "text": "Find stocks and REITs (FIIs) by ticker, name, sector or segment."
+      },
+      "calendar": {
+        "title": "Trading calendar",
+        "text": "Publish the weekdays when B3 is closed, checked against B3's official calendar."
+      },
+      "assets": {
+        "title": "Asset catalog",
+        "text": "Add and maintain the stocks and REITs (FIIs) users find in the search."
+      },
+      "tasks": {
+        "title": "Data tasks",
+        "text": "See how each task that brings data ran, with its errors, and request a run when you need one."
+      }
+    },
+    "firstPortfolio": {
+      "text": "You don't have any portfolios yet. Create one to start simulating.",
+      "create": "Create portfolio"
+    },
+    "tasks": {
+      "title": "Data tasks",
+      "running": "processor running",
+      "stoppedSince": "processor stopped since {{when}}",
+      "neverSeen": "the processor has not reported yet",
+      "allGood": "all up to date",
+      "failing_one": "{{count}} task failing",
+      "failing_other": "{{count}} tasks failing",
+      "open": "Open the tasks"
+    }
+  },
+  "profile": {
+    "title": "My profile",
+    "signInMethods": "Sign-in methods",
+    "methodPassword": "Email and password",
+    "createdAt": "Account created on",
+    "nameSection": "Name",
+    "emailSection": "Email",
+    "newEmail": "Email",
+    "passwordSection": "Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "saved": "Changes saved.",
+    "passwordChanged": "Password changed. Other sessions of this account were signed out.",
+    "googleOnly": "This account signs in with Google ({{email}}). Email and password are managed by Google.",
+    "consentsSection": "Consents",
+    "withdrawConsent": "To withdraw consent, delete your account in Your data.",
+    "termsUpdated": "The terms of use and privacy policy have changed. Read the summary and accept the new version.",
+    "subtitle": "Your sign-in details and consent history.",
+    "roleName": {
+      "user": "User",
+      "collaborator": "Collaborator"
+    },
+    "editName": "Edit name",
+    "saveName": "Save name",
+    "editEmail": "Change email",
+    "saveEmail": "Save email",
+    "editPassword": "Change password",
+    "savePassword": "Save new password",
+    "passwordSummary": "Used to sign in with email and password.",
+    "googleAccount": "Google account",
+    "consentTitle": "Terms of use and privacy policy",
+    "consentMeta": "Version {{version}}, accepted on {{date}}",
+    "consentCurrent": "Current",
+    "confirmEmail": "Confirm email",
+    "emailCodeSent": "We sent a code to {{email}}. Your email only changes after you confirm it.",
+    "pendingEmail": "Waiting for confirmation: {{email}}",
+    "emailChanged": "Email changed. The old address received a notice.",
+    "data": {
+      "title": "Your data",
+      "intro": "Download a copy of everything the app keeps about you, or delete your account.",
+      "export": "Download my data",
+      "exported": "File saved.",
+      "delete": "Delete my account",
+      "deleteWarning": "This erases your account, your consents and your sessions. It cannot be undone.",
+      "sendCode": "Send code to {{email}}",
+      "codeSent": "We sent a code to {{email}}. It is valid for 15 minutes.",
+      "confirmDelete": "Delete my account forever",
+      "collaboratorNote": "Collaborator accounts are deleted by the team."
+    }
+  },
+  "fieldErrors": {
+    "required": "Required field.",
+    "too_short": "Too short.",
+    "too_long": "Too long.",
+    "invalid_email": "Enter a valid email.",
+    "terms_not_accepted": "You must accept the terms to continue.",
+    "same_password": "The new password must be different from the current one.",
+    "invalid_version": "Outdated terms version. Reload the screen.",
+    "invalid_code": "The code has 8 letters and numbers, like K7QM-4XPD.",
+    "invalid_date": "Enter a valid date.",
+    "wrong_year": "The date must be in the selected year.",
+    "weekend": "Weekends never have trading and are not listed.",
+    "duplicate": "This date is already on the list.",
+    "invalid_ticker": "Use the B3 code: 4 characters and 1 or 2 digits, like PETR4 or MXRF11.",
+    "invalid_option": "Choose an option from the list.",
+    "wrong_class": "This option doesn't belong to the asset's class.",
+    "immutable": "The class can't be changed after the asset is created.",
+    "before_history": "The price history starts on 01/04/2016: choose that date or later.",
+    "future": "Choose a day before today: today doesn't have B3's close yet.",
+    "not_trading_day": "There was no trading session that day (weekend or holiday). Choose a trading day.",
+    "invalid_amount": "Enter an amount in reais with up to 2 decimals, like 1,000.00.",
+    "above_max": "The maximum per entry is R$10,000,000.00.",
+    "not_allowed": "In a live portfolio, the date is always now.",
+    "before_start": "Choose a day on or after the portfolio's start.",
+    "before_last_entry": "Choose the day of the last entry or later: a historical portfolio's entries follow date order.",
+    "invalid_quantity": "Enter a whole quantity, 1 or more.",
+    "after_end": "The start date can't be after the end date.",
+    "after_today": "Choose an end date no later than today.",
+    "invalid_selection": "Choose 2 to 4 different portfolios.",
+    "not_https": "Use an address that starts with https://.",
+    "private_address": "Use a public https address (not an internal network one).",
+    "not_a_feed": "Could not read an RSS or Atom feed at this address.",
+    "invalid_url": "Invalid address."
+  },
+  "authErrors": {
+    "validation_error": "Check the highlighted fields.",
+    "email_in_use": "This email is already in use.",
+    "invalid_credentials": "Incorrect email or password.",
+    "invalid_refresh_token": "Your session has expired. Sign in again.",
+    "unauthorized": "Your session has expired. Sign in again.",
+    "rate_limited": "Too many attempts. Wait a minute and try again.",
+    "server_unavailable": "Could not reach the server. Try again.",
+    "invalid_url": "Invalid server address.",
+    "unexpected": "Something went wrong. Try again.",
+    "wrong_account_type": "This account cannot sign in here. Users sign in through the regular sign-in; collaborators, through the Collaborator area.",
+    "terms_required": "Accept the terms to create your account.",
+    "google_login_unavailable": "Sign in with Google is not available.",
+    "google_token_invalid": "Could not confirm the Google sign-in. Try again.",
+    "google_email_not_verified": "Google did not confirm this email.",
+    "google_cancelled": "Google sign-in cancelled.",
+    "invalid_password": "Incorrect current password.",
+    "email_change_not_allowed": "This account email comes from Google and cannot be changed here.",
+    "password_change_not_allowed": "This account signs in with Google and has no password.",
+    "invalid_reset_code": "Invalid or expired code. Check the code or ask for a new one.",
+    "password_reset_unavailable": "Password reset is not available on this server.",
+    "email_not_confirmed": "Confirm your email to sign in.",
+    "invalid_confirmation_code": "Invalid or expired code. Check the code or ask for a new one.",
+    "email_confirmation_unavailable": "Email confirmation is not available on this server.",
+    "deletion_not_allowed": "Collaborator accounts are deleted by the team.",
+    "forbidden": "This area is for the team only.",
+    "calendar_not_published": "The team hasn't published the trading calendar for that year yet. Without it, the app doesn't know which days the exchange was open.",
+    "ticker_in_use": "Another asset already uses this ticker.",
+    "asset_not_found": "This asset no longer exists. The list has been refreshed.",
+    "source_disabled": "Investidor10 indicators are turned off.",
+    "portfolio_not_found": "This portfolio no longer exists.",
+    "portfolio_name_in_use": "You already have a portfolio with this name.",
+    "portfolio_limit_reached": "You already have the maximum of 20 portfolios. Delete one to create another.",
+    "insufficient_cash": "Not enough cash.",
+    "insufficient_position": "You don't hold that quantity of the asset.",
+    "quote_changed": "The quote changed. Check the new price.",
+    "market_closed": "The exchange is closed today.",
+    "no_quote_today": "This asset doesn't have a quote today yet.",
+    "asset_inactive": "This asset was deactivated and can't be bought.",
+    "historical_portfolio": "Buying and selling in a historical portfolio comes in a later version.",
+    "entry_not_found": "That entry isn't from this portfolio.",
+    "already_reversed": "That entry was already reversed.",
+    "reversal_window_closed": "In a live portfolio, purchases and sales can only be reversed on the day they were made. To undo one, make the opposite trade.",
+    "reversal_breaks_cash": "This reversal would make cash negative.",
+    "reversal_breaks_position": "This reversal would make a sale larger than the position.",
+    "no_close_that_day": "This asset has no B3 close on that day.",
+    "history_pending": "This asset's price history is still being loaded.",
+    "copy_breaks_cash": "Without the purchases and sales, a withdrawal would have no balance.",
+    "not_saved_offline": "Not viewed on this computer yet. Connect to see it.",
+    "task_not_found": "Task not found.",
+    "run_not_found": "Run not found (runs older than 90 days are deleted).",
+    "run_already_requested": "This task already has a request waiting for the processor.",
+    "run_in_progress": "This task is running now. Request it again when it finishes.",
+    "news_source_not_found": "News source not found.",
+    "source_exists": "There is already a source with this address.",
+    "parent_source": "The parent source can't be changed here.",
+    "news_not_found": "News item not found.",
+    "no_model": "The task runner hasn't classified any news yet.",
+    "not_enough_labels": "Label more news: at least 10 test items are needed to evaluate."
+  },
+  "landing": {
+    "skip": "Skip to sign-in",
+    "nav": {
+      "label": "Page sections",
+      "how": "How it works",
+      "portfolios": "Portfolios",
+      "news": "News",
+      "assets": "Stocks and REITs",
+      "signIn": "Sign in"
+    },
+    "hero": {
+      "eyebrow": "An educational simulator for B3",
+      "title": "Invest for pretend. Learn for real.",
+      "lead": "Build portfolios with B3 stocks and REITs, follow real quotes and see how the news moves prices.",
+      "secondary": "See how it works"
+    },
+    "stage": {
+      "title": "Seven different tools. One screen.",
+      "lead": "Today, investors jump between their broker, news sites, charts and simulators. Here, everything talks to each other.",
+      "listLabel": "What the simulator brings together",
+      "tiles": {
+        "portfolio": "Portfolio",
+        "virtual": "Virtual portfolio",
+        "news": "News",
+        "charts": "Charts",
+        "history": "History",
+        "simulations": "Simulations",
+        "ai": "Artificial intelligence",
+        "learn": "Financial education"
+      }
+    },
+    "how": {
+      "title": "From the headline to the decision, in four moves.",
+      "lead": "The path an experienced investor follows by heart, organized for people who are just starting.",
+      "build": {
+        "title": "Build",
+        "text": "Create a portfolio with pretend money and pick real B3 stocks and REITs."
+      },
+      "follow": {
+        "title": "Follow",
+        "text": "See real quotes, always with the time of each price. No real-time promises."
+      },
+      "relate": {
+        "title": "Relate",
+        "text": "News shows up on the asset chart, classified as positive, neutral or negative."
+      },
+      "learn": {
+        "title": "Learn",
+        "text": "Compare what you decided with what happened in the market and find out what you would do differently."
+      }
+    },
+    "portfolios": {
+      "title": "Two ways to test an idea.",
+      "live": {
+        "title": "Live portfolio",
+        "text": "Buy and sell now, with the latest available quote. The portfolio moves along with the market."
+      },
+      "historic": {
+        "title": "Historical portfolio",
+        "text": "Pick a date in the past, build the portfolio and see what it would be worth today.",
+        "quote": "If I had invested, would I have gained or lost?"
+      }
+    },
+    "news": {
+      "title": "News with context, not with noise.",
+      "lead": "Each article is linked to the assets it mentions and classified by tone. On the chart, you see what happened to the price afterwards.",
+      "note": "We show possible relations, never certainties. Scenarios are educational estimates, not advice.",
+      "positive": {
+        "title": "Positive",
+        "text": "A favorable tone for the asset, such as profits above expectations."
+      },
+      "neutral": {
+        "title": "Neutral or uncertain",
+        "text": "A relevant fact with no clear direction, or an effect that is still hard to predict."
+      },
+      "negative": {
+        "title": "Negative",
+        "text": "An unfavorable tone, such as a rule change that weighs on the sector."
+      }
+    },
+    "assets": {
+      "eyebrow": "For beginners",
+      "title": "Stocks and REITs, explained simply.",
+      "examples": "Examples",
+      "stock": {
+        "title": "Stock",
+        "text": "A piece of a company. You gain when it grows in value and when it pays dividends and interest on equity."
+      },
+      "reit": {
+        "title": "Real estate fund (FII)",
+        "text": "Shares of a fund that invests in real estate, such as warehouses and offices, and usually pays income every month."
+      },
+      "tip": {
+        "title": "Ending in 11 does not mean FII.",
+        "text": "ETFs and units also end in 11. That is why each asset here has its class set at registration, like at brokers."
+      }
+    },
+    "trust": {
+      "title": "Learn without risk, for real.",
+      "noMoney": {
+        "title": "No real money",
+        "text": "Every operation is simulated. There is no broker, no buy order and no real payment."
+      },
+      "education": {
+        "title": "Education, not advice",
+        "text": "We show scenarios and statistics. Recommending what to buy is regulated by the CVM, and that does not happen here."
+      },
+      "password": {
+        "title": "Protected password",
+        "text": "We only store a hash of your password, made with argon2id. Not even the team can read it."
+      },
+      "privacy": {
+        "title": "Your data, your rules",
+        "text": "You will be able to request the export or deletion of your data, as required by the LGPD."
+      }
+    },
+    "cta": {
+      "title": "Your first portfolio starts with zero risk.",
+      "lead": "Create your free account and start learning from the real market.",
+      "register": "Create account",
+      "signIn": "I already have an account"
+    },
+    "footer": {
+      "project": "Computer Engineering, Universidade Presbiteriana Mackenzie.",
+      "team": "Luís Gustavo Sampaio Coêlho and Nicoly Araujo de Paschoa"
+    }
+  },
+  "shell": {
+    "skip": "Skip to content",
+    "navLabel": "App navigation",
+    "home": "Home",
+    "calendar": "Calendar",
+    "assets": "Assets",
+    "logoutLabel": "Sign out of your account",
+    "portfolios": "Portfolios",
+    "news": "News"
+  },
+  "offline": {
+    "title": "No connection to the server.",
+    "body": "You are seeing the data saved on this computer, read-only.",
+    "dataFrom": "Data from {{date}}.",
+    "retry": "Try now",
+    "retrying": "Trying…",
+    "stillOffline": "Still offline. The app tries again on its own every 30 seconds.",
+    "needsConnection": "Needs a connection.",
+    "announce": "No connection to the server. Read-only mode: only the data saved on this computer.",
+    "back": "Connection is back. The data was updated.",
+    "searchNeedsConnection": "Search needs a connection. The assets you already opened are still in your portfolios' positions."
+  },
+  "language": {
+    "switchTo": "Switch the app language to Portuguese",
+    "changed": "The app is now in English."
+  },
+  "calendar": {
+    "title": "Trading calendar",
+    "subtitle": "The weekdays when B3 is closed. Until a year is published, the app doesn't accept dates in it.",
+    "year": "Year",
+    "published": "Published on {{date}}",
+    "publishedFromB3": "Published by the processor on {{date}}, from the B3 file",
+    "notPublished": "Not published",
+    "b3Note": "Check against B3's official calendar before publishing. B3 releases next year's calendar in early December.",
+    "loadSuggestion": "Load suggestion",
+    "suggestionLoaded": "Suggestion loaded. Check each day against B3's calendar.",
+    "suggested": "Suggestion",
+    "listTitle": "Non-trading days in {{year}}",
+    "count": "Days on the list: {{count}}",
+    "empty": "No days on the list. Load the suggestion or add the days.",
+    "weekendNote": "Saturdays and Sundays never have trading and don't need to be listed.",
+    "date": "Date",
+    "reason": "Reason",
+    "actions": "Actions",
+    "remove": "Remove",
+    "removeLabel": "Remove {{date}} ({{reason}})",
+    "addTitle": "Add a day",
+    "reasonHint": "As in B3's calendar, for example \"Carnival\".",
+    "add": "Add",
+    "unsaved": "There are unpublished changes.",
+    "yearLocked": "Publish or discard the changes to switch years.",
+    "discard": "Discard changes",
+    "publish": "Publish {{year}}",
+    "confirmText": "The list replaces the previous one and takes effect immediately for everyone: any weekday not on it counts as a trading day.",
+    "confirm": "Publish now",
+    "publishedOk": "{{year}} calendar published."
+  },
+  "assets": {
+    "title": "Assets",
+    "subtitle": "Search stocks and Brazilian REITs (FIIs) to study and simulate.",
+    "catalogNote": "The catalog has the stocks and REITs (FIIs) traded on B3 in the last 3 months.",
+    "searchLabel": "Search by ticker or name",
+    "searchPlaceholder": "E.g. PETR4, Itaú or logistics",
+    "classFilter": "Class",
+    "allClasses": "All",
+    "sectorFilter": "Sector or segment",
+    "allSectors": "All",
+    "clear": "Clear filters",
+    "resultCount": "Assets found: {{count}}",
+    "searching": "Searching…",
+    "showing": "Showing {{shown}} of {{total}}.",
+    "showMore": "Show more",
+    "loadingMore": "Loading…",
+    "empty": "No assets match this search.",
+    "emptyCatalog": "The catalog is still empty. Stocks and REITs arrive with the daily import.",
+    "listLabel": "Asset search results",
+    "columns": {
+      "asset": "Asset",
+      "class": "Class",
+      "sector": "Sector or segment",
+      "status": "Status",
+      "actions": "Actions",
+      "price": "Last price"
+    },
+    "class": {
+      "stock": "Stock",
+      "fii": "REIT (FII)"
+    },
+    "classPlural": {
+      "stock": "Stocks",
+      "fii": "REITs (FIIs)"
+    },
+    "sectorLabel": {
+      "stock": "Sector",
+      "fii": "Segment"
+    },
+    "sectors": {
+      "stock": {
+        "bens_industriais": "Industrials",
+        "comunicacoes": "Communications",
+        "consumo_ciclico": "Consumer discretionary",
+        "consumo_nao_ciclico": "Consumer staples",
+        "financeiro": "Financials",
+        "materiais_basicos": "Basic materials",
+        "petroleo_gas_biocombustiveis": "Oil, gas and biofuels",
+        "saude": "Health care",
+        "tecnologia_informacao": "Information technology",
+        "utilidade_publica": "Utilities",
+        "outros": "Other"
+      },
+      "fii": {
+        "lajes_corporativas": "Office buildings",
+        "logistica": "Logistics",
+        "shoppings": "Shopping malls",
+        "recebiveis": "Real estate receivables",
+        "fundo_de_fundos": "Fund of funds",
+        "hibrido": "Hybrid",
+        "residencial": "Residential",
+        "hoteis": "Hotels",
+        "renda_urbana": "Urban income",
+        "desenvolvimento": "Development",
+        "outros": "Other"
+      }
+    },
+    "quote": {
+      "none": "No quote yet",
+      "today": "Quote at {{time}} (up to {{delay}} min delay)",
+      "otherDay": "Quote from {{date}} at {{time}}",
+      "note": "Quotes from brapi, delayed by up to {{delay}} minutes. Not real-time."
+    }
+  },
+  "detail": {
+    "openLabel": "Open the details of {{ticker}}",
+    "back": "Back to Assets",
+    "loading": "Loading the details…",
+    "notFound": "Asset not found.",
+    "loadFailed": "The details could not be opened right now.",
+    "retry": "Try again",
+    "refreshFailed": "Could not update right now. We will try again in {{minutes}} minutes.",
+    "deactivated": "Deactivated in the catalog since {{date}}.",
+    "closeOf": "Close of {{date}} (B3)",
+    "session": {
+      "title": "Last B3 trading session",
+      "date": "Session of {{date}}",
+      "none": "No trading session stored for this asset yet."
+    },
+    "helpLabel": "What is {{term}}?",
+    "terms": {
+      "open": "Open",
+      "openHelp": "The price of the first trade of the day.",
+      "high": "High",
+      "highHelp": "The highest price traded during the day.",
+      "low": "Low",
+      "lowHelp": "The lowest price traded during the day.",
+      "close": "Close",
+      "closeHelp": "The price of the last trade of the day, which B3 publishes as the official one.",
+      "trades": "Trades",
+      "tradesHelp": "How many purchases and sales of this asset happened during the day.",
+      "volume": "Volume",
+      "volumeHelp": "How much money changed hands in this asset during the day."
+    },
+    "news": {
+      "title": "News",
+      "loading": "Loading the news…",
+      "empty": "There is no news about {{ticker}} yet.",
+      "more_one": "Show more ({{count}} article)",
+      "more_other": "Show more ({{count}} articles)",
+      "relevance": {
+        "principal": "About {{ticker}}",
+        "citado": "Mentions {{ticker}}",
+        "lista": "In a list"
+      },
+      "readParent": "Read on Investidor10",
+      "read": "Read on {{source}}",
+      "inPortuguese": "In Portuguese",
+      "lists_one": "Also appears in lists ({{count}})",
+      "lists_other": "Also appears in lists ({{count}})",
+      "listsHint": "Agendas, rankings and articles that mention many assets at once.",
+      "source": "News from Investidor10 (use authorized for this academic project) and from sources curated by the team. The app shows the title and the summary; the full article stays on the source's website.",
+      "count_one": "{{count}} article",
+      "count_other": "{{count}} articles",
+      "legend": "Session with news",
+      "chartHint": "N and Shift+N jump to the next and the previous session with news; Enter shows the news of the session.",
+      "sessionTitle": "News of the {{date}} session",
+      "close": "Close the news of the session",
+      "closeShort": "Close",
+      "onSession": "On the session",
+      "later_one": "{{count}} session later",
+      "later_other": "{{count}} sessions later",
+      "noPrevious": "No previous session in the chart",
+      "notYet_one": "There is no {{count}} session later yet",
+      "notYet_other": "There are no {{count}} sessions later yet",
+      "reactionNote": "Change of the close over the close of the session before the news. It shows what the price did afterwards, not that the news caused the change.",
+      "tones": "In this session: {{positive}}, {{neutral}}, {{negative}}.",
+      "tonesPending_one": "In this session: {{positive}}, {{neutral}}, {{negative}}; and {{count}} not classified yet.",
+      "tonesPending_other": "In this session: {{positive}}, {{neutral}}, {{negative}}; and {{count}} not classified yet.",
+      "tonePositive_zero": "no positive",
+      "tonePositive_one": "{{count}} positive",
+      "tonePositive_other": "{{count}} positive",
+      "toneNeutral_zero": "no neutral",
+      "toneNeutral_one": "{{count}} neutral",
+      "toneNeutral_other": "{{count}} neutral",
+      "toneNegative_zero": "no negative",
+      "toneNegative_one": "{{count}} negative",
+      "toneNegative_other": "{{count}} negative",
+      "sentimentNote": "Tone classified automatically ({{model}}); it can be wrong. Not a recommendation.",
+      "sessionEmpty": "No news in this session."
+    },
+    "history": {
+      "title": "Price history",
+      "periodLabel": "Chart period",
+      "periods": {
+        "1m": "1 month",
+        "6m": "6 months",
+        "1y": "1 year",
+        "5y": "5 years",
+        "max": "All"
+      },
+      "loading": "Loading the chart…",
+      "failed": "The chart could not be loaded right now.",
+      "pending": "The history of this asset is still being loaded. Come back in a few minutes.",
+      "notFound": "This asset does not appear in the B3 files since 2016.",
+      "tooFew": "Too few trading sessions in the period to show the chart.",
+      "since": "History since {{date}}.",
+      "change": "Change in the period",
+      "changeNotCalculated": "Not calculated: there is a price jump in the period",
+      "min": "Low",
+      "max": "High",
+      "on": "on {{date}}",
+      "chartLabel": "Closing prices of {{ticker}}: {{period}}",
+      "chartHint": "Use the arrow keys to move through the sessions; Home and End go to the first and the last.",
+      "cursor": "{{date}}: {{price}}",
+      "jumpsTitle": "Price jumps in the period",
+      "jump": "{{date}}: {{change}} from one session to the next",
+      "jumpsExplain": "Splits and reverse splits change the price without changing the value held; it may also have been a real move.",
+      "notice": "Prices as B3 publishes them, not adjusted for dividends, FII distributions, splits or reverse splits. The change is not the return of someone who held the asset.",
+      "source": "Source: B3 files · last close on {{date}}",
+      "priceMode": "How to show prices",
+      "adjusted": "Adjusted for splits and reverse splits",
+      "asPublished": "As B3 published",
+      "noticeAdjusted": "Prices adjusted for splits, reverse splits and stock bonuses (B3 events), not for dividends or FII distributions. The change is not the return of someone who held the asset.",
+      "eventsTitle": "Events in the period",
+      "event": {
+        "desdobramento": "{{date}}: split, 1 share became {{multiplier}}",
+        "grupamento": "{{date}}: reverse split, 1 share became {{multiplier}}",
+        "bonificacao": "{{date}}: stock bonus, 1 share became {{multiplier}}"
+      },
+      "eventsSource": "Source: B3. The date is the record date: the price changes on the next session."
+    },
+    "buy": "Buy",
+    "buyTitle": "Buy in which portfolio?",
+    "buyLoading": "Loading the portfolios…",
+    "noLivePortfolio": "Create a portfolio to buy.",
+    "buyCancel": "Cancel"
+  },
+  "portfolios": {
+    "title": "Portfolios",
+    "subtitle": "Each portfolio is a simulation: live, with current prices, or historical, in the past.",
+    "count": "{{count}} of {{limit}} portfolios",
+    "new": "New portfolio",
+    "newTitle": "New portfolio",
+    "loading": "Loading the portfolios…",
+    "empty": "You don't have any portfolios yet. Create one to start simulating.",
+    "name": "Name",
+    "nameHint": "Up to {{max}} characters. Each of your portfolios has a different name.",
+    "type": "Type (can't change later)",
+    "types": {
+      "live": {
+        "title": "Live",
+        "text": "Trades at current prices: purchases and sales use the latest quote."
+      },
+      "historical": {
+        "title": "Historical",
+        "text": "Trades in the past, with data already known: you choose the day the portfolio starts."
+      }
+    },
+    "startDate": "Start date",
+    "startDateHint": "A trading day, from {{first}} until yesterday.",
+    "create": "Create portfolio",
+    "creating": "Creating…",
+    "cancel": "Cancel",
+    "save": "Save",
+    "rename": "Rename",
+    "renameLabel": "Rename the portfolio {{name}}",
+    "delete": "Delete",
+    "deleteLabel": "Delete the portfolio {{name}}",
+    "deleteConfirm": "Delete the portfolio {{name}}? This deletes the portfolio and all its entries. It can't be undone.",
+    "deleteButton": "Delete portfolio",
+    "deleted": "Portfolio {{name}} deleted.",
+    "since": "since {{date}}",
+    "label": {
+      "live": "Live simulation",
+      "historical": "Historical simulation: result calculated with data already known"
+    },
+    "back": "Back to portfolios",
+    "comingSoon": "Purchases and sales come in the next steps.",
+    "initialAmount": "Initial amount (optional)",
+    "initialAmountHint": "Becomes the portfolio's first deposit. In reais, up to R$10,000,000.00.",
+    "cash": {
+      "title": "Cash",
+      "balance": "Cash balance",
+      "deposit": "Deposit",
+      "withdraw": "Withdraw",
+      "depositTitle": "New deposit",
+      "withdrawalTitle": "New withdrawal",
+      "amount": "Amount",
+      "amountHint": "In reais, from R$0.01 to R$10,000,000.00.",
+      "date": "Date",
+      "dateHint": "A trading day, from {{first}} to {{last}}.",
+      "review": "Review",
+      "back": "Back",
+      "cancel": "Cancel",
+      "confirmDeposit": "Deposit {{amount}} into the portfolio “{{name}}”?",
+      "confirmDepositOn": "Deposit {{amount}} into the portfolio “{{name}}”, dated {{date}}?",
+      "confirmWithdrawal": "Withdraw {{amount}} from the portfolio “{{name}}”?",
+      "confirmWithdrawalOn": "Withdraw {{amount}} from the portfolio “{{name}}”, dated {{date}}?",
+      "immutable": "Entries can't be changed or deleted; a mistake is fixed with a reversal.",
+      "confirmDepositButton": "Confirm deposit",
+      "confirmWithdrawalButton": "Confirm withdrawal",
+      "saving": "Saving…",
+      "deposited": "Deposit saved. Balance: {{balance}}.",
+      "withdrawn": "Withdrawal saved. Balance: {{balance}}.",
+      "insufficient": "Not enough cash: there is {{available}} available.",
+      "empty": "This portfolio has no money yet. Make a deposit to start simulating.",
+      "statement": "Statement",
+      "loading": "Loading the cash…",
+      "columns": {
+        "date": "Date",
+        "type": "Entry",
+        "amount": "Amount",
+        "balanceAfter": "Balance after",
+        "actions": "Actions"
+      },
+      "types": {
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "buy": "Purchase",
+        "sell": "Sale",
+        "income": "Income"
+      },
+      "income": {
+        "kinds": {
+          "dividendo": "Dividend",
+          "jcp": "Interest on equity",
+          "rendimento": "Distribution",
+          "amortizacao": "Amortization"
+        },
+        "fraction": "Fractional share sale",
+        "detail": "{{quantity}} {{ticker}} × {{perShare}} (record date {{exDate}})",
+        "tax": "gross {{gross}}, tax {{tax}}",
+        "fractionDetail": "{{shares}} {{ticker}} at {{price}}",
+        "source": "Source: Investidor10",
+        "pendingTitle": "To receive",
+        "pendingOn": "{{kind}} {{ticker}}: {{amount}} on {{date}}",
+        "pendingNoDate": "{{kind}} {{ticker}}: {{amount}}, no payment date yet",
+        "disabled": "Income is off: cash doesn't include dividends.",
+        "negative": "Cash went negative because an income payment is no longer in the source. Only deposits are allowed until it's positive again."
+      },
+      "showMore": "Show more",
+      "count_one": "{{shown}} of {{count}} entry",
+      "count_other": "{{shown}} of {{count}} entries",
+      "tradeDetail": "{{quantity}} {{ticker}} at {{price}}",
+      "reversal": {
+        "reverse": "Reverse",
+        "reverseLabel": "Reverse {{description}}",
+        "reversed": "Reversed on {{date}}",
+        "confirm": "Reverse {{description}}? It stays in the statement, struck through, and stops counting in cash and positions. A reversal can't be undone.",
+        "confirmButton": "Confirm reversal",
+        "cancel": "Cancel",
+        "saving": "Reversing…",
+        "done": "Entry reversed.",
+        "description": {
+          "deposit": "the deposit of {{amount}} on {{date}}",
+          "withdrawal": "the withdrawal of {{amount}} on {{date}}",
+          "buy": "the purchase of {{quantity}} {{ticker}} at {{price}} on {{date}}",
+          "sell": "the sale of {{quantity}} {{ticker}} at {{price}} on {{date}}"
+        },
+        "at": {
+          "deposit": "at the deposit of {{amount}} on {{date}}",
+          "withdrawal": "at the withdrawal of {{amount}} on {{date}}",
+          "buy": "at the purchase of {{quantity}} {{ticker}} on {{date}}",
+          "sell": "at the sale of {{quantity}} {{ticker}} on {{date}}"
+        },
+        "that": {
+          "deposit": "that deposit",
+          "withdrawal": "that withdrawal",
+          "buy": "that purchase",
+          "sell": "that sale"
+        },
+        "breaksCash": "This reversal would make cash negative {{at}}. Reverse {{that}} first.",
+        "breaksPosition": "This reversal would make the sale of {{quantity}} {{ticker}} on {{date}} larger than the position. Reverse that sale first."
+      }
+    },
+    "performance": {
+      "title": "Performance",
+      "periodLabel": "Period",
+      "periods": {
+        "1m": "1 month",
+        "6m": "6 months",
+        "12m": "12 months",
+        "ytd": "Year to date",
+        "all": "Since inception",
+        "custom": "Custom"
+      },
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "loading": "Calculating the performance…",
+      "empty": "Make a deposit to see the performance.",
+      "range": "From {{from}} to {{to}}",
+      "return": "Return",
+      "result": "Result",
+      "equity": "Net worth",
+      "flows": "Net worth at the start: {{start}}; deposits minus withdrawals in the period: {{flows}}.",
+      "chartLabel": "Net worth over time",
+      "legendEquity": "Net worth",
+      "legendInvested": "Total deposited",
+      "tooltipInvested": "Deposited: {{amount}}",
+      "cursor": "{{date}}: net worth {{equity}}, deposited {{invested}}, return {{return}}",
+      "weekly": "One point per week.",
+      "note": "Time-weighted return: deposits and withdrawals don't change the %, and income counts as gain. Prices: B3 close and, today, the trading-session quote; no trading costs.",
+      "jump": "{{ticker}} had a price jump on {{date}} with no known split or reverse split: the result may be wrong.",
+      "noClose": "{{ticker}} has no close until {{date}}: until then, the purchase price is used.",
+      "chartMode": "Chart",
+      "chartModes": {
+        "money": "In reais",
+        "percent": "In %"
+      },
+      "legendPortfolio": "Portfolio",
+      "returnChartLabel": "Portfolio and benchmark returns",
+      "returnCursor": "{{date}}: {{values}}",
+      "noData": "no data",
+      "benchmarks": {
+        "title": "Same period",
+        "cdi": "CDI",
+        "ibov": "Ibovespa",
+        "ifix": "IFIX",
+        "until": "through {{date}}",
+        "notLoaded": {
+          "bcb": "not loaded yet: the worker fetches it from the Central Bank",
+          "b3": "not loaded yet: the worker fetches it from B3"
+        },
+        "share": "Your portfolio returned {{share}}% of the CDI.",
+        "note": "Each benchmark's cumulative return since the close of {{date}}, on the same basis as the portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa, B3.",
+        "noteIfix": "Each benchmark's cumulative return since the close of {{date}}, on the same basis as the portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa and IFIX, B3.",
+        "wouldHave": "would be {{amount}}"
+      },
+      "compare": "Compare with indexes",
+      "sameMoney": {
+        "cdi": "In the CDI",
+        "ibov": "In the Ibovespa",
+        "ifix": "In the IFIX"
+      },
+      "sameMoneyNote": "Index lines: the portfolio's same money (its value at the start of the period, with deposits and withdrawals on the same days) invested in each index."
+    },
+    "positions": {
+      "title": "Positions",
+      "loading": "Loading the positions…",
+      "buy": "Buy",
+      "sell": "Sell",
+      "sellLabel": "Sell {{ticker}}",
+      "empty": "No assets in this portfolio yet. Use Buy to start.",
+      "totals": {
+        "cash": "Cash",
+        "positions": "In assets",
+        "total": "Total",
+        "income": "Income received",
+        "pending": "To receive"
+      },
+      "columns": {
+        "asset": "Asset",
+        "quantity": "Quantity",
+        "averagePrice": "Average price",
+        "lastPrice": "Last price",
+        "marketValue": "Current value",
+        "change": "Change",
+        "actions": "Actions"
+      },
+      "closeOf": "Close of {{date}}",
+      "noPrice": "No price",
+      "changeNote": "Change over the average price, without trading costs or dividends.",
+      "dividendsNote": "Income enters cash on the payment date, for whoever held the asset at the end of the record date (interest on equity already net of tax); splits, reverse splits and bonus issues adjust the quantity and the average price. Income source: Investidor10.",
+      "incomeDisabled": "Income is off: cash doesn't include dividends. Splits, reverse splits and bonus issues still adjust the quantity.",
+      "incomeReceived": "Income received: {{amount}}",
+      "incomeNotLoaded": "Income for this asset not loaded yet.",
+      "nextPayment": "Next: {{amount}} on {{date}}",
+      "eventApplied": "{{event}} on {{date}}: {{before}} → {{after}}",
+      "bought": "Purchase saved: {{quantity}} {{ticker}}.",
+      "sold": "Sale saved: {{quantity}} {{ticker}}.",
+      "at": "at {{time}}",
+      "priceNote": "Last price: the trading-session quote, delayed up to {{delay}} minutes; without it, the last close.",
+      "event": {
+        "split": "Split",
+        "reverse_split": "Reverse split",
+        "bonus": "Bonus issue"
+      }
+    },
+    "allocation": {
+      "title": "Allocation",
+      "classes": {
+        "stock": "Stocks",
+        "fii": "REITs (FIIs)",
+        "cash": "Cash"
+      },
+      "byClass": {
+        "stock": "Stocks by sector",
+        "fii": "REITs (FIIs) by segment"
+      },
+      "shares": {
+        "stock": "{{ofClass}} of stocks · {{ofTotal}} of the portfolio",
+        "fii": "{{ofClass}} of REITs · {{ofTotal}} of the portfolio"
+      },
+      "assetShare": "{{share}} of the portfolio",
+      "empty": "Buy an asset to see the allocation by sector.",
+      "negativeCash": "Negative cash: {{amount}}. The allocation considers only the assets.",
+      "atCost_one": "{{tickers}} is valued at cost: no price yet.",
+      "atCost_other": "{{tickers}} are valued at cost: no price yet.",
+      "note": "Today's values, as in the positions. Stock sectors from B3's classification; REIT segments suggested from Investidor10, reviewed by the team."
+    },
+    "compare": {
+      "start": "Compare portfolios",
+      "intro": "Choose 2 to 4 portfolios to see side by side.",
+      "max": "Up to 4 portfolios",
+      "go": "Compare ({{count}})",
+      "cancel": "Cancel"
+    },
+    "copy": {
+      "action": "Copy",
+      "actionLabel": "Copy the portfolio {{name}}",
+      "pageAction": "Copy portfolio",
+      "title": "New portfolio from “{{name}}”",
+      "fixedHint": "The copy has the same type and the same start as the original.",
+      "suffix": "copy",
+      "scope": "What to copy",
+      "scopes": {
+        "all": {
+          "title": "Everything",
+          "text": "Deposits, withdrawals, purchases and sales, up to today: change only what you want to test."
+        },
+        "cash": {
+          "title": "Only the money",
+          "text": "Deposits and withdrawals on the same dates: build another allocation with the same money."
+        }
+      },
+      "until": "Copy until (optional)",
+      "untilHint": "Only entries up to that day are copied. Empty: all of them.",
+      "create": "Create copy",
+      "creating": "Copying…",
+      "breaksCash": "Without the purchases and sales, the withdrawal of {{amount}} on {{date}} would have no balance. Copy everything, or copy only until before it.",
+      "created": "Created from “{{name}}”: {{cash}} deposits and withdrawals and {{trades}} trades copied.",
+      "compareBoth": "Compare both",
+      "from": "Created on {{date}} from",
+      "fromName": "“{{name}}”",
+      "fromDeleted": "Created on {{date}} from a portfolio already deleted",
+      "openOrigin": "Open the portfolio {{name}}"
+    },
+    "comparison": {
+      "title": "Comparison",
+      "lead": "Your portfolios side by side, over the same period.",
+      "loading": "Comparing the portfolios…",
+      "listLabel": "Compared portfolios",
+      "open": "Open {{name}}",
+      "types": {
+        "live": "Live simulation",
+        "historical": "Historical simulation"
+      },
+      "returnTitle": "Performance",
+      "common": "In common",
+      "commonHint": "In common: since the newest portfolio started, the stretch in which all of them exist.",
+      "chartLabel": "Portfolio returns",
+      "cursor": "{{date}}: {{values}}",
+      "noChart": "The chart appears with at least two trading days in the period.",
+      "benchmarksNote": "Each benchmark since the close of {{date}}, the same day for every portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa, B3.",
+      "benchmarksNoteIfix": "Each benchmark since the close of {{date}}, the same day for every portfolio. Sources: CDI, Central Bank of Brazil; Ibovespa and IFIX, B3.",
+      "note": "Each portfolio by time-weighted return, since it started in the period: deposits and withdrawals don't change the %, and income counts as gain. Prices: B3 close and, today, the trading-session quote; no trading costs.",
+      "summary": {
+        "title": "Summary",
+        "type": "Type",
+        "start": "Start",
+        "endValue": "Equity at the end",
+        "netFlows": "Net deposits in the period",
+        "result": "Result in the period",
+        "return": "Time-weighted return",
+        "cdiShare": "% of the CDI",
+        "cdiShareValue": "{{share}}% of the CDI",
+        "startedOn": "started on {{date}}",
+        "empty": "No entries in the period",
+        "none": "no value"
+      },
+      "composition": {
+        "title": "Composition today",
+        "note": "As a % of each portfolio's equity today, as in Allocation. \"—\": the portfolio has nothing there.",
+        "empty": "None of the portfolios has equity today.",
+        "none": "nothing"
+      },
+      "historicalNote": "Historical simulation: result calculated with data already known.",
+      "backToComparison": "Back to the comparison"
+    },
+    "trade": {
+      "buyTitle": "Buy",
+      "sellTitle": "Sell {{ticker}}",
+      "asset": "Asset",
+      "assetHint": "Type the ticker or the name, like PETR4 or Petrobras.",
+      "searching": "Searching…",
+      "noResults": "No asset found.",
+      "changeAsset": "Change asset",
+      "loadingQuote": "Getting the quote…",
+      "marketClosed": "The exchange is closed. Buying and selling resume on the next trading day, {{date}}.",
+      "marketClosedNoDate": "The exchange is closed. Buying and selling resume on the next trading day.",
+      "noQuoteToday": "Today's first quote arrives around 10:30 a.m. (Brasília time).",
+      "assetInactive": "This asset was deactivated: you can only sell what you already hold.",
+      "quantity": "Quantity",
+      "quantityHint": "Shares and FII units only in whole numbers, up to 1,000,000.",
+      "quantityMax": "At most 1,000,000 per trade.",
+      "max": "Maximum",
+      "all": "All",
+      "held": "You hold {{quantity}}.",
+      "byValue": "Calculate by amount",
+      "byValueAmount": "How much you want to invest",
+      "fits": "{{quantity}} fit ({{total}}); {{rest}} left over.",
+      "fitsNone": "That amount doesn't buy a single unit.",
+      "useQuantity": "Use {{quantity}}",
+      "total": "Total",
+      "cashAfter": "Cash after",
+      "costs": "Brokerage, B3 fees and custody fees aren't part of the simulation.",
+      "review": "Review",
+      "cancel": "Cancel",
+      "back": "Back",
+      "confirmBuy": "Buy {{quantity}} {{ticker}} at {{price}} (quote from {{time}}) for {{total}}? Cash will be {{cash}}.",
+      "confirmSell": "Sell {{quantity}} {{ticker}} at {{price}} (quote from {{time}}) for {{total}}? Cash will be {{cash}}.",
+      "immutable": "Entries can't be changed or deleted; a mistake is fixed with a reversal.",
+      "confirmBuyButton": "Confirm purchase",
+      "confirmSellButton": "Confirm sale",
+      "saving": "Saving…",
+      "quoteChanged": "The quote changed to {{price}} (from {{time}}). Confirm with the new price?",
+      "insufficientCash": "Not enough cash: there is {{available}} available.",
+      "insufficientPosition": "You only hold {{held}} of this asset.",
+      "date": "Date",
+      "dateHint": "A trading day, from {{first}} to {{last}}.",
+      "pickDate": "Choose the date to see that day's close.",
+      "closeOf": "Close of {{date}} (B3)",
+      "noClose": "There is no close for {{ticker}} on {{date}}. The last one before was on {{last}}.",
+      "noCloseNoPrevious": "There is no close for {{ticker}} on {{date}}.",
+      "historyPending": "This asset's price history is still being loaded.",
+      "confirmBuyOn": "Buy {{quantity}} {{ticker}} at {{price}} (close of {{date}}) for {{total}}? Cash will be {{cash}} on that date.",
+      "confirmSellOn": "Sell {{quantity}} {{ticker}} at {{price}} (close of {{date}}) for {{total}}? Cash will be {{cash}} on that date.",
+      "byValueMode": "Calculate with",
+      "modeAmount": "Amount in R$",
+      "modePercent": "% of cash",
+      "percentLabel": "Percentage of cash",
+      "percentHint": "From 1% to 100% of the cash of {{cash}}.",
+      "percentInvalid": "Enter a percentage from 1 to 100."
+    }
+  },
+  "fundamentals": {
+    "title": "Indicators",
+    "loading": "Loading the indicators…",
+    "failed": "Couldn't load the indicators right now.",
+    "noPage": "This asset has no page on Investidor10.",
+    "notCollected": "This asset's indicators haven't been collected yet.",
+    "source": "Source: Investidor10 · collected on {{date}}",
+    "notice": "Indicators from Investidor10, used with permission for this academic project. They are not a recommendation to buy or sell.",
+    "group": {
+      "valuation": "Valuation",
+      "efficiency": "Efficiency",
+      "profitability": "Profitability",
+      "dividends": "Dividends",
+      "debt": "Debt",
+      "growth": "Growth",
+      "fund": "Fund"
+    },
+    "fund": {
+      "fundType": "Fund type",
+      "segment": "Segment",
+      "mandate": "Mandate",
+      "management": "Management",
+      "adminFee": "Management fee",
+      "term": "Term",
+      "audience": "Target investors"
+    },
+    "history": {
+      "toggle": "Yearly indicator history",
+      "label": "Yearly indicator history of {{ticker}}",
+      "indicator": "Indicator"
+    },
+    "indicator": {
+      "p_l": {
+        "name": "P/E",
+        "help": "Price divided by earnings per share: how many years of earnings would pay the current price."
+      },
+      "p_vp": {
+        "name": "P/B",
+        "help": "Price divided by book value per share. Below 1, the share costs less than the equity it represents."
+      },
+      "psr": {
+        "name": "P/Sales (PSR)",
+        "help": "Market value divided by revenue over the last 12 months."
+      },
+      "ev_ebitda": {
+        "name": "EV/EBITDA",
+        "help": "Enterprise value (market value plus net debt) divided by EBITDA: how many years of operating cash generation would pay for the company."
+      },
+      "ev_ebit": {
+        "name": "EV/EBIT",
+        "help": "Enterprise value divided by operating profit (EBIT)."
+      },
+      "p_ebitda": {
+        "name": "P/EBITDA",
+        "help": "Market value divided by EBITDA."
+      },
+      "p_ebit": {
+        "name": "P/EBIT",
+        "help": "Market value divided by operating profit (EBIT)."
+      },
+      "p_ativo": {
+        "name": "P/Assets",
+        "help": "Market value divided by the company's total assets."
+      },
+      "p_ativo_circ_liq": {
+        "name": "P/Net current assets",
+        "help": "Market value divided by current assets minus all liabilities. Negative when debts exceed short-term assets."
+      },
+      "p_cap_giro": {
+        "name": "P/Working capital",
+        "help": "Market value divided by working capital (current assets minus current liabilities)."
+      },
+      "lpa": {
+        "name": "EPS",
+        "help": "Earnings per share: earnings over the last 12 months divided by the number of shares."
+      },
+      "vpa": {
+        "name": "BVPS",
+        "help": "Book value per share: shareholders' equity divided by the number of shares."
+      },
+      "margem_bruta": {
+        "name": "Gross margin",
+        "help": "What is left of revenue after the cost of what was sold."
+      },
+      "margem_ebitda": {
+        "name": "EBITDA margin",
+        "help": "EBITDA (operating result before depreciation) divided by revenue."
+      },
+      "margem_ebit": {
+        "name": "EBIT margin",
+        "help": "Operating profit (EBIT) divided by revenue."
+      },
+      "margem_liquida": {
+        "name": "Net margin",
+        "help": "Net income divided by revenue: how much of each real sold becomes profit."
+      },
+      "giro_ativos": {
+        "name": "Asset turnover",
+        "help": "Revenue divided by total assets: how much the company sells for each real of assets."
+      },
+      "roe": {
+        "name": "ROE",
+        "help": "Return on equity: net income divided by shareholders' equity."
+      },
+      "roa": {
+        "name": "ROA",
+        "help": "Return on assets: net income divided by total assets."
+      },
+      "roic": {
+        "name": "ROIC",
+        "help": "Return on the capital invested (equity plus debt) in operations."
+      },
+      "dividend_yield": {
+        "name": "Dividend yield",
+        "help": "Dividends paid over the last 12 months divided by the current price."
+      },
+      "payout": {
+        "name": "Payout",
+        "help": "Share of earnings paid out as dividends and interest on equity."
+      },
+      "liquidez_corrente": {
+        "name": "Current ratio",
+        "help": "Current assets divided by current liabilities. Above 1, what falls due in the short term is covered."
+      },
+      "div_liq_ebitda": {
+        "name": "Net debt/EBITDA",
+        "help": "How many years of EBITDA would pay off the net debt."
+      },
+      "div_liq_ebit": {
+        "name": "Net debt/EBIT",
+        "help": "How many years of operating profit would pay off the net debt."
+      },
+      "div_liq_pl": {
+        "name": "Net debt/Equity",
+        "help": "Net debt divided by shareholders' equity."
+      },
+      "div_bruta_pl": {
+        "name": "Gross debt/Equity",
+        "help": "All financial debt divided by shareholders' equity."
+      },
+      "pl_ativos": {
+        "name": "Equity/Assets",
+        "help": "Share of assets financed with the company's own capital."
+      },
+      "passivos_ativos": {
+        "name": "Liabilities/Assets",
+        "help": "Share of assets financed with debt and other obligations."
+      },
+      "cagr_receitas_5a": {
+        "name": "Revenue CAGR (5 years)",
+        "help": "Average yearly revenue growth over the last 5 years."
+      },
+      "cagr_lucros_5a": {
+        "name": "Earnings CAGR (5 years)",
+        "help": "Average yearly earnings growth over the last 5 years."
+      },
+      "fii_dy_12m": {
+        "name": "Dividend yield (12 months)",
+        "help": "Distributions paid over the last 12 months divided by the current unit price."
+      },
+      "fii_p_vp": {
+        "name": "P/B",
+        "help": "Unit price divided by book value per unit. Below 1, the unit costs less than the equity it represents."
+      },
+      "fii_vp_cota": {
+        "name": "Book value per unit",
+        "help": "The fund's equity divided by the number of units."
+      },
+      "fii_valor_patrimonial": {
+        "name": "Fund equity",
+        "help": "Everything the fund owns, minus what it owes."
+      },
+      "fii_ultimo_rendimento": {
+        "name": "Last distribution",
+        "help": "The last amount distributed per unit."
+      },
+      "fii_liquidez_diaria": {
+        "name": "Daily liquidity",
+        "help": "How much is traded per day on the exchange, on average."
+      },
+      "fii_vacancia": {
+        "name": "Vacancy",
+        "help": "Share of the fund's properties without a tenant."
+      },
+      "fii_cotistas": {
+        "name": "Unitholders",
+        "help": "How many people and institutions hold units of the fund."
+      },
+      "fii_cotas_emitidas": {
+        "name": "Units issued",
+        "help": "How many units the fund has."
+      }
+    }
+  },
+  "dividends": {
+    "title": "Dividends",
+    "loading": "Loading the dividends…",
+    "failed": "Couldn't load the dividends right now.",
+    "total12m": "Total paid over the last 12 months: {{value}} per share or unit",
+    "noTotal": "No dividends over the last 12 months.",
+    "none": "No dividends recorded for this asset in the period.",
+    "notCollected": "The dividends of this asset have not been collected yet. The Investidor10 collection goes through every asset, starting with the most traded, and then updates them once a week.",
+    "tableLabel": "Dividends per share or unit",
+    "kind": "Type",
+    "exDate": "Record date",
+    "paymentDate": "Payment",
+    "value": "Amount",
+    "kinds": {
+      "dividendo": "Dividend",
+      "jcp": "Interest on equity",
+      "rendimento": "Distribution",
+      "amortizacao": "Amortization"
+    },
+    "periodLabel": "Dividends period",
+    "periods": {
+      "12m": "12 months",
+      "5y": "5 years",
+      "all": "All"
+    },
+    "source": "Source: Investidor10 · collected on {{date}}",
+    "sourceOnly": "Source: Investidor10",
+    "notice": "Record date: the last day on which holders of the asset are entitled to the payment. Interest on equity is shown gross, before tax. Amortization returns part of the capital invested in the fund."
+  },
+  "catalog": {
+    "title": "Asset catalog",
+    "subtitle": "The assets users find in the search. Assets are never deleted, only deactivated. Every change is logged.",
+    "statusFilter": "Status",
+    "statusAll": "All",
+    "statusActive": "Active",
+    "statusInactive": "Deactivated",
+    "activeCount": "Active assets in the catalog: {{count}}",
+    "new": "New asset",
+    "newTitle": "New asset",
+    "editTitle": "Edit {{ticker}}",
+    "ticker": "Ticker",
+    "tickerHint": "B3 code, like PETR4 or MXRF11.",
+    "name": "Name",
+    "class": "Class",
+    "classHint": "The class can't be changed after the asset is created.",
+    "choose": "Choose…",
+    "create": "Add asset",
+    "save": "Save",
+    "created": "{{ticker}} added. Its quote history will be loaded in a few minutes.",
+    "updated": "{{ticker}} updated.",
+    "unchanged": "Nothing changed in {{ticker}}.",
+    "deactivated": "{{ticker}} deactivated.",
+    "reactivated": "{{ticker}} reactivated.",
+    "edit": "Edit",
+    "editLabel": "Edit {{ticker}}",
+    "deactivate": "Deactivate",
+    "deactivateLabel": "Deactivate {{ticker}}",
+    "reactivate": "Reactivate",
+    "reactivateLabel": "Reactivate {{ticker}}",
+    "deactivateConfirm": "{{ticker}} disappears from the search and can't be bought anymore. Anyone who already holds it still sees it and can sell.",
+    "confirmDeactivate": "Deactivate now",
+    "active": "Active",
+    "inactive": "Deactivated",
+    "empty": "No assets match these filters.",
+    "emptyCatalog": "No assets yet. The daily import brings the stocks and REITs from B3; you can also use \"New asset\".",
+    "listLabel": "Catalog assets",
+    "historyPending": "History: loading…",
+    "historyLoaded": "History from {{from}} to {{to}}",
+    "historyNotFound": "History: not found in the B3 files",
+    "historyWaitingCalendar": "Quote history for {{years}} is only loaded after the trading calendar for those years is published (in Calendar).",
+    "quotes": {
+      "lastRun": "Trading quotes: last collection {{when}}",
+      "never": "Trading quotes: no collection yet",
+      "whenToday": "at {{time}}",
+      "whenOther": "on {{date}} at {{time}}",
+      "usage": "every {{interval}} min · {{used}} of {{quota}} requests in the brapi cycle",
+      "exhausted": "The brapi quota ran out: quotes come back {{when}}.",
+      "exhaustedUnknown": "The brapi quota ran out: quotes come back when it renews.",
+      "slower": "So the quota lasts until the end of the cycle, quotes are fetched every {{interval}} minutes.",
+      "lastFailed": "The last collection had failures. The details are in the run log.",
+      "free": "every {{interval}} min · brapi list, no quota used"
+    },
+    "pendingReviewCount": "Classification to review: {{count}}",
+    "reviewFilter": "Classification",
+    "reviewAll": "All",
+    "reviewPending": "To review",
+    "reviewBadge": "Classification to review",
+    "autoDeactivated": "Deactivated automatically: no trades on B3 since {{date}}",
+    "autoDeactivatedNever": "Deactivated automatically: no trades on B3 in the last 3 months",
+    "importedOn": "Imported from B3 on {{date}}.",
+    "importedPending": "The classification was suggested by the import: check the sector or segment.",
+    "confirmClassification": "Confirm classification",
+    "confirmed": "{{ticker}} classification confirmed.",
+    "import": {
+      "never": "B3 import: none yet",
+      "lastRun": "B3 import {{when}} · new: {{created}} · deactivated: {{deactivated}} · reactivated: {{reactivated}}",
+      "failed": "The last import failed: the brapi list did not respond. The catalog did not change; it runs again at the next scheduled time.",
+      "b3Behind": "The B3 files were late: nobody was deactivated in this import."
+    }
+  },
+  "tasks": {
+    "title": "Data tasks",
+    "subtitle": "The tasks that bring data into the app: how the last run of each one went, the history with its errors and the button to run it now.",
+    "back": "Back to home",
+    "loading": "Loading…",
+    "names": {
+      "calendario_b3": "Calendar from the B3 files",
+      "historico_retroativo": "History backfill",
+      "fechamento_diario": "Daily close",
+      "importacao_catalogo": "Catalog import",
+      "cdi_diario": "CDI",
+      "indices_b3": "B3 indexes (Ibovespa and IFIX)",
+      "investidor10": "Investidor10 (indicators and dividends)",
+      "eventos_b3": "Corporate events and sectors",
+      "cotacao_pregao": "Trading session quotes",
+      "noticias_novas": "Latest news (Investidor10)",
+      "noticias_arquivo": "News archive (Investidor10)",
+      "noticias_feeds": "News from the curated sources"
+    },
+    "sources": {
+      "b3": "B3",
+      "brapi": "brapi",
+      "bcb": "Central Bank of Brazil",
+      "investidor10": "Investidor10",
+      "feeds": "RSS feeds of the curated sources"
+    },
+    "source_one": "Source: {{sources}}",
+    "source_other": "Sources: {{sources}}",
+    "schedule": {
+      "daily": "Every day at {{times}}",
+      "weekly": "Sundays at {{times}}",
+      "every": "Every {{minutes}} minutes",
+      "session": "Every {{minutes}} minutes during the trading session",
+      "sundaysAll": "(all assets on Sundays; only the new ones on other days)"
+    },
+    "status": {
+      "sucesso": "Success",
+      "parcial": "Partial",
+      "falha": "Failed",
+      "aguardando_publicacao": "Waiting for publication",
+      "cota_esgotada": "Quota exhausted",
+      "running": "Running"
+    },
+    "at": {
+      "today": "today at {{time}}",
+      "other": "{{date}} at {{time}}"
+    },
+    "runningSince": "since {{when}}",
+    "records_one": "{{formatted}} record",
+    "records_other": "{{formatted}} records",
+    "records_zero": "{{formatted}} records",
+    "assets_one": "{{formatted}} asset",
+    "assets_other": "{{formatted}} assets",
+    "assets_zero": "{{formatted}} assets",
+    "errors_one": "{{formatted}} error",
+    "errors_other": "{{formatted}} errors",
+    "errors_zero": "{{formatted}} errors",
+    "neverRan": "Has not run yet.",
+    "pending": "Request sent {{when}}, waiting for the processor.",
+    "pendingStopped": "It only runs once the processor is started.",
+    "runNow": "Run now",
+    "showHistory": "Show history",
+    "hideHistory": "Hide history",
+    "blocked": {
+      "running": "The task is running.",
+      "requested": "A request is already waiting.",
+      "source_disabled": "Collection turned off (no Investidor10 authorization)."
+    },
+    "requestSent": "Request sent: {{name}}. The processor picks it up within 15 seconds.",
+    "finished_one": "Run finished: {{name}}, {{status}}, {{formatted}} record.",
+    "finished_other": "Run finished: {{name}}, {{status}}, {{formatted}} records.",
+    "finished_zero": "Run finished: {{name}}, {{status}}, {{formatted}} records.",
+    "nothing": "{{name}}: nothing to do right now. {{reason}}",
+    "nothingReason": {
+      "calendario_b3": "No closed year to publish.",
+      "historico_retroativo": "No new asset without history.",
+      "fechamento_diario": "No trading day missing.",
+      "importacao_catalogo": "Nothing new to import.",
+      "cdi_diario": "No CDI missing.",
+      "indices_b3": "No close missing.",
+      "investidor10": "No new asset and none with an error on the last visit.",
+      "eventos_b3": "Nothing to fetch right now.",
+      "cotacao_pregao": "Outside trading hours, or no quota left.",
+      "noticias_novas": "Nothing to fetch right now.",
+      "noticias_arquivo": "Nothing to fetch right now.",
+      "noticias_feeds": "No active curated source."
+    },
+    "processor": {
+      "title": "Processor",
+      "running": "Running, last seen {{since}}.",
+      "stoppedSince": "Stopped since {{when}}.",
+      "never": "Has not reported yet.",
+      "stoppedHint": "Without the processor, no task runs and no request is picked up. Start the processor on the server."
+    },
+    "historyTitle": "History: {{name}}",
+    "historyCount_one": "{{shown}} of {{total}} run",
+    "historyCount_other": "{{shown}} of {{total}} runs",
+    "errorsCount_one": "{{shown}} of {{total}} error",
+    "errorsCount_other": "{{shown}} of {{total}} errors",
+    "showMore": "Show more",
+    "columns": {
+      "started": "Start",
+      "status": "Status",
+      "numbers": "Records",
+      "details": "Details",
+      "errors": "Errors"
+    },
+    "period": "Period: {{from}} to {{to}}",
+    "periodDay": "Day: {{day}}",
+    "quota": "Requests: {{requests}} (quota: {{remaining}} of {{limit}})",
+    "requests": "Requests: {{formatted}}",
+    "requestedBy": "Requested by {{name}}",
+    "requestedByRemoved": "Requested by an account that was removed",
+    "showErrors_one": "See the error",
+    "showErrors_other": "See the {{formatted}} errors",
+    "hideErrors": "Hide the errors",
+    "yes": "yes",
+    "no": "no",
+    "totals": {
+      "created": "Created",
+      "deactivated": "Deactivated",
+      "reactivated": "Reactivated",
+      "logosSaved": "Logos downloaded",
+      "logosMissing": "Without logo",
+      "logoErrors": "Logo errors",
+      "notRecent": "Not traded in the last 3 months",
+      "outOfFormat": "Ticker out of format",
+      "mismatched": "Class differs between brapi and B3",
+      "b3Behind": "B3 file behind",
+      "published": "Years published",
+      "checked": "Years checked",
+      "classificacoes": "B3 classifications",
+      "sugestoes": "Suggestions changed",
+      "missing": "Assets missing from the list",
+      "missingTickers": "Missing from the list",
+      "visited": "Visited",
+      "collected": "Collected",
+      "noPage": "No page",
+      "layoutErrors": "Page without the table",
+      "failed": "Failed",
+      "stopped": "Stopped midway (403 or 429)",
+      "inSitemap": "New in the sitemap",
+      "archiveMissing": "Missing from the archive",
+      "changed": "Updated on the site",
+      "items": "Items in the feeds",
+      "saved": "Saved",
+      "gone": "Gone from the site (404)"
+    }
+  },
+  "news": {
+    "title": "News sources",
+    "subtitle": "The parent source (Investidor10) and the curated RSS or Atom sources. The worker collects new articles every 30 minutes.",
+    "loading": "Loading the sources…",
+    "parentDisabled": "Investidor10 collection is off (INVESTIDOR10_ENABLED=false); curated sources keep running.",
+    "archiveRunning": "Investidor10 archive: {{done}} of {{total}} articles (updated on {{date}}).",
+    "archiveDone": "Investidor10 archive complete: {{done}} of {{total}} articles (checked on {{date}}).",
+    "columns": {
+      "source": "Source",
+      "category": "Category",
+      "reliability": "Reliability",
+      "lastRun": "Last collection",
+      "news": "Articles",
+      "actions": "Actions"
+    },
+    "categories": {
+      "economia": "Economy",
+      "mercado": "Market",
+      "empresas": "Companies",
+      "internacional": "International"
+    },
+    "reliabilityValue": "{{value}} of 5",
+    "parentNote": "Parent source: can't be turned off",
+    "inactive": "Turned off",
+    "never": "Not collected yet",
+    "ok": "Succeeded",
+    "failed": "Failed",
+    "problem_one": "Problem: {{count}} failure in a row",
+    "problem_other": "Problem: {{count}} failures in a row",
+    "activate": "Turn on",
+    "deactivate": "Turn off",
+    "activateLabel": "Turn on the source {{name}}",
+    "deactivateLabel": "Turn off the source {{name}}",
+    "activated": "Source {{name}} turned on.",
+    "deactivated": "Source {{name}} turned off.",
+    "new": "New source",
+    "newTitle": "New curated source",
+    "fields": {
+      "name": "Name",
+      "url": "Feed address (RSS or Atom)",
+      "urlHint": "Public https addresses only. The feed is tested before saving.",
+      "category": "Category",
+      "reliability": "Reliability",
+      "reliabilityHint": "From 1 (barely reliable) to 5 (very reliable), by the team’s criteria.",
+      "choose": "Choose",
+      "license": "I checked that the source's license allows use in this project"
+    },
+    "save": "Test and save",
+    "testing": "Testing the feed…",
+    "cancel": "Cancel",
+    "created_one": "Source {{name}} saved: {{count}} article in the feed.",
+    "created_other": "Source {{name}} saved: {{count}} articles in the feed.",
+    "latest": {
+      "title": "Latest news",
+      "loading": "Loading the news…",
+      "linked": "Linked to an asset: {{linked}} of {{total}} articles.",
+      "empty": "No news collected yet.",
+      "assets": "Assets in the article",
+      "noLinks": "No linked asset",
+      "relevance": {
+        "principal": "Main",
+        "citado": "Mentioned",
+        "lista": "List"
+      }
+    }
+  },
+  "sentiment": {
+    "title": "News sentiment",
+    "definition": "The tone of each article for its main asset (with no main asset, for the Brazilian market). Positive: good news for holders of the asset. Negative: bad news. Neutral: informational, a schedule, or mixed opinions.",
+    "loading": "Loading the sentiment…",
+    "model": "Version in use",
+    "modelName": "{{name}} v{{number}}",
+    "models": {
+      "lexico": "Word list"
+    },
+    "noModel": "None yet: the task runner registers the version on its first classification.",
+    "classified": "Classified",
+    "classifiedValue": "{{classified}} of {{total}} articles",
+    "sample": "Labeled sample",
+    "sampleValue_zero": "None yet. Goal: {{goal}}.",
+    "sampleValue_one": "{{total}} article ({{tuning}} for tuning, {{test}} for testing). Goal: {{goal}}.",
+    "sampleValue_other": "{{total}} articles ({{tuning}} for tuning, {{test}} for testing). Goal: {{goal}}.",
+    "evaluation": "Last evaluation",
+    "evaluationValue_one": "Macro F1 {{f1}}, accuracy {{accuracy}}, on {{count}} test article ({{date}})",
+    "evaluationValue_other": "Macro F1 {{f1}}, accuracy {{accuracy}}, on {{count}} test articles ({{date}})",
+    "notEvaluated": "The version in use hasn't been evaluated yet.",
+    "visible": "Visible to users: the asset page shows the tone of each article.",
+    "hidden": {
+      "no_model": "Hidden from users: no version in use yet.",
+      "not_evaluated": "Hidden from users: the version in use hasn't been evaluated yet.",
+      "few_tests_one": "Hidden from users: the evaluation had {{count}} test article; the minimum is {{min}}.",
+      "few_tests_other": "Hidden from users: the evaluation had {{count}} test articles; the minimum is {{min}}.",
+      "low_score": "Hidden from users: macro F1 {{f1}}, below the minimum of {{minF1}}."
+    },
+    "matrix": {
+      "caption": "Hits and misses on the test articles",
+      "corner": "Team label",
+      "predicted": "Model: {{value}}",
+      "labeled": "{{value}}"
+    },
+    "evaluate": "Evaluate now",
+    "evaluating": "Evaluating…",
+    "evaluated": "Evaluation done and saved on the version.",
+    "values": {
+      "positive": "Positive",
+      "neutral": "Neutral",
+      "negative": "Negative"
+    },
+    "tag": "Tone: {{value}}",
+    "label": {
+      "title": "Label news",
+      "hint": "Read and pick the tone. The model's answer is hidden so it won't sway you. Keys: 1 positive, 2 neutral, 3 negative, 0 skip.",
+      "loading": "Fetching the next article…",
+      "done": "Every article has been labeled (or skipped).",
+      "principal": "Main asset: {{tickers}}. The tone is for it.",
+      "market": "No main asset: the tone is for the Brazilian market.",
+      "group": "Article tone",
+      "skip": "Skip",
+      "saved": "Label {{value}} saved."
+    },
+    "recent": {
+      "title": "Recently labeled",
+      "change": "Label for {{title}}",
+      "remove": "Remove",
+      "removeLabel": "Remove the label for {{title}}"
+    }
+  },
+  "report": {
+    "button": "Download report (PDF)",
+    "hint": "For the Performance period: {{period}}",
+    "customPeriod": "{{label}} ({{from}} to {{to}})",
+    "noEntries": "There are no entries for a report yet.",
+    "generating": "Generating the report…",
+    "saved": "Report saved in {{folder}}.",
+    "open": "Open",
+    "openLabel": "Open the report {{file}}",
+    "openFailed": "The system could not open the file. It is in {{folder}}.",
+    "failed": "Could not generate the report. Try again.",
+    "needsConnection": "Needs a connection: {{missing}}.",
+    "missing": {
+      "performance": "the performance for this period is not saved on this computer",
+      "positions": "the positions are not saved on this computer",
+      "statement": "the full statement is not saved on this computer"
+    },
+    "documentTitle": "{{name}} portfolio report",
+    "title": "Portfolio report",
+    "periodLabel": "Period",
+    "period": "{{from}} to {{to}} ({{label}})",
+    "generatedLabel": "Generated on",
+    "dataLabel": "Data",
+    "dataFrom": "From {{date}}, saved on this computer (offline)",
+    "summary": "Summary",
+    "evolution": "Evolution",
+    "equityDescription": "Equity from {{start}} on {{from}} to {{end}} on {{to}}; total invested at the end: {{invested}}.",
+    "returnDescription": "Return in the period: {{values}}.",
+    "positionsDate": "Positions and allocation on {{date}}, with each asset's latest price.",
+    "noPositions": "No assets in the portfolio.",
+    "allocation": {
+      "stock": "Sector",
+      "fii": "Segment",
+      "ofClass": "Of the class",
+      "ofTotal": "Of the portfolio",
+      "value": "Value"
+    },
+    "income": {
+      "title": "Income",
+      "received": "Received in the period",
+      "pending": "To receive"
+    },
+    "statement": {
+      "title": "Statement for the period",
+      "order": "From oldest to newest, with the balance after each entry.",
+      "empty": "No entries in the period.",
+      "reversed_one": "{{count}} reversed entry is not shown (it does not count in the balance).",
+      "reversed_other": "{{count}} reversed entries are not shown (they do not count in the balance)."
+    },
+    "notices": {
+      "title": "Notices",
+      "sources": "Sources: quotes and indexes from B3 and brapi, CDI from the Central Bank of Brazil and income from Investidor10 (authorized only for this academic project)."
+    },
+    "footer": {
+      "notice": "Educational simulation, not investment advice",
+      "page": "Page {{page}} of {{pages}}"
+    }
+  },
+  "alerts": {
+    "settings": {
+      "title": "Price move alerts",
+      "enabled": "Notify me when an asset in my portfolios rises or falls sharply during the day",
+      "threshold": "Minimum daily move",
+      "levels": {
+        "3": "{{percent}} (more alerts)",
+        "5": "{{percent}} (default)",
+        "10": "{{percent}} (extremes only)"
+      },
+      "hint": "Only while the app is open (it can be minimized), during trading hours. Quotes are delayed by up to {{delay}} minutes. Alerts follow your Windows notification settings."
+    },
+    "notice": {
+      "up": "{{ticker}} rose {{change}} today",
+      "down": "{{ticker}} fell {{change}} today",
+      "quote": "{{price}} at {{time}} (up to {{delay}} min delay)",
+      "portfolios_one": "Portfolio: {{names}}",
+      "portfolios_other": "Portfolios: {{names}}",
+      "more": "{{items}} and {{more}} more",
+      "groupUp": "{{total}} assets in your portfolios rose {{threshold}} or more today",
+      "groupDown": "{{total}} assets in your portfolios fell {{threshold}} or more today",
+      "groupMixed": "{{total}} assets in your portfolios moved {{threshold}} or more today"
+    }
+  }
+}

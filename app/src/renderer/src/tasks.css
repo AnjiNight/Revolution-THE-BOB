@@ -1,0 +1,352 @@
+/* ---------- Tarefas de dados (SPEC-011) ---------- */
+
+.tasks-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* O anúncio do pedido (enviado, terminado, nada a fazer): só ocupa espaço quando tem texto. */
+.task-notice:empty {
+  display: none;
+}
+
+/* ---------- O processador ---------- */
+
+.task-processor {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  line-height: 1.5;
+}
+
+.task-processor h2 {
+  margin: 0 0 0.15rem;
+  font-size: 1rem;
+}
+
+.task-processor p {
+  margin: 0;
+}
+
+.task-processor .field-hint {
+  margin-top: 0.35rem;
+}
+
+.task-processor-icon {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  font-size: 1.2rem;
+}
+
+.task-processor.is-running .task-processor-icon {
+  background: var(--accent-soft);
+  color: var(--ok);
+}
+
+/* Parado: é a primeira coisa que o colaborador precisa saber (âmbar, como os outros avisos). */
+.task-processor.is-stopped {
+  border-color: transparent;
+  border-left: 3px solid var(--warn);
+  background: var(--warn-soft);
+}
+
+.task-processor.is-stopped .task-processor-icon {
+  background: var(--surface);
+  color: var(--warn);
+}
+
+/* ---------- A lista das tarefas ---------- */
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  box-shadow: inset 3px 0 0 var(--tone, var(--border-strong));
+}
+
+.task-card.tone-ok {
+  --tone: var(--ok);
+}
+
+.task-card.tone-warn {
+  --tone: var(--warn);
+}
+
+.task-card.tone-error {
+  --tone: var(--error);
+}
+
+.task-card.tone-running {
+  --tone: var(--accent);
+}
+
+.task-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.task-meta {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.task-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin: 0;
+  font-size: 0.925rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-pending {
+  margin: 0;
+  color: var(--warn);
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.task-card .form-error {
+  margin: 0;
+}
+
+/* Recebem o foco depois do "Executar agora" (o botão fica desativado). */
+.task-pending:focus-visible,
+.task-card .form-error:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+/* ---------- A situação: ícone, texto e cor (RNF18) ---------- */
+
+.task-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.task-status svg {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.task-status.tone-ok {
+  background: var(--accent-soft);
+  color: var(--ok);
+}
+
+.task-status.tone-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.task-status.tone-error {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.task-status.tone-running {
+  background: var(--surface-sunken);
+  color: var(--accent);
+}
+
+.task-status.tone-running svg {
+  animation: task-spin 1.2s linear infinite;
+}
+
+@keyframes task-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-status.tone-running svg {
+    animation: none;
+  }
+}
+
+/* ---------- O histórico de uma tarefa ---------- */
+
+.task-history {
+  margin-top: 0.25rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+.task-history h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+}
+
+.task-history > .field-hint {
+  margin: 0.25rem 0 0.6rem;
+}
+
+.task-runs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.task-runs th {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.task-runs td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-runs td:first-child {
+  white-space: nowrap;
+}
+
+.task-run-actions {
+  text-align: right;
+}
+
+.task-run-actions .pill {
+  white-space: nowrap;
+}
+
+.task-errors-row > td {
+  padding: 0.25rem 0.6rem 0.9rem;
+  background: var(--surface-sunken);
+}
+
+/* ---------- Os erros de uma execução ---------- */
+
+.task-errors ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0.6rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-errors li {
+  display: grid;
+  /* A mesma largura em todas as linhas: os tickers e os dias ficam alinhados. */
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: 0.15rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.task-error-where {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.task-errors > .field-hint {
+  margin: 0 0 0.5rem;
+}
+
+/* ---------- Telas estreitas: as execuções viram cartões, com o rótulo na linha do valor ---------- */
+
+@media (max-width: 640px) {
+  .task-runs thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .task-runs,
+  .task-runs tbody,
+  .task-runs tr,
+  .task-runs td {
+    display: block;
+  }
+
+  .task-runs tr {
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .task-runs td {
+    padding: 0.2rem 0;
+    border: 0;
+  }
+
+  .task-runs td[data-label]::before {
+    content: attr(data-label);
+    margin-right: 0.5rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .task-runs td:first-child {
+    white-space: normal;
+  }
+
+  .task-run-actions {
+    text-align: left;
+  }
+
+  .task-runs .task-errors-row {
+    margin-top: -0.4rem;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    background: var(--surface-sunken);
+  }
+
+  .task-errors-row > td {
+    padding: 0;
+    background: none;
+  }
+
+  .task-errors li {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,144 @@
+import { describe, expect, it } from 'vitest';
+import { ConfigError, loadConfig } from './config.js';
+
+const base = {
+  DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
+  JWT_SECRET: 'segredo-de-teste-com-mais-de-32-caracteres',
+};
+
+describe('loadConfig (CA08)', () => {
+  it('usa valores padrão quando só DATABASE_URL e JWT_SECRET são informados', () => {
+    const config = loadConfig(base);
+    expect(config).toEqual({
+      env: 'development',
+      host: '127.0.0.1',
+      port: 3333,
+      logLevel: 'info',
+      databaseUrl: base.DATABASE_URL,
+      jwtSecret: base.JWT_SECRET,
+      accessTokenTtlMinutes: 15,
+      refreshTokenTtlDays: 30,
+      authRateLimitPerMinute: 10,
+      googleClientId: null,
+      smtp: null,
+      workerHeartbeatSeconds: 60,
+      b3CacheDir: '.cache/b3',
+      brapi: { token: null, monthlyQuota: 15_000, baseUrl: 'https://brapi.dev' },
+      bcbSgsBaseUrl: 'https://api.bcb.gov.br',
+      investidor10: { enabled: false, baseUrl: 'https://investidor10.com.br' },
+      b3ListedBaseUrl: 'https://sistemaswebb3-listados.b3.com.br',
+    });
+  });
+
+  it('Investidor10 só ligado de propósito (SPEC-041)', () => {
+    expect(loadConfig({ ...base, INVESTIDOR10_ENABLED: 'true' }).investidor10.enabled).toBe(true);
+    expect(() => loadConfig({ ...base, INVESTIDOR10_ENABLED: 'sim' })).toThrow(
+      /INVESTIDOR10_ENABLED/,
+    );
+  });
+
+  it('endereço da API SGS do Banco Central (SPEC-007)', () => {
+    expect(loadConfig({ ...base, BCB_SGS_BASE_URL: 'http://127.0.0.1:9998' }).bcbSgsBaseUrl).toBe(
+      'http://127.0.0.1:9998',
+    );
+    expect(() => loadConfig({ ...base, BCB_SGS_BASE_URL: 'api.bcb.gov.br' })).toThrow(
+      /BCB_SGS_BASE_URL/,
+    );
+  });
+
+  it('token, cota e endereço da brapi (SPEC-009)', () => {
+    const config = loadConfig({
+      ...base,
+      BRAPI_TOKEN: ' meu-token ',
+      BRAPI_MONTHLY_QUOTA: '150000',
+      BRAPI_BASE_URL: 'http://127.0.0.1:9999',
+    });
+    expect(config.brapi).toEqual({
+      token: 'meu-token',
+      monthlyQuota: 150_000,
+      baseUrl: 'http://127.0.0.1:9999',
+    });
+    expect(() => loadConfig({ ...base, BRAPI_MONTHLY_QUOTA: '0' })).toThrow(/BRAPI_MONTHLY_QUOTA/);
+    expect(() => loadConfig({ ...base, BRAPI_BASE_URL: 'brapi.dev' })).toThrow(/BRAPI_BASE_URL/);
+  });
+
+  it('pasta dos arquivos da B3 pode ser trocada (SPEC-008)', () => {
+    expect(loadConfig({ ...base, B3_CACHE_DIR: 'D:/b3' }).b3CacheDir).toBe('D:/b3');
+  });
+
+  it('converte números vindos de texto', () => {
+    const config = loadConfig({ ...base, PORT: '8080', WORKER_HEARTBEAT_SECONDS: '5' });
+    expect(config.port).toBe(8080);
+    expect(config.workerHeartbeatSeconds).toBe(5);
+  });
+
+  it('recusa configuração sem DATABASE_URL, explicando o motivo', () => {
+    expect(() => loadConfig({})).toThrow(ConfigError);
+    expect(() => loadConfig({})).toThrow(/DATABASE_URL/);
+  });
+
+  it('lista todos os problemas de uma vez', () => {
+    try {
+      loadConfig({ DATABASE_URL: 'mysql://x', PORT: '99999', NODE_ENV: 'staging' });
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigError);
+      const problems = (error as ConfigError).problems.join('\n');
+      expect(problems).toMatch(/DATABASE_URL/);
+      expect(problems).toMatch(/PORT/);
+      expect(problems).toMatch(/NODE_ENV/);
+      expect(problems).not.toMatch(/Invalid input/);
+    }
+  });
+
+  it('exige JWT_SECRET com pelo menos 32 caracteres', () => {
+    expect(() => loadConfig({ ...base, JWT_SECRET: 'curto' })).toThrow(/JWT_SECRET/);
+    expect(() => loadConfig({ DATABASE_URL: base.DATABASE_URL })).toThrow(/JWT_SECRET/);
+  });
+
+  it('liga o login com Google só quando GOOGLE_CLIENT_ID é informado', () => {
+    expect(loadConfig({ ...base, GOOGLE_CLIENT_ID: '' }).googleClientId).toBeNull();
+    expect(
+      loadConfig({ ...base, GOOGLE_CLIENT_ID: 'abc.apps.googleusercontent.com' }).googleClientId,
+    ).toBe('abc.apps.googleusercontent.com');
+  });
+
+  it('recusa o segredo de exemplo em produção', () => {
+    const exemplo = 'desenvolvimento-troque-este-segredo-em-producao';
+    expect(() => loadConfig({ ...base, JWT_SECRET: exemplo })).not.toThrow();
+    expect(() => loadConfig({ ...base, JWT_SECRET: exemplo, NODE_ENV: 'production' })).toThrow(
+      /produção/,
+    );
+  });
+
+  it('liga o envio de e-mail só com SMTP_HOST, com porta 587 por padrão (SPEC-004)', () => {
+    expect(loadConfig({ ...base, SMTP_HOST: '' }).smtp).toBeNull();
+    expect(
+      loadConfig({
+        ...base,
+        SMTP_HOST: 'localhost',
+        SMTP_PORT: '1025',
+        EMAIL_FROM: 'App <a@x.com>',
+      }).smtp,
+    ).toEqual({ host: 'localhost', port: 1025, user: null, password: null, from: 'App <a@x.com>' });
+    expect(
+      loadConfig({
+        ...base,
+        SMTP_HOST: 'smtp.exemplo.com',
+        SMTP_USER: 'conta',
+        SMTP_PASSWORD: 'senha',
+        EMAIL_FROM: 'a@x.com',
+      }).smtp,
+    ).toEqual({
+      host: 'smtp.exemplo.com',
+      port: 587,
+      user: 'conta',
+      password: 'senha',
+      from: 'a@x.com',
+    });
+  });
+
+  it('SMTP_HOST sem EMAIL_FROM impede o servidor de iniciar (CA12)', () => {
+    expect(() => loadConfig({ ...base, SMTP_HOST: 'localhost' })).toThrow(/EMAIL_FROM/);
+  });
+});

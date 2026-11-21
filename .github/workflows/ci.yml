@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [development, main]
+
+# O token da CI só lê o repositório.
+permissions:
+  contents: read
+
+# Um push novo no mesmo branch (ou no mesmo PR) cancela a execução anterior, que já ficou velha.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Lint, tipos, testes e build
+    runs-on: ubuntu-latest
+    # Cada job leva uns 2 minutos; um teste travado não segura a máquina pelas 6 horas do padrão.
+    timeout-minutes: 15
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  migracoes:
+    name: Banco real (migrações reversíveis e testes com PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      DATABASE_URL: postgresql://simulador:simulador@localhost:5432/simulador
+      TEST_DATABASE_URL: postgresql://simulador:simulador@localhost:5432/simulador
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: simulador
+          POSTGRES_PASSWORD: simulador
+          POSTGRES_DB: simulador
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U simulador"
+          --health-interval 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      # As migrações são escritas à mão (com down.sql): o banco que elas montam tem que ser igual
+      # ao schema.prisma, senão o Prisma do código e o banco discordam.
+      - name: As migrações batem com o schema.prisma
+        run: npm run db:check
+      - name: Testes com o banco real
+        run: npm test
+      - name: Reverter todas as migrações
+        run: |
+          for pasta in api/prisma/migrations/*/; do npm run db:rollback; done
+      - name: Aplicar de novo
+        run: npm run db:migrate

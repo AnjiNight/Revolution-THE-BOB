@@ -1,0 +1,202 @@
+import { z } from 'zod';
+
+const configSchema = z
+  .object({
+    NODE_ENV: z
+      .enum(['development', 'test', 'production'], {
+        error: 'NODE_ENV deve ser development, test ou production',
+      })
+      .default('development'),
+    HOST: z.string().min(1).default('127.0.0.1'),
+    PORT: z.coerce
+      .number({ error: 'PORT deve ser um número' })
+      .int({ error: 'PORT deve ser um número inteiro' })
+      .min(1, { error: 'PORT deve estar entre 1 e 65535' })
+      .max(65535, { error: 'PORT deve estar entre 1 e 65535' })
+      .default(3333),
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'], {
+        error: 'LOG_LEVEL deve ser fatal, error, warn, info, debug ou trace',
+      })
+      .default('info'),
+    DATABASE_URL: z
+      .string({ error: 'DATABASE_URL é obrigatória' })
+      .regex(/^postgres(ql)?:\/\//, 'DATABASE_URL deve começar com postgresql://'),
+    JWT_SECRET: z
+      .string({ error: 'JWT_SECRET é obrigatório' })
+      .min(32, { error: 'JWT_SECRET deve ter pelo menos 32 caracteres' }),
+    ACCESS_TOKEN_TTL_MINUTES: z.coerce
+      .number({ error: 'ACCESS_TOKEN_TTL_MINUTES deve ser um número' })
+      .int({ error: 'ACCESS_TOKEN_TTL_MINUTES deve ser um número inteiro' })
+      .min(1, { error: 'ACCESS_TOKEN_TTL_MINUTES deve ser maior que zero' })
+      .default(15),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce
+      .number({ error: 'REFRESH_TOKEN_TTL_DAYS deve ser um número' })
+      .int({ error: 'REFRESH_TOKEN_TTL_DAYS deve ser um número inteiro' })
+      .min(1, { error: 'REFRESH_TOKEN_TTL_DAYS deve ser maior que zero' })
+      .default(30),
+    AUTH_RATE_LIMIT_PER_MINUTE: z.coerce
+      .number({ error: 'AUTH_RATE_LIMIT_PER_MINUTE deve ser um número' })
+      .int({ error: 'AUTH_RATE_LIMIT_PER_MINUTE deve ser um número inteiro' })
+      .min(1, { error: 'AUTH_RATE_LIMIT_PER_MINUTE deve ser maior que zero' })
+      .default(10),
+    /** Client ID do app no Google (DA24). Sem ele, o login com Google fica desligado. */
+    GOOGLE_CLIENT_ID: z.string().trim().optional(),
+    /** Servidor SMTP (SPEC-004). Sem ele, a recuperação de senha fica desligada. */
+    SMTP_HOST: z.string().trim().optional(),
+    SMTP_PORT: z.coerce
+      .number({ error: 'SMTP_PORT deve ser um número' })
+      .int({ error: 'SMTP_PORT deve ser um número inteiro' })
+      .min(1, { error: 'SMTP_PORT deve estar entre 1 e 65535' })
+      .max(65535, { error: 'SMTP_PORT deve estar entre 1 e 65535' })
+      .default(587),
+    SMTP_USER: z.string().trim().optional(),
+    SMTP_PASSWORD: z.string().optional(),
+    /** Remetente dos e-mails, ex.: "Simulador de Investimentos <nao-responda@exemplo.com>". */
+    EMAIL_FROM: z.string().trim().optional(),
+    WORKER_HEARTBEAT_SECONDS: z.coerce
+      .number({ error: 'WORKER_HEARTBEAT_SECONDS deve ser um número' })
+      .int({ error: 'WORKER_HEARTBEAT_SECONDS deve ser um número inteiro' })
+      .min(1, { error: 'WORKER_HEARTBEAT_SECONDS deve ser maior que zero' })
+      .default(60),
+    /** Pasta onde o processador guarda os arquivos anuais da B3 de anos fechados (SPEC-008). */
+    B3_CACHE_DIR: z.string().trim().min(1).default('.cache/b3'),
+    /** Token da brapi (SPEC-009), pessoal. Sem ele, só os tickers de teste recebem cotação. */
+    BRAPI_TOKEN: z.string().trim().optional(),
+    /** Consultas por ciclo do plano, para quando a brapi não informa a cota (sem token). */
+    BRAPI_MONTHLY_QUOTA: z.coerce
+      .number({ error: 'BRAPI_MONTHLY_QUOTA deve ser um número' })
+      .int({ error: 'BRAPI_MONTHLY_QUOTA deve ser um número inteiro' })
+      .min(1, { error: 'BRAPI_MONTHLY_QUOTA deve ser maior que zero' })
+      .default(15_000),
+    /** Endereço da brapi; só muda nos testes de ponta a ponta. */
+    BRAPI_BASE_URL: z
+      .string()
+      .trim()
+      .regex(/^https?:\/\//, 'BRAPI_BASE_URL deve começar com http:// ou https://')
+      .default('https://brapi.dev'),
+    /** Endereço da API SGS do Banco Central (SPEC-007, CDI); só muda nos testes de ponta a ponta. */
+    BCB_SGS_BASE_URL: z
+      .string()
+      .trim()
+      .regex(/^https?:\/\//, 'BCB_SGS_BASE_URL deve começar com http:// ou https://')
+      .default('https://api.bcb.gov.br'),
+    /**
+     * SPEC-041: coleta do Investidor10, só com a autorização por escrito da equipe (uso acadêmico,
+     * válida até a apresentação). Desligado por padrão.
+     */
+    INVESTIDOR10_ENABLED: z
+      .enum(['true', 'false'], { error: 'INVESTIDOR10_ENABLED deve ser true ou false' })
+      .default('false'),
+    INVESTIDOR10_BASE_URL: z
+      .string()
+      .trim()
+      .regex(/^https?:\/\//, 'INVESTIDOR10_BASE_URL deve começar com http:// ou https://')
+      .default('https://investidor10.com.br'),
+    /** SPEC-042: página das empresas no site da B3 (eventos corporativos). */
+    B3_LISTED_BASE_URL: z
+      .string()
+      .trim()
+      .regex(/^https?:\/\//, 'B3_LISTED_BASE_URL deve começar com http:// ou https://')
+      .default('https://sistemaswebb3-listados.b3.com.br'),
+  })
+  .refine((c) => c.NODE_ENV !== 'production' || !c.JWT_SECRET.includes('troque'), {
+    error: 'o JWT_SECRET de exemplo não pode ser usado em produção',
+    path: ['JWT_SECRET'],
+  })
+  .refine((c) => !c.SMTP_HOST || Boolean(c.EMAIL_FROM), {
+    error: 'EMAIL_FROM é obrigatório quando SMTP_HOST está preenchido',
+    path: ['EMAIL_FROM'],
+  })
+  // SPEC-039 (RB23): sem e-mail, ninguém confirmaria a conta. Fora de produção, o servidor sobe
+  // sem SMTP, com o cadastro por senha e a recuperação de senha desligados.
+  .refine((c) => c.NODE_ENV !== 'production' || Boolean(c.SMTP_HOST), {
+    error: 'SMTP_HOST é obrigatório em produção (confirmação de e-mail)',
+    path: ['SMTP_HOST'],
+  });
+
+/** Envio de e-mail por SMTP (SPEC-004). */
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string | null;
+  password: string | null;
+  from: string;
+}
+
+export interface AppConfig {
+  env: 'development' | 'test' | 'production';
+  host: string;
+  port: number;
+  logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
+  databaseUrl: string;
+  jwtSecret: string;
+  accessTokenTtlMinutes: number;
+  refreshTokenTtlDays: number;
+  authRateLimitPerMinute: number;
+  googleClientId: string | null;
+  /** null quando o SMTP não está configurado: a recuperação de senha fica desligada. */
+  smtp: SmtpConfig | null;
+  workerHeartbeatSeconds: number;
+  b3CacheDir: string;
+  /** SPEC-009: cotações do pregão pela brapi. */
+  brapi: { token: string | null; monthlyQuota: number; baseUrl: string };
+  /** SPEC-007: série do CDI pela API SGS do Banco Central (sem token). */
+  bcbSgsBaseUrl: string;
+  /** SPEC-041: Investidor10, só ligado com a autorização (uso acadêmico). */
+  investidor10: { enabled: boolean; baseUrl: string };
+  /** SPEC-042: eventos corporativos pelo site da B3. */
+  b3ListedBaseUrl: string;
+}
+
+export class ConfigError extends Error {
+  constructor(public readonly problems: string[]) {
+    super(`Configuração inválida:\n${problems.map((p) => `  - ${p}`).join('\n')}`);
+    this.name = 'ConfigError';
+  }
+}
+
+/** Lê e valida a configuração. Lança ConfigError com todos os problemas encontrados. */
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  const parsed = configSchema.safeParse(env);
+  if (!parsed.success) {
+    throw new ConfigError(
+      parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
+    );
+  }
+  const c = parsed.data;
+  return {
+    env: c.NODE_ENV,
+    host: c.HOST,
+    port: c.PORT,
+    logLevel: c.LOG_LEVEL,
+    databaseUrl: c.DATABASE_URL,
+    jwtSecret: c.JWT_SECRET,
+    accessTokenTtlMinutes: c.ACCESS_TOKEN_TTL_MINUTES,
+    refreshTokenTtlDays: c.REFRESH_TOKEN_TTL_DAYS,
+    authRateLimitPerMinute: c.AUTH_RATE_LIMIT_PER_MINUTE,
+    googleClientId: c.GOOGLE_CLIENT_ID || null,
+    smtp: c.SMTP_HOST
+      ? {
+          host: c.SMTP_HOST,
+          port: c.SMTP_PORT,
+          user: c.SMTP_USER || null,
+          password: c.SMTP_PASSWORD || null,
+          from: c.EMAIL_FROM as string,
+        }
+      : null,
+    workerHeartbeatSeconds: c.WORKER_HEARTBEAT_SECONDS,
+    b3CacheDir: c.B3_CACHE_DIR,
+    brapi: {
+      token: c.BRAPI_TOKEN || null,
+      monthlyQuota: c.BRAPI_MONTHLY_QUOTA,
+      baseUrl: c.BRAPI_BASE_URL,
+    },
+    bcbSgsBaseUrl: c.BCB_SGS_BASE_URL,
+    investidor10: {
+      enabled: c.INVESTIDOR10_ENABLED === 'true',
+      baseUrl: c.INVESTIDOR10_BASE_URL,
+    },
+    b3ListedBaseUrl: c.B3_LISTED_BASE_URL,
+  };
+}

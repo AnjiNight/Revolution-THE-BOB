@@ -1,0 +1,223 @@
+import { describe, expect, it } from 'vitest';
+import type { StoredAsset } from './modules/asset-catalog/domain/asset.js';
+import type { LatestIntradayQuote } from './modules/market-data/application/ports.js';
+import { portfolioMarket } from './portfolio-market.js';
+
+const asset: StoredAsset = {
+  id: 'a1',
+  ticker: 'PETR4',
+  name: 'Petrobras PN',
+  assetClass: 'stock',
+  sector: 'petroleo_gas_biocombustiveis',
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
+  deactivatedAt: null,
+  origin: 'import',
+  classificationReviewedAt: null,
+  autoDeactivated: false,
+};
+
+const intradayQuote: LatestIntradayQuote = {
+  assetId: 'a1',
+  at: new Date('2026-11-05T14:30:00Z'),
+  level: 'gratuito',
+  price: '31.200000',
+  open: null,
+  high: null,
+  low: null,
+  previousClose: null,
+  source: 'brapi',
+  storedPreviousClose: null,
+};
+
+describe('dados de mercado para a carteira (SPECs 014 e 016)', () => {
+  const levels: string[] = [];
+  const market = portfolioMarket({
+    assets: {
+      findById: (id) =>
+        Promise.resolve(
+          id === 'a1' ? asset : id === 'a2' ? { ...asset, id, deactivatedAt: new Date() } : null,
+        ),
+    },
+    intraday: {
+      latestOf: (level, assetId) => {
+        levels.push(level);
+        // SPEC-033: com o fechamento guardado da B3 (a4) e só com o que a fonte informou (a5).
+        if (assetId === 'a4') {
+          return Promise.resolve({
+            ...intradayQuote,
+            assetId,
+            previousClose: '29.00',
+            storedPreviousClose: '30.00',
+          });
+        }
+        if (assetId === 'a5') {
+          return Promise.resolve({ ...intradayQuote, assetId, previousClose: '32.50' });
+        }
+        return Promise.resolve(assetId === 'a1' ? intradayQuote : null);
+      },
+    },
+    history: {
+      quoteRange: (assetId) =>
+        Promise.resolve(assetId === 'a1' ? { from: '2016-01-04', to: '2026-11-04' } : null),
+      closeOn: (assetId, date) =>
+        Promise.resolve(assetId === 'a1' && date === '2019-03-15' ? '25.3' : null),
+      lastTradingDayBefore: (assetId, date) =>
+        Promise.resolve(assetId === 'a1' && date > '2019-03-13' ? '2019-03-13' : null),
+      closes: (assetId, from) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [{ date: '2019-03-15', close: '25.3' }].filter((c) => !from || c.date >= from)
+            : [],
+        ),
+      sessions: (assetId) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [
+                {
+                  date: '2026-11-04',
+                  open: '31',
+                  high: '32',
+                  low: '30',
+                  close: '31.50',
+                  trades: 10,
+                  volume: '1000.00',
+                },
+              ]
+            : [],
+        ),
+    },
+    events: {
+      forAsset: (assetId) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [
+                { kind: 'desdobramento', exDate: '2019-03-15', factor: '2' },
+                { kind: 'grupamento', exDate: '2021-06-01', factor: '0.1' },
+              ]
+            : [],
+        ),
+    },
+    income: {
+      enabled: true,
+      dividends: (assetId, since) =>
+        Promise.resolve(
+          assetId === 'a1'
+            ? [
+                {
+                  kind: 'jcp' as const,
+                  exDate: '2026-08-21',
+                  paymentDate: '2026-12-21',
+                  value: '0.2',
+                },
+                {
+                  kind: 'jcp' as const,
+                  exDate: '2026-08-21',
+                  paymentDate: '2026-12-21',
+                  value: '0.2',
+                },
+                { kind: 'dividendo' as const, exDate: '2019-01-02', paymentDate: null, value: '1' },
+              ].filter((row) => !since || row.exDate >= since)
+            : [],
+        ),
+      visitedAssets: () => Promise.resolve(new Set(['a1'])),
+    },
+    benchmarks: {
+      cdiRates: (from, to) =>
+        Promise.resolve(
+          [{ date: '2026-11-05', rate: '0.055131' }].filter((r) => r.date >= from && r.date <= to),
+        ),
+      indexCloses: (code, from, to) =>
+        Promise.resolve(
+          code === 'IBOV'
+            ? [{ date: '2026-11-06', close: '168498.45' }].filter(
+                (c) => c.date >= from && c.date <= to,
+              )
+            : [],
+        ),
+    },
+  });
+
+  it('SPEC-020: o CDI e os índices da B3 entre as datas', async () => {
+    expect(await market.cdiRates('2026-11-01', '2026-11-06')).toEqual([
+      { date: '2026-11-05', rate: '0.055131' },
+    ]);
+    expect(await market.indexCloses('IBOV', '2026-11-06', '2026-11-06')).toEqual([
+      { date: '2026-11-06', close: '168498.45' },
+    ]);
+    expect(await market.indexCloses('IFIX', '2026-11-01', '2026-11-06')).toEqual([]);
+  });
+
+  it('SPEC-016: fechamento do dia, último dia com negócio e eventos a partir da compra', async () => {
+    expect(await market.historyRange('a1')).toEqual({ from: '2016-01-04', to: '2026-11-04' });
+    expect(await market.historyRange('a3')).toBeNull();
+    expect(await market.closeOn('a1', '2019-03-15')).toBe('25.3');
+    expect(await market.closeOn('a1', '2019-03-14')).toBeNull();
+    expect(await market.lastTradingDayBefore('a1', '2019-03-14')).toBe('2019-03-13');
+    // A data com no dia da compra conta; SPEC-043: com o fechamento da data com.
+    expect(await market.corporateEvents('a1', '2019-03-15')).toEqual([
+      {
+        id: 'desdobramento:2019-03-15',
+        assetId: 'a1',
+        kind: 'desdobramento',
+        exDate: '2019-03-15',
+        factor: '2',
+        close: '25.3',
+      },
+      {
+        id: 'grupamento:2021-06-01',
+        assetId: 'a1',
+        kind: 'grupamento',
+        exDate: '2021-06-01',
+        factor: '0.1',
+        close: null,
+      },
+    ]);
+    expect(await market.corporateEvents('a1', '2021-06-02')).toEqual([]);
+  });
+
+  it('SPEC-043: proventos com id estável (iguais ganham número) e ativos visitados', async () => {
+    const income = await market.income('a1', '2020-01-01');
+    expect(income.map((row) => row.id)).toEqual([
+      'a1:jcp:2026-08-21:2026-12-21:0.2',
+      'a1:jcp:2026-08-21:2026-12-21:0.2:2',
+    ]);
+    expect(market.incomeEnabled).toBe(true);
+    expect(await market.incomeLoaded(['a1', 'a2'])).toEqual(new Set(['a1']));
+  });
+
+  it('o ativo com a situação; o desativado vem com active false; o que não existe, null', async () => {
+    expect(await market.asset('a1')).toEqual({
+      id: 'a1',
+      ticker: 'PETR4',
+      name: 'Petrobras PN',
+      assetClass: 'stock',
+      active: true,
+      // SPEC-021: o setor do catálogo, para a distribuição.
+      sector: 'petroleo_gas_biocombustiveis',
+    });
+    expect((await market.asset('a2'))?.active).toBe(false);
+    expect(await market.asset('a3')).toBeNull();
+  });
+
+  it('a cotação do pregão no nível pedido e o último fechamento', async () => {
+    expect(await market.latestQuote('a1', 'free')).toEqual({
+      price: '31.200000',
+      at: new Date('2026-11-05T14:30:00Z'),
+      level: 'free',
+      source: 'brapi',
+      // SPEC-033: sem fechamento anterior, sem variação.
+      change: null,
+    });
+    await market.latestQuote('a1', 'subscriber');
+    expect(levels).toEqual(['gratuito', 'assinante']);
+    expect(await market.latestQuote('a3', 'free')).toBeNull();
+    expect(await market.lastClose('a1')).toEqual({ date: '2026-11-04', close: '31.50' });
+    expect(await market.lastClose('a3')).toBeNull();
+  });
+
+  it('a variação do dia, como na lista Ativos: sobre o fechamento guardado, ou o da fonte (SPEC-033)', async () => {
+    expect((await market.latestQuote('a4', 'free'))?.change).toBe('4.00');
+    expect((await market.latestQuote('a5', 'free'))?.change).toBe('-4.00');
+  });
+});

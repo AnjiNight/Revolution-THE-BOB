@@ -1,4 +1,3 @@
-[Uploading personas.md…]()
 # Especificação do Sistema
 
 ## Personas
@@ -29,7 +28,7 @@ Lucas procura uma ferramenta que permita experimentar situações de investiment
 - Simular investimentos sem utilizar dinheiro real.
 - Criar uma carteira fictícia de investimentos.
 - Acompanhar a evolução do patrimônio simulado.
-- Comparar ações e investimentos de renda fixa.
+- Comparar ações e fundos imobiliários (FIIs).
 - Compreender como acontecimentos e notícias podem estar relacionados às variações dos ativos.
 - Visualizar possíveis cenários para seus investimentos.
 
@@ -76,7 +75,7 @@ Ele deseja descobrir o que aconteceria caso distribuísse o valor da seguinte ma
 
 - 50% em PETR4;
 - 20% em VALE3;
-- 30% em renda fixa indexada ao CDI.
+- 30% em um fundo imobiliário (FII).
 
 Lucas cria a carteira e o aplicativo apresenta a evolução histórica, rentabilidade e composição do patrimônio.
 
@@ -166,7 +165,7 @@ Mariana consulta as notícias relacionadas a PETR4, observa o histórico do ativ
 
 **Cenário B**
 - reduz a exposição ao setor de petróleo;
-- aumenta a participação em renda fixa.
+- aumenta a participação em fundos imobiliários (FIIs).
 
 O aplicativo apresenta os resultados das duas estratégias para que Mariana possa compará-las.
 
@@ -176,11 +175,11 @@ Mariana considera que o aplicativo resolveu seu problema quando consegue testar 
 
 ---
 
-### P03 — Administrador da Plataforma
+### P03 — Colaborador da Plataforma
 
 **Nome fictício:** André Martins  
 **Idade:** 29 anos  
-**Ocupação:** Administrador do sistema  
+**Ocupação:** Colaborador da equipe (administração do sistema)  
 **Conhecimento financeiro:** Intermediário  
 **Conhecimento técnico:** Avançado  
 
@@ -254,7 +253,7 @@ André considera que o sistema atende sua necessidade quando consegue identifica
 |---|---|---|---|
 | P01 | Lucas Ferreira | Investidor iniciante | Aprender e experimentar investimentos sem utilizar dinheiro real |
 | P02 | Mariana Costa | Investidora intermediária | Testar e comparar diferentes estratégias e cenários |
-| P03 | André Martins | Administrador | Garantir disponibilidade e qualidade dos dados da plataforma |
+| P03 | André Martins | Colaborador | Garantir disponibilidade e qualidade dos dados da plataforma |
 
 ---
 

@@ -1,0 +1,1454 @@
+/* Carteiras (SPEC-012). */
+
+.portfolio-new {
+  margin-bottom: 1.5rem;
+}
+
+.portfolio-types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.portfolio-types legend {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.type-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.35));
+  border-radius: 14px;
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.type-card.is-selected {
+  border-color: var(--accent, currentColor);
+  box-shadow: 0 0 0 1px var(--accent, currentColor);
+}
+
+.type-card:focus-within {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: 2px;
+}
+
+/* O rádio fica acessível pelo teclado, mas o cartão inteiro é o alvo do clique. */
+.type-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.type-card-title {
+  font-weight: 650;
+}
+
+.type-card-text {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.portfolio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portfolio-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.25));
+  border-radius: 16px;
+}
+
+.portfolio-row .danger-zone {
+  flex-basis: 100%;
+}
+
+button.link.portfolio-open {
+  font-size: 1.05rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.portfolio-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.portfolio-type {
+  font-weight: 600;
+}
+
+.portfolio-type-historical {
+  color: var(--warn);
+}
+
+.portfolio-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.portfolio-rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 20rem;
+}
+
+.portfolio-rename input {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.portfolio-rename .field-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.portfolio-page .portfolio-meta {
+  font-size: 0.95rem;
+}
+
+/* ---------- Caixa (SPEC-013) ---------- */
+
+/* Campo de dinheiro: "R$" fixo dentro do campo, valor alinhado com números de mesma largura. */
+.money-input {
+  position: relative;
+}
+
+.money-prefix {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.money-input input {
+  padding-left: 2.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-panel {
+  margin: 1.5rem 0;
+}
+
+.cash-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cash-head h2 {
+  margin: 0;
+}
+
+.cash-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.5rem 0 0;
+}
+
+.cash-balance span {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.cash-balance strong {
+  font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.cash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cash-form {
+  margin-top: 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-sunken);
+}
+
+.cash-form h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.cash-form input {
+  background: var(--surface);
+}
+
+.cash-confirm {
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.cash-confirm-question {
+  margin: 0 0 0.35rem;
+  font-weight: 650;
+}
+
+.cash-panel .form-success {
+  margin-top: 1rem;
+}
+
+.cash-statement-block {
+  margin-top: 1.5rem;
+}
+
+.cash-statement-block h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.cash-statement {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.925rem;
+}
+
+.cash-statement th {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.cash-statement td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.cash-statement .cash-number {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cash-statement .cash-deposit {
+  color: var(--ok);
+}
+
+.cash-trade {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------- Estorno (SPEC-015) ---------- */
+
+/* Riscado e com o "Estornado em…" escrito embaixo: a aparência nunca é o único sinal (RNF18). */
+.cash-statement .is-reversed .cash-type,
+.cash-statement .is-reversed .cash-trade,
+.cash-statement .is-reversed .cash-amount {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.cash-reversed {
+  display: block;
+  color: var(--warn);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.cash-statement .cash-actions-cell {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cash-statement .reversal-row td {
+  padding: 0.25rem 0 0.75rem;
+}
+
+/* ---------- Posições e compra e venda (SPEC-014) ---------- */
+
+.positions-panel {
+  margin: 1.5rem 0;
+}
+
+.positions-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+.positions-totals div {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.positions-totals dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.positions-totals dd {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.positions-scroll {
+  margin-top: 1.25rem;
+  overflow-x: auto;
+}
+
+/* Em janela média, as posições já viram cartões: são 7 colunas. */
+@media (max-width: 860px) {
+  .positions-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .positions-table,
+  .positions-table tbody,
+  .positions-table tr,
+  .positions-table td {
+    display: block;
+  }
+
+  .positions-table tr {
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .positions-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    border: 0;
+  }
+
+  .positions-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .positions-table td:first-child {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+
+  .positions-table td:first-child::before,
+  .positions-table .position-actions::before {
+    content: none;
+  }
+
+  .positions-table .position-actions {
+    justify-content: flex-end;
+  }
+}
+
+button.link.position-ticker {
+  font-weight: 650;
+}
+
+.position-name,
+.position-when {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.position-price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.position-actions {
+  text-align: right;
+}
+
+.positions-table .quote-change.is-up {
+  color: var(--ok);
+}
+
+.positions-table .quote-change.is-down {
+  color: var(--error);
+}
+
+.trade-form {
+  margin-top: 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-sunken);
+}
+
+.trade-form h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.trade-form input {
+  background: var(--surface);
+}
+
+.trade-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Cada resultado é um botão, mas sem a cara do botão principal do app (styles.css): alinhado à
+ * esquerda, sem margem em cima e sem o fundo verde ao passar o mouse, só a borda.
+ */
+.trade-results button.trade-result {
+  justify-content: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+}
+
+.trade-results button.trade-result:hover:not(:disabled),
+.trade-results button.trade-result:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.trade-results button.trade-result strong {
+  flex: 0 0 4.5rem;
+  font-weight: 650;
+}
+
+.trade-results button.trade-result span:not(.asset-logo) {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.trade-asset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.trade-asset p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  margin: 0;
+}
+
+.trade-asset p > span:not(.asset-logo) {
+  color: var(--muted);
+}
+
+.trade-quote {
+  margin: 0.75rem 0;
+}
+
+.trade-price {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-blocked {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid var(--warn);
+  border-radius: 12px;
+  background: var(--warn-soft);
+}
+
+.trade-quantity {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.trade-quantity input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-by-value {
+  margin: 0.75rem 0;
+}
+
+.trade-fits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+}
+
+.trade-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin: 1rem 0 0.25rem;
+}
+
+.trade-summary dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.trade-summary dd {
+  margin: 0.15rem 0 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-summary .is-negative {
+  color: var(--error);
+}
+
+.trade-costs {
+  margin-bottom: 0.75rem;
+}
+
+.trade-changed {
+  margin: 0 0 0.5rem;
+  color: var(--warn);
+  font-weight: 650;
+}
+
+/* SPEC-016: evento corporativo depois da compra (até a SPEC-043). */
+/* SPEC-043: evento já aplicado e proventos recebidos; informação, não alerta. */
+.position-event {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.cash-pending {
+  margin-top: 1rem;
+}
+
+.cash-pending h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.cash-pending ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+/* "Calcular por valor": em reais ou em % do caixa. */
+.trade-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0 0.5rem;
+  padding: 0;
+  border: 0;
+}
+
+.trade-mode legend {
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.trade-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.percent-input input {
+  padding-right: 2.2rem;
+  padding-left: 0.85rem;
+}
+
+.percent-suffix {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.asset-buy-type {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.asset-buy {
+  margin: 0 0 1.25rem;
+}
+
+.asset-buy-choose ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------- Janela estreita (até 480px) ---------- */
+
+@media (max-width: 640px) {
+  .portfolio-types {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portfolio-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cash-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* O extrato vira cartões: cada célula com o nome da coluna ao lado. */
+  .cash-statement thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .cash-statement,
+  .cash-statement tbody,
+  .cash-statement tr,
+  .cash-statement td {
+    display: block;
+  }
+
+  .cash-statement tr {
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .cash-statement td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    border: 0;
+  }
+
+  .cash-statement td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .cash-statement .cash-number {
+    text-align: right;
+  }
+
+  .cash-statement .cash-actions-cell {
+    justify-content: flex-end;
+    width: auto;
+  }
+
+  .cash-statement .cash-type-cell {
+    text-align: right;
+  }
+
+  .cash-statement .cash-actions-cell::before,
+  .cash-statement .reversal-row td::before {
+    content: none;
+  }
+
+  .positions-totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .position-price {
+    align-items: flex-end;
+  }
+
+  .position-actions {
+    justify-content: flex-end;
+  }
+
+  .position-actions::before {
+    content: none;
+  }
+}
+
+/* SPEC-019: rentabilidade e evolução patrimonial. */
+.performance-panel .period-buttons {
+  margin: 0.75rem 0;
+}
+
+.performance-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.performance-custom .field {
+  margin: 0;
+}
+
+.chart-invested {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.performance-legend {
+  display: flex;
+  gap: 1.25rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.performance-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 1.25rem;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  border-top: 2px solid var(--accent);
+}
+
+.performance-legend .legend-invested::before {
+  border-top: 2px dashed var(--muted);
+}
+
+/*
+ * SPEC-020: referências no mesmo período e gráfico em %. Uma só cor de destaque (a carteira); as
+ * referências se distinguem pelo traço, em tons neutros, não só pela cor.
+ */
+.performance-benchmarks {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.performance-benchmarks h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.performance-benchmarks ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.performance-benchmarks li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.benchmark-name {
+  font-weight: 600;
+}
+
+.benchmark-value,
+.benchmark-until,
+.benchmark-missing {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.benchmark-share {
+  margin: 0.4rem 0 0;
+  font-weight: 600;
+}
+
+.performance-legend {
+  flex-wrap: wrap;
+}
+
+/* O seletor "Em reais / Em %" e, ao lado, o botão "Comparar com os índices". */
+.chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.performance-panel .chart-toolbar .period-buttons {
+  margin: 0;
+}
+
+.compare-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Fora do grupo dos modos, o botão precisa de contorno para não parecer texto. */
+button.period-button.compare-toggle {
+  border: 1px solid var(--border);
+}
+
+/* Ligado: contorno e ícone na cor de destaque, além do fundo dos botões escolhidos. */
+button.period-button.compare-toggle[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+button.period-button.compare-toggle[aria-pressed='true'] svg {
+  color: var(--accent);
+}
+
+.compare-toggle svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.chart-zero {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.chart-benchmark {
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+}
+
+.chart-benchmark.is-cdi {
+  stroke: var(--muted);
+  stroke-dasharray: 6 4;
+}
+
+.chart-benchmark.is-ibov {
+  stroke: var(--text);
+  stroke-width: 2;
+  stroke-dasharray: 1 4;
+  stroke-linecap: round;
+}
+
+.chart-benchmark.is-ifix {
+  stroke: var(--border-strong);
+  stroke-dasharray: 10 3 2 3;
+}
+
+.performance-legend .legend-cdi::before {
+  border-top: 2px dashed var(--muted);
+}
+
+.performance-legend .legend-ibov::before {
+  border-top: 2px dotted var(--text);
+}
+
+.performance-legend .legend-ifix::before {
+  height: 2px;
+  border-top: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border-strong) 0 8px,
+    transparent 8px 10px,
+    var(--border-strong) 10px 12px,
+    transparent 12px 14px
+  );
+}
+
+.assets-note.is-warning svg {
+  color: var(--warn);
+}
+
+/*
+ * SPEC-021: distribuição por classe e setor. Barras só de desenho (o texto ao lado diz tudo);
+ * Ações na cor de destaque, FIIs no mesmo tom mais claro e Caixa neutro.
+ */
+.allocation-bar {
+  display: flex;
+  height: 0.75rem;
+  margin: 0.75rem 0 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.allocation-segment + .allocation-segment {
+  border-left: 2px solid var(--surface);
+}
+
+.allocation-segment.is-stock,
+.allocation-swatch.is-stock {
+  background: var(--accent);
+}
+
+.allocation-segment.is-fii,
+.allocation-swatch.is-fii {
+  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+}
+
+.allocation-segment.is-cash,
+.allocation-swatch.is-cash {
+  background: var(--border-strong);
+}
+
+.allocation-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-classes li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.allocation-swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  align-self: center;
+}
+
+.allocation-muted {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.allocation-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem 2rem;
+  margin: 0.5rem 0;
+}
+
+.allocation-group h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.allocation-sectors,
+.allocation-assets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.allocation-sector + .allocation-sector {
+  margin-top: 0.35rem;
+}
+
+button.allocation-sector-button {
+  display: grid;
+  /* O estilo global dos botões centraliza; aqui a linha ocupa a coluna inteira. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  align-items: stretch;
+  gap: 0.3rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-weight: 400;
+}
+
+button.allocation-sector-button:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.allocation-sector-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-sector-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.allocation-caret {
+  align-self: center;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--muted);
+  transition: transform 150ms var(--ease-out);
+}
+
+.allocation-sector-button[aria-expanded='true'] .allocation-caret {
+  transform: rotate(180deg);
+}
+
+.allocation-sector-bar {
+  display: block;
+  height: 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.allocation-sector-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.allocation-assets {
+  margin: 0.15rem 0 0.4rem 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--border);
+}
+
+.allocation-assets li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.2rem 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocation-ticker {
+  min-width: 4.5rem;
+  font-weight: 600;
+}
+
+/*
+ * SPEC-022: comparação de carteiras. Cada carteira tem uma cor e um marcador (círculo, quadrado,
+ * triângulo, losango), para não depender só da cor (RNF18); os índices seguem tracejados, em tons
+ * neutros, como na SPEC-020.
+ */
+.portfolio-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.portfolio-row.is-chosen {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.portfolio-choice {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.portfolio-choice input {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0.2rem 0 0;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+
+.portfolio-choice:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.portfolio-choice-name {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.compare-bar {
+  position: sticky;
+  bottom: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 32px -20px color-mix(in srgb, var(--text) 45%, transparent);
+}
+
+.compare-bar .field-hint,
+.compare-bar .form-actions {
+  margin: 0;
+}
+
+.comparison-page {
+  --series-1: var(--accent);
+  --series-2: #2f5fb3;
+  --series-3: var(--warn);
+  --series-4: #7a3e9d;
+}
+
+@media (prefers-color-scheme: dark) {
+  .comparison-page {
+    --series-2: #7ea6f2;
+    --series-4: #c591e6;
+  }
+}
+
+.is-series-1 {
+  color: var(--series-1);
+}
+
+.is-series-2 {
+  color: var(--series-2);
+}
+
+.is-series-3 {
+  color: var(--series-3);
+}
+
+.is-series-4 {
+  color: var(--series-4);
+}
+
+.comparison-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.comparison-marker {
+  fill: currentColor;
+  stroke: var(--surface);
+  stroke-width: 1.25;
+}
+
+.series-badge {
+  flex: none;
+  overflow: visible;
+}
+
+.comparison-portfolios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-portfolios li {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.comparison-portfolios .portfolio-type {
+  font-size: 0.85rem;
+}
+
+.comparison-panel {
+  margin: 1.5rem 0;
+}
+
+/* Ao trocar o período, os números de antes ficam esmaecidos até chegarem os novos. */
+.is-stale {
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+.comparison-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.comparison-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.comparison-tooltip {
+  align-items: flex-start;
+}
+
+.comparison-tooltip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* A 480 px, a tabela rola na horizontal dentro do próprio quadro. */
+.comparison-scroll {
+  max-width: 100%;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.comparison-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  vertical-align: top;
+}
+
+.comparison-table thead th {
+  min-width: 8.5rem;
+  font-weight: 650;
+}
+
+/* Datas e valores numa linha só: a tabela rola, em vez de quebrar "2 de jan. de 2025". */
+.comparison-table td {
+  white-space: nowrap;
+}
+
+.comparison-table th[scope='row'] {
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.comparison-column {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.comparison-table .quote-change {
+  font-size: inherit;
+}
+
+.comparison-started,
+.comparison-empty {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.comparison-empty {
+  min-width: 8rem;
+  font-size: 0.85rem;
+  white-space: normal;
+}
+
+.comparison-table tr.is-class th[scope='row'] {
+  color: var(--text);
+}
+
+.comparison-table tr.is-class td {
+  font-weight: 650;
+}
+
+.comparison-table tr.is-sector th[scope='row'] {
+  padding-left: 1.75rem;
+  font-weight: 500;
+}
+
+/* ---------- Nova carteira a partir de outra (SPEC-023) ---------- */
+
+.portfolio-origin .link {
+  font-size: inherit;
+}
+
+.portfolio-copied {
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+/* SPEC-027: fontes de notícias (Área do colaborador). O endereço quebra em qualquer ponto para a
+   tabela caber na tela sem rolagem lateral. */
+.news-sources-table {
+  table-layout: auto;
+}
+
+.news-sources-table .position-name {
+  overflow-wrap: anywhere;
+}
+
+.news-sources-table td:first-child {
+  min-width: 12rem;
+}
+
+.news-source-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 34rem;
+  margin-top: 1rem;
+}
+
+.news-source-form h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.news-sources-page .profile-panel > .pill {
+  margin-top: 1rem;
+}
+
+/* SPEC-028: as últimas notícias com os ativos vinculados (tela Notícias do colaborador). */
+.latest-news {
+  margin-top: 1.5rem;
+}
+
+.latest-news-list {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.latest-news-list > li {
+  display: grid;
+  gap: 0.25rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.latest-news-list a {
+  color: var(--text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.news-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A relevância vai no texto também (para leitores de tela); a aparência só reforça. */
+.news-link {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.news-link.is-principal {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.news-link.is-lista {
+  border-style: dashed;
+}
+
+.news-links-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

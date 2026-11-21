@@ -1,0 +1,80 @@
+import type { PrismaClient } from '../../../generated/prisma/client.js';
+import type {
+  NewRefreshToken,
+  RefreshTokenRepository,
+  StoredRefreshToken,
+  StoredSession,
+} from '../application/ports.js';
+import { summarizeSessions } from '../application/session-summary.js';
+
+export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async create(token: NewRefreshToken): Promise<void> {
+    await this.prisma.tokenRenovacao.create({ data: toRow(token) });
+  }
+
+  async findByHash(tokenHash: string): Promise<StoredRefreshToken | null> {
+    const row = await this.prisma.tokenRenovacao.findUnique({ where: { tokenHash } });
+    return row
+      ? {
+          id: row.id,
+          userId: row.usuarioId,
+          family: row.familia,
+          expiresAt: row.expiraEm,
+          revokedAt: row.revogadoEm,
+        }
+      : null;
+  }
+
+  async rotate(currentId: string, next: NewRefreshToken, at: Date): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.tokenRenovacao.updateMany({
+        where: { id: currentId, revogadoEm: null },
+        data: { revogadoEm: at },
+      });
+      if (count === 0) return false;
+      await tx.tokenRenovacao.create({ data: toRow(next) });
+      return true;
+    });
+  }
+
+  async revokeFamily(family: string, at: Date): Promise<void> {
+    await this.prisma.tokenRenovacao.updateMany({
+      where: { familia: family, revogadoEm: null },
+      data: { revogadoEm: at },
+    });
+  }
+
+  async revokeAllForUser(userId: string, at: Date): Promise<void> {
+    await this.prisma.tokenRenovacao.updateMany({
+      where: { usuarioId: userId, revogadoEm: null },
+      data: { revogadoEm: at },
+    });
+  }
+
+  async listSessions(userId: string): Promise<StoredSession[]> {
+    const rows = await this.prisma.tokenRenovacao.findMany({
+      where: { usuarioId: userId },
+      orderBy: { criadoEm: 'asc' },
+      select: { familia: true, criadoEm: true, expiraEm: true, revogadoEm: true },
+    });
+    return summarizeSessions(
+      rows.map((row) => ({
+        family: row.familia,
+        createdAt: row.criadoEm,
+        expiresAt: row.expiraEm,
+        revokedAt: row.revogadoEm,
+      })),
+    );
+  }
+}
+
+function toRow(token: NewRefreshToken) {
+  return {
+    usuarioId: token.userId,
+    tokenHash: token.tokenHash,
+    familia: token.family,
+    expiraEm: token.expiresAt,
+  };
+}

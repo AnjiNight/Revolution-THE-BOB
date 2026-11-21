@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: simulador
+      POSTGRES_PASSWORD: simulador
+      POSTGRES_DB: simulador
+    ports:
+      - '5432:5432'
+    volumes:
+      - dados-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U simulador']
+      interval: 5s
+      retries: 10
+
+  # SPEC-004: recebe os e-mails do servidor na própria máquina (nada sai para a internet).
+  # Caixa de entrada em http://localhost:8025; SMTP na porta 1025 (npm run mail:up).
+  mail:
+    image: axllent/mailpit:v1.31.3
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+volumes:
+  dados-postgres:

@@ -1,0 +1,244 @@
+import type {
+  AssetClass,
+  CashEntryType,
+  IsoDate,
+  MarketIndexCode,
+  SectorCode,
+  PortfolioType,
+  QuoteLevelCode,
+  TradeType,
+} from '@simulador/shared';
+import type { CdiRate } from '../../financial-calculation/benchmarks.js';
+import type { EventInput, IncomeInput } from '../../financial-calculation/corporate-actions.js';
+import type { DailyClose } from '../../financial-calculation/performance.js';
+import type { TradingCalendar } from '../../financial-calculation/trading-calendar.js';
+
+/** Aporte ou retirada como fica guardado (SPEC-013 §6). Valor em decimal com 2 casas. */
+export interface StoredCashEntry {
+  id: string;
+  portfolioId: string;
+  type: CashEntryType;
+  amount: string;
+  date: IsoDate;
+  recordedAt: Date;
+}
+
+export interface NewStoredCashEntry {
+  type: CashEntryType;
+  amount: string;
+  date: IsoDate;
+  recordedAt: Date;
+}
+
+/** Compra ou venda como fica guardada (SPEC-014 §6). Preço e total com 2 casas. */
+export interface StoredTrade {
+  id: string;
+  portfolioId: string;
+  assetId: string;
+  type: TradeType;
+  quantity: number;
+  price: string;
+  total: string;
+  date: IsoDate;
+  recordedAt: Date;
+  /** Ao vivo: horário e nível da cotação; histórica (SPEC-016): `null`, com o fechamento da B3. */
+  quotedAt: Date | null;
+  level: QuoteLevelCode | null;
+  source: 'brapi' | 'b3';
+}
+
+export type NewStoredTrade = Omit<StoredTrade, 'id' | 'portfolioId'>;
+
+/** Estorno de um lançamento (SPEC-015 §6): anula o original, que continua guardado. */
+export interface StoredReversal {
+  id: string;
+  portfolioId: string;
+  entryId: string;
+  entryKind: 'cash' | 'trade';
+  recordedAt: Date;
+}
+
+export type NewStoredReversal = Omit<StoredReversal, 'id' | 'portfolioId'>;
+
+/**
+ * Tudo o que mexe no caixa de uma carteira: aportes e retiradas, compras e vendas, e os estornos
+ * (SPEC-015), que tiram um desses das contas.
+ */
+export interface PortfolioLedger {
+  cash: StoredCashEntry[];
+  trades: StoredTrade[];
+  reversals: StoredReversal[];
+}
+
+/**
+ * Livro-razão da carteira (SPECs 013 e 014, DA09): só inclui. Não há como alterar nem apagar um
+ * lançamento (RB08); eles só saem junto com a carteira ou com a conta.
+ */
+export interface LedgerRepository {
+  /** Os lançamentos da carteira, em qualquer ordem (quem chama ordena pelo livro). */
+  ledger(portfolioId: string): Promise<PortfolioLedger>;
+  /** Os das carteiras pedidas, para a exportação. */
+  ledgers(portfolioIds: readonly string[]): Promise<Map<string, PortfolioLedger>>;
+  /**
+   * Trava a carteira, lê o livro dela e chama `decide`, que confere as regras com ele e devolve o
+   * lançamento novo (ou lança o erro). Grava antes de soltar a trava: dois pedidos ao mesmo tempo
+   * na mesma carteira são conferidos um depois do outro (SPEC-013 §4.2).
+   */
+  appendCashLocked(
+    portfolioId: string,
+    decide: (current: PortfolioLedger) => NewStoredCashEntry,
+  ): Promise<StoredCashEntry>;
+  /** O mesmo, para uma compra ou venda (SPEC-014). */
+  appendTradeLocked(
+    portfolioId: string,
+    decide: (current: PortfolioLedger) => NewStoredTrade,
+  ): Promise<StoredTrade>;
+  /** O mesmo, para um estorno (SPEC-015). */
+  appendReversalLocked(
+    portfolioId: string,
+    decide: (current: PortfolioLedger) => NewStoredReversal,
+  ): Promise<StoredReversal>;
+}
+
+/** Ativo do catálogo, como a carteira precisa dele (SPEC-014). */
+export interface MarketAsset {
+  id: string;
+  ticker: string;
+  name: string;
+  assetClass: AssetClass;
+  active: boolean;
+  /** SPEC-021: setor (ação) ou segmento (FII) do catálogo; sem ele, "Outros". */
+  sector?: SectorCode;
+}
+
+/** Cotação do pregão (SPEC-009): preço com até 6 casas e o horário da coleta. */
+export interface MarketQuote {
+  price: string;
+  at: Date;
+  level: QuoteLevelCode;
+  source: 'brapi';
+  /**
+   * SPEC-033: a variação do dia sobre o fechamento do pregão anterior, em %, com 2 casas (a mesma
+   * da lista Ativos, SPEC-009); `null` sem esse fechamento.
+   */
+  change?: string | null;
+}
+
+/**
+ * Catálogo e cotações (SPECs 006, 008 e 009), que os módulos Catálogo e Dados de Mercado fornecem.
+ * O `main.ts` liga as peças; a carteira não conhece esses módulos.
+ */
+export interface PortfolioMarket {
+  asset(assetId: string): Promise<MarketAsset | null>;
+  /** A última cotação do pregão no nível pedido (DA16). */
+  latestQuote(assetId: string, level: QuoteLevelCode): Promise<MarketQuote | null>;
+  /** O último fechamento guardado do histórico (SPEC-008), para avaliar sem cotação do pregão. */
+  lastClose(assetId: string): Promise<{ date: IsoDate; close: string } | null>;
+  /** SPEC-016: primeiro e último pregão da B3 guardados do ativo; `null` sem histórico. */
+  historyRange(assetId: string): Promise<{ from: IsoDate; to: IsoDate } | null>;
+  /** SPEC-016: o fechamento da B3 do dia (como publicado), ou `null` sem negócio nesse dia. */
+  closeOn(assetId: string, date: IsoDate): Promise<string | null>;
+  /** SPEC-016: o último dia com negócio antes da data, ou `null`. */
+  lastTradingDayBefore(assetId: string, date: IsoDate): Promise<IsoDate | null>;
+  /**
+   * SPEC-043: desdobramentos, grupamentos e bonificações (SPEC-042) com data com a partir da data,
+   * com o fechamento da B3 da data com (para vender as frações).
+   */
+  corporateEvents(assetId: string, from: IsoDate): Promise<EventInput[]>;
+  /**
+   * SPEC-043: proventos (SPEC-042) com data com a partir da data; vazio com o interruptor do
+   * Investidor10 desligado.
+   */
+  income(assetId: string, from: IsoDate): Promise<IncomeInput[]>;
+  /** SPEC-043: o interruptor `INVESTIDOR10_ENABLED` (SPEC-041). */
+  readonly incomeEnabled: boolean;
+  /** SPEC-043: dos ativos pedidos, os que o processador já visitou no Investidor10. */
+  incomeLoaded(assetIds: readonly string[]): Promise<Set<string>>;
+  /** SPEC-019: os fechamentos da B3 do ativo (como publicados) desde a data, em ordem. */
+  closesFrom(assetId: string, from: IsoDate): Promise<DailyClose[]>;
+  /** SPEC-020: as taxas do CDI (SPEC-007) entre as datas (inclusive), em ordem. */
+  cdiRates(from: IsoDate, to: IsoDate): Promise<CdiRate[]>;
+  /** SPEC-020: os fechamentos do índice da B3 entre as datas (inclusive), em ordem. */
+  indexCloses(code: MarketIndexCode, from: IsoDate, to: IsoDate): Promise<DailyClose[]>;
+}
+
+/** Carteira como fica guardada (SPEC-012 §6). */
+export interface StoredPortfolio {
+  id: string;
+  userId: string;
+  name: string;
+  type: PortfolioType;
+  startDate: IsoDate;
+  createdAt: Date;
+  updatedAt: Date;
+  /** SPEC-023: a carteira de que esta foi copiada (pode já não existir), ou `null`. */
+  copiedFromId: string | null;
+}
+
+/**
+ * SPEC-023: a cópia que o serviço decidiu, com a original travada: o nome e os lançamentos que
+ * entram (sem id nem carteira: o repositório grava com ids novos, na carteira nova).
+ */
+export interface NewStoredPortfolioCopy {
+  name: string;
+  nameKey: string;
+  at: Date;
+  cash: NewStoredCashEntry[];
+  trades: NewStoredTrade[];
+}
+
+export interface StoredPortfolioCopy {
+  portfolio: StoredPortfolio;
+  copied: { cashEntries: number; trades: number };
+}
+
+export interface NewStoredPortfolio {
+  userId: string;
+  name: string;
+  /** O nome sem maiúsculas nem acentos: único por usuário. */
+  nameKey: string;
+  type: PortfolioType;
+  startDate: IsoDate;
+  at: Date;
+  /** SPEC-013: "Valor inicial", gravado como primeiro aporte na mesma transação da carteira. */
+  initialDeposit?: NewStoredCashEntry;
+}
+
+export interface PortfolioRepository {
+  /** Do usuário, da mais recente para a mais antiga. */
+  listByUser(userId: string): Promise<StoredPortfolio[]>;
+  countByUser(userId: string): Promise<number>;
+  /** Qualquer dono; quem chama confere se é do usuário. */
+  findById(id: string): Promise<StoredPortfolio | null>;
+  /**
+   * Lança PortfolioNameInUseError se o usuário já tem a chave. Com `initialDeposit`, a carteira e o
+   * aporte são gravados juntos: se um falhar, nada fica.
+   */
+  create(portfolio: NewStoredPortfolio): Promise<StoredPortfolio>;
+  /** Lança PortfolioNameInUseError se o usuário já tem a chave. */
+  rename(id: string, name: string, nameKey: string, at: Date): Promise<StoredPortfolio>;
+  /**
+   * SPEC-023: trava a original, lê o livro dela e quantas carteiras o dono tem, e chama `decide`,
+   * que confere as regras e devolve o que copiar (ou lança o erro). Grava a carteira nova (mesmo
+   * dono, tipo e início da original, com `origem_id`) e os lançamentos copiados antes de soltar a
+   * trava: se algo falhar, nada fica. Lança PortfolioNameInUseError se o usuário já tem a chave e
+   * PortfolioNotFoundError se a original sumiu enquanto o pedido chegava.
+   */
+  copyLocked(
+    sourceId: string,
+    decide: (current: PortfolioLedger, count: number) => NewStoredPortfolioCopy,
+  ): Promise<StoredPortfolioCopy>;
+  /** SPEC-023: o nome atual das carteiras pedidas (as que ainda existem), para `copiedFrom`. */
+  namesOf(ids: readonly string[]): Promise<Map<string, string>>;
+  /**
+   * Apaga a carteira e os lançamentos dela e grava o registro da exclusão (com quantos lançamentos
+   * havia), sem dado pessoal, numa transação só.
+   */
+  delete(id: string, at: Date): Promise<void>;
+}
+
+/** Calendário de pregão (SPEC-005), que o módulo Dados de Mercado fornece. */
+export interface PortfolioCalendar {
+  /** Lança CalendarNotPublishedError ao perguntar de um ano não publicado. */
+  tradingCalendar(fromYear: number, toYear: number): Promise<TradingCalendar>;
+}
