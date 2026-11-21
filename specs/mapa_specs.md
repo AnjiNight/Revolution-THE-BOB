@@ -75,13 +75,12 @@
 | 1.65 | SPEC-029 aprovada (Nicoly, 17/11/2026, "Aprovar e fazer") e implementada: seção Notícias na ficha do ativo (10 por vez, listas num grupo fechado), marcadores no gráfico com clique, toque e teclado (N, Shift+N, Enter), painel do pregão com a variação no pregão e 5 pregões depois, e as duas leituras na cópia local (SPEC-032 §5.1 atualizada). A conferência com dados reais achou e corrigiu a leitura dos horários com 3 horas a menos num PostgreSQL fora de UTC (a conexão agora é sempre UTC) |
 | 1.66 | SPEC-038 detalhada ([SPEC-038.md](SPEC-038.md)) a pedido do Luís, aguardando a aprovação: botão "Baixar relatório (PDF)" na tela da carteira, com o período da Rentabilidade; o relatório é a fotografia da tela (resumo com o CDI, o Ibovespa e o IFIX, os dois gráficos, posições e distribuição de hoje, proventos, extrato do período do mais antigo para o mais recente, sem os estornados, e os avisos), em A4 e tema claro, no idioma da interface, sem dado pessoal, gerado pelo próprio app (`printToPDF` do Electron) e gravado com "Salvar como"; proposta para a OPEN-38 |
 | 1.67 | SPEC-038 aprovada (Luís, 17/11/2026, com as recomendações) e implementada: botão "Baixar relatório (PDF)" ao lado de "Copiar carteira", com o período da Rentabilidade; o documento só existe na impressão (cabeçalho, resumo com o CDI, o Ibovespa e o IFIX, os dois gráficos, posições e distribuição de hoje, proventos, extrato do período e avisos), em A4 e tema claro, PDF marcado com rodapé numerado, gerado pelo `printToPDF` do Electron e gravado com "Salvar como"; sem conexão, sai com os dados guardados e a data deles. OPEN-38 resolvida |
-<<<<<<< Updated upstream
 | 1.68 | SPEC-033 detalhada ([SPEC-033.md](SPEC-033.md)) a pedido do Luís, aguardando a aprovação: aviso do Windows quando um ativo em posição nas carteiras (ao vivo e históricas) sobe ou cai 5% ou mais no dia (3% ou 10% à escolha em Meu perfil, ou desligado), com o app aberto ou minimizado, durante o pregão; um aviso por ativo por dia em cada sentido, agrupado acima de 3; o clique abre a ficha; a escolha fica neste computador; nova rota de leitura `GET /api/portfolios/day-changes`, sem mudança no banco; nenhum aviso com o app fechado. Proposta para a OPEN-35 |
 | 1.69 | SPEC-033 aprovada (Luís, 17/11/2026, com as recomendações) e implementada: aviso do Windows, com o app aberto ou minimizado, quando um ativo em posição nas carteiras (ao vivo e históricas) sobe ou cai a partir do limiar escolhido em Meu perfil (5% por padrão, 3% ou 10%, ou desligado); a interface lê a rota `GET /api/portfolios/day-changes` a cada 5 minutos nos dias úteis das 10:30 às 18:30, e não lê sem conexão; um aviso por ativo por dia em cada sentido, agrupado acima de 3, sem valores da carteira; o clique abre a ficha (ou Carteiras, no agrupado); ao sair da conta, os avisos saem da Central de Ações. OPEN-35 resolvida para o RF35 |
-=======
-| 1.68 | SPEC-044 detalhada ([SPEC-044.md](SPEC-044.md)) pela Nicoly com o Claude, aguardando a aprovação: sentimento positivo, neutro ou negativo de cada notícia, com a versão do modelo; v1 por regras com dicionário de termos do mercado, no processador; amostra rotulada pela equipe na tela do colaborador, avaliação separada no tempo (F1 macro) e o tom na ficha do ativo só com F1 de 0,60 ou mais em 60 notícias de teste; proposta para a OPEN-30 |
-| 1.69 | SPEC-044 aprovada (Nicoly, 19/11/2026, "Aprovar e fazer") e implementada: dicionário de termos (`lexico` v1) no processador, logo depois do vínculo e a cada 30 minutos; versões do modelo no banco, com a nota; na tela Notícias do colaborador, rotular (teclas 1, 2, 3 e 0), trocar e apagar rótulos e "Avaliar agora" com a tabela de erros; na ficha, o tom em cada notícia, as contagens do pregão e a nota de caráter educacional, só com a versão aprovada. As 261 notícias reais classificadas em 0,3 s (79 positivas, 101 neutras, 81 negativas). OPEN-30 resolvida; OPEN-31 em parte; DA20 e `decisoes_tecnicas.md` atualizados |
->>>>>>> Stashed changes
+| 1.70 | SPEC-044 detalhada ([SPEC-044.md](SPEC-044.md)) pela Nicoly com o Claude, aguardando a aprovação: sentimento positivo, neutro ou negativo de cada notícia, com a versão do modelo; v1 por regras com dicionário de termos do mercado, no processador; amostra rotulada pela equipe na tela do colaborador, avaliação separada no tempo (F1 macro) e o tom na ficha do ativo só com F1 de 0,60 ou mais em 60 notícias de teste; proposta para a OPEN-30 |
+| 1.71 | SPEC-044 aprovada (Nicoly, 19/11/2026, "Aprovar e fazer") e implementada: dicionário de termos (`lexico` v1) no processador, logo depois do vínculo e a cada 30 minutos; versões do modelo no banco, com a nota; na tela Notícias do colaborador, rotular (teclas 1, 2, 3 e 0), trocar e apagar rótulos e "Avaliar agora" com a tabela de erros; na ficha, o tom em cada notícia, as contagens do pregão e a nota de caráter educacional, só com a versão aprovada. As 261 notícias reais classificadas em 0,3 s (79 positivas, 101 neutras, 81 negativas). OPEN-30 resolvida; OPEN-31 em parte; DA20 e `decisoes_tecnicas.md` atualizados |
+| 1.72 | Junção de 21/11/2026: tiradas as marcas de conflito que tinham ficado no histórico; as linhas da SPEC-044, que repetiam 1.68 e 1.69, passam a 1.70 e 1.71 |
+| 1.73 | SPEC-045 detalhada ([SPEC-045.md](SPEC-045.md)) a pedido da Nicoly, aprovada por ela em 21/11/2026, como escrita ("Aprovo, implemente"), e implementada: botão Visão do usuário no menu do colaborador, com as telas do usuário, a faixa de aviso e carteiras de teste da própria conta (as rotas de carteira aceitam o colaborador; a verificação de dono não muda). Novo RF44 (requisitos v1.14); muda a regra "Quem tem carteira" da SPEC-012 |
 ---
 
 ## 0. Como ler este documento
@@ -1165,6 +1164,24 @@ Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
 | Depende de | SPEC-001 e as Specs com tela já entregues |
 | Posição | Os textos já ficam fora do código desde a SPEC-001 (RNF20); a tradução completa só faz sentido com as telas prontas |
 | Em aberto | — (OPEN-45 resolvida) |
+| Prioridade derivada | Could |
+
+#### SPEC-045 — Visão do usuário para o colaborador
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O colaborador alterna para a Visão do usuário e usa as telas do usuário (Início, Ativos, Carteiras) com carteiras de teste da própria conta, sem ver dados de usuários reais |
+| Valor | **Colaborador (P03):** confere como os dados aparecem para o usuário sem criar outra conta |
+| RF | RF44 |
+| RB | RB03 |
+| RNF | RNF04, RNF18, RNF20 |
+| Caso de uso / fluxo | Cenário da P03 (OPEN-43) |
+| Entidades | USUARIO, CARTEIRA (sem mudança no modelo) |
+| Drivers | QA05, QA12 |
+| ADRs | DA12, DA13 |
+| Depende de | SPEC-002, SPEC-012 a SPEC-023, SPEC-043 |
+| Posição | Pedida em 21/11/2026, com as telas do usuário prontas |
+| Em aberto | Plano na Visão do usuário (com a SPEC-025/026) |
 | Prioridade derivada | Could |
 
 #### SPEC-036 — Desbloqueio por biometria

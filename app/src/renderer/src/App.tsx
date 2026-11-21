@@ -77,6 +77,11 @@ type View =
 export function App() {
   const { t } = useTranslation();
   const [view, setViewState] = useState<View>({ kind: 'loading' });
+  /**
+   * SPEC-045: o colaborador está na Visão do usuário. Só na tela: o servidor autoriza pelo dono de
+   * cada carteira. Não fica guardado entre as sessões: ao entrar, ele começa na Área do colaborador.
+   */
+  const [userView, setUserView] = useState(false);
   // SPEC-032: o modo consulta, a data da leitura guardada mais antiga da tela atual e o aviso de
   // que a conexão voltou.
   const [offline, setOffline] = useState(false);
@@ -166,18 +171,21 @@ export function App() {
   }, [noticeUser, setView]);
 
   const signedIn = (user: PublicUser) => {
+    setUserView(false);
     setOffline(false);
     setReconnected(false);
     setView({ kind: 'home', user });
   };
   const logout = () => {
     void window.api.auth.logout().finally(() => {
+      setUserView(false);
       setOffline(false);
       setReconnected(false);
       setView({ kind: 'login' });
     });
   };
   const sessionExpired = useCallback(() => {
+    setUserView(false);
     setOffline(false);
     setView({ kind: 'login', notice: 'invalid_refresh_token' });
   }, [setView]);
@@ -197,6 +205,15 @@ export function App() {
     view.kind === 'tasks'
   ) {
     const { user } = view;
+    /** SPEC-045: o papel das telas; na Visão do usuário, o colaborador vê as do usuário. */
+    const inUserView = userView && user.role === 'collaborator';
+    const shownRole: PublicUser['role'] = inUserView ? 'user' : user.role;
+    const toggleUserView = () => {
+      setUserView(!inUserView);
+      setView({ kind: 'home', user });
+      // O foco vai para o conteúdo da tela nova (RNF18).
+      requestAnimationFrame(() => document.getElementById('conteudo')?.focus());
+    };
     const openCalendar = (year?: number) =>
       setView({ kind: 'calendar', user, ...(year ? { year } : {}) });
     const openAsset = (assetId: string, opener: HTMLElement) => {
@@ -221,13 +238,16 @@ export function App() {
           onAssets={() => setView({ kind: 'assets', user })}
           onNews={() => setView({ kind: 'news', user })}
           onLogout={logout}
+          userView={inUserView}
+          {...(user.role === 'collaborator' ? { onToggleUserView: toggleUserView } : {})}
         >
           {/* SPEC-032: quando a conexão volta, a tela é montada de novo e relê tudo. */}
           <Fragment key={screenVersion}>
             {view.kind === 'news' && <NewsSources onSessionExpired={sessionExpired} />}
             {view.kind === 'home' && (
               <Home
-                user={user}
+                user={{ ...user, role: shownRole }}
+                userView={inUserView}
                 onOpenProfile={() => setView({ kind: 'profile', user })}
                 onOpenCalendar={openCalendar}
                 onOpenAssets={() => setView({ kind: 'assets', user })}
@@ -321,7 +341,7 @@ export function App() {
               <>
                 {/* Com a ficha aberta, a lista fica escondida, mas montada: a busca não se perde. */}
                 <div hidden={view.assetId !== undefined}>
-                  {user.role === 'collaborator' ? (
+                  {shownRole === 'collaborator' ? (
                     <AssetCatalog onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
                   ) : (
                     <AssetSearch onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
@@ -338,8 +358,9 @@ export function App() {
                           : { kind: 'assets', user },
                       )
                     }
-                    // SPEC-014: só a conta de usuário compra; abre a carteira escolhida já comprando.
-                    {...(user.role === 'user'
+                    // SPEC-014: só a conta de usuário compra (e o colaborador na Visão do usuário,
+                    // SPEC-045); abre a carteira escolhida já comprando.
+                    {...(shownRole === 'user'
                       ? {
                           onBuy: (portfolioId: string, asset: TradeAsset) =>
                             setView({ kind: 'portfolios', user, portfolioId, buyAsset: asset }),

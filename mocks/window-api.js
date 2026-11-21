@@ -393,7 +393,26 @@
     calendar: group({}),
     indexes: group({}),
     fundamentals: group({}),
-    portfolios: group({}),
+    // SPEC-045: a lista de carteiras (uma de teste); o resto responde como servidor fora do ar.
+    portfolios: group({
+      list: () => {
+        calls.push(['portfolios']);
+        return ok({
+          portfolios: [
+            {
+              id: '00000000-0000-4000-8000-0000000000c1',
+              name: 'Teste do calendário',
+              type: 'live',
+              startDate: '2026-11-21',
+              createdAt: '2026-11-21T13:00:00.000Z',
+              updatedAt: '2026-11-21T13:00:00.000Z',
+              copiedFrom: null,
+            },
+          ],
+          limit: 20,
+        });
+      },
+    }),
     // SPEC-033: nenhum aviso de variação nestes testes (a variação do dia é lida das carteiras,
     // que aqui respondem como servidor fora do ar).
     notifications: {

@@ -426,7 +426,11 @@
     "assets": "Assets",
     "logoutLabel": "Sign out of your account",
     "portfolios": "Portfolios",
-    "news": "News"
+    "news": "News",
+    "userView": "User view",
+    "userViewBannerTitle": "User view.",
+    "userViewBannerText": "You are seeing the app as a user, with your test portfolios.",
+    "backToCollaborator": "Back to the Collaborator area"
   },
   "offline": {
     "title": "No connection to the server.",

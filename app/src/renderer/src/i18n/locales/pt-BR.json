@@ -426,7 +426,11 @@
     "assets": "Ativos",
     "logoutLabel": "Sair da conta",
     "portfolios": "Carteiras",
-    "news": "Notícias"
+    "news": "Notícias",
+    "userView": "Visão do usuário",
+    "userViewBannerTitle": "Visão do usuário.",
+    "userViewBannerText": "Você está vendo o app como um usuário, com as suas carteiras de teste.",
+    "backToCollaborator": "Voltar à Área do colaborador"
   },
   "offline": {
     "title": "Sem conexão com o servidor.",

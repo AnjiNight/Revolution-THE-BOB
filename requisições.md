@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.13
+**Versão:** 1.14
 
 | Versão | Alteração |
 |---|---|
@@ -21,6 +21,7 @@
 | 1.11 | Nova RB28: o estorno anula um lançamento, só é aceito se o livro continuar válido sem ele e, na carteira ao vivo, compra e venda só se estornam no mesmo dia ([SPEC-015](specs/SPEC-015.md)) |
 | 1.12 | RF20 reescrito: com cenário = carteira ([SPEC-022](specs/SPEC-022.md)), "salvar e recuperar" já é a lista de carteiras (RF11); o requisito passa a ser criar uma carteira a partir de outra ([SPEC-023](specs/SPEC-023.md)) |
 | 1.13 | RF37 reescrito: sem conexão, o app é só para consulta (RNF14, [DA08](adr/DA08-cache-dois-niveis-offline-leitura.md)); ao reconectar, atualiza os dados guardados trazendo só o que mudou, e não há lançamento pendente a sincronizar ([SPEC-032](specs/SPEC-032.md)) |
+| 1.14 | Novo RF44: o colaborador vê o app como um usuário (Visão do usuário), com carteiras de teste da própria conta e sem acesso às carteiras de outras contas ([SPEC-045](specs/SPEC-045.md)) |
 
 ---
 
@@ -67,6 +68,7 @@ Descrevem o que o sistema faz. Cada requisito é uma capacidade verificável.
 | RF41 | Permitir entrar com conta Google, só para usuários ([DA24](adr/DA24-login-com-google.md)) | Visitante | Should |
 | RF42 | Oferecer login próprio para colaboradores (Área do colaborador); contas de colaborador são criadas só pela equipe ([SPEC-002](specs/SPEC-002.md)) | Colaborador | Must |
 | RF43 | Confirmar o e-mail com um código enviado a ele: no cadastro com e-mail e senha (a conta só é liberada depois) e na troca de e-mail ([SPEC-039](specs/SPEC-039.md)) | Visitante | Should |
+| RF44 | Permitir ao colaborador ver o app como um usuário (Visão do usuário), com carteiras de teste da própria conta; nunca as carteiras de outras contas ([SPEC-045](specs/SPEC-045.md)) | Colaborador | Could |
 
 ### 2.2 Ativos e dados de mercado
 

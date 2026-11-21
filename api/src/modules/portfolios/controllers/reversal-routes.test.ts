@@ -266,7 +266,7 @@ describe('estorno de lançamento (SPEC-015)', () => {
     expect(Number((await statement()).balance)).toBeGreaterThanOrEqual(0);
   });
 
-  it('carteira de outro: 404 com aviso; colaborador: 403; sem sessão: 401 (CA08)', async () => {
+  it('carteira de outro: 404 com aviso; colaborador: 404 (SPEC-045); sem sessão: 401 (CA08)', async () => {
     const deposit = await firstEntryId();
     const bia = await t.registerConfirmed({
       name: 'Bia Lima',
@@ -287,7 +287,7 @@ describe('estorno de lançamento (SPEC-015)', () => {
       url: AUTH_PATHS.collaboratorLogin,
       payload: { email: 'nicoly@equipe.com', password: 'senha-do-colaborador' },
     });
-    expect((await reverse(deposit, live, login.json<AuthSession>())).statusCode).toBe(403);
+    expect((await reverse(deposit, live, login.json<AuthSession>())).statusCode).toBe(404);
     tick();
     const anonymous = await t.app.inject({
       method: 'POST',
