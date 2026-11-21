@@ -1,5 +1,5 @@
 import type { PublicUser } from '@simulador/shared';
-import { ChartLineUp, SignOut } from '@phosphor-icons/react';
+import { ChartLineUp, Eye, SignOut } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReconnectResult } from '../../../shared/auth-ipc';
@@ -23,7 +23,8 @@ export interface ShellConnection {
 interface AppShellProps {
   connection?: ShellConnection;
   user: PublicUser;
-  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'news';
+  /** SPEC-011: a tela Tarefas não tem item no menu (abre pelo Início). */
+  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'tasks' | 'news';
   onHome: () => void;
   /** SPEC-012: só para o usuário. */
   onPortfolios: () => void;
@@ -35,6 +36,13 @@ interface AppShellProps {
   /** SPEC-027: fontes de notícias, só na Área do colaborador. */
   onNews: () => void;
   onLogout: () => void;
+  /**
+   * SPEC-045: o colaborador está na Visão do usuário (as telas e o menu do usuário, com as
+   * carteiras de teste dele).
+   */
+  userView?: boolean;
+  /** SPEC-045: entra ou sai da Visão do usuário; só para o colaborador. */
+  onToggleUserView?: () => void;
   children: ReactNode;
 }
 
@@ -54,13 +62,17 @@ export function AppShell({
   onAssets,
   onNews,
   onLogout,
+  userView = false,
+  onToggleUserView,
   children,
 }: AppShellProps) {
   const { t } = useTranslation();
+  /** SPEC-045: na Visão do usuário, o colaborador vê o menu do usuário. */
+  const role = userView ? 'user' : user.role;
   const ariaCurrent = (view: AppShellProps['current']) => (current === view ? 'page' : undefined);
 
   return (
-    <div className={`shell shell-${user.role}`}>
+    <div className={`shell shell-${user.role}${userView ? ' shell-user-view' : ''}`}>
       <a className="skip-link" href="#conteudo">
         {t('shell.skip')}
       </a>
@@ -80,7 +92,7 @@ export function AppShell({
                 {t('shell.home')}
               </button>
             </li>
-            {user.role === 'user' && (
+            {role === 'user' && (
               <li>
                 <button
                   type="button"
@@ -91,7 +103,7 @@ export function AppShell({
                 </button>
               </li>
             )}
-            {user.role === 'collaborator' && (
+            {role === 'collaborator' && (
               <li>
                 <button type="button" aria-current={ariaCurrent('calendar')} onClick={onCalendar}>
                   {t('shell.calendar')}
@@ -103,10 +115,25 @@ export function AppShell({
                 {t('shell.assets')}
               </button>
             </li>
-            {user.role === 'collaborator' && (
+            {role === 'collaborator' && (
               <li>
                 <button type="button" aria-current={ariaCurrent('news')} onClick={onNews}>
                   {t('shell.news')}
+                </button>
+              </li>
+            )}
+            {role === 'collaborator' && onToggleUserView && (
+              <li>
+                <button
+                  type="button"
+                  className="user-view-button"
+                  aria-label={t('shell.userView')}
+                  onClick={onToggleUserView}
+                >
+                  <span className="user-view-icon" aria-hidden="true">
+                    <Eye weight="bold" />
+                  </span>
+                  <span className="user-view-text">{t('shell.userView')}</span>
                 </button>
               </li>
             )}
@@ -151,6 +178,20 @@ export function AppShell({
               ? t('offline.back')
               : ''}
         </p>
+        {userView && onToggleUserView && (
+          <div className="user-view-banner" role="status">
+            <p>
+              <strong>{t('shell.userViewBannerTitle')}</strong> {t('shell.userViewBannerText')}
+            </p>
+            <button
+              type="button"
+              className="pill pill-primary pill-small"
+              onClick={onToggleUserView}
+            >
+              {t('shell.backToCollaborator')}
+            </button>
+          </div>
+        )}
         {connection?.offline && (
           <OfflineBanner dataFrom={connection.dataFrom} onRetry={connection.onRetry} />
         )}

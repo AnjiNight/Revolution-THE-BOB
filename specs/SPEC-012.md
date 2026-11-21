@@ -47,7 +47,7 @@ Esta Spec também fecha as regras que as próximas precisam: o preço de cada ti
 - **Compra, venda, posição e preço médio:** SPEC-014. **Estorno:** SPEC-015. **Lançamentos com data passada:** SPEC-016.
 - **Valor e rentabilidade da carteira** na lista: SPEC-019.
 - **Arquivar** carteira em vez de excluir: pode vir depois, se pedirem.
-- **Carteira de colaborador:** a conta da equipe não tem carteiras (§4.2).
+- **Carteira de colaborador:** a conta da equipe não tinha carteiras (§4.2); desde a [SPEC-045](SPEC-045.md), tem as de teste da Visão do usuário.
 - **Carteira real** (corretora de verdade): fora do escopo (OPEN-42).
 
 ## 4. Decisões
@@ -64,7 +64,7 @@ Esta Spec também fecha as regras que as próximas precisam: o preço de cada ti
 
 | Tema | Proposta | Motivo |
 |---|---|---|
-| Quem tem carteira | Só a conta de **usuário**. Colaborador recebe 403 nas rotas de carteira (DA12) | A conta da equipe cuida do catálogo e do calendário; quem quiser simular usa uma conta de usuário |
+| Quem tem carteira | Só a conta de **usuário**. Colaborador recebe 403 nas rotas de carteira (DA12). **Mudada pela [SPEC-045](SPEC-045.md) (21/11/2026):** o colaborador também tem carteiras, as de teste da Visão do usuário, com as mesmas regras; a de outra conta continua 404 | A conta da equipe cuida do catálogo e do calendário; quem quiser simular usa uma conta de usuário |
 | **Nome** | De **1 a 60 caracteres**, sem espaços nas pontas e com os espaços repetidos trocados por um. **Único para cada usuário**, sem diferenciar maiúsculas e acentos ("Dividendos" e "dividendos" são o mesmo nome). Repetido: `portfolio_name_in_use` | Na lista, duas carteiras com o mesmo nome confundem |
 | **Limite** | Até **20 carteiras** por usuário; a 21ª dá `portfolio_limit_reached` | Suficiente para comparar estratégias (P02), sem deixar uma conta crescer sem fim |
 | **Tipo** | Escolhido na criação, em dois cartões com a explicação: **"Ao vivo — opera com o preço de agora"** e **"Histórica — opera no passado, com dados já conhecidos"**. Sem rota para mudar; o banco também recusa a troca (gatilho, como a classe do ativo) | RB24 (DA17); a explicação ajuda quem está começando (QA13) |

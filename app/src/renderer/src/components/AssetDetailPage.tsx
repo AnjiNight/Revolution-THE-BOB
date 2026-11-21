@@ -5,13 +5,14 @@ import {
   PRICE_HISTORY_PERIODS,
   showsIntradayQuote,
   type AssetDetail,
+  type AssetNewsDay,
   type AssetSession,
   type Portfolio,
   type PriceHistory,
   type PriceHistoryPeriod,
 } from '@simulador/shared';
 import { ArrowLeft, Info, Question, Warning } from '@phosphor-icons/react';
-import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
 import '../asset-detail.css';
@@ -26,8 +27,10 @@ import {
   formatMoney,
   quoteMoment,
 } from '../format';
+import { newsSessions } from '../news-chart';
 import { useSectorName } from './AssetFields';
 import { AssetLogo } from './AssetLogo';
+import { AssetNewsSection, NewsSessionPanel, useNewsDays } from './AssetNews';
 import { DividendsPanel, FundamentalsPanel } from './FundamentalsPanels';
 import { PriceChart } from './PriceChart';
 import type { TradeAsset } from './TradeForm';
@@ -170,6 +173,11 @@ export function AssetDetailPage({
         onSessionExpired={onSessionExpired}
       />
       <HistoryPanel asset={asset} onSessionExpired={onSessionExpired} />
+      <AssetNewsSection
+        assetId={asset.id}
+        ticker={asset.ticker}
+        onSessionExpired={onSessionExpired}
+      />
       <DividendsPanel assetId={asset.id} onSessionExpired={onSessionExpired} />
     </div>
   );
@@ -351,6 +359,8 @@ function HistoryPanel({
   const loaded = asset.history.status === 'loaded';
   const key = `${period}|${adjusted ? 'a' : 'b3'}|${asset.lastSession?.date ?? ''}`;
   const shown = histories[key];
+  // SPEC-029: as notícias por dia do período, para os marcadores.
+  const newsDays = useNewsDays(asset.id, period, loaded, onSessionExpired);
 
   useEffect(() => {
     if (!loaded || shown) return;
@@ -397,10 +407,15 @@ function HistoryPanel({
     );
   } else {
     content = (
+      // A chave fecha o painel de notícias ao trocar o período ou a série.
       <HistoryContent
+        key={key}
+        assetId={asset.id}
         ticker={asset.ticker}
         history={shown}
+        newsDays={newsDays}
         periodLabel={t(`detail.history.periods.${period}`)}
+        onSessionExpired={onSessionExpired}
       />
     );
   }
@@ -460,18 +475,26 @@ function HistoryPanel({
 }
 
 function HistoryContent({
+  assetId,
   ticker,
   history,
+  newsDays,
   periodLabel,
+  onSessionExpired,
 }: {
+  assetId: string;
   ticker: string;
   history: PriceHistory;
+  newsDays: AssetNewsDay[];
   periodLabel: string;
+  onSessionExpired: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const language = i18n.language;
   const { summary } = history;
   const day = (date: string) => formatCalendarDay(date, language);
+  const sessions = useMemo(() => newsSessions(history.points, newsDays), [history, newsDays]);
+  const [selected, setSelected] = useState<number | null>(null);
 
   return (
     <>
@@ -517,9 +540,23 @@ function HistoryContent({
           points={history.points}
           jumps={history.jumps}
           label={t('detail.history.chartLabel', { ticker, period: periodLabel })}
+          news={sessions}
+          selectedNews={selected}
+          onSelectNews={setSelected}
         />
       ) : (
         <p className="chart-placeholder">{t('detail.history.tooFew')}</p>
+      )}
+      {selected !== null && (
+        <NewsSessionPanel
+          assetId={assetId}
+          ticker={ticker}
+          points={history.points}
+          index={selected}
+          days={newsDays}
+          onClose={() => setSelected(null)}
+          onSessionExpired={onSessionExpired}
+        />
       )}
       {history.jumps.length > 0 && (
         <div className="chart-jumps">

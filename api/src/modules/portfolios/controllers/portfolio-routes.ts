@@ -19,6 +19,7 @@ import type { AccessTokenService } from '../../identity/application/ports.js';
 import {
   makeAuthenticate,
   requireAuth,
+  requirePortfolioAccount,
   requireUser,
 } from '../../identity/controllers/authenticate.js';
 import type { PortfolioService } from '../application/portfolio-service.js';
@@ -85,9 +86,9 @@ interface IdParams {
 }
 
 /**
- * Carteiras (SPEC-012 §5.1): só a conta de usuário (403 para o colaborador). Carteira de outra
- * pessoa responde 404, como se não existisse, e a tentativa fica no log sem dados da carteira
- * (RB03, QA05).
+ * Carteiras (SPEC-012 §5.1): do usuário e, desde a SPEC-045, as de teste do colaborador. Carteira
+ * de outra pessoa responde 404, como se não existisse, e a tentativa fica no log sem dados da
+ * carteira (RB03, QA05).
  */
 export function registerPortfolioRoutes(
   app: FastifyInstance,
@@ -95,6 +96,9 @@ export function registerPortfolioRoutes(
 ): void {
   const { portfolios, trading } = options;
   const userOnly = { preHandler: [makeAuthenticate(options.accessTokens), requireUser] };
+  const portfolioAccounts = {
+    preHandler: [makeAuthenticate(options.accessTokens), requirePortfolioAccount],
+  };
 
   /** Rota de uma carteira: a de outra pessoa vira o mesmo 404 e só deixa o aviso no log. */
   const owned = <T>(request: FastifyRequest, action: () => Promise<T>) =>
@@ -112,11 +116,11 @@ export function registerPortfolioRoutes(
       }
     });
 
-  app.get(PORTFOLIO_PATHS.list, userOnly, async (request, reply) => {
+  app.get(PORTFOLIO_PATHS.list, portfolioAccounts, async (request, reply) => {
     return reply.send(await portfolios.list(requireAuth(request).userId));
   });
 
-  app.post(PORTFOLIO_PATHS.list, userOnly, async (request, reply) => {
+  app.post(PORTFOLIO_PATHS.list, portfolioAccounts, async (request, reply) => {
     const input = ensureValid(validateNewPortfolio(request.body));
     const portfolio = await run(() => portfolios.create(requireAuth(request).userId, input));
     return reply.status(201).send({ portfolio });
@@ -124,7 +128,7 @@ export function registerPortfolioRoutes(
 
   // SPEC-022 §5.1: de 2 a 4 carteiras no mesmo período, só leitura. Uma delas de outra pessoa (ou
   // que não existe) é o mesmo 404, sem dizer qual.
-  app.get(PORTFOLIO_PATHS.comparison, userOnly, async (request, reply) => {
+  app.get(PORTFOLIO_PATHS.comparison, portfolioAccounts, async (request, reply) => {
     const query = ensureValid(validateComparisonQuery(request.query));
     const result = await owned(request, () =>
       trading.comparison(requireAuth(request).userId, query),
@@ -132,39 +136,58 @@ export function registerPortfolioRoutes(
     return reply.send(result);
   });
 
-  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.item, userOnly, async (request, reply) => {
+  // SPEC-033 §5.1: a variação do dia dos ativos das carteiras, para os avisos do app. Só leitura,
+  // com ETag (o app confere a cada 5 minutos; quase sempre volta 304). Os avisos são só da conta de
+  // usuário, também na Visão do usuário do colaborador (SPEC-045 §9).
+  app.get(PORTFOLIO_PATHS.dayChanges, userOnly, async (request, reply) => {
+    return reply.send(await trading.dayChanges(requireAuth(request).userId));
+  });
+
+  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.item, portfolioAccounts, async (request, reply) => {
     const id = portfolioId(request);
     const portfolio = await owned(request, () => portfolios.get(requireAuth(request).userId, id));
     return reply.send({ portfolio });
   });
 
-  app.patch<{ Params: IdParams }>(PORTFOLIO_PATHS.item, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    const { name } = ensureValid(validateRenamePortfolio(request.body));
-    const portfolio = await owned(request, () =>
-      portfolios.rename(requireAuth(request).userId, id, name),
-    );
-    return reply.send({ portfolio });
-  });
+  app.patch<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.item,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      const { name } = ensureValid(validateRenamePortfolio(request.body));
+      const portfolio = await owned(request, () =>
+        portfolios.rename(requireAuth(request).userId, id, name),
+      );
+      return reply.send({ portfolio });
+    },
+  );
 
-  app.delete<{ Params: IdParams }>(PORTFOLIO_PATHS.item, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    await owned(request, () => portfolios.delete(requireAuth(request).userId, id));
-    return reply.status(204).send();
-  });
+  app.delete<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.item,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      await owned(request, () => portfolios.delete(requireAuth(request).userId, id));
+      return reply.status(204).send();
+    },
+  );
 
   // SPEC-023 §5.1: nova carteira a partir desta. A original de outra pessoa é o mesmo 404.
-  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.copies, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    const input = ensureValid(validateNewPortfolioCopy(request.body));
-    const result = await owned(request, () =>
-      portfolios.copy(requireAuth(request).userId, id, input),
-    );
-    return reply.status(201).send(result);
-  });
+  app.post<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.copies,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      const input = ensureValid(validateNewPortfolioCopy(request.body));
+      const result = await owned(request, () =>
+        portfolios.copy(requireAuth(request).userId, id, input),
+      );
+      return reply.status(201).send(result);
+    },
+  );
 
   // SPEC-013 §5.1: saldo e extrato; aporte ou retirada. Nenhuma rota altera ou apaga um lançamento.
-  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.cash, userOnly, async (request, reply) => {
+  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.cash, portfolioAccounts, async (request, reply) => {
     const id = portfolioId(request);
     const { offset } = ensureValid(validateCashStatementQuery(request.query));
     const statement = await owned(request, () =>
@@ -173,62 +196,86 @@ export function registerPortfolioRoutes(
     return reply.send(statement);
   });
 
-  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.cash, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    const input = ensureValid(validateNewCashEntry(request.body));
-    const result = await owned(request, () =>
-      portfolios.addCashEntry(requireAuth(request).userId, id, input),
-    );
-    return reply.status(201).send(result);
-  });
+  app.post<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.cash,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      const input = ensureValid(validateNewCashEntry(request.body));
+      const result = await owned(request, () =>
+        portfolios.addCashEntry(requireAuth(request).userId, id, input),
+      );
+      return reply.status(201).send(result);
+    },
+  );
 
   // SPEC-014 §5.1: posições, cotação para negociar e a compra ou venda. Nenhuma rota altera ou
   // apaga uma negociação.
-  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.positions, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    const positions = await owned(request, () =>
-      trading.positions(requireAuth(request).userId, id),
-    );
-    return reply.send(positions);
-  });
+  app.get<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.positions,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      const positions = await owned(request, () =>
+        trading.positions(requireAuth(request).userId, id),
+      );
+      return reply.send(positions);
+    },
+  );
 
-  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.tradeQuote, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    const { assetId, date } = ensureValid(validateTradeQuoteQuery(request.query));
-    const quote = await owned(request, () =>
-      trading.tradeQuote(requireAuth(request).userId, id, assetId, date),
-    );
-    return reply.send(quote);
-  });
+  app.get<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.tradeQuote,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      const { assetId, date } = ensureValid(validateTradeQuoteQuery(request.query));
+      const quote = await owned(request, () =>
+        trading.tradeQuote(requireAuth(request).userId, id, assetId, date),
+      );
+      return reply.send(quote);
+    },
+  );
 
-  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.trades, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    const input = ensureValid(validateNewTrade(request.body));
-    const result = await owned(request, () =>
-      trading.trade(requireAuth(request).userId, id, input),
-    );
-    return reply.status(201).send(result);
-  });
+  app.post<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.trades,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      const input = ensureValid(validateNewTrade(request.body));
+      const result = await owned(request, () =>
+        trading.trade(requireAuth(request).userId, id, input),
+      );
+      return reply.status(201).send(result);
+    },
+  );
 
   // SPEC-019 §5.1: rentabilidade e evolução patrimonial no período.
-  app.get<{ Params: IdParams }>(PORTFOLIO_PATHS.performance, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    const query = ensureValid(validatePerformanceQuery(request.query));
-    const result = await owned(request, () =>
-      trading.performance(requireAuth(request).userId, id, query),
-    );
-    return reply.send(result);
-  });
+  app.get<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.performance,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      const query = ensureValid(validatePerformanceQuery(request.query));
+      const result = await owned(request, () =>
+        trading.performance(requireAuth(request).userId, id, query),
+      );
+      return reply.send(result);
+    },
+  );
 
   // SPEC-015 §5.1: estorno de um lançamento. Nada é alterado nem apagado.
-  app.post<{ Params: IdParams }>(PORTFOLIO_PATHS.reversals, userOnly, async (request, reply) => {
-    const id = portfolioId(request);
-    const { entryId } = ensureValid(validateNewReversal(request.body));
-    const result = await owned(request, () =>
-      portfolios.reverse(requireAuth(request).userId, id, entryId),
-    );
-    return reply.status(201).send(result);
-  });
+  app.post<{ Params: IdParams }>(
+    PORTFOLIO_PATHS.reversals,
+    portfolioAccounts,
+    async (request, reply) => {
+      const id = portfolioId(request);
+      const { entryId } = ensureValid(validateNewReversal(request.body));
+      const result = await owned(request, () =>
+        portfolios.reverse(requireAuth(request).userId, id, entryId),
+      );
+      return reply.status(201).send(result);
+    },
+  );
 }
 
 function portfolioId(request: FastifyRequest<{ Params: IdParams }>): string {

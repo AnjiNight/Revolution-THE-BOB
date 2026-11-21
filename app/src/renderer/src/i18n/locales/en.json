@@ -74,16 +74,10 @@
     "greeting": "Hello, {{name}}!",
     "next": "Your account is ready. You can already search stocks and REITs (FIIs); simulation portfolios are coming in future versions.",
     "logout": "Sign out",
-    "collaboratorNext": "Keep the trading calendar and the asset catalog up to date. Data collection monitoring is coming in future versions.",
+    "collaboratorNext": "Keep the trading calendar and the asset catalog up to date, and follow the tasks that bring data into the app.",
     "profile": "My profile",
     "upcomingTitle": "What is coming",
     "soon": "Coming soon",
-    "collabTools": {
-      "ingestion": {
-        "title": "Data collection monitoring",
-        "text": "See the runs and failures of quote and news collection, and run them again when needed."
-      }
-    },
     "calendarReminder": {
       "missing": "The {{year}} trading calendar hasn't been published. Until it is, entries dated in that year are blocked.",
       "nextYear": "The {{year}} trading calendar hasn't been published yet. Publish it by December 31.",
@@ -132,11 +126,25 @@
       "assets": {
         "title": "Asset catalog",
         "text": "Add and maintain the stocks and REITs (FIIs) users find in the search."
+      },
+      "tasks": {
+        "title": "Data tasks",
+        "text": "See how each task that brings data ran, with its errors, and request a run when you need one."
       }
     },
     "firstPortfolio": {
       "text": "You don't have any portfolios yet. Create one to start simulating.",
       "create": "Create portfolio"
+    },
+    "tasks": {
+      "title": "Data tasks",
+      "running": "processor running",
+      "stoppedSince": "processor stopped since {{when}}",
+      "neverSeen": "the processor has not reported yet",
+      "allGood": "all up to date",
+      "failing_one": "{{count}} task failing",
+      "failing_other": "{{count}} tasks failing",
+      "open": "Open the tasks"
     }
   },
   "profile": {
@@ -270,9 +278,18 @@
     "reversal_breaks_position": "This reversal would make a sale larger than the position.",
     "no_close_that_day": "This asset has no B3 close on that day.",
     "history_pending": "This asset's price history is still being loaded.",
+    "copy_breaks_cash": "Without the purchases and sales, a withdrawal would have no balance.",
+    "not_saved_offline": "Not viewed on this computer yet. Connect to see it.",
+    "task_not_found": "Task not found.",
+    "run_not_found": "Run not found (runs older than 90 days are deleted).",
+    "run_already_requested": "This task already has a request waiting for the processor.",
+    "run_in_progress": "This task is running now. Request it again when it finishes.",
     "news_source_not_found": "News source not found.",
     "source_exists": "There is already a source with this address.",
-    "parent_source": "The parent source can't be changed here."
+    "parent_source": "The parent source can't be changed here.",
+    "news_not_found": "News item not found.",
+    "no_model": "The task runner hasn't classified any news yet.",
+    "not_enough_labels": "Label more news: at least 10 test items are needed to evaluate."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -409,7 +426,27 @@
     "assets": "Assets",
     "logoutLabel": "Sign out of your account",
     "portfolios": "Portfolios",
-    "news": "News"
+    "news": "News",
+    "userView": "User view",
+    "userViewBannerTitle": "User view.",
+    "userViewBannerText": "You are seeing the app as a user, with your test portfolios.",
+    "backToCollaborator": "Back to the Collaborator area"
+  },
+  "offline": {
+    "title": "No connection to the server.",
+    "body": "You are seeing the data saved on this computer, read-only.",
+    "dataFrom": "Data from {{date}}.",
+    "retry": "Try now",
+    "retrying": "Trying…",
+    "stillOffline": "Still offline. The app tries again on its own every 30 seconds.",
+    "needsConnection": "Needs a connection.",
+    "announce": "No connection to the server. Read-only mode: only the data saved on this computer.",
+    "back": "Connection is back. The data was updated.",
+    "searchNeedsConnection": "Search needs a connection. The assets you already opened are still in your portfolios' positions."
+  },
+  "language": {
+    "switchTo": "Switch the app language to Portuguese",
+    "changed": "The app is now in English."
   },
   "calendar": {
     "title": "Trading calendar",
@@ -545,6 +582,53 @@
       "tradesHelp": "How many purchases and sales of this asset happened during the day.",
       "volume": "Volume",
       "volumeHelp": "How much money changed hands in this asset during the day."
+    },
+    "news": {
+      "title": "News",
+      "loading": "Loading the news…",
+      "empty": "There is no news about {{ticker}} yet.",
+      "more_one": "Show more ({{count}} article)",
+      "more_other": "Show more ({{count}} articles)",
+      "relevance": {
+        "principal": "About {{ticker}}",
+        "citado": "Mentions {{ticker}}",
+        "lista": "In a list"
+      },
+      "readParent": "Read on Investidor10",
+      "read": "Read on {{source}}",
+      "inPortuguese": "In Portuguese",
+      "lists_one": "Also appears in lists ({{count}})",
+      "lists_other": "Also appears in lists ({{count}})",
+      "listsHint": "Agendas, rankings and articles that mention many assets at once.",
+      "source": "News from Investidor10 (use authorized for this academic project) and from sources curated by the team. The app shows the title and the summary; the full article stays on the source's website.",
+      "count_one": "{{count}} article",
+      "count_other": "{{count}} articles",
+      "legend": "Session with news",
+      "chartHint": "N and Shift+N jump to the next and the previous session with news; Enter shows the news of the session.",
+      "sessionTitle": "News of the {{date}} session",
+      "close": "Close the news of the session",
+      "closeShort": "Close",
+      "onSession": "On the session",
+      "later_one": "{{count}} session later",
+      "later_other": "{{count}} sessions later",
+      "noPrevious": "No previous session in the chart",
+      "notYet_one": "There is no {{count}} session later yet",
+      "notYet_other": "There are no {{count}} sessions later yet",
+      "reactionNote": "Change of the close over the close of the session before the news. It shows what the price did afterwards, not that the news caused the change.",
+      "tones": "In this session: {{positive}}, {{neutral}}, {{negative}}.",
+      "tonesPending_one": "In this session: {{positive}}, {{neutral}}, {{negative}}; and {{count}} not classified yet.",
+      "tonesPending_other": "In this session: {{positive}}, {{neutral}}, {{negative}}; and {{count}} not classified yet.",
+      "tonePositive_zero": "no positive",
+      "tonePositive_one": "{{count}} positive",
+      "tonePositive_other": "{{count}} positive",
+      "toneNeutral_zero": "no neutral",
+      "toneNeutral_one": "{{count}} neutral",
+      "toneNeutral_other": "{{count}} neutral",
+      "toneNegative_zero": "no negative",
+      "toneNegative_one": "{{count}} negative",
+      "toneNegative_other": "{{count}} negative",
+      "sentimentNote": "Tone classified automatically ({{model}}); it can be wrong. Not a recommendation.",
+      "sessionEmpty": "No news in this session."
     },
     "history": {
       "title": "Price history",
@@ -863,6 +947,36 @@
       "max": "Up to 4 portfolios",
       "go": "Compare ({{count}})",
       "cancel": "Cancel"
+    },
+    "copy": {
+      "action": "Copy",
+      "actionLabel": "Copy the portfolio {{name}}",
+      "pageAction": "Copy portfolio",
+      "title": "New portfolio from “{{name}}”",
+      "fixedHint": "The copy has the same type and the same start as the original.",
+      "suffix": "copy",
+      "scope": "What to copy",
+      "scopes": {
+        "all": {
+          "title": "Everything",
+          "text": "Deposits, withdrawals, purchases and sales, up to today: change only what you want to test."
+        },
+        "cash": {
+          "title": "Only the money",
+          "text": "Deposits and withdrawals on the same dates: build another allocation with the same money."
+        }
+      },
+      "until": "Copy until (optional)",
+      "untilHint": "Only entries up to that day are copied. Empty: all of them.",
+      "create": "Create copy",
+      "creating": "Copying…",
+      "breaksCash": "Without the purchases and sales, the withdrawal of {{amount}} on {{date}} would have no balance. Copy everything, or copy only until before it.",
+      "created": "Created from “{{name}}”: {{cash}} deposits and withdrawals and {{trades}} trades copied.",
+      "compareBoth": "Compare both",
+      "from": "Created on {{date}} from",
+      "fromName": "“{{name}}”",
+      "fromDeleted": "Created on {{date}} from a portfolio already deleted",
+      "openOrigin": "Open the portfolio {{name}}"
     },
     "comparison": {
       "title": "Comparison",
@@ -1256,6 +1370,155 @@
       "b3Behind": "The B3 files were late: nobody was deactivated in this import."
     }
   },
+  "tasks": {
+    "title": "Data tasks",
+    "subtitle": "The tasks that bring data into the app: how the last run of each one went, the history with its errors and the button to run it now.",
+    "back": "Back to home",
+    "loading": "Loading…",
+    "names": {
+      "calendario_b3": "Calendar from the B3 files",
+      "historico_retroativo": "History backfill",
+      "fechamento_diario": "Daily close",
+      "importacao_catalogo": "Catalog import",
+      "cdi_diario": "CDI",
+      "indices_b3": "B3 indexes (Ibovespa and IFIX)",
+      "investidor10": "Investidor10 (indicators and dividends)",
+      "eventos_b3": "Corporate events and sectors",
+      "cotacao_pregao": "Trading session quotes",
+      "noticias_novas": "Latest news (Investidor10)",
+      "noticias_arquivo": "News archive (Investidor10)",
+      "noticias_feeds": "News from the curated sources"
+    },
+    "sources": {
+      "b3": "B3",
+      "brapi": "brapi",
+      "bcb": "Central Bank of Brazil",
+      "investidor10": "Investidor10",
+      "feeds": "RSS feeds of the curated sources"
+    },
+    "source_one": "Source: {{sources}}",
+    "source_other": "Sources: {{sources}}",
+    "schedule": {
+      "daily": "Every day at {{times}}",
+      "weekly": "Sundays at {{times}}",
+      "every": "Every {{minutes}} minutes",
+      "session": "Every {{minutes}} minutes during the trading session",
+      "sundaysAll": "(all assets on Sundays; only the new ones on other days)"
+    },
+    "status": {
+      "sucesso": "Success",
+      "parcial": "Partial",
+      "falha": "Failed",
+      "aguardando_publicacao": "Waiting for publication",
+      "cota_esgotada": "Quota exhausted",
+      "running": "Running"
+    },
+    "at": {
+      "today": "today at {{time}}",
+      "other": "{{date}} at {{time}}"
+    },
+    "runningSince": "since {{when}}",
+    "records_one": "{{formatted}} record",
+    "records_other": "{{formatted}} records",
+    "records_zero": "{{formatted}} records",
+    "assets_one": "{{formatted}} asset",
+    "assets_other": "{{formatted}} assets",
+    "assets_zero": "{{formatted}} assets",
+    "errors_one": "{{formatted}} error",
+    "errors_other": "{{formatted}} errors",
+    "errors_zero": "{{formatted}} errors",
+    "neverRan": "Has not run yet.",
+    "pending": "Request sent {{when}}, waiting for the processor.",
+    "pendingStopped": "It only runs once the processor is started.",
+    "runNow": "Run now",
+    "showHistory": "Show history",
+    "hideHistory": "Hide history",
+    "blocked": {
+      "running": "The task is running.",
+      "requested": "A request is already waiting.",
+      "source_disabled": "Collection turned off (no Investidor10 authorization)."
+    },
+    "requestSent": "Request sent: {{name}}. The processor picks it up within 15 seconds.",
+    "finished_one": "Run finished: {{name}}, {{status}}, {{formatted}} record.",
+    "finished_other": "Run finished: {{name}}, {{status}}, {{formatted}} records.",
+    "finished_zero": "Run finished: {{name}}, {{status}}, {{formatted}} records.",
+    "nothing": "{{name}}: nothing to do right now. {{reason}}",
+    "nothingReason": {
+      "calendario_b3": "No closed year to publish.",
+      "historico_retroativo": "No new asset without history.",
+      "fechamento_diario": "No trading day missing.",
+      "importacao_catalogo": "Nothing new to import.",
+      "cdi_diario": "No CDI missing.",
+      "indices_b3": "No close missing.",
+      "investidor10": "No new asset and none with an error on the last visit.",
+      "eventos_b3": "Nothing to fetch right now.",
+      "cotacao_pregao": "Outside trading hours, or no quota left.",
+      "noticias_novas": "Nothing to fetch right now.",
+      "noticias_arquivo": "Nothing to fetch right now.",
+      "noticias_feeds": "No active curated source."
+    },
+    "processor": {
+      "title": "Processor",
+      "running": "Running, last seen {{since}}.",
+      "stoppedSince": "Stopped since {{when}}.",
+      "never": "Has not reported yet.",
+      "stoppedHint": "Without the processor, no task runs and no request is picked up. Start the processor on the server."
+    },
+    "historyTitle": "History: {{name}}",
+    "historyCount_one": "{{shown}} of {{total}} run",
+    "historyCount_other": "{{shown}} of {{total}} runs",
+    "errorsCount_one": "{{shown}} of {{total}} error",
+    "errorsCount_other": "{{shown}} of {{total}} errors",
+    "showMore": "Show more",
+    "columns": {
+      "started": "Start",
+      "status": "Status",
+      "numbers": "Records",
+      "details": "Details",
+      "errors": "Errors"
+    },
+    "period": "Period: {{from}} to {{to}}",
+    "periodDay": "Day: {{day}}",
+    "quota": "Requests: {{requests}} (quota: {{remaining}} of {{limit}})",
+    "requests": "Requests: {{formatted}}",
+    "requestedBy": "Requested by {{name}}",
+    "requestedByRemoved": "Requested by an account that was removed",
+    "showErrors_one": "See the error",
+    "showErrors_other": "See the {{formatted}} errors",
+    "hideErrors": "Hide the errors",
+    "yes": "yes",
+    "no": "no",
+    "totals": {
+      "created": "Created",
+      "deactivated": "Deactivated",
+      "reactivated": "Reactivated",
+      "logosSaved": "Logos downloaded",
+      "logosMissing": "Without logo",
+      "logoErrors": "Logo errors",
+      "notRecent": "Not traded in the last 3 months",
+      "outOfFormat": "Ticker out of format",
+      "mismatched": "Class differs between brapi and B3",
+      "b3Behind": "B3 file behind",
+      "published": "Years published",
+      "checked": "Years checked",
+      "classificacoes": "B3 classifications",
+      "sugestoes": "Suggestions changed",
+      "missing": "Assets missing from the list",
+      "missingTickers": "Missing from the list",
+      "visited": "Visited",
+      "collected": "Collected",
+      "noPage": "No page",
+      "layoutErrors": "Page without the table",
+      "failed": "Failed",
+      "stopped": "Stopped midway (403 or 429)",
+      "inSitemap": "New in the sitemap",
+      "archiveMissing": "Missing from the archive",
+      "changed": "Updated on the site",
+      "items": "Items in the feeds",
+      "saved": "Saved",
+      "gone": "Gone from the site (404)"
+    }
+  },
   "news": {
     "title": "News sources",
     "subtitle": "The parent source (Investidor10) and the curated RSS or Atom sources. The worker collects new articles every 30 minutes.",
@@ -1320,6 +1583,149 @@
         "citado": "Mentioned",
         "lista": "List"
       }
+    }
+  },
+  "sentiment": {
+    "title": "News sentiment",
+    "definition": "The tone of each article for its main asset (with no main asset, for the Brazilian market). Positive: good news for holders of the asset. Negative: bad news. Neutral: informational, a schedule, or mixed opinions.",
+    "loading": "Loading the sentiment…",
+    "model": "Version in use",
+    "modelName": "{{name}} v{{number}}",
+    "models": {
+      "lexico": "Word list"
+    },
+    "noModel": "None yet: the task runner registers the version on its first classification.",
+    "classified": "Classified",
+    "classifiedValue": "{{classified}} of {{total}} articles",
+    "sample": "Labeled sample",
+    "sampleValue_zero": "None yet. Goal: {{goal}}.",
+    "sampleValue_one": "{{total}} article ({{tuning}} for tuning, {{test}} for testing). Goal: {{goal}}.",
+    "sampleValue_other": "{{total}} articles ({{tuning}} for tuning, {{test}} for testing). Goal: {{goal}}.",
+    "evaluation": "Last evaluation",
+    "evaluationValue_one": "Macro F1 {{f1}}, accuracy {{accuracy}}, on {{count}} test article ({{date}})",
+    "evaluationValue_other": "Macro F1 {{f1}}, accuracy {{accuracy}}, on {{count}} test articles ({{date}})",
+    "notEvaluated": "The version in use hasn't been evaluated yet.",
+    "visible": "Visible to users: the asset page shows the tone of each article.",
+    "hidden": {
+      "no_model": "Hidden from users: no version in use yet.",
+      "not_evaluated": "Hidden from users: the version in use hasn't been evaluated yet.",
+      "few_tests_one": "Hidden from users: the evaluation had {{count}} test article; the minimum is {{min}}.",
+      "few_tests_other": "Hidden from users: the evaluation had {{count}} test articles; the minimum is {{min}}.",
+      "low_score": "Hidden from users: macro F1 {{f1}}, below the minimum of {{minF1}}."
+    },
+    "matrix": {
+      "caption": "Hits and misses on the test articles",
+      "corner": "Team label",
+      "predicted": "Model: {{value}}",
+      "labeled": "{{value}}"
+    },
+    "evaluate": "Evaluate now",
+    "evaluating": "Evaluating…",
+    "evaluated": "Evaluation done and saved on the version.",
+    "values": {
+      "positive": "Positive",
+      "neutral": "Neutral",
+      "negative": "Negative"
+    },
+    "tag": "Tone: {{value}}",
+    "label": {
+      "title": "Label news",
+      "hint": "Read and pick the tone. The model's answer is hidden so it won't sway you. Keys: 1 positive, 2 neutral, 3 negative, 0 skip.",
+      "loading": "Fetching the next article…",
+      "done": "Every article has been labeled (or skipped).",
+      "principal": "Main asset: {{tickers}}. The tone is for it.",
+      "market": "No main asset: the tone is for the Brazilian market.",
+      "group": "Article tone",
+      "skip": "Skip",
+      "saved": "Label {{value}} saved."
+    },
+    "recent": {
+      "title": "Recently labeled",
+      "change": "Label for {{title}}",
+      "remove": "Remove",
+      "removeLabel": "Remove the label for {{title}}"
+    }
+  },
+  "report": {
+    "button": "Download report (PDF)",
+    "hint": "For the Performance period: {{period}}",
+    "customPeriod": "{{label}} ({{from}} to {{to}})",
+    "noEntries": "There are no entries for a report yet.",
+    "generating": "Generating the report…",
+    "saved": "Report saved in {{folder}}.",
+    "open": "Open",
+    "openLabel": "Open the report {{file}}",
+    "openFailed": "The system could not open the file. It is in {{folder}}.",
+    "failed": "Could not generate the report. Try again.",
+    "needsConnection": "Needs a connection: {{missing}}.",
+    "missing": {
+      "performance": "the performance for this period is not saved on this computer",
+      "positions": "the positions are not saved on this computer",
+      "statement": "the full statement is not saved on this computer"
+    },
+    "documentTitle": "{{name}} portfolio report",
+    "title": "Portfolio report",
+    "periodLabel": "Period",
+    "period": "{{from}} to {{to}} ({{label}})",
+    "generatedLabel": "Generated on",
+    "dataLabel": "Data",
+    "dataFrom": "From {{date}}, saved on this computer (offline)",
+    "summary": "Summary",
+    "evolution": "Evolution",
+    "equityDescription": "Equity from {{start}} on {{from}} to {{end}} on {{to}}; total invested at the end: {{invested}}.",
+    "returnDescription": "Return in the period: {{values}}.",
+    "positionsDate": "Positions and allocation on {{date}}, with each asset's latest price.",
+    "noPositions": "No assets in the portfolio.",
+    "allocation": {
+      "stock": "Sector",
+      "fii": "Segment",
+      "ofClass": "Of the class",
+      "ofTotal": "Of the portfolio",
+      "value": "Value"
+    },
+    "income": {
+      "title": "Income",
+      "received": "Received in the period",
+      "pending": "To receive"
+    },
+    "statement": {
+      "title": "Statement for the period",
+      "order": "From oldest to newest, with the balance after each entry.",
+      "empty": "No entries in the period.",
+      "reversed_one": "{{count}} reversed entry is not shown (it does not count in the balance).",
+      "reversed_other": "{{count}} reversed entries are not shown (they do not count in the balance)."
+    },
+    "notices": {
+      "title": "Notices",
+      "sources": "Sources: quotes and indexes from B3 and brapi, CDI from the Central Bank of Brazil and income from Investidor10 (authorized only for this academic project)."
+    },
+    "footer": {
+      "notice": "Educational simulation, not investment advice",
+      "page": "Page {{page}} of {{pages}}"
+    }
+  },
+  "alerts": {
+    "settings": {
+      "title": "Price move alerts",
+      "enabled": "Notify me when an asset in my portfolios rises or falls sharply during the day",
+      "threshold": "Minimum daily move",
+      "levels": {
+        "3": "{{percent}} (more alerts)",
+        "5": "{{percent}} (default)",
+        "10": "{{percent}} (extremes only)"
+      },
+      "hint": "Only while the app is open (it can be minimized), during trading hours. Quotes are delayed by up to {{delay}} minutes. Alerts follow your Windows notification settings."
+    },
+    "notice": {
+      "up": "{{ticker}} rose {{change}} today",
+      "down": "{{ticker}} fell {{change}} today",
+      "quote": "{{price}} at {{time}} (up to {{delay}} min delay)",
+      "portfolios_one": "Portfolio: {{names}}",
+      "portfolios_other": "Portfolios: {{names}}",
+      "more": "{{items}} and {{more}} more",
+      "groupUp": "{{total}} assets in your portfolios rose {{threshold}} or more today",
+      "groupDown": "{{total}} assets in your portfolios fell {{threshold}} or more today",
+      "groupMixed": "{{total}} assets in your portfolios moved {{threshold}} or more today"
     }
   }
 }

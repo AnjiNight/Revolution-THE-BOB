@@ -16,7 +16,12 @@ import {
   sameAtCents,
 } from '../../financial-calculation/decimal.js';
 import { planCollection, type QuotaDecision } from '../domain/quota-plan.js';
-import { brasiliaInstant, collectionMinutes, dueCollection } from '../domain/trading-session.js';
+import {
+  brasiliaInstant,
+  collectionMinutes,
+  dueCollection,
+  withinSession,
+} from '../domain/trading-session.js';
 import {
   QuoteSourceError,
   type AssetListing,
@@ -87,13 +92,19 @@ export class IntradayCollection {
     this.retryDelayMs = deps.retryDelayMs ?? INTRADAY_RETRY_DELAY_MS;
   }
 
-  /** Faz a coleta da vez, se houver. Sem nada a fazer, devolve `null` (e não grava execução). */
-  async collect(): Promise<RunResult | null> {
+  /**
+   * Faz a coleta da vez, se houver. Sem nada a fazer, devolve `null` (e não grava execução).
+   *
+   * SPEC-011: `force` é o "Executar agora": coleta mesmo que a vez atual já tenha sido coletada,
+   * mas só em dia de pregão, das 10:30 até meia hora depois do fechamento, e com a regra da cota.
+   */
+  async collect(options: { force?: boolean } = {}): Promise<RunResult | null> {
     const now = this.clock();
     const today = isoDateInBrasilia(now);
     if (isWeekend(today)) return null;
     const slotIndex = dueCollection(today, now);
     if (slotIndex === null) return null;
+    if (options.force && !withinSession(today, now)) return null;
 
     const year = yearOf(today);
     const published = await this.deps.calendars.findYears(year, year + 1);
@@ -105,7 +116,7 @@ export class IntradayCollection {
     if (!calendar.isTradingDay(today)) return null;
 
     const slotAt = brasiliaInstant(today, collectionMinutes(today)[slotIndex] ?? 0);
-    if (last && last.startedAt.getTime() >= slotAt.getTime()) return null;
+    if (!options.force && last && last.startedAt.getTime() >= slotAt.getTime()) return null;
     if (last?.status === 'cota_esgotada' && last.quota && last.quota.resetsAt > now) return null;
 
     const assets = await this.deps.quotes.activeAssets();

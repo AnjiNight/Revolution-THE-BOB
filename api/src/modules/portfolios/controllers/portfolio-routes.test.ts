@@ -158,7 +158,10 @@ describe('rotas das carteiras (SPEC-012)', () => {
     expect((await call('GET', portfolioPath(id), bia)).statusCode).toBe(200);
   });
 
-  it('colaborador recebe 403; sem sessão, 401 (CA05)', async () => {
+  it('colaborador tem as carteiras de teste dele e não vê as dos outros; sem sessão, 401 (SPEC-045 CA02, CA03)', async () => {
+    const ofAna = (await create({ name: 'Da Ana', type: 'live' })).json<{
+      portfolio: Portfolio;
+    }>().portfolio;
     await createCollaborator(
       t.users,
       t.hasher,
@@ -171,8 +174,20 @@ describe('rotas das carteiras (SPEC-012)', () => {
       payload: { email: 'nicoly@equipe.com', password: 'senha-do-colaborador' },
     });
     const collaborator = login.json<AuthSession>();
-    expect((await call('GET', PORTFOLIO_PATHS.list, collaborator)).statusCode).toBe(403);
-    expect((await create({ name: 'X', type: 'live' }, collaborator)).statusCode).toBe(403);
+    // Começa sem nenhuma carteira: as do usuário não aparecem.
+    const empty = await call('GET', PORTFOLIO_PATHS.list, collaborator);
+    expect(empty.statusCode).toBe(200);
+    expect(JSON.stringify(empty.json())).not.toContain('Da Ana');
+
+    const created = await create({ name: 'Teste do calendário', type: 'live' }, collaborator);
+    expect(created.statusCode).toBe(201);
+    const own = created.json<{ portfolio: Portfolio }>().portfolio;
+    expect((await call('GET', portfolioPath(own.id), collaborator)).statusCode).toBe(200);
+    // A Ana também não vê a carteira de teste do colaborador.
+    expect((await call('GET', portfolioPath(own.id), ana)).statusCode).toBe(404);
+
+    expect((await call('GET', portfolioPath(ofAna.id), collaborator)).statusCode).toBe(404);
+    expect(t.logs.text).toContain('tentativa de acessar carteira de outro usuário');
     expect((await call('GET', PORTFOLIO_PATHS.list, null)).statusCode).toBe(401);
   });
 

@@ -21,7 +21,29 @@ export const PORTFOLIO_PATHS = {
   comparison: '/api/portfolios/comparison',
   /** SPEC-023: nova carteira a partir desta. */
   copies: '/api/portfolios/:id/copies',
+  /** SPEC-033: a variação do dia dos ativos das carteiras (caminho fixo, antes de `item`). */
+  dayChanges: '/api/portfolios/day-changes',
 } as const;
+
+/** SPEC-033: um ativo em posição nas carteiras do usuário, com a cotação do pregão de hoje. */
+export interface DayChange {
+  assetId: string;
+  ticker: string;
+  name: string;
+  /** Decimal em texto (RNF12). */
+  price: string;
+  /** Variação do dia sobre o fechamento do pregão anterior, em %, com 2 casas; `null` sem ele. */
+  change: string | null;
+  /** Horário da coleta (ISO 8601); as cotações do nível gratuito têm atraso (DA16). */
+  at: string;
+  /** As carteiras em que o ativo está em posição, na ordem da lista de carteiras. */
+  portfolios: Array<{ id: string; name: string }>;
+}
+
+/** Corpo de `GET /api/portfolios/day-changes`: vazio sem cotação do pregão de hoje. */
+export interface DayChanges {
+  assets: DayChange[];
+}
 
 export function portfolioPath(id: string): string {
   return PORTFOLIO_PATHS.item.replace(':id', encodeURIComponent(id));

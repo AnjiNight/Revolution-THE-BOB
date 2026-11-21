@@ -8,6 +8,7 @@ import {
   suggestCopyName,
   type CopyScope,
   type FieldErrors,
+  type PerformanceQuery,
   type Portfolio,
   type PortfolioCopyResult,
   type PortfolioList,
@@ -25,6 +26,7 @@ import { MoneyField } from './MoneyField';
 import { PortfolioCash } from './PortfolioCash';
 import { PortfolioPerformance } from './PortfolioPerformance';
 import { PortfolioPositions } from './PortfolioPositions';
+import { ReportButton } from './PortfolioReport';
 import type { TradeAsset } from './TradeForm';
 import { TextField } from './TextField';
 
@@ -807,6 +809,8 @@ export function PortfolioPage({
   // SPEC-023: o formulário de cópia, acima do caixa.
   const [copying, setCopying] = useState(false);
   const copyButton = useRef<HTMLButtonElement>(null);
+  // SPEC-038: o relatório em PDF usa o período escolhido na Rentabilidade.
+  const [reportQuery, setReportQuery] = useState<PerformanceQuery>({ period: 'all' });
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'ready'; portfolio: Portfolio }
@@ -914,6 +918,12 @@ export function PortfolioPage({
                     <Copy weight="bold" />
                   </span>
                 </button>
+                <ReportButton
+                  portfolio={state.portfolio}
+                  query={reportQuery}
+                  version={version}
+                  onSessionExpired={onSessionExpired}
+                />
               </div>
             )}
           </header>
@@ -963,6 +973,7 @@ export function PortfolioPage({
           <PortfolioPerformance
             portfolio={state.portfolio}
             version={version}
+            onQueryChange={setReportQuery}
             onSessionExpired={onSessionExpired}
           />
           {/* SPEC-016: a histórica também compra e vende, com a data escolhida. */}

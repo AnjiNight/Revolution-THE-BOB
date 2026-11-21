@@ -23,6 +23,7 @@ import type {
   NewsErrorCode,
   PortfolioErrorCode,
   RenamePortfolioInput,
+  TaskErrorCode,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   PublicUser,
@@ -74,6 +75,9 @@ export const ASSET_CHANNELS = {
   detail: 'assets:detail',
   history: 'assets:history',
   logo: 'assets:logo',
+  /** SPEC-029: notícias do ativo e os marcadores do gráfico. */
+  news: 'assets:news',
+  newsDays: 'assets:news-days',
   catalog: 'assets:catalog',
   create: 'assets:create',
   update: 'assets:update',
@@ -103,6 +107,12 @@ export const NEWS_CHANNELS = {
   updateSource: 'news:update-source',
   // SPEC-028: as últimas notícias com os vínculos.
   latest: 'news:latest',
+  // SPEC-044: a amostra rotulada e a avaliação do sentimento.
+  sentiment: 'news:sentiment',
+  nextToLabel: 'news:next-to-label',
+  label: 'news:label',
+  unlabel: 'news:unlabel',
+  evaluate: 'news:evaluate-sentiment',
 } as const;
 
 /** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */
@@ -127,7 +137,57 @@ export const PORTFOLIO_CHANNELS = {
   comparison: 'portfolios:comparison',
   // SPEC-023: nova carteira a partir de outra.
   copy: 'portfolios:copy',
+  // SPEC-033: a variação do dia dos ativos das carteiras, para os avisos.
+  dayChanges: 'portfolios:day-changes',
 } as const;
+
+/**
+ * SPEC-033: os avisos de variação. A interface prepara o texto (no idioma dela) e pede o aviso do
+ * sistema; o processo principal avisa a interface quando a pessoa clica nele.
+ */
+export const NOTIFY_CHANNELS = {
+  show: 'notify:show',
+  clicked: 'notify:clicked',
+} as const;
+
+/** Para onde o clique no aviso leva: a ficha do ativo, ou a tela Carteiras (aviso agrupado). */
+export type NoticeTarget = { kind: 'asset'; assetId: string } | { kind: 'portfolios' };
+
+/** Um aviso do sistema, já no idioma da interface. */
+export interface VariationNotice {
+  title: string;
+  body: string;
+  target: NoticeTarget;
+}
+
+/** SPEC-011: as tarefas de ingestão do colaborador (a tela Tarefas). */
+export const TASK_CHANNELS = {
+  list: 'tasks:list',
+  runs: 'tasks:runs',
+  errors: 'tasks:errors',
+  request: 'tasks:request',
+} as const;
+
+/**
+ * SPEC-038: o relatório da carteira em PDF. A interface monta o documento (só para a impressão) e
+ * o processo principal imprime a própria janela e grava o arquivo; `open` abre o último gravado.
+ */
+export const REPORT_CHANNELS = {
+  save: 'report:save',
+  open: 'report:open',
+} as const;
+
+/** O que o processo principal precisa, já no idioma da interface: o nome e o rodapé das páginas. */
+export interface ReportSaveRequest {
+  portfolioName: string;
+  /** O aviso curto do rodapé de cada página. */
+  footerNotice: string;
+  /** "Página {page} de {pages}": os marcadores viram o número da página e o total. */
+  footerPage: string;
+}
+
+/** Gravado (com o nome do arquivo e a pasta), ou não (a pessoa cancelou o "Salvar como"). */
+export type ReportSaveResult = { saved: false } | { saved: true; file: string; folder: string };
 
 /** SPEC-035: os idiomas do app. */
 export type AppLanguage = 'pt-BR' | 'en';
@@ -172,6 +232,7 @@ export type ClientAuthError =
   | FundamentalsErrorCode
   | NewsErrorCode
   | PortfolioErrorCode
+  | TaskErrorCode
   | 'server_unavailable'
   | 'invalid_url'
   | 'unexpected'

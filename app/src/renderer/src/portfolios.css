@@ -1348,6 +1348,17 @@ button.allocation-sector-button:hover {
   font-weight: 500;
 }
 
+/* ---------- Nova carteira a partir de outra (SPEC-023) ---------- */
+
+.portfolio-origin .link {
+  font-size: inherit;
+}
+
+.portfolio-copied {
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
 /* SPEC-027: fontes de notícias (Área do colaborador). O endereço quebra em qualquer ponto para a
    tabela caber na tela sem rolagem lateral. */
 .news-sources-table {

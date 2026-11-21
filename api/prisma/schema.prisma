@@ -56,6 +56,8 @@ model Usuario {
   tokensRenovacao TokenRenovacao[]
   codigosEmail    CodigoEmail[]
   carteiras       Carteira[]
+  /// SPEC-011: execuções que o colaborador pediu.
+  pedidosExecucao PedidoExecucao[]
 
   @@map("usuario")
 }
@@ -542,7 +544,9 @@ model ExecucaoTarefa {
   /// SPEC-040: totais que não cabem em "registros" (importação: criados, desativados, logos...).
   totais         Json?             @db.JsonB
 
-  erros ErroExecucao[]
+  erros   ErroExecucao[]
+  /// SPEC-011: o pedido do colaborador que esta execução atendeu.
+  pedidos PedidoExecucao[]
 
   @@index([tarefa, iniciadaEm])
   @@map("execucao_tarefa")
@@ -560,6 +564,43 @@ model ErroExecucao {
 
   @@index([execucaoId])
   @@map("erro_execucao")
+}
+
+/// SPEC-011: o resultado de um pedido de execução, depois de atendido.
+enum ResultadoPedido {
+  executada
+  nada_a_fazer
+
+  @@map("resultado_pedido")
+}
+
+/// SPEC-011: o colaborador pede uma execução e o processador atende (confere a cada 15 s). Um
+/// pedido pendente por tarefa (índice único parcial na migração); atendido sempre com o resultado.
+model PedidoExecucao {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tarefa        TarefaIngestao
+  pedidoEm      DateTime         @map("pedido_em") @db.Timestamptz(3)
+  /// Nulo se a conta do colaborador for removida pela equipe.
+  colaboradorId String?          @map("colaborador_id") @db.Uuid
+  atendidoEm    DateTime?        @map("atendido_em") @db.Timestamptz(3)
+  /// A execução que atendeu o pedido; nula quando não havia nada a fazer.
+  execucaoId    String?          @map("execucao_id") @db.Uuid
+  resultado     ResultadoPedido?
+
+  colaborador Usuario?        @relation(fields: [colaboradorId], references: [id], onDelete: SetNull)
+  execucao    ExecucaoTarefa? @relation(fields: [execucaoId], references: [id], onDelete: SetNull)
+
+  @@index([atendidoEm])
+  @@map("pedido_execucao")
+}
+
+/// SPEC-011: o sinal de vida do processador, uma linha só (id = 1), com o intervalo dele.
+model EstadoProcessador {
+  id                Int      @id @default(1) @db.SmallInt
+  vistoEm           DateTime @map("visto_em") @db.Timestamptz(3)
+  intervaloSegundos Int      @map("intervalo_segundos")
+
+  @@map("estado_processador")
 }
 
 /// Nível da cotação (DA16): o gratuito tem atraso de ~30 minutos; o assinante vem na SPEC-026.
@@ -868,14 +909,69 @@ model Noticia {
   /// SPEC-028: quando e com qual versão da regra a notícia foi vinculada aos ativos.
   vinculadaEm         DateTime? @map("vinculada_em") @db.Timestamptz(3)
   versaoVinculo       Int?      @map("versao_vinculo") @db.SmallInt
+  /// SPEC-044: o tom da notícia, a pontuação (−1 a 1), quando e por qual versão; vazios = pendente.
+  sentimento          SentimentoNoticia?
+  sentimentoPontuacao Decimal?           @map("sentimento_pontuacao") @db.Decimal(4, 3)
+  classificadaEm      DateTime?          @map("classificada_em") @db.Timestamptz(3)
+  versaoModeloId      Int?               @map("versao_modelo_id")
 
-  fonte  FonteNoticia   @relation(fields: [fonteId], references: [id], onDelete: Restrict)
-  ativos NoticiaAtivo[]
+  fonte        FonteNoticia   @relation(fields: [fonteId], references: [id], onDelete: Restrict)
+  ativos       NoticiaAtivo[]
+  versaoModelo VersaoModelo?  @relation(fields: [versaoModeloId], references: [id], onDelete: Restrict)
+  rotulo       RotuloNoticia?
 
   @@unique([fonteId, url])
   @@index([publicadaEm])
   @@index([versaoVinculo], map: "noticia_vinculo_idx")
+  @@index([versaoModeloId], map: "noticia_versao_modelo_idx")
   @@map("noticia")
+}
+
+/// SPEC-044: positivo, neutro ou negativo, do modelo ou do rótulo da equipe.
+enum SentimentoNoticia {
+  positivo
+  neutro
+  negativo
+
+  @@map("sentimento_noticia")
+}
+
+enum SituacaoVersaoModelo {
+  em_uso
+  retirada
+
+  @@map("situacao_versao_modelo")
+}
+
+/// SPEC-044 (DA20): cada versão do modelo de sentimento, com a nota da última avaliação.
+model VersaoModelo {
+  id           Int                  @id @default(autoincrement())
+  nome         String               @db.VarChar(40)
+  numero       Int
+  situacao     SituacaoVersaoModelo
+  criadaEm     DateTime             @map("criada_em") @db.Timestamptz(3)
+  avaliadaEm   DateTime?            @map("avaliada_em") @db.Timestamptz(3)
+  amostraTeste Int?                 @map("amostra_teste")
+  acuracia     Decimal?             @db.Decimal(4, 3)
+  f1Macro      Decimal?             @map("f1_macro") @db.Decimal(4, 3)
+  /// Linhas: o rótulo; colunas: o modelo (positivo, neutro, negativo).
+  matriz       Json?
+
+  noticias Noticia[]
+
+  @@unique([nome, numero])
+  @@map("versao_modelo")
+}
+
+/// SPEC-044: o rótulo da equipe para a amostra; sem a pessoa (§4.2).
+model RotuloNoticia {
+  noticiaId  String            @id @map("noticia_id") @db.Uuid
+  sentimento SentimentoNoticia
+  rotuladoEm DateTime          @map("rotulado_em") @db.Timestamptz(3)
+
+  noticia Noticia @relation(fields: [noticiaId], references: [id], onDelete: Cascade)
+
+  @@map("rotulo_noticia")
 }
 
 /// SPEC-028: o ativo é o assunto (principal), aparece no texto (citado) ou a notícia é uma lista.

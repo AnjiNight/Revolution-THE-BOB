@@ -97,7 +97,7 @@ describe('carga do histórico (SPEC-008)', () => {
       });
       expect(runs.runs).toEqual([
         expect.objectContaining({
-          id: 'run-1',
+          id: '00000000-0000-4000-8000-000000000001',
           task: 'historico_retroativo',
           result: expect.objectContaining(result),
         }),

@@ -58,9 +58,29 @@
 | 1.48 | Tela da carteira reordenada a pedido do Luís (09/11/2026): Caixa (saldo, Aportar e Retirar) no topo, depois Rentabilidade, Posições e Distribuição, e o Extrato no fim (SPEC-021 §9) |
 | 1.49 | SPEC-022 detalhada ([SPEC-022.md](SPEC-022.md)), aguardando a aprovação: de 2 a 4 carteiras lado a lado no mesmo período ("Em comum" por padrão), rentabilidade da cota num gráfico em %, resumo em reais e composição de hoje; propostas para a OPEN-22 (cenário = carteira) e a OPEN-23 (ao vivo e histórica juntas, com o rótulo) |
 | 1.50 | SPEC-022 aprovada (Luís, 11/11/2026) com as recomendações e implementada: botão "Comparar carteiras" na lista (de 2 a 4), tela Comparação com o período "Em comum", gráfico da cota em % com cor e marcador por carteira e "Comparar com os índices", resumo em reais e composição de hoje; números iguais aos da tela de cada carteira; 4 carteiras com 50 ativos no total em 1,05 s (RNF06). OPEN-23 resolvida e OPEN-22 em parte (cenário = carteira); a SPEC-023 deixa de estar bloqueada: o que ela vira fica para decidir ao detalhá-la |
-| 1.51 | SPEC-027 detalhada ([SPEC-027.md](SPEC-027.md)) pela Nicoly, aguardando a aprovação: notícias do Investidor10 (autorizadas por telefone em 12/11/2026) pelo sitemap de notícias a cada 30 min e o arquivo desde 22/09/2023 (22.491 notícias); fontes curadas por RSS ou Atom, a primeira a Agência Brasil; propostas para a OPEN-28 (notícias) e a OPEN-29 |
-| 1.52 | SPEC-027 aprovada (Nicoly, 12/11/2026; decisão 1 sem o pedido de e-mail) e implementada: módulo Notícias com a fonte pai (Investidor10, sitemap de notícias a cada 30 min e o arquivo aos poucos) e as fontes curadas por RSS ou Atom (Agência Brasil), tela Notícias do colaborador; coleta real de 251 notícias do Investidor10 e 10 da Agência Brasil. OPEN-28 resolvida e OPEN-29 em parte. Primeira Spec com a validação visual como usuária e o teste de ponta a ponta em `tests/e2e/` (Playwright), com os mocks em `mocks/` |
-| 1.53 | SPEC-028 detalhada ([SPEC-028.md](SPEC-028.md)) pela Nicoly, aguardando a aprovação: só o vínculo notícia–ativo (RF27), pelo ticker citado e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista; o sentimento (RF28, OPEN-30, OPEN-31) proposto para uma nova SPEC-044, para as notícias chegarem antes à ficha (SPEC-029) |
+| 1.51 | SPEC-023 detalhada ([SPEC-023.md](SPEC-023.md)), aguardando a aprovação: "Nova carteira a partir de outra", com o mesmo tipo e início, copiando tudo (aportes, retiradas, compras e vendas) ou só o dinheiro, na histórica até uma data, sem os estornados; a cópia guarda de qual carteira nasceu e abre com "Comparar as duas"; proposta para fechar a OPEN-22 (RF20 reescrito na versão 1.12 dos requisitos) |
+| 1.52 | SPEC-023 aprovada (Luís, 16/11/2026, como escrita) e implementada: botão Copiar na lista e na carteira, formulário com "Tudo" ou "Só o dinheiro" e "Copiar até" na histórica, cópia numa transação com a original travada mantendo o horário de cada lançamento, `copy_breaks_cash`, "Criada em … a partir de" com o link e "Comparar as duas"; `carteira.origem_id`, exportação na versão 7, requisitos 1.12 (RF20) e modelo de domínio. OPEN-22 resolvida. Fase 5 completa |
+| 1.53 | SPEC-032 detalhada ([SPEC-032.md](SPEC-032.md)) a pedido do Luís, fora da ordem das fases, aguardando a aprovação: cópia local cifrada pelo cofre do SO do que foi consultado, modo consulta sem conexão (servidor inalcançável, sessão renovada há menos de 30 dias), ETag e 304 nas leituras (RNF19) e limpeza no logout, na sessão recusada e na exclusão; propostas para a OPEN-10 (offline só leitura, RF37 reescrito na versão 1.13 dos requisitos), para trocar o SQLite das decisões técnicas por arquivos cifrados e para a SPEC-029 deixar de ser dependência (ela entrega a sua parte) |
+| 1.54 | SPEC-032 aprovada (Luís, 16/11/2026, como escrita) e implementada: ETag e 304 em todas as leituras do servidor, cópia local cifrada no processo principal (`offline-cache`), modo consulta com a faixa "Sem conexão", os botões de escrita desativados e a volta da conexão a cada 30 s ou no "Tentar agora"; reabrir uma histórica de 10 anos sem mudança: de 139 KB para 0 de corpo; requisitos 1.13 (RF37), decisões técnicas, DA08, drivers e SPEC-034 atualizados. OPEN-10 resolvida; a SPEC-029 entrega a sua parte |
+| 1.55 | SPEC-035 detalhada ([SPEC-035.md](SPEC-035.md)) a pedido do Luís, aprovada com as recomendações no próprio pedido ("vamo faze o md e implementar") e implementada: botão com o globo e o nome do outro idioma no topo da página de entrada e no rodapé das telas, troca na hora (textos, números, moeda, datas, `<html lang>` e título), escolha guardada neste computador e não na conta, e a página do login com Google e o nome do arquivo "Baixar meus dados" seguindo o idioma. OPEN-45 resolvida (o que vem das fontes fica como veio) |
+| 1.56 | SPEC-011 detalhada ([SPEC-011.md](SPEC-011.md)) a pedido do Luís, aguardando a aprovação: tela Tarefas aberta pelo Início do colaborador (as 9 tarefas, o histórico com os erros e o estado do processador), "Executar agora" por pedido gravado no banco e atendido pelo processador a cada 15 s, sinal de vida do processador, execução interrompida fechada como falha e limpeza das execuções com mais de 90 dias (proposta para a OPEN-40) |
+| 1.57 | SPEC-011 aprovada (Luís, 16/11/2026, como escrita) e implementada: tela Tarefas aberta pelo painel "Tarefas de dados" do Início do colaborador (as 9 tarefas com a última execução, o histórico 50 por vez com os erros 100 por vez e o estado do processador), "Executar agora" gravado em `pedido_execucao` e atendido pelo processador em até 15 s, sinal de vida em `estado_processador`, execução interrompida fechada como falha ao iniciar e limpeza diária das execuções com mais de 90 dias, guardando a última de cada tarefa; os horários das tarefas num lugar só do código. OPEN-40 resolvida; EXECUCAO_TAREFA e ERRO_EXECUCAO entram no modelo de domínio, com PEDIDO_EXECUCAO e ESTADO_PROCESSADOR |
+| 1.58 | SPEC-027 detalhada ([SPEC-027.md](SPEC-027.md)) pela Nicoly, aguardando a aprovação: notícias do Investidor10 (autorizadas por telefone em 12/11/2026) pelo sitemap de notícias a cada 30 min e o arquivo desde 22/09/2023 (22.491 notícias); fontes curadas por RSS ou Atom, a primeira a Agência Brasil; propostas para a OPEN-28 (notícias) e a OPEN-29 |
+| 1.59 | SPEC-027 aprovada (Nicoly, 12/11/2026; decisão 1 sem o pedido de e-mail) e implementada: módulo Notícias com a fonte pai (Investidor10, sitemap de notícias a cada 30 min e o arquivo aos poucos) e as fontes curadas por RSS ou Atom (Agência Brasil), tela Notícias do colaborador; coleta real de 251 notícias do Investidor10 e 10 da Agência Brasil. OPEN-28 resolvida e OPEN-29 em parte. Primeira Spec com a validação visual como usuária e o teste de ponta a ponta em `tests/e2e/` (Playwright), com os mocks em `mocks/` |
+| 1.60 | SPEC-028 detalhada ([SPEC-028.md](SPEC-028.md)) pela Nicoly, aguardando a aprovação: só o vínculo notícia–ativo (RF27), pelo ticker citado e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista; o sentimento (RF28, OPEN-30, OPEN-31) proposto para uma nova SPEC-044, para as notícias chegarem antes à ficha (SPEC-029) |
+| 1.61 | Junção, em 16/11/2026, do trabalho da Nicoly (SPECs 027 e 028, que ela tinha numerado 1.51 a 1.53, agora 1.58 a 1.60) com o do Luís (1.51 a 1.57): as 3 tarefas de notícias da SPEC-027 (`noticias_novas`, `noticias_arquivo` e `noticias_feeds`) entram na tela Tarefas da SPEC-011, que passa a mostrar 12 tarefas; as duas do Investidor10 ficam bloqueadas com a coleta desligada |
+| 1.62 | Menu do colaborador em telas estreitas, a pedido do Luís (16/11/2026): com "Notícias" (SPEC-027), até 719 px a ilha fica compacta (sem o avatar, o Sair só com o ícone e espaços menores) e os 5 itens cabem a partir de 480 px, sem o "Meu perfil" escondido nem o Sair fora da ilha; o contorno do foco fica por dentro dos itens; os 4 itens do usuário também ganham folga em 480 px. Nota no §9 da SPEC-027 |
+| 1.63 | SPEC-028 aprovada (Nicoly) e implementada, validada como usuária em 17/11/2026: vínculo notícia–ativo pelo ticker e pelas empresas marcadas pelo Investidor10, com a relevância principal, citado ou lista, e as últimas notícias na tela do colaborador; 261 notícias reais vinculadas, 154 com ativo. Entra a SPEC-044 (sentimento, RF28, OPEN-30 e OPEN-31); a SPEC-029 passa a depender só do vínculo |
+| 1.64 | SPEC-029 detalhada ([SPEC-029.md](SPEC-029.md)) pela Nicoly com o Claude, aguardando a aprovação: notícias principal e citado na ficha do ativo (as de lista num grupo à parte), marcadores por pregão no gráfico de preço, notícia depois das 18h contando para o pregão seguinte, e a variação no pregão e 5 pregões depois; sem sentimento (SPEC-044); entrega a sua parte da consulta sem conexão (SPEC-032) |
+| 1.65 | SPEC-029 aprovada (Nicoly, 17/11/2026, "Aprovar e fazer") e implementada: seção Notícias na ficha do ativo (10 por vez, listas num grupo fechado), marcadores no gráfico com clique, toque e teclado (N, Shift+N, Enter), painel do pregão com a variação no pregão e 5 pregões depois, e as duas leituras na cópia local (SPEC-032 §5.1 atualizada). A conferência com dados reais achou e corrigiu a leitura dos horários com 3 horas a menos num PostgreSQL fora de UTC (a conexão agora é sempre UTC) |
+| 1.66 | SPEC-038 detalhada ([SPEC-038.md](SPEC-038.md)) a pedido do Luís, aguardando a aprovação: botão "Baixar relatório (PDF)" na tela da carteira, com o período da Rentabilidade; o relatório é a fotografia da tela (resumo com o CDI, o Ibovespa e o IFIX, os dois gráficos, posições e distribuição de hoje, proventos, extrato do período do mais antigo para o mais recente, sem os estornados, e os avisos), em A4 e tema claro, no idioma da interface, sem dado pessoal, gerado pelo próprio app (`printToPDF` do Electron) e gravado com "Salvar como"; proposta para a OPEN-38 |
+| 1.67 | SPEC-038 aprovada (Luís, 17/11/2026, com as recomendações) e implementada: botão "Baixar relatório (PDF)" ao lado de "Copiar carteira", com o período da Rentabilidade; o documento só existe na impressão (cabeçalho, resumo com o CDI, o Ibovespa e o IFIX, os dois gráficos, posições e distribuição de hoje, proventos, extrato do período e avisos), em A4 e tema claro, PDF marcado com rodapé numerado, gerado pelo `printToPDF` do Electron e gravado com "Salvar como"; sem conexão, sai com os dados guardados e a data deles. OPEN-38 resolvida |
+| 1.68 | SPEC-033 detalhada ([SPEC-033.md](SPEC-033.md)) a pedido do Luís, aguardando a aprovação: aviso do Windows quando um ativo em posição nas carteiras (ao vivo e históricas) sobe ou cai 5% ou mais no dia (3% ou 10% à escolha em Meu perfil, ou desligado), com o app aberto ou minimizado, durante o pregão; um aviso por ativo por dia em cada sentido, agrupado acima de 3; o clique abre a ficha; a escolha fica neste computador; nova rota de leitura `GET /api/portfolios/day-changes`, sem mudança no banco; nenhum aviso com o app fechado. Proposta para a OPEN-35 |
+| 1.69 | SPEC-033 aprovada (Luís, 17/11/2026, com as recomendações) e implementada: aviso do Windows, com o app aberto ou minimizado, quando um ativo em posição nas carteiras (ao vivo e históricas) sobe ou cai a partir do limiar escolhido em Meu perfil (5% por padrão, 3% ou 10%, ou desligado); a interface lê a rota `GET /api/portfolios/day-changes` a cada 5 minutos nos dias úteis das 10:30 às 18:30, e não lê sem conexão; um aviso por ativo por dia em cada sentido, agrupado acima de 3, sem valores da carteira; o clique abre a ficha (ou Carteiras, no agrupado); ao sair da conta, os avisos saem da Central de Ações. OPEN-35 resolvida para o RF35 |
+| 1.70 | SPEC-044 detalhada ([SPEC-044.md](SPEC-044.md)) pela Nicoly com o Claude, aguardando a aprovação: sentimento positivo, neutro ou negativo de cada notícia, com a versão do modelo; v1 por regras com dicionário de termos do mercado, no processador; amostra rotulada pela equipe na tela do colaborador, avaliação separada no tempo (F1 macro) e o tom na ficha do ativo só com F1 de 0,60 ou mais em 60 notícias de teste; proposta para a OPEN-30 |
+| 1.71 | SPEC-044 aprovada (Nicoly, 19/11/2026, "Aprovar e fazer") e implementada: dicionário de termos (`lexico` v1) no processador, logo depois do vínculo e a cada 30 minutos; versões do modelo no banco, com a nota; na tela Notícias do colaborador, rotular (teclas 1, 2, 3 e 0), trocar e apagar rótulos e "Avaliar agora" com a tabela de erros; na ficha, o tom em cada notícia, as contagens do pregão e a nota de caráter educacional, só com a versão aprovada. As 261 notícias reais classificadas em 0,3 s (79 positivas, 101 neutras, 81 negativas). OPEN-30 resolvida; OPEN-31 em parte; DA20 e `decisoes_tecnicas.md` atualizados |
+| 1.72 | Junção de 21/11/2026: tiradas as marcas de conflito que tinham ficado no histórico; as linhas da SPEC-044, que repetiam 1.68 e 1.69, passam a 1.70 e 1.71 |
+| 1.73 | SPEC-045 detalhada ([SPEC-045.md](SPEC-045.md)) a pedido da Nicoly, aprovada por ela em 21/11/2026, como escrita ("Aprovo, implemente"), e implementada: botão Visão do usuário no menu do colaborador, com as telas do usuário, a faixa de aviso e carteiras de teste da própria conta (as rotas de carteira aceitam o colaborador; a verificação de dono não muda). Novo RF44 (requisitos v1.14); muda a regra "Quem tem carteira" da SPEC-012 |
 ---
 
 ## 0. Como ler este documento
@@ -141,7 +161,7 @@ flowchart LR
     C11 --> C10
     C03 --> C10
     C08 --> C12["C12 Offline"]
-    C09 --> C12
+    C09 -.-> C12
     C06 --> C13["C13 Notificações"]
     C01 --> C14["C14 LGPD"]
     C06 -. "acrescenta sua parte" .-> C14
@@ -196,8 +216,8 @@ Invariantes vindos das ADRs (não estão em `requisições.md`, ver OPEN-09 e OP
 | DA16 | A interface nunca exibe "tempo real"; toda cotação mostra o horário | 009, 010, 026 |
 | DA16, DA12 | Usuário só recebe cotações compatíveis com o plano | 026 |
 | DA19 | A fonte pai não pode ser desativada nem trocada pelo usuário | 027, 030 |
-| DA19, DA20 | Fontes do usuário nunca entram no treino nem nas probabilidades oficiais | 028, 030, 031 |
-| DA20 | Toda classificação registra a versão do modelo | 028 |
+| DA19, DA20 | Fontes do usuário nunca entram no treino nem nas probabilidades oficiais | 044, 030, 031 |
+| DA20 | Toda classificação registra a versão do modelo | 044 |
 | DA21 | Cenário com n abaixo do mínimo exibe "dados insuficientes" | 031 |
 
 ### 1.5 Requisitos não funcionais e onde se aplicam
@@ -299,7 +319,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-07 | ✅ **Resolvida na [SPEC-009](SPEC-009.md):** a brapi é usada só para mostrar as cotações no próprio app, com fonte e horário, nunca "tempo real" e sem repassar os dados a terceiros | PE02 | 009, 026 |
 | OPEN-08 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** compra e venda na carteira ao vivo só em dia de pregão (RB11) e com a cotação do próprio dia (RB07); depois do fechamento vale a última cotação do dia; sem ordem para a abertura. Original: compra/venda com a bolsa fechada e sua relação com RB11 | PE03 | 013, 014 |
 | OPEN-09 | ✅ **Parte da carteira resolvida na [SPEC-012](SPEC-012.md)** (RB07, RF11, RB24 e RB25 nos requisitos v1.8); RF09 e RF33 ficam com a SPEC-026. Original: reescrever RB07 e incluir em `requisições.md` as regras de DA16/DA17 (preço por plano, tipo imutável, ordem cronológica) e ajustar RF09, RF11, RF33 | DA16, DA17 | 012, 014, 016, 026 |
-| OPEN-10 | RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
+| OPEN-10 | ✅ **Resolvida na [SPEC-032](SPEC-032.md) (16/11/2026):** offline só leitura e RF37 reescrito na versão 1.13 dos requisitos ("ao restabelecer a conexão, atualizar os dados guardados no computador, trazendo do servidor só o que mudou"); a fila de lançamentos pendentes continua como evolução (DA08). Original: RF37 (escrita offline) × RNF14/DA08 (somente leitura): ajustar ou remover RF37 | INC-04 | 032 |
 | OPEN-11 | ✅ **Resolvida na [SPEC-012](SPEC-012.md):** sem `saldo_inicial`; o caixa vem só dos aportes ("Valor inicial" na SPEC-013), e retirada maior que o caixa é recusada (RB26). Original: relação entre `saldo_inicial` e aportes; retirada maior que o caixa | INC-14 | 012, 013 |
 | OPEN-12 | ✅ **Resolvida na [SPEC-014](SPEC-014.md):** quantidade inteira, de 1 a 1.000.000, sem lote padrão (RB27). Original: quantidade fracionária de ações e regras de lote | INC-18 | 014, 016 |
 | OPEN-13 | ✅ **Resolvida pela equipe:** custos de operação ficam fora do escopo, com aviso ao usuário na compra e na venda de ações e FIIs (RB20, RB21); o aviso na aplicação no Tesouro Direto volta com a renda fixa (DA22) | INC-19 | 014, 016, 019; 024 na fase de renda fixa |
@@ -311,7 +331,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-19 | ⏸ **Adiada com a renda fixa (DA22).** Significado do caso de uso "Projetar renda fixa" | INC-16 | 017 |
 | OPEN-20 | ⏸ **Adiada com a renda fixa (DA22).** Renda fixa na carteira histórica | DA17 PO4 | 016, 017 |
 | OPEN-21 | ✅ **Resolvida na [SPEC-020](SPEC-020.md):** Ibovespa e IFIX pelas estatísticas históricas da B3, desde 2016. Original: fonte do histórico do Ibovespa | PE06 | 020 |
-| OPEN-22 | ⏳ **Em parte resolvida na [SPEC-022](SPEC-022.md):** cada cenário é uma carteira, e "Comparar cenários" é a comparação de carteiras (RF19); a SIMULACAO do modelo (projeção) fica com a SPEC-031. Falta o RF20: decidir, ao detalhar a SPEC-023, se ela vira "Nova carteira a partir de outra" ou fica coberta pela SPEC-012. Original: significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
+| OPEN-22 | ✅ **Resolvida nas SPECs [022](SPEC-022.md) e [023](SPEC-023.md):** cada cenário é uma carteira, e "Comparar cenários" é a comparação de carteiras (RF19); a SIMULACAO do modelo (projeção) fica com a SPEC-031; o RF20 virou "Nova carteira a partir de outra" (requisitos 1.12). Original: significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
 | OPEN-23 | ✅ **Resolvida na [SPEC-022](SPEC-022.md):** pode misturar, com o rótulo do tipo sempre visível e a nota da DA17. Original: comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
 | OPEN-24 | ✅ **Resolvida nas SPECs [014](SPEC-014.md) e [016](SPEC-016.md):** a API registra por quantidade (RF12); a tela tem "Calcular por valor", em reais ou em "% do caixa" (o "50% em PETR4" da P01); montar vários ativos de uma vez fica fora. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
 | OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
@@ -319,22 +339,22 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
 | OPEN-28 | ✅ **Resolvida.** Dados (04/11/2026): autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)). Notícias (12/11/2026): autorizadas por telefone para fins universitários, nas mesmas condições ([SPEC-027 §4.1](SPEC-027.md)). Original: autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta | PE07 | 027, 041, 042 |
 | OPEN-29 | ⏳ **Em parte resolvida na [SPEC-027](SPEC-027.md):** fontes curadas por RSS ou Atom, cadastradas pelo colaborador com categoria, confiabilidade de 1 a 5 (critério da equipe) e licença conferida; a primeira é a Agência Brasil – Economia. As outras fontes ficam com a equipe. Original: lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
-| OPEN-30 | Implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 028 |
-| OPEN-31 | Fonte do histórico de notícias e janela de treino | PE09, PE11 | 028, 031 |
+| OPEN-30 | ✅ **Resolvida na [SPEC-044](SPEC-044.md) (19/11/2026):** v1 por regras com dicionário, no processador; nota mínima F1 macro 0,60 com 60 notícias de teste da amostra rotulada pela equipe; versão nova só se medir melhor na mesma amostra; retreino não se aplica à v1. Original: implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 044 |
+| OPEN-31 | ⏳ Em parte: a v1 (SPEC-044) não treina; o histórico disponível é o arquivo do Investidor10, desde 22/09/2023. A janela de treino fica para o modelo treinado. Original: fonte do histórico de notícias e janela de treino | PE09, PE11 | 044, 031 |
 | OPEN-32 | RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
 | OPEN-33 | Aprovação de DA21 (**Proposta**); horizontes, limite de estabilidade, n mínimo; cenário com sentimento personalizado | DA21, PE12 | 031 |
 | OPEN-34 | Cenário por ativo ou por carteira; reescrita de RF30/RF31 | INC-06 | 031 |
-| OPEN-35 | Limiar de "variação relevante", antecedência do aviso de vencimento, notificação com o app fechado | RF34, RF35 | 033 |
+| OPEN-35 | ✅ **Resolvida para o RF35 na [SPEC-033](SPEC-033.md) (17/11/2026):** 5% no dia (3% ou 10% à escolha em Meu perfil, ou desligado) e nenhum aviso com o app fechado; a antecedência do aviso de vencimento (RF34) fica com a renda fixa (DA22). Original: limiar de "variação relevante", antecedência do aviso de vencimento, notificação com o app fechado | RF34, RF35 | 033 |
 | OPEN-36 | Escopo de RF04 por sistema operacional | INC-12 | 036 |
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
-| OPEN-38 | Conteúdo do relatório PDF (RF22) | Lacuna | 038 |
+| OPEN-38 | ✅ **Resolvida na [SPEC-038](SPEC-038.md) (17/11/2026):** a fotografia da carteira no período escolhido na Rentabilidade (resumo com as referências, gráficos, posições e distribuição de hoje, proventos e extrato do período) com os avisos. Original: conteúdo do relatório PDF (RF22) | Lacuna | 038 |
 | OPEN-39 | ✅ **Resolvida na [SPEC-001](SPEC-001.md):** cada migração tem um `down.sql` escrito à mão e o comando `db:rollback` desfaz a última | INC-11 | 001 |
-| OPEN-40 | Retenção de backups (× RB04), de registros de execução e de cotações intradiárias. Decidido: backups e logs por no máximo 30 dias ([SPEC-034](SPEC-034.md)); cotações do pregão por 30 dias ([SPEC-009](SPEC-009.md)) | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
+| OPEN-40 | ✅ **Resolvida na [SPEC-011](SPEC-011.md) (16/11/2026):** registros de execução, erros e pedidos atendidos por 90 dias, guardando sempre a última execução de cada tarefa. Antes, decididos os backups e logs (no máximo 30 dias, [SPEC-034](SPEC-034.md)), as cotações do pregão (30 dias, [SPEC-009](SPEC-009.md)) e o CDI (para sempre, [SPEC-007](SPEC-007.md)). Original: retenção de backups (× RB04), de registros de execução e de cotações intradiárias | DA13, DA14, DA04 | 001, 007, 008, 009, 011, 034 |
 | OPEN-41 | ✅ **Resolvida na [SPEC-006](SPEC-006.md):** a busca procura só nos ativos ativos do catálogo da equipe | INC-09 | 006 |
 | OPEN-42 | Carteira real: confirmar fora do MVP | INC-08 | — (nenhuma Spec criada) |
 | OPEN-43 | Atualizar o diagrama de casos de uso | INC-02 | Várias |
 | OPEN-44 | Aprovar no modelo conceitual as entidades previstas na arquitetura §9 | INC-05 | Várias (marcadas com `†`) |
-| OPEN-45 | Com interface em inglês, notícias (em português, PRE04) e textos gerados continuam em português? | RF38 × PRE04 | 035 |
+| OPEN-45 | ✅ **Resolvida na [SPEC-035](SPEC-035.md) (16/11/2026):** o que vem das fontes fica como veio (nomes de empresas e de fundos; as notícias em português, que a SPEC-029 marca com `lang="pt-BR"` e "Em português"); o que o app escreve é traduzido, inclusive os textos gerados dos cenários (SPEC-031). Original: com interface em inglês, notícias (em português, PRE04) e textos gerados continuam em português? | RF38 × PRE04 | 035 |
 | OPEN-46 | ✅ **Resolvida (DA23):** FIIs comparados com CDI e Ibovespa no escopo atual; IFIX como evolução | DA22, DA23 | 020 |
 | OPEN-47 | ✅ **Resolvida (DA23):** ações classificadas por setor e FIIs por segmento | DA22, DA23 | 006, 021 |
 | OPEN-48 | Confirmar que as fontes de cotação (atual e histórica) cobrem os FIIs do catálogo. Atual: ✅ a brapi devolve FII no plano gratuito ([SPEC-009](SPEC-009.md)) | DA22 | 008, 009 |
@@ -542,7 +562,7 @@ Visão geral por fase:
 | RB | RB11 |
 | RNF | RNF12, RNF13 |
 | Caso de uso / fluxo | UC: Consultar cotação (lado do sistema) |
-| Entidades | COTACAO, ATIVO, EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
+| Entidades | COTACAO, ATIVO, EXECUCAO_TAREFA, ERRO_EXECUCAO |
 | Drivers | FAS03, QA02, QA08, QA12, PA03, RES03, RES07, PRE03 |
 | ADRs | DA06, DA07, DA14, DA18 |
 | Depende de | SPEC-001, SPEC-005, SPEC-006 |
@@ -602,7 +622,7 @@ Visão geral por fase:
 | RB | — |
 | RNF | RNF13 |
 | Caso de uso / fluxo | UC: Consultar taxa do indexador (lado do sistema); fluxo 7.2 (mesmo padrão) |
-| Entidades | INDEXADOR (CDI), TAXA_DIARIA, EXECUCAO_TAREFA† |
+| Entidades | INDEXADOR (CDI), TAXA_DIARIA, EXECUCAO_TAREFA |
 | Drivers | FAS03, QA02, QA08, QA12 |
 | ADRs | DA06, DA07, DA14, DA22 |
 | Depende de | SPEC-008 (padrão de ingestão); SPEC-005 só para conferir pregões sem CDI |
@@ -672,6 +692,8 @@ Visão geral por fase:
 
 #### SPEC-011 — Monitoramento e reexecução das tarefas de ingestão
 
+📄 Detalhada em [SPEC-011.md](SPEC-011.md) — aprovada (Luís, 16/11/2026, como escrita) e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O colaborador vê as execuções (horário, fonte, ativos afetados, registros processados, erros) e reexecuta uma tarefa |
@@ -680,12 +702,12 @@ Visão geral por fase:
 | RB | — |
 | RNF | RNF04, RNF18 |
 | Caso de uso / fluxo | Cenário de uso da P03 (sem caso de uso no diagrama, ver OPEN-43) |
-| Entidades | EXECUCAO_TAREFA†, ERRO_EXECUCAO† |
+| Entidades | EXECUCAO_TAREFA, ERRO_EXECUCAO, PEDIDO_EXECUCAO, ESTADO_PROCESSADOR |
 | Drivers | QA12, FAS10 |
 | ADRs | DA12, DA14 |
 | Depende de | SPEC-002, SPEC-008, SPEC-009 |
 | Posição | Só faz sentido depois que há tarefas. Fica antes das carteiras porque ajuda a operar a ingestão enquanto as demais Specs são desenvolvidas |
-| Em aberto | OPEN-03, OPEN-40 |
+| Em aberto | OPEN-43 (OPEN-03 e OPEN-40 resolvidas) |
 | Prioridade derivada | Could |
 
 ---
@@ -900,22 +922,24 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 | Em aberto | — (OPEN-23 resolvida; OPEN-22 resolvida na parte do RF19) |
 | Prioridade derivada | Could |
 
-#### SPEC-023 — Salvar e recuperar simulações
+#### SPEC-023 — Salvar e recuperar simulações: nova carteira a partir de outra
+
+📄 Detalhada em [SPEC-023.md](SPEC-023.md) — aprovada (Luís, 16/11/2026) e implementada.
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O usuário salva uma simulação e a recupera depois |
-| Valor | **Usuário:** retoma análises (P02 passo 9) |
-| RF | RF20 |
-| RB | RB02, RB03 |
-| RNF | — |
-| Caso de uso / fluxo | P02 passos 6–9 |
-| Entidades | SIMULACAO (significado em aberto) |
-| Drivers | OBJ02 |
-| ADRs | DA09 |
-| Depende de | SPEC-012, SPEC-019 |
-| Posição | Com cenário = carteira (SPEC-022), as carteiras já ficam salvas (SPEC-012). Ao detalhar, decidir se ela vira "Nova carteira a partir de outra" (mesmo tipo, início e valor inicial, para montar o cenário B rápido) ou fica coberta pela SPEC-012 (SPEC-022 §8) |
-| Em aberto | OPEN-22 (a parte do RF20, decidida com a própria Spec) |
+| Objetivo | O usuário cria uma carteira a partir de outra, com o mesmo tipo e o mesmo início, copiando tudo (aportes, retiradas, compras e vendas) ou só o dinheiro (aportes e retiradas), na histórica até uma data, sem os lançamentos estornados; a cópia é independente e guarda de qual carteira nasceu. "Salvar e recuperar" já é a lista de carteiras (SPEC-012) |
+| Valor | **Usuário:** monta o cenário B sem redigitar o A (P01: "altera a distribuição e compara"; P02: Cenário A × Cenário B) e retoma análises (P02 passo 9) |
+| RF | RF20 (reescrito na versão 1.12 dos requisitos) |
+| RB | RB02, RB03, RB08, RB24, RB25, RB26, RB28 |
+| RNF | RNF04, RNF11, RNF15, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | Criar carteira; P01 (altera a distribuição); P02 passos 6, 7 e 9 e o cenário de uso |
+| Entidades | CARTEIRA (`origem_id`); a SIMULACAO do modelo é a projeção da SPEC-031 |
+| Drivers | OBJ02, QA13 |
+| ADRs | DA09, DA13, DA17 |
+| Depende de | SPEC-012, SPEC-013, SPEC-014, SPEC-015, SPEC-016, SPEC-022 |
+| Posição | Fecha a Fase 5: usa o livro-razão das SPECs 013 a 016 e entrega na Comparação (SPEC-022) |
+| Em aberto | — (OPEN-22 resolvida) |
 | Prioridade derivada | Should |
 
 ---
@@ -982,31 +1006,53 @@ Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
 | Em aberto | **OPEN-28 (crítico)**, OPEN-29 |
 | Prioridade derivada | Could |
 
-#### SPEC-028 — Vínculo notícia–ativo e classificação de sentimento
+#### SPEC-028 — Vínculo notícia–ativo
 
-Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de ficar só com o vínculo (RF27) e passar o sentimento (RF28) para uma nova SPEC-044.
+📄 Detalhada em [SPEC-028.md](SPEC-028.md) — aprovada (Nicoly) e implementada; validada como usuária em 17/11/2026. Ficou só com o vínculo (RF27); o sentimento (RF28) passou para a SPEC-044.
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Para cada notícia coletada, identificar os ativos citados e classificar o sentimento, registrando a versão do modelo; notícias não classificadas ficam pendentes |
+| Objetivo | Para cada notícia coletada, identificar os ativos citados (pelo ticker e pelas empresas marcadas pelo Investidor10), com a relevância principal, citado ou lista |
+| Valor | **Sistema:** dado central da pesquisa do projeto (OBJ03); base das notícias na ficha (029) |
+| RF | RF27 |
+| RB | — |
+| RNF | RNF13, RNF16 |
+| Caso de uso / fluxo | UC: Ler notícias do ativo (lado do sistema); fluxo 7.4 (vínculo) |
+| Entidades | NOTICIA, NOTICIA_ATIVO, ATIVO |
+| Drivers | OBJ02, OBJ03, FAS04, PA04 |
+| ADRs | DA10, DA11, DA19 |
+| Depende de | SPEC-006, SPEC-027, SPEC-040 |
+| Posição | Precede as notícias na ficha (029) e o sentimento (044) |
+| Em aberto | — |
+| Prioridade derivada | Could |
+
+#### SPEC-044 — Classificação de sentimento das notícias
+
+📄 Detalhada em [SPEC-044.md](SPEC-044.md) — aprovada (Nicoly, 19/11/2026) e implementada; validada como usuária. Separada da SPEC-028 em 12/11/2026 (escolha da Nicoly). O tom só chega ao usuário depois que a equipe rotular a amostra e a versão passar na nota mínima.
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Classificar o sentimento de cada notícia vinculada, registrando a versão do modelo; notícias não classificadas ficam pendentes |
 | Valor | **Sistema:** dado central da pesquisa do projeto (OBJ03) |
-| RF | RF27, RF28 |
+| RF | RF28 |
 | RB | — |
 | RNF | RNF13 |
-| Caso de uso / fluxo | UC: Analisar sentimento das notícias (inclui Ler notícias do ativo); fluxo 7.4 (classificação) |
-| Entidades | NOTICIA, NOTICIA_ATIVO, ATIVO, VERSAO_MODELO† |
+| Caso de uso / fluxo | UC: Analisar sentimento das notícias; fluxo 7.4 (classificação) |
+| Entidades | NOTICIA, NOTICIA_ATIVO, VERSAO_MODELO† |
 | Drivers | OBJ03, FAS04, PA04, QA09 |
 | ADRs | DA11, DA19, DA20 |
-| Depende de | SPEC-006, SPEC-027 |
-| Posição | Precede a exibição com sentimento (029), o sentimento personalizado (030) e os cenários (031) |
+| Depende de | SPEC-028 |
+| Posição | Pode vir depois da 029, que mostra as notícias sem sentimento; precede o sentimento personalizado (030) e os cenários (031) |
 | Em aberto | OPEN-30, OPEN-31 |
 | Prioridade derivada | Could |
 
 #### SPEC-029 — Notícias na ficha do ativo e gráfico Notícias × Preço
 
+📄 Detalhada em [SPEC-029.md](SPEC-029.md) — aprovada (Nicoly, 17/11/2026) e implementada; validada como usuária. Sem o sentimento, que vem com a SPEC-044.
+
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Exibir na ficha do ativo as notícias relacionadas com sentimento, e marcá-las no gráfico de preço; ao selecionar um marcador, mostrar fonte, data, sentimento e comportamento posterior do ativo |
+| Objetivo | Exibir na ficha do ativo as notícias relacionadas e marcá-las no gráfico de preço; ao selecionar um marcador, mostrar as notícias do pregão (fonte, data, resumo e link) e o comportamento posterior do ativo (no pregão e 5 pregões depois). O sentimento entra com a SPEC-044 |
 | Valor | **Usuário:** relaciona acontecimentos e preço (principal diferencial — Visão §5, §19) |
 | RF | RF29 |
 | RB | — |
@@ -1016,7 +1062,7 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 | Drivers | OBJ02, FAS05 |
 | ADRs | DA11, DA16 |
 | Depende de | SPEC-010, SPEC-028 |
-| Posição | Combina a ficha (010) com as notícias classificadas (028) |
+| Posição | Combina a ficha (010) com as notícias classificadas (028). Entrega a sua parte da consulta sem conexão ([SPEC-032](SPEC-032.md) §5.1): diz quais leituras de notícias entram na cópia local e as testa em modo consulta |
 | Em aberto | — |
 | Prioridade derivada | Could (RF29); destacado como núcleo do MVP na Visão §24 (ver OPEN-42 e drivers §8) |
 
@@ -1051,7 +1097,7 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 | Entidades | SIMULACAO, CENARIO†, SENTIMENTO_DIARIO† |
 | Drivers | OBJ03, OBJ07, FAS11, RES04 |
 | ADRs | DA12, DA15, DA19, DA20, DA21 (Proposta) |
-| Depende de | SPEC-005, SPEC-008, SPEC-025, SPEC-028 |
+| Depende de | SPEC-005, SPEC-008, SPEC-025, SPEC-044 (sentimento) |
 | Posição | Exige plano (025), histórico de preços (008) e notícias classificadas (028) |
 | Em aberto | **OPEN-33 e OPEN-34 (bloqueantes)**, OPEN-31 |
 | Prioridade derivada | Could |
@@ -1062,23 +1108,27 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 
 #### SPEC-032 — Consulta sem conexão e sincronização incremental
 
+📄 Detalhada em [SPEC-032.md](SPEC-032.md) — aprovada (Luís, 16/11/2026, como escrita) e implementada. A SPEC-029 deixou de ser dependência e entrega a sua parte (as leituras de notícias).
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | Sem conexão, o app exibe carteiras, posições, séries e notícias do cache local, em modo somente leitura e com a data dos dados; ao reconectar, sincroniza só o que mudou; o cache é limpo no logout |
 | Valor | **Usuário:** consulta a carteira em qualquer lugar (QA03) |
-| RF | RF36, RF37 (em conflito, OPEN-10) |
+| RF | RF36, RF37 (reescrito na versão 1.13 dos requisitos) |
 | RB | RB03 |
 | RNF | RNF13, RNF14, RNF19, RNF21 |
 | Caso de uso / fluxo | Fluxo 7.3 |
 | Entidades | Nenhuma nova (cópia local) |
 | Drivers | FAS06, QA03, PA01 |
 | ADRs | DA03, DA08 |
-| Depende de | SPEC-002, SPEC-010, SPEC-019, SPEC-029 |
+| Depende de | SPEC-002, SPEC-010, SPEC-019 (a SPEC-029 entrega a sua parte quando for feita) |
 | Posição | Só pode guardar localmente o que já existe para consulta |
-| Em aberto | OPEN-10 |
+| Em aberto | — (OPEN-10 resolvida) |
 | Prioridade derivada | Should |
 
 #### SPEC-033 — Notificações de variação relevante
+
+📄 Detalhada em [SPEC-033.md](SPEC-033.md) — aprovada (Luís, 17/11/2026) e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -1093,10 +1143,12 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 | ADRs | DA03 (notificações do SO), DA07 |
 | Depende de | SPEC-009, SPEC-014 |
 | Posição | Depende de posições existentes |
-| Em aberto | OPEN-35 |
+| Em aberto | OPEN-43 (OPEN-35 resolvida para o RF35) |
 | Prioridade derivada | Could |
 
 #### SPEC-035 — Alternância de idioma
+
+📄 Detalhada em [SPEC-035.md](SPEC-035.md) — aprovada com as recomendações (Luís, 16/11/2026, no próprio pedido) e implementada.
 
 | Campo | Conteúdo |
 |---|---|
@@ -1106,12 +1158,30 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 | RB | — |
 | RNF | RNF20 |
 | Caso de uso / fluxo | — |
-| Entidades | USUARIO (preferência de idioma, não modelada, OPEN-44) |
+| Entidades | Nenhuma: a escolha do idioma fica neste computador, não na conta (decisão 2 da SPEC-035) |
 | Drivers | QA15 |
 | ADRs | DA03 |
 | Depende de | SPEC-001 e as Specs com tela já entregues |
 | Posição | Os textos já ficam fora do código desde a SPEC-001 (RNF20); a tradução completa só faz sentido com as telas prontas |
-| Em aberto | OPEN-45 |
+| Em aberto | — (OPEN-45 resolvida) |
+| Prioridade derivada | Could |
+
+#### SPEC-045 — Visão do usuário para o colaborador
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O colaborador alterna para a Visão do usuário e usa as telas do usuário (Início, Ativos, Carteiras) com carteiras de teste da própria conta, sem ver dados de usuários reais |
+| Valor | **Colaborador (P03):** confere como os dados aparecem para o usuário sem criar outra conta |
+| RF | RF44 |
+| RB | RB03 |
+| RNF | RNF04, RNF18, RNF20 |
+| Caso de uso / fluxo | Cenário da P03 (OPEN-43) |
+| Entidades | USUARIO, CARTEIRA (sem mudança no modelo) |
+| Drivers | QA05, QA12 |
+| ADRs | DA12, DA13 |
+| Depende de | SPEC-002, SPEC-012 a SPEC-023, SPEC-043 |
+| Posição | Pedida em 21/11/2026, com as telas do usuário prontas |
+| Em aberto | Plano na Visão do usuário (com a SPEC-025/026) |
 | Prioridade derivada | Could |
 
 #### SPEC-036 — Desbloqueio por biometria
@@ -1152,6 +1222,8 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 
 #### SPEC-038 — Relatório da carteira em PDF
 
+📄 Detalhada em [SPEC-038.md](SPEC-038.md) — aprovada (Luís, 17/11/2026) e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário exporta um relatório da carteira em PDF |
@@ -1165,7 +1237,7 @@ Detalhada em [SPEC-028.md](SPEC-028.md), aguardando a aprovação: proposta de f
 | ADRs | DA15 (se o relatório incluir cenários) |
 | Depende de | SPEC-019, SPEC-020, SPEC-021 |
 | Posição | Consolida visões já existentes |
-| Em aberto | **OPEN-38 (bloqueante)** |
+| Em aberto | OPEN-43 (OPEN-38 resolvida) |
 | Prioridade derivada | Could |
 
 ---
@@ -1243,7 +1315,7 @@ Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora.
 | RF05 | 003 | RF15 | 019 | RF25 | ⏸ adiado | RF35 | 033 |
 | RF06 | 034 | RF16 | 020 | RF26 | 027 | RF36 | 032 |
 | RF07 | 006, 040 | RF17 | 019 | RF27 | 028 | RF37 | 032 |
-| RF08 | 010 | RF18 | 021 | RF28 | 028 | RF38 | 035 |
+| RF08 | 010 | RF18 | 021 | RF28 | 044 | RF38 | 035 |
 | RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006, 040 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
 

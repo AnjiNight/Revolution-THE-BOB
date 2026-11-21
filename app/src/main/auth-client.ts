@@ -1,4 +1,5 @@
 import {
+  ASSET_NEWS_PATHS,
   ASSET_PATHS,
   assetPath,
   AUTH_PATHS,
@@ -7,8 +8,13 @@ import {
   FUNDAMENTALS_PATHS,
   INDEX_PATHS,
   NEWS_PATHS,
+  newsLabelPath,
   newsSourcePath,
+  SENTIMENT_PATHS,
+  validateSentimentNextQuery,
+  isNewsSentiment,
   isDividendPeriod,
+  isIngestionTask,
   isPriceHistoryPeriod,
   parseCalendarYear,
   PORTFOLIO_PATHS,
@@ -16,10 +22,16 @@ import {
   portfolioPath,
   portfolioSubPath,
   PROFILE_PATHS,
+  runPath,
+  TASK_PATHS,
+  taskPath,
   TERMS_VERSION,
+  validateAssetNewsQuery,
   type AccountDeletionConfirmInput,
   type AccountDeletionRequestInput,
   type AssetDetail,
+  type AssetNewsDays,
+  type AssetNewsPage,
   type AssetDividends,
   type AssetFundamentals,
   type AssetSearchQuery,
@@ -35,6 +47,7 @@ import {
   type CatalogListResult,
   type CatalogQuery,
   type CdiStatus,
+  type DayChanges,
   type MarketIndexStatus,
   type ChangeEmailInput,
   type ChangePasswordInput,
@@ -54,6 +67,10 @@ import {
   type NewsSource,
   type NewsSourceCreated,
   type NewsSourcesStatus,
+  type NewsSentiment,
+  type NewsToLabel,
+  type SentimentModelVersion,
+  type SentimentSummary,
   type UpdateNewsSourceInput,
   type CashEntryResult,
   type CashStatement,
@@ -79,6 +96,10 @@ import {
   type PublicUser,
   type RegisterInput,
   type RenamePortfolioInput,
+  type TaskErrorCode,
+  type TaskErrorPage,
+  type TaskList,
+  type TaskRunPage,
   type TokenPair,
   type TradingCalendarYear,
   type UpdateNameInput,
@@ -127,6 +148,7 @@ const KNOWN_ERRORS: ReadonlyArray<
   | CatalogErrorCode
   | FundamentalsErrorCode
   | PortfolioErrorCode
+  | TaskErrorCode
   | NewsErrorCode
 > = [
   'validation_error',
@@ -134,6 +156,10 @@ const KNOWN_ERRORS: ReadonlyArray<
   'news_source_not_found',
   'source_exists',
   'parent_source',
+  // SPEC-044
+  'news_not_found',
+  'no_model',
+  'not_enough_labels',
   'email_in_use',
   'invalid_credentials',
   'invalid_refresh_token',
@@ -175,6 +201,11 @@ const KNOWN_ERRORS: ReadonlyArray<
   'reversal_breaks_position',
   'no_close_that_day',
   'history_pending',
+  // SPEC-011
+  'task_not_found',
+  'run_not_found',
+  'run_already_requested',
+  'run_in_progress',
 ];
 
 class RequestFailed extends Error {
@@ -480,6 +511,14 @@ export class AuthClient {
   }
 
   /**
+   * SPEC-033: a variação do dia dos ativos das carteiras, para os avisos. Conferida a cada 5
+   * minutos: com o ETag, quase sempre volta "nada mudou".
+   */
+  dayChanges(): Promise<ClientResult<DayChanges>> {
+    return this.read<DayChanges>(() => PORTFOLIO_PATHS.dayChanges);
+  }
+
+  /**
    * SPEC-019: rentabilidade no período. Só um período conhecido ou duas datas AAAA-MM-DD vão para a
    * query string; o resto é o servidor que confere.
    */
@@ -664,6 +703,72 @@ export class AuthClient {
     });
   }
 
+  /**
+   * SPEC-029: notícias do ativo, 10 por vez, do grupo principal ou das listas; com `after` e
+   * `until`, as de um pregão (o painel do marcador).
+   */
+  assetNews(id: string, query: unknown): Promise<ClientResult<AssetNewsPage>> {
+    return this.read<AssetNewsPage>(() => {
+      // A consulta vem da interface: só o que passa na validação entra na query string.
+      const checked = validateAssetNewsQuery(query);
+      if (!checked.success) throw new RequestFailed('unexpected');
+      const { group, offset, after, until } = checked.data;
+      const params = new URLSearchParams();
+      if (group !== 'main') params.set('group', group);
+      if (offset > 0) params.set('offset', String(offset));
+      if (after && until) {
+        params.set('after', after);
+        params.set('until', until);
+      }
+      const search = params.toString();
+      return `${assetUrl(ASSET_NEWS_PATHS.list, id)}${search ? `?${search}` : ''}`;
+    });
+  }
+
+  /** SPEC-029: quantas notícias por dia de referência, no período do gráfico (os marcadores). */
+  assetNewsDays(id: string, period: PriceHistoryPeriod): Promise<ClientResult<AssetNewsDays>> {
+    return this.read<AssetNewsDays>(() => {
+      if (!isPriceHistoryPeriod(period)) throw new RequestFailed('unexpected');
+      return `${assetUrl(ASSET_NEWS_PATHS.days, id)}?period=${period}`;
+    });
+  }
+
+  // --- Tarefas de ingestão (SPEC-011), só colaborador ---
+
+  /** As 9 tarefas e o estado do processador. */
+  listTasks(): Promise<ClientResult<TaskList>> {
+    return this.call(() => this.authorizedRequest<TaskList>('GET', TASK_PATHS.list));
+  }
+
+  /** O histórico de uma tarefa, 50 por vez a partir de `offset`. */
+  taskRuns(task: string, offset = 0): Promise<ClientResult<TaskRunPage>> {
+    return this.call(() => {
+      if (!isIngestionTask(task)) throw new RequestFailed('unexpected');
+      const path = taskPath(TASK_PATHS.runs, task);
+      return this.authorizedRequest<TaskRunPage>('GET', withOffset(path, offset));
+    });
+  }
+
+  /** Os erros de uma execução, 100 por vez a partir de `offset`. */
+  runErrors(runId: string, offset = 0): Promise<ClientResult<TaskErrorPage>> {
+    return this.call(() => {
+      if (typeof runId !== 'string' || !UUID_PATTERN.test(runId)) {
+        throw new RequestFailed('unexpected');
+      }
+      const path = runPath(TASK_PATHS.errors, runId);
+      return this.authorizedRequest<TaskErrorPage>('GET', withOffset(path, offset));
+    });
+  }
+
+  /** "Executar agora": grava o pedido, que o processador atende (202, sem nada a devolver aqui). */
+  requestTaskRun(task: string): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      if (!isIngestionTask(task)) throw new RequestFailed('unexpected');
+      await this.authorizedRequest('POST', taskPath(TASK_PATHS.requests, task));
+      return null;
+    });
+  }
+
   /** Colaborador (SPEC-041): situação da coleta do Investidor10. */
   investidor10Status(): Promise<ClientResult<Investidor10Status>> {
     return this.call(() =>
@@ -679,6 +784,53 @@ export class AuthClient {
   /** Colaborador (SPEC-028): as últimas notícias com os vínculos aos ativos. */
   latestNews(): Promise<ClientResult<LatestNews>> {
     return this.call(() => this.authorizedRequest<LatestNews>('GET', NEWS_PATHS.latest));
+  }
+
+  /** Colaborador (SPEC-044): versão do modelo, contagens, avaliação e os últimos rotulados. */
+  sentimentSummary(): Promise<ClientResult<SentimentSummary>> {
+    return this.call(() =>
+      this.authorizedRequest<SentimentSummary>('GET', SENTIMENT_PATHS.summary),
+    );
+  }
+
+  /** Colaborador (SPEC-044): a próxima notícia sem rótulo, fora das puladas. */
+  nextNewsToLabel(skip: readonly string[]): Promise<ClientResult<{ news: NewsToLabel | null }>> {
+    return this.call(() => {
+      const checked = validateSentimentNextQuery({ skip: skip.join(',') });
+      if (!checked.success) throw new RequestFailed('unexpected');
+      const path =
+        checked.data.skip.length > 0
+          ? `${SENTIMENT_PATHS.next}?skip=${checked.data.skip.join(',')}`
+          : SENTIMENT_PATHS.next;
+      return this.authorizedRequest<{ news: NewsToLabel | null }>('GET', path);
+    });
+  }
+
+  /** Colaborador (SPEC-044): grava ou troca o rótulo da notícia. */
+  labelNews(id: string, sentiment: NewsSentiment): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id) || !isNewsSentiment(sentiment)) {
+        throw new RequestFailed('unexpected');
+      }
+      await this.authorizedRequest<undefined>('PUT', newsLabelPath(id), { sentiment });
+      return null;
+    });
+  }
+
+  /** Colaborador (SPEC-044): apaga o rótulo da notícia. */
+  unlabelNews(id: string): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+      await this.authorizedRequest<undefined>('DELETE', newsLabelPath(id));
+      return null;
+    });
+  }
+
+  /** Colaborador (SPEC-044): avalia a versão em uso contra as notícias de teste. */
+  evaluateSentiment(): Promise<ClientResult<{ version: SentimentModelVersion }>> {
+    return this.call(() =>
+      this.authorizedRequest<{ version: SentimentModelVersion }>('POST', SENTIMENT_PATHS.evaluate),
+    );
   }
 
   /** Colaborador (SPEC-027): nova fonte curada; o servidor testa o feed antes de gravar. */
@@ -1150,6 +1302,11 @@ function withQuery(path: string, query: AssetSearchQuery | CatalogQuery): string
   }
   const text = params.toString();
   return text ? `${path}?${text}` : path;
+}
+
+/** SPEC-011: só um inteiro positivo entra como `offset`. */
+function withOffset(path: string, offset: number): string {
+  return Number.isSafeInteger(offset) && offset > 0 ? `${path}?offset=${offset}` : path;
 }
 
 /** O id da carteira vem da interface: só um UUID entra no caminho da rota. */

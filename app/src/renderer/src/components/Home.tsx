@@ -8,6 +8,7 @@ import {
   type MarketIndexCode,
   type MarketIndexStatus,
   type PublicUser,
+  type TaskList,
 } from '@simulador/shared';
 import {
   ArrowUpRight,
@@ -25,6 +26,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatDate } from '../format';
+import { whenText } from '../tasks';
 import { isTermsOutdated, TermsUpdateNotice } from './Profile';
 
 interface HomeProps {
@@ -36,9 +38,16 @@ interface HomeProps {
   onOpenAssets: () => void;
   /** SPEC-012: carteiras do usuário; `creating` abre já com o formulário de nova. */
   onOpenPortfolios: (creating?: boolean) => void;
+  /**
+   * SPEC-045: o colaborador na Visão do usuário (`user.role` já chega como `user`). O aceite dos
+   * termos é da conta de usuário: o colaborador não tem um a renovar.
+   */
+  userView?: boolean;
+  /** SPEC-011: as tarefas de dados (colaborador). */
+  onOpenTasks: () => void;
 }
 
-type Tool = 'portfolios' | 'search' | 'calendar' | 'assets';
+type Tool = 'portfolios' | 'search' | 'calendar' | 'assets' | 'tasks';
 
 /** O que já funciona: carteiras e busca para o usuário; o calendário e o catálogo para o colaborador. */
 const AVAILABLE: Record<PublicUser['role'], ReadonlyArray<{ tool: Tool; icon: Icon }>> = {
@@ -49,6 +58,8 @@ const AVAILABLE: Record<PublicUser['role'], ReadonlyArray<{ tool: Tool; icon: Ic
   collaborator: [
     { tool: 'calendar', icon: CalendarBlank },
     { tool: 'assets', icon: Database },
+    // SPEC-011: o acompanhamento da coleta, que antes aparecia em "O que vem por aí".
+    { tool: 'tasks', icon: Pulse },
   ],
 };
 
@@ -69,13 +80,7 @@ const UPCOMING: Record<
       icon: ClockCounterClockwise,
     },
   ],
-  collaborator: [
-    {
-      title: 'home.collabTools.ingestion.title',
-      text: 'home.collabTools.ingestion.text',
-      icon: Pulse,
-    },
-  ],
+  collaborator: [],
 };
 
 export function Home({
@@ -84,6 +89,8 @@ export function Home({
   onOpenCalendar,
   onOpenAssets,
   onOpenPortfolios,
+  onOpenTasks,
+  userView = false,
 }: HomeProps) {
   const { t } = useTranslation();
   const [consents, setConsents] = useState<ConsentList | null>(null);
@@ -91,9 +98,9 @@ export function Home({
 
   // SPEC-003: se os termos mudaram desde o último aceite, pede um novo aceite ao entrar.
   useEffect(() => {
-    if (user.role !== 'user') return;
+    if (user.role !== 'user' || userView) return;
     void window.api.profile.listConsents().then((result) => result.ok && setConsents(result.data));
-  }, [user.role]);
+  }, [user.role, userView]);
 
   const accept = async () => {
     setAccepting(true);
@@ -111,6 +118,7 @@ export function Home({
         <TermsUpdateNotice submitting={accepting} onAccept={() => void accept()} />
       )}
       {user.role === 'collaborator' && <CalendarReminder onOpen={onOpenCalendar} />}
+      {user.role === 'collaborator' && <TasksSummary onOpen={onOpenTasks} />}
       {user.role === 'collaborator' && <CdiStatusPanel />}
       {user.role === 'collaborator' && <MarketIndexStatusPanel />}
       {user.role === 'collaborator' && <Investidor10Panel />}
@@ -158,7 +166,9 @@ export function Home({
                         ? onOpenCalendar()
                         : tool === 'portfolios'
                           ? onOpenPortfolios()
-                          : onOpenAssets()
+                          : tool === 'tasks'
+                            ? onOpenTasks()
+                            : onOpenAssets()
                     }
                   >
                     {t('home.open')}
@@ -173,27 +183,74 @@ export function Home({
         </ul>
       </section>
 
-      <section className="upcoming" aria-labelledby="upcoming-title">
-        <h2 id="upcoming-title" className="section-label">
-          {t('home.upcomingTitle')}
-        </h2>
-        <ul className="upcoming-grid">
-          {UPCOMING[user.role].map(({ title, text, icon: ItemIcon }) => (
-            <li key={title} className="bezel">
-              <div className="bezel-core upcoming-card">
-                <div className="upcoming-head">
-                  <span className="round-icon" aria-hidden="true">
-                    <ItemIcon weight="light" />
-                  </span>
-                  <span className="soon-badge">{t('home.soon')}</span>
+      {UPCOMING[user.role].length > 0 && (
+        <section className="upcoming" aria-labelledby="upcoming-title">
+          <h2 id="upcoming-title" className="section-label">
+            {t('home.upcomingTitle')}
+          </h2>
+          <ul className="upcoming-grid">
+            {UPCOMING[user.role].map(({ title, text, icon: ItemIcon }) => (
+              <li key={title} className="bezel">
+                <div className="bezel-core upcoming-card">
+                  <div className="upcoming-head">
+                    <span className="round-icon" aria-hidden="true">
+                      <ItemIcon weight="light" />
+                    </span>
+                    <span className="soon-badge">{t('home.soon')}</span>
+                  </div>
+                  <h3>{t(title)}</h3>
+                  <p>{t(text)}</p>
                 </div>
-                <h3>{t(title)}</h3>
-                <p>{t(text)}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/**
+ * SPEC-011 (§5.3): o resumo das tarefas de dados no Início do colaborador ("Tudo em dia", "2
+ * tarefas com falha" ou "Processador parado desde 14:05") e o botão para a tela Tarefas.
+ */
+function TasksSummary({ onOpen }: { onOpen: () => void }) {
+  const { t, i18n } = useTranslation();
+  const [list, setList] = useState<TaskList | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    void window.api.tasks.list().then((result) => current && result.ok && setList(result.data));
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  if (!list) return null;
+  const failing = list.tasks.filter(
+    (task) => task.lastRun?.status === 'falha' || task.lastRun?.status === 'parcial',
+  ).length;
+  const processor = list.processor;
+  const attention = processor.stopped || failing > 0;
+  const lines = [
+    processor.stopped
+      ? processor.lastSeenAt
+        ? t('home.tasks.stoppedSince', { when: whenText(processor.lastSeenAt, t, i18n.language) })
+        : t('home.tasks.neverSeen')
+      : t('home.tasks.running'),
+    failing > 0 ? t('home.tasks.failing', { count: failing }) : t('home.tasks.allGood'),
+  ];
+  return (
+    <div className={attention ? 'calendar-reminder tasks-summary' : 'cdi-status tasks-summary'}>
+      <p role="status">
+        <strong>{t('home.tasks.title')}:</strong> {lines.join(' · ')}
+      </p>
+      <button type="button" className="pill pill-ghost pill-small" onClick={onOpen}>
+        {t('home.tasks.open')}
+        <span className="pill-icon" aria-hidden="true">
+          <ArrowUpRight weight="bold" />
+        </span>
+      </button>
     </div>
   );
 }

@@ -1,7 +1,16 @@
 import type { PriceJump, PricePoint } from '@simulador/shared';
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatAxisPrice, formatCalendarDay, formatMoney, formatTickDate } from '../format';
+import { nextNewsSession } from '../news-chart';
 import { chartLayout, cursorAfterKey, nearestIndex, spaceTicks, timeTicks } from '../price-chart';
 
 const HEIGHT = 260;
@@ -10,22 +19,34 @@ const MIN_TICK_GAP = 58;
 /** Metade da largura e a altura da caixa do cursor, para ela não sair do gráfico. */
 const TOOLTIP_HALF = 70;
 const TOOLTIP_HEIGHT = 44;
+/** SPEC-029: o círculo de notícia e quanto em volta dele o clique ou o toque alcança. */
+const MARKER_RADIUS = 5;
+const MARKER_REACH = 12;
+const NO_NEWS: ReadonlyMap<number, number> = new Map();
 
 /**
  * Gráfico de linha dos fechamentos (SPEC-010 §4.2), desenhado pelo próprio app em SVG. Pelo mouse
  * ou toque, mostra a data e o fechamento do pregão mais perto; pelo teclado, o gráfico é um
  * controle deslizante: as setas andam um pregão, Page Up e Page Down um mês, Home e End vão às
  * pontas, e o leitor de tela lê a data e o preço. Os saltos de preço ficam marcados com uma linha
- * tracejada (a lista com o texto fica fora do gráfico).
+ * tracejada (a lista com o texto fica fora do gráfico). SPEC-029: os pregões com notícia ganham um
+ * círculo na base; o clique, o toque ou Enter abrem o painel do pregão (fora do gráfico).
  */
 export function PriceChart({
   points,
   jumps,
   label,
+  news,
+  selectedNews = null,
+  onSelectNews,
 }: {
   points: PricePoint[];
   jumps: PriceJump[];
   label: string;
+  /** SPEC-029: pregão (índice) → quantas notícias; um círculo na base do gráfico em cada um. */
+  news?: ReadonlyMap<number, number>;
+  selectedNews?: number | null;
+  onSelectNews?: (index: number) => void;
 }) {
   const { t, i18n } = useTranslation();
   const language = i18n.language;
@@ -54,15 +75,33 @@ export function PriceChart({
   const last = points.length - 1;
   const index = cursor?.points === points ? cursor.index : null;
   const shown = points[index ?? last];
-  const describe = (point: PricePoint | undefined) =>
-    point
-      ? t('detail.history.cursor', {
-          date: formatCalendarDay(point.date, language),
-          price: formatMoney(point.close, language),
-        })
-      : undefined;
+  const newsMap = news ?? NO_NEWS;
+  const hasNews = newsMap.size > 0;
+  const describe = (point: PricePoint | undefined, at: number) => {
+    if (!point) return undefined;
+    const text = t('detail.history.cursor', {
+      date: formatCalendarDay(point.date, language),
+      price: formatMoney(point.close, language),
+    });
+    const count = newsMap.get(at);
+    return count ? `${text}, ${t('detail.news.count', { count })}` : text;
+  };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    // SPEC-029: N e Shift+N pulam entre os pregões com notícia; Enter abre o do cursor.
+    if (hasNews && event.key.toLowerCase() === 'n') {
+      const direction = event.shiftKey ? -1 : 1;
+      const from = index ?? (direction === 1 ? -1 : points.length);
+      const target = nextNewsSession(newsMap, from, direction);
+      event.preventDefault();
+      if (target !== null) setCursor({ points, index: target });
+      return;
+    }
+    if (event.key === 'Enter' && index !== null && newsMap.has(index)) {
+      event.preventDefault();
+      onSelectNews?.(index);
+      return;
+    }
     const next = cursorAfterKey(event.key, index, points.length);
     if (next === null) return;
     event.preventDefault();
@@ -72,6 +111,23 @@ export function PriceChart({
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setCursor({ points, index: nearestIndex(event.clientX - rect.left, points.length, box) });
+  };
+
+  // Clique ou toque perto de um marcador (até 12 px para cada lado: 24 px de área de toque).
+  const onClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!hasNews || !onSelectNews) return;
+    const left = event.clientX - event.currentTarget.getBoundingClientRect().left;
+    let closest: number | null = null;
+    for (const at of newsMap.keys()) {
+      const distance = Math.abs(x(at) - left);
+      if (
+        distance <= MARKER_REACH &&
+        (closest === null || distance < Math.abs(x(closest) - left))
+      ) {
+        closest = at;
+      }
+    }
+    if (closest !== null) onSelectNews(closest);
   };
 
   const point = index !== null ? points[index] : undefined;
@@ -91,8 +147,9 @@ export function PriceChart({
         aria-valuemin={0}
         aria-valuemax={last}
         aria-valuenow={index ?? last}
-        aria-valuetext={describe(shown)}
+        aria-valuetext={describe(shown, index ?? last)}
         onKeyDown={onKeyDown}
+        onClick={onClick}
         onFocus={() => {
           if (index === null) setCursor({ points, index: last });
         }}
@@ -146,6 +203,15 @@ export function PriceChart({
               y2={box.bottom}
             />
           ))}
+          {[...newsMap.keys()].map((at) => (
+            <circle
+              key={`news-${at}`}
+              className={`chart-news${at === selectedNews ? ' is-selected' : ''}`}
+              cx={x(at)}
+              cy={box.bottom - MARKER_RADIUS - 2}
+              r={MARKER_RADIUS}
+            />
+          ))}
           {point && (
             <g>
               <line className="chart-cursor" x1={pointX} x2={pointX} y1={box.top} y2={box.bottom} />
@@ -169,7 +235,14 @@ export function PriceChart({
       </div>
       <p id={hintId} className="visually-hidden">
         {t('detail.history.chartHint')}
+        {hasNews && ` ${t('detail.news.chartHint')}`}
       </p>
+      {hasNews && (
+        <p className="chart-news-legend" aria-hidden="true">
+          <span className="chart-news-dot" />
+          {t('detail.news.legend')}
+        </p>
+      )}
     </div>
   );
 }
