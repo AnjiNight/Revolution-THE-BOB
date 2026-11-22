@@ -7,6 +7,7 @@ import {
   calendarPath,
   FUNDAMENTALS_PATHS,
   INDEX_PATHS,
+  MARKET_TODAY_PATHS,
   NEWS_PATHS,
   newsLabelPath,
   newsSourcePath,
@@ -49,6 +50,7 @@ import {
   type CdiStatus,
   type DayChanges,
   type MarketIndexStatus,
+  type MarketToday,
   type ChangeEmailInput,
   type ChangePasswordInput,
   type ConfirmEmailChangeInput,
@@ -621,6 +623,11 @@ export class AuthClient {
   /** Colaborador (SPEC-007): até que dia a série do CDI está carregada e a última atualização. */
   cdiStatus(): Promise<ClientResult<CdiStatus>> {
     return this.call(() => this.authorizedRequest<CdiStatus>('GET', INDEX_PATHS.cdi));
+  }
+
+  /** SPEC-048: o Ibovespa e o dólar do dia; entra na cópia local, como as outras leituras. */
+  marketToday(): Promise<ClientResult<MarketToday>> {
+    return this.read<MarketToday>(() => MARKET_TODAY_PATHS.today);
   }
 
   /** Colaborador (SPEC-020): até que dia o Ibovespa e o IFIX estão carregados. */

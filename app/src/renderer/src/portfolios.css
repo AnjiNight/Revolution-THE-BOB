@@ -1452,3 +1452,18 @@ button.allocation-sector-button:hover {
   gap: 0.5rem;
   margin-top: 1rem;
 }
+
+/* SPEC-047: feeds testados no formulário Nova fonte. */
+.news-suggestions ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.news-suggestions button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}

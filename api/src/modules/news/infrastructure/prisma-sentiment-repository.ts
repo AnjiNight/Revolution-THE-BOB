@@ -107,7 +107,10 @@ export class PrismaSentimentRepository implements SentimentRepository {
 
   async newsToClassify(versionId: number, limit: number): Promise<NewsToClassify[]> {
     const rows = await this.prisma.noticia.findMany({
-      where: { OR: [{ versaoModeloId: null }, { versaoModeloId: { not: versionId } }] },
+      where: {
+        repetidaDeId: null,
+        OR: [{ versaoModeloId: null }, { versaoModeloId: { not: versionId } }],
+      },
       select: { id: true, titulo: true, resumo: true },
       orderBy: [{ publicadaEm: 'desc' }, { id: 'asc' }],
       take: limit,
@@ -138,7 +141,7 @@ export class PrismaSentimentRepository implements SentimentRepository {
 
   async classifiedCounts(versionId: number | null): Promise<{ total: number; classified: number }> {
     const [total, classified] = await Promise.all([
-      this.prisma.noticia.count(),
+      this.prisma.noticia.count({ where: { repetidaDeId: null } }),
       versionId === null
         ? Promise.resolve(0)
         : this.prisma.noticia.count({ where: { versaoModeloId: versionId } }),
@@ -191,7 +194,8 @@ export class PrismaSentimentRepository implements SentimentRepository {
         : Prisma.empty;
     const [picked] = await this.prisma.$queryRaw<Array<{ id: string }>>`
       SELECT n.id FROM noticia n
-      WHERE NOT EXISTS (SELECT 1 FROM rotulo_noticia r WHERE r.noticia_id = n.id) ${skipped}
+      WHERE n.repetida_de_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM rotulo_noticia r WHERE r.noticia_id = n.id) ${skipped}
       ORDER BY EXISTS (
         SELECT 1 FROM noticia_ativo a WHERE a.noticia_id = n.id AND a.relevancia = 'principal'
       ) DESC, random()

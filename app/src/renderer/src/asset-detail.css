@@ -350,9 +350,33 @@ button.asset-news-close {
   margin: 0;
 }
 
+.asset-news-head h2 {
+  margin-bottom: 0.25rem;
+}
+
+/* O que quer dizer cada etiqueta, uma vez no topo da seção. */
+.asset-news-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.asset-news-legend li {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.1rem;
+}
+
+/* Cada notícia é um cartão: separa bem uma da outra. */
 .asset-news-list {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.75rem;
   margin: 0.75rem 0;
   padding: 0;
   list-style: none;
@@ -360,34 +384,116 @@ button.asset-news-close {
 
 .asset-news-item {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.45rem;
   min-width: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
   overflow-wrap: anywhere;
+  transition: border-color 0.3s var(--ease-premium);
+}
+
+.asset-news-item:hover,
+.asset-news-item:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
 }
 
 .asset-news-item p {
   margin: 0;
 }
 
-.asset-news-title {
-  font-weight: 650;
-  line-height: 1.35;
+.asset-news-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
 }
 
-/* O resumo da Agência Brasil chega a 999 caracteres: 3 linhas na lista. */
+/* O título é o link da matéria: com a cor do texto, e o destaque só ao passar o mouse ou focar. */
+a.asset-news-title {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+a.asset-news-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.asset-news-item a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* O resumo da Agência Brasil chega a 999 caracteres: 2 linhas na lista. */
 .asset-news-summary {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  max-height: calc(2 * 1.45em);
   overflow: hidden;
-  color: var(--text);
+  color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.45;
 }
 
-.asset-news-read {
-  justify-self: start;
-  font-size: 0.85rem;
+.asset-news-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  font-size: 0.82rem;
+}
+
+.asset-news-meta {
+  color: var(--muted);
+}
+
+a.asset-news-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.asset-news-read:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* SPEC-047: a mesma matéria em outras fontes. */
+.asset-news-also {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.asset-news-also a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+button.asset-news-lists-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+button.asset-news-lists-toggle svg {
+  transition: transform 0.3s var(--ease-premium);
+}
+
+button.asset-news-lists-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
 }
 
 .asset-news-language {

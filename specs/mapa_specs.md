@@ -81,6 +81,13 @@
 | 1.71 | SPEC-044 aprovada (Nicoly, 19/11/2026, "Aprovar e fazer") e implementada: dicionário de termos (`lexico` v1) no processador, logo depois do vínculo e a cada 30 minutos; versões do modelo no banco, com a nota; na tela Notícias do colaborador, rotular (teclas 1, 2, 3 e 0), trocar e apagar rótulos e "Avaliar agora" com a tabela de erros; na ficha, o tom em cada notícia, as contagens do pregão e a nota de caráter educacional, só com a versão aprovada. As 261 notícias reais classificadas em 0,3 s (79 positivas, 101 neutras, 81 negativas). OPEN-30 resolvida; OPEN-31 em parte; DA20 e `decisoes_tecnicas.md` atualizados |
 | 1.72 | Junção de 21/11/2026: tiradas as marcas de conflito que tinham ficado no histórico; as linhas da SPEC-044, que repetiam 1.68 e 1.69, passam a 1.70 e 1.71 |
 | 1.73 | SPEC-045 detalhada ([SPEC-045.md](SPEC-045.md)) a pedido da Nicoly, aprovada por ela em 21/11/2026, como escrita ("Aprovo, implemente"), e implementada: botão Visão do usuário no menu do colaborador, com as telas do usuário, a faixa de aviso e carteiras de teste da própria conta (as rotas de carteira aceitam o colaborador; a verificação de dono não muda). Novo RF44 (requisitos v1.14); muda a regra "Quem tem carteira" da SPEC-012 |
+| 1.74 | Lista de notícias da ficha mais clara, a pedido da Nicoly (21/11/2026): cada notícia num cartão, títulos com a cor do texto (estavam com o azul padrão do navegador), resumo em 2 linhas, legenda de "Sobre" e "Cita" e a seta no grupo das listas ([SPEC-029 §10](SPEC-029.md)). Corrigida também a pasta da cópia local (SPEC-032): `cache` era, no Windows, a mesma pasta do cache do Chromium, e a troca de conta falhava com EBUSY |
+| 1.75 | SPEC-046 detalhada ([SPEC-046.md](SPEC-046.md)) a pedido da Nicoly, aguardando a aprovação: a lista de Ativos mostra o último fechamento da B3 quando não há cotação do pregão mais nova (a regra da ficha, SPEC-010), com o campo `lastClose` ao lado do `quote` |
+| 1.76 | SPEC-046 aprovada (Nicoly, 21/11/2026, como escrita) e implementada: campo `lastClose` na busca, no catálogo e na ficha (uma consulta `LATERAL` com os dois últimos fechamentos da B3 de cada ativo); a coluna "Último preço" mostra o mais recente entre a cotação do pregão e o fechamento ("Fechamento de {data} (B3)"); a SPEC-009 ganhou a nota |
+| 1.77 | SPEC-047 detalhada ([SPEC-047.md](SPEC-047.md)) a pedido da Nicoly, aguardando a aprovação: InfoMoney, Valor Econômico, Exame e Investing.com Brasil como fontes curadas sugeridas (RSS testados em 21/11/2026) e as notícias repetidas entre fontes (mesmo endereço ou título com 80% das palavras em comum, em 48 horas) ligadas à original, fora das contagens |
+| 1.78 | SPEC-047 aprovada pela Nicoly em 21/11/2026, como escrita ("aprovo spec 047"). SPEC-048 detalhada ([SPEC-048.md](SPEC-048.md)) a pedido da Nicoly, aguardando a aprovação: Ibovespa e dólar do dia pela Yahoo Finance no painel "Mercado hoje" do Início, com atraso e a última leitura válida quando a fonte falha |
+| 1.79 | SPEC-047 implementada ([SPEC-047 §9](SPEC-047.md)): sugestões das quatro fontes no formulário, notícias repetidas entre fontes ligadas à original (fora do vínculo, do sentimento e das contagens), "Também em" na ficha e as repetidas por fonte; migração `noticias_repetidas` com gatilho que solta a repetida quando a original é apagada |
+| 1.80 | SPEC-048 aprovada pela Nicoly em 21/11/2026, como escrita ("Aprovo, implemente"), e implementada ([SPEC-048 §9](SPEC-048.md)): tarefa `mercado_yahoo` (Ibovespa a cada 15 minutos no pregão, dólar a cada 30 nos dias úteis), tabela `cotacao_mercado` (30 dias), rota `GET /api/market/today` e o painel "Mercado hoje" no Início do usuário, com o atraso e o aviso de desatualizado |
 ---
 
 ## 0. Como ler este documento
@@ -610,6 +617,24 @@ Visão geral por fase:
 | Em aberto | Termos da brapi para os logos (teste da rota de lista feito em 03/11/2026: a lista não desconta da cota) |
 | Prioridade derivada | Should |
 
+#### SPEC-046 — Último fechamento na lista de ativos
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | A coluna Último preço da busca e do catálogo mostra o mais recente entre a cotação do pregão e o último fechamento da B3 |
+| Valor | **Usuário e colaborador:** um preço com data em todo ativo com histórico, também no fim de semana e antes da primeira coleta |
+| RF | RF07 |
+| RB | — |
+| RNF | RNF04, RNF12, RNF18, RNF20 |
+| Caso de uso / fluxo | Consultar ativos |
+| Entidades | COTACAO_DIARIA, COTACAO_PREGAO (sem mudança) |
+| Drivers | — |
+| ADRs | DA16, DA18 |
+| Depende de | SPEC-008, SPEC-009, SPEC-010, SPEC-040 |
+| Posição | Pedida em 21/11/2026, depois de a lista aparecer vazia num sábado |
+| Em aberto | A ficha passar a usar o mesmo campo |
+| Prioridade derivada | Should |
+
 #### SPEC-007 — Ingestão da série do CDI
 
 📄 Detalhada em [SPEC-007.md](SPEC-007.md) — implementada.
@@ -882,6 +907,24 @@ Detalhada em [SPEC-020.md](SPEC-020.md), aprovada e implementada (com o IFIX nas
 | Em aberto | ✅ OPEN-21 resolvida |
 | Prioridade derivada | Should |
 
+#### SPEC-048 — Ibovespa e dólar do dia (Yahoo Finance)
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Painel "Mercado hoje" no Início do usuário com o Ibovespa e o dólar do dia, coletados da Yahoo Finance |
+| Valor | **Usuário:** o mercado de hoje antes de abrir a carteira |
+| RF | RF07 |
+| RB | — |
+| RNF | RNF04, RNF12, RNF13, RNF17, RNF18, RNF20 |
+| Caso de uso / fluxo | Acompanhar o mercado |
+| Entidades | COTACAO_MERCADO (nova) |
+| Drivers | — |
+| ADRs | DA06, DA07, DA16 |
+| Depende de | SPEC-005, SPEC-009, SPEC-011, SPEC-020 |
+| Posição | Pedida, aprovada e implementada em 21/11/2026 |
+| Em aberto | — |
+| Prioridade derivada | Could |
+
 #### SPEC-021 — Distribuição da carteira por classe e setor
 
 Detalhada em [SPEC-021.md](SPEC-021.md), aprovada e implementada.
@@ -1065,6 +1108,24 @@ Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
 | Posição | Combina a ficha (010) com as notícias classificadas (028). Entrega a sua parte da consulta sem conexão ([SPEC-032](SPEC-032.md) §5.1): diz quais leituras de notícias entram na cópia local e as testa em modo consulta |
 | Em aberto | — |
 | Prioridade derivada | Could (RF29); destacado como núcleo do MVP na Visão §24 (ver OPEN-42 e drivers §8) |
+
+#### SPEC-047 — Mais fontes de notícias e notícias repetidas entre fontes
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Sugerir quatro feeds RSS testados como fontes curadas e tratar a mesma matéria vinda de fontes diferentes como uma notícia só |
+| Valor | **Usuário:** mais notícias sem repetição. **Pesquisa:** cada matéria conta uma vez no sentimento e nos marcadores |
+| RF | RF26 |
+| RB | — |
+| RNF | RNF13, RNF17 |
+| Caso de uso / fluxo | Ler notícias do ativo; fluxo 7.4 (coleta) |
+| Entidades | NOTICIA (repetida de), FONTE_NOTICIA |
+| Drivers | OBJ02, OBJ03 |
+| ADRs | DA06, DA07, DA19 |
+| Depende de | SPEC-027, SPEC-028, SPEC-029, SPEC-044 |
+| Posição | Pedida em 21/11/2026; antes do feed do usuário (SPEC-030) |
+| Em aberto | OPEN-29 (confiabilidade das novas fontes, com a equipe) |
+| Prioridade derivada | Should |
 
 #### SPEC-030 — Fontes de notícias do usuário e preferências
 

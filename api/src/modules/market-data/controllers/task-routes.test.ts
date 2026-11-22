@@ -101,10 +101,17 @@ describe('tarefas de ingestão (SPEC-011)', () => {
       'noticias_novas',
       'noticias_arquivo',
       'noticias_feeds',
+      // SPEC-048: o Ibovespa e o dólar do dia.
+      'mercado_yahoo',
     ]);
     expect(body.tasks.find((task) => task.task === 'noticias_feeds')).toMatchObject({
       sources: ['feeds'],
       schedule: { kind: 'every', minutes: 30 },
+    });
+    expect(body.tasks.find((task) => task.task === 'mercado_yahoo')).toMatchObject({
+      sources: ['yahoo'],
+      schedule: { kind: 'market', indexMinutes: 15, dollarMinutes: 30 },
+      blockedReason: null,
     });
     const daily = body.tasks.find((task) => task.task === 'fechamento_diario');
     expect(daily).toMatchObject({

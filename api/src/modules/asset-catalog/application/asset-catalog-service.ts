@@ -4,6 +4,7 @@ import {
   CATALOG_PAGE_LIMIT,
   isSectorOf,
   SECTOR_OPTIONS,
+  type AssetClose,
   type AssetDetail,
   type AssetHistory,
   type AssetSearchQuery,
@@ -41,6 +42,7 @@ import type {
   AssetEventReader,
   AssetModification,
   AssetPriceReader,
+  LastCloses,
   AssetQuoteReader,
   AssetRepository,
   CatalogImportReader,
@@ -109,7 +111,7 @@ export class AssetCatalogService {
    * logo (SPEC-040). Sem texto, os mais negociados primeiro.
    */
   async search(query: AssetSearchQuery): Promise<AssetSearchResult> {
-    const [candidates, quotes, logos, volumes] = await Promise.all([
+    const [candidates, quotes, logos, volumes, closes] = await Promise.all([
       this.deps.assets.list({
         status: 'active',
         assetClass: query.class,
@@ -118,6 +120,7 @@ export class AssetCatalogService {
       this.deps.quotes?.latestQuotes(),
       this.deps.logos?.withLogo(),
       this.deps.activity?.lastVolumes(),
+      this.deps.prices?.lastCloses(),
     ]);
     const found = searchAssets(
       candidates,
@@ -128,7 +131,12 @@ export class AssetCatalogService {
     );
     return {
       assets: found.assets.map((asset) =>
-        toPublicAsset(asset, quotes?.get(asset.id) ?? null, logos?.has(asset.id) ?? false),
+        toPublicAsset(
+          asset,
+          quotes?.get(asset.id) ?? null,
+          logos?.has(asset.id) ?? false,
+          toClose(closes?.get(asset.id)),
+        ),
       ),
       hasMore: found.hasMore,
       total: found.total,
@@ -151,6 +159,7 @@ export class AssetCatalogService {
       volumes,
       catalogImport,
       tradingDays,
+      closes,
     ] = await Promise.all([
       this.deps.assets.list({
         status: query.status,
@@ -167,6 +176,7 @@ export class AssetCatalogService {
       this.deps.activity?.lastVolumes(),
       this.deps.imports?.status(),
       this.deps.imports?.lastTradingDays(),
+      this.deps.prices?.lastCloses(),
     ]);
     const found = searchAssets(
       candidates,
@@ -177,7 +187,12 @@ export class AssetCatalogService {
     );
     return {
       assets: found.assets.map((asset) => ({
-        ...toCatalogAsset(asset, quotes?.get(asset.id) ?? null, logos?.has(asset.id) ?? false),
+        ...toCatalogAsset(
+          asset,
+          quotes?.get(asset.id) ?? null,
+          logos?.has(asset.id) ?? false,
+          toClose(closes?.get(asset.id)),
+        ),
         history: history?.byAsset.get(asset.id) ?? PENDING_HISTORY,
         lastTradedOn: tradingDays?.get(asset.ticker) ?? null,
       })),
@@ -209,11 +224,19 @@ export class AssetCatalogService {
       this.deps.prices?.sessions(id, 2),
       this.deps.history?.forAsset(id),
     ]);
+    const lastSession = toSession(sessions ?? []);
     return {
-      ...toPublicAsset(asset, quote ?? null, logos?.has(id) ?? false),
+      ...toPublicAsset(
+        asset,
+        quote ?? null,
+        logos?.has(id) ?? false,
+        lastSession
+          ? { date: lastSession.date, price: lastSession.close, change: lastSession.change }
+          : null,
+      ),
       active: isActive(asset),
       deactivatedAt: asset.deactivatedAt?.toISOString() ?? null,
-      lastSession: toSession(sessions ?? []),
+      lastSession,
       history: history ?? PENDING_HISTORY,
     };
   }
@@ -415,6 +438,16 @@ export class AssetCatalogService {
     };
     return { changes, updatedAt: now, audit };
   }
+}
+
+/** SPEC-046: o último fechamento com a variação sobre o anterior, ou `null` sem histórico. */
+function toClose(closes: LastCloses | undefined): AssetClose | null {
+  if (!closes) return null;
+  return {
+    date: closes.date,
+    price: closes.close,
+    change: closes.previousClose ? percentChange(closes.close, closes.previousClose) : null,
+  };
 }
 
 /** O último pregão, com a variação sobre o anterior (a mesma regra da SPEC-009). */

@@ -124,6 +124,7 @@ describe('ficha do ativo (SPEC-010)', () => {
         class: 'stock',
         sector: 'petroleo_gas_biocombustiveis',
         quote: null,
+        lastClose: { date: '2026-10-30', price: '52.71', change: '0.98' },
         hasLogo: false,
         active: true,
         deactivatedAt: null,
@@ -139,6 +140,37 @@ describe('ficha do ativo (SPEC-010)', () => {
           volume: '1000.00',
         },
         history: { status: 'loaded', from: '2025-10-29', to: '2026-10-30' },
+      });
+    });
+
+    it('a busca e o catálogo trazem o último fechamento da B3, sem o provisório da brapi (SPEC-046)', async () => {
+      const fii = await create({
+        ticker: 'MXRF11',
+        name: 'Maxi Renda FII',
+        class: 'fii',
+        sector: 'recebiveis',
+      });
+      // Um pregão só: sem a variação. O provisório da brapi, mais novo, não conta.
+      await closes(fii.id, [['2026-10-30', '9.10']]);
+      await closes(petr4.id, [['2026-11-03', '53.00']], 'brapi');
+
+      const res = await call('GET', ASSET_PATHS.search, user);
+      expect(res.statusCode, res.body).toBe(200);
+      const byTicker = new Map(
+        res.json<{ assets: CatalogAsset[] }>().assets.map((a) => [a.ticker, a.lastClose]),
+      );
+      expect(byTicker.get('PETR4')).toEqual({ date: '2026-10-30', price: '52.71', change: '0.98' });
+      expect(byTicker.get('MXRF11')).toEqual({ date: '2026-10-30', price: '9.10', change: null });
+
+      const catalog = await call('GET', ASSET_PATHS.catalog, collaborator);
+      expect(catalog.statusCode, catalog.body).toBe(200);
+      const fromCatalog = catalog
+        .json<{ assets: CatalogAsset[] }>()
+        .assets.find((a) => a.ticker === 'PETR4');
+      expect(fromCatalog?.lastClose).toEqual({
+        date: '2026-10-30',
+        price: '52.71',
+        change: '0.98',
       });
     });
 

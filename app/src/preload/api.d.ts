@@ -23,6 +23,7 @@ import type {
   CatalogListResult,
   CdiStatus,
   MarketIndexStatus,
+  MarketToday,
   ConsentList,
   DividendPeriod,
   Investidor10Status,
@@ -146,6 +147,8 @@ export interface DesktopApi {
   indexes: {
     cdi(): Promise<ClientResult<CdiStatus>>;
     market(): Promise<ClientResult<MarketIndexStatus>>;
+    /** SPEC-048: o Ibovespa e o dólar do dia (Yahoo Finance), para qualquer pessoa conectada. */
+    today(): Promise<ClientResult<MarketToday>>;
   };
   /** Carteiras (SPEC-012): só a conta de usuário; carteira de outra pessoa é `portfolio_not_found`. */
   portfolios: {

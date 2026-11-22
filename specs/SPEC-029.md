@@ -199,3 +199,12 @@ No pregão de 03/11, "No pregão" dá −3,79% (R$ 50,71 sobre R$ 52,71), e "5 p
 - No período de 1 ano ou mais, os marcadores de dias seguidos ficam colados. O clique escolhe o mais perto, N e Shift+N passam por um de cada vez, e o período de 1 mês os separa.
 - Se a leitura dos marcadores falhar, o gráfico fica sem eles até trocar o período ou reabrir a ficha. O "Tentar de novo" da seção relê só a lista.
 - O app não mostra a ficha com dados reais pelo navegador do Claude, porque precisa de login. A conferência com o banco real foi feita pelo serviço (CA08).
+
+## 10. Ajuste da lista (21/11/2026)
+
+A pedido da Nicoly ("o campo de notícias está pouco intuitivo e claro"), sem mudar o comportamento do §5:
+
+- Cada notícia virou um **cartão**: a relação com o ativo e o tom em etiquetas no topo, o título (o link da matéria) com a cor do texto e o destaque só ao passar o mouse ou focar, o resumo em **2 linhas** (antes, 3) e, no rodapé, a fonte, a data por extenso e "Ler no …" com o ícone de link externo. Os links estavam com o azul padrão do navegador, difícil de ler no tema escuro.
+- No topo da seção, uma frase explica a lista ("das mais recentes para as mais antigas; clique no título para ler a matéria") e uma legenda diz o que é "Sobre a {ticker}" e "Cita a {ticker}".
+- "Também aparece em listas" virou um botão com a seta que abre e fecha.
+- Os roteiros E2E das SPECs 029 e 044 passam sem mudança.

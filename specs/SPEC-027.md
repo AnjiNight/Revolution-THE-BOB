@@ -147,7 +147,7 @@ As execuções usam o registro que já existe (SPEC-008, DA14), com tarefas nova
 | ID | Situação |
 |---|---|
 | OPEN-28 | ✅ Parte de notícias resolvida (decisão 1): autorizada por telefone em 12/11/2026, nas mesmas condições dos dados |
-| OPEN-29 | ⏳ Com a decisão 5: lista inicial (Agência Brasil) e confiabilidade de 1 a 5 dada pela equipe. Outras fontes a escolher pela equipe |
+| OPEN-29 | ⏳ Com a decisão 5: lista inicial (Agência Brasil) e confiabilidade de 1 a 5 dada pela equipe. Desde a [SPEC-047](SPEC-047.md), o formulário sugere InfoMoney, Valor Econômico, Exame e Investing.com Brasil; a licença e a confiabilidade continuam com a equipe |
 | OPEN-31 | ⏳ Histórico de notícias: o arquivo do Investidor10 começa em 22/09/2023 (cerca de 3 anos); a janela de treino é decisão da SPEC-028 |
 | OPEN-44 | ⏳ `FONTE_NOTICIA` entra no modelo conceitual |
 

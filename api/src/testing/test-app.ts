@@ -11,6 +11,7 @@ import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
 import { AssetNewsService } from '../modules/news/application/asset-news-service.js';
 import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
+import { MarketTodayCollection } from '../modules/market-data/application/market-today.js';
 import { SentimentService } from '../modules/news/application/sentiment-service.js';
 import {
   FakeFeedFetcher,
@@ -52,6 +53,8 @@ import {
   InMemoryFundamentals,
   InMemoryIndexRates,
   InMemoryMarketIndexes,
+  InMemoryMarketQuotes,
+  FakeMarketQuoteSource,
   InMemoryIntradayQuoteRepository,
   InMemoryLogoRepository,
   InMemoryQuoteRepository,
@@ -249,6 +252,16 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   // SPEC-044: o sentimento sobre as mesmas notícias em memória.
   const sentimentRepo = new InMemorySentimentRepository(newsRepo);
   const sentiment = new SentimentService({ sentiment: sentimentRepo, clock });
+  // SPEC-048: o "Mercado hoje" com a Yahoo falsa.
+  const marketQuotes = new InMemoryMarketQuotes();
+  const marketSource = new FakeMarketQuoteSource();
+  const marketToday = new MarketTodayCollection({
+    source: marketSource,
+    quotes: marketQuotes,
+    runs,
+    calendars,
+    clock,
+  });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -274,6 +287,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     newsSources,
     assetNews: new AssetNewsService({ news: newsRepo, sentiment, clock }),
     sentiment,
+    marketToday,
     logStream: logs,
   });
 
@@ -308,6 +322,9 @@ export async function buildTestApp(options: TestAppOptions = {}) {
 
   return {
     app,
+    marketQuotes,
+    marketSource,
+    marketToday,
     logs,
     newsRepo,
     sentimentRepo,

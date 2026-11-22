@@ -69,6 +69,8 @@ export interface AssetNewsItem {
   relevance: NewsLinkRelevance;
   /** SPEC-044: `null` se a notícia está pendente ou se o modelo não passou na avaliação. */
   sentiment: NewsSentiment | null;
+  /** SPEC-047: a mesma matéria em outras fontes (as repetidas desta), na ordem de coleta. */
+  alsoIn: Array<{ source: string; url: string }>;
 }
 
 /** Corpo de `GET /api/assets/:id/news`. */
@@ -332,7 +334,28 @@ export interface NewsSource {
   failures: number;
   /** Notícias guardadas desta fonte. */
   news: number;
+  /** SPEC-047: quantas delas são repetidas de outra fonte. */
+  duplicates: number;
 }
+
+/**
+ * SPEC-047 §4.1, decisões 1 e 2: feeds RSS testados em 21/11/2026, sugeridos no formulário Nova
+ * fonte. A licença e a confiabilidade ficam com o colaborador.
+ */
+export const SUGGESTED_NEWS_SOURCES: ReadonlyArray<{
+  name: string;
+  url: string;
+  category: NewsCategory;
+}> = [
+  { name: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/', category: 'mercado' },
+  { name: 'Valor Econômico', url: 'https://valor.globo.com/rss/valor', category: 'economia' },
+  { name: 'Exame', url: 'https://exame.com/feed/', category: 'economia' },
+  {
+    name: 'Investing.com Brasil',
+    url: 'https://br.investing.com/rss/news.rss',
+    category: 'mercado',
+  },
+];
 
 /** Carga do arquivo da fonte pai (SPEC-027 §4.1, decisão 3). */
 export interface NewsArchiveProgress {

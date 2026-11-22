@@ -91,6 +91,8 @@ export const INDEX_CHANNELS = {
   cdi: 'indexes:cdi',
   /** SPEC-020: Ibovespa e IFIX. */
   marketIndexes: 'indexes:market',
+  /** SPEC-048: o Ibovespa e o dólar do dia (qualquer pessoa conectada). */
+  marketToday: 'indexes:today',
 } as const;
 
 /** Canais IPC dos indicadores e proventos (SPECs 041 e 042); a situação da coleta é do colaborador. */

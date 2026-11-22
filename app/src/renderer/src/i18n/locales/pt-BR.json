@@ -145,6 +145,20 @@
       "failing_one": "{{count}} tarefa com falha",
       "failing_other": "{{count}} tarefas com falha",
       "open": "Abrir as tarefas"
+    },
+    "market": {
+      "title": "Mercado hoje",
+      "names": {
+        "ibovespa": "Ibovespa",
+        "dollar": "Dólar (US$ em R$)"
+      },
+      "points": "{{value}} pts",
+      "today": "Hoje às {{time}} (atraso de até {{delay}} min)",
+      "otherDay": "Último valor: {{date}}, {{time}}",
+      "stale": "Pode estar desatualizado: a última leitura é de {{date}}, {{time}}.",
+      "none": "Ainda sem leitura.",
+      "empty": "Ainda sem leitura do mercado de hoje.",
+      "source": "Fonte: Yahoo Finance (valores com atraso)."
     }
   },
   "profile": {
@@ -550,7 +564,8 @@
       "none": "Sem cotação ainda",
       "today": "Cotação das {{time}} (atraso de até {{delay}} min)",
       "otherDay": "Cotação de {{date}} às {{time}}",
-      "note": "Cotações da brapi, com atraso de até {{delay}} minutos. Não são em tempo real."
+      "note": "O preço é a cotação do pregão da brapi, com atraso de até {{delay}} minutos (nunca em tempo real), ou o último fechamento da B3, o que for mais recente.",
+      "close": "Fechamento de {{date}} (B3)"
     }
   },
   "detail": {
@@ -628,7 +643,12 @@
       "toneNegative_one": "{{count}} negativa",
       "toneNegative_other": "{{count}} negativas",
       "sentimentNote": "Tom classificado automaticamente ({{model}}); pode errar. Não é recomendação.",
-      "sessionEmpty": "Nenhuma notícia neste pregão."
+      "sessionEmpty": "Nenhuma notícia neste pregão.",
+      "intro": "As notícias sobre a {{ticker}} ou que a citam, das mais recentes para as mais antigas. Clique no título para ler a matéria no site da fonte.",
+      "legendLabel": "O que quer dizer cada etiqueta",
+      "legendPrincipal": ": a notícia é principalmente sobre o ativo.",
+      "legendCitado": ": o ativo aparece na notícia, mas o assunto é outro.",
+      "alsoIn": "Também em:"
     },
     "history": {
       "title": "Histórico de cotações",
@@ -1387,14 +1407,16 @@
       "cotacao_pregao": "Cotações do pregão",
       "noticias_novas": "Notícias novas (Investidor10)",
       "noticias_arquivo": "Arquivo de notícias (Investidor10)",
-      "noticias_feeds": "Notícias das fontes curadas"
+      "noticias_feeds": "Notícias das fontes curadas",
+      "mercado_yahoo": "Mercado do dia (Yahoo: Ibovespa e dólar)"
     },
     "sources": {
       "b3": "B3",
       "brapi": "brapi",
       "bcb": "Banco Central",
       "investidor10": "Investidor10",
-      "feeds": "feeds RSS das fontes curadas"
+      "feeds": "feeds RSS das fontes curadas",
+      "yahoo": "Yahoo Finance"
     },
     "source_one": "Fonte: {{sources}}",
     "source_other": "Fontes: {{sources}}",
@@ -1403,7 +1425,8 @@
       "weekly": "Aos domingos às {{times}}",
       "every": "A cada {{minutes}} minutos",
       "session": "A cada {{minutes}} minutos durante o pregão",
-      "sundaysAll": "(todos os ativos aos domingos; nos outros dias, só os novos)"
+      "sundaysAll": "(todos os ativos aos domingos; nos outros dias, só os novos)",
+      "market": "Ibovespa a cada {{indexMinutes}} minutos durante o pregão; dólar a cada {{dollarMinutes}} minutos nos dias úteis"
     },
     "status": {
       "sucesso": "Sucesso",
@@ -1455,7 +1478,8 @@
       "cotacao_pregao": "Fora do horário do pregão, ou sem cota.",
       "noticias_novas": "Nada a buscar agora.",
       "noticias_arquivo": "Nada a buscar agora.",
-      "noticias_feeds": "Nenhuma fonte curada ativa."
+      "noticias_feeds": "Nenhuma fonte curada ativa.",
+      "mercado_yahoo": "Nada a coletar agora."
     },
     "processor": {
       "title": "Processador",
@@ -1583,7 +1607,10 @@
         "citado": "Citado",
         "lista": "Lista"
       }
-    }
+    },
+    "suggestions": "Sugestões testadas (o clique preenche nome, endereço e categoria; confira a licença antes de cadastrar):",
+    "duplicates_one": "{{count}} repetida",
+    "duplicates_other": "{{count}} repetidas"
   },
   "sentiment": {
     "title": "Sentimento das notícias",

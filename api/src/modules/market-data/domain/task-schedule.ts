@@ -1,4 +1,5 @@
 import type { IngestionTaskCode, TaskSchedule, TaskSource } from '@simulador/shared';
+import { MARKET_HOURS } from './market-hours.js';
 import { SESSION } from './trading-session.js';
 
 /** A coleta do pregão confere a cada 5 minutos se chegou a vez dela (SPEC-009). */
@@ -40,11 +41,21 @@ export const INGESTION_SCHEDULE: Record<
   noticias_novas: { sources: ['investidor10'], schedule: { kind: 'every', minutes: 30 } },
   noticias_arquivo: { sources: ['investidor10'], schedule: { kind: 'every', minutes: 35 } },
   noticias_feeds: { sources: ['feeds'], schedule: { kind: 'every', minutes: 30 } },
+  // SPEC-048: o Ibovespa a cada 15 minutos no pregão; o dólar a cada 30 nos dias úteis.
+  mercado_yahoo: {
+    sources: ['yahoo'],
+    schedule: {
+      kind: 'market',
+      indexMinutes: MARKET_HOURS.ibovespa.every,
+      dollarMinutes: MARKET_HOURS.dollar.every,
+    },
+  },
 };
 
 /**
  * Como o processador agenda a tarefa: nos horários do dia ou a cada tantos minutos. A semanal roda
- * todo dia no horário (ela mesma confere se é domingo); a do pregão confere a cada 5 minutos.
+ * todo dia no horário (ela mesma confere se é domingo); a do pregão e a do "Mercado hoje" (SPEC-048)
+ * conferem a cada 5 minutos.
  */
 export function workerTiming(schedule: TaskSchedule): {
   everyMinutes?: number;
@@ -54,6 +65,7 @@ export function workerTiming(schedule: TaskSchedule): {
     case 'every':
       return { everyMinutes: schedule.minutes };
     case 'session':
+    case 'market':
       return { everyMinutes: SESSION_CHECK_MINUTES };
     case 'daily':
     case 'weekly':

@@ -410,6 +410,8 @@ enum TarefaIngestao {
   noticias_novas
   noticias_arquivo
   noticias_feeds
+  /// SPEC-048: o Ibovespa e o dólar do dia pela Yahoo Finance.
+  mercado_yahoo
 
   @@map("tarefa_ingestao")
 }
@@ -631,6 +633,28 @@ model CotacaoPregao {
   @@id([ativoId, momento, nivel])
   @@index([momento])
   @@map("cotacao_pregao")
+}
+
+/// SPEC-048: o que o painel "Mercado hoje" mostra.
+enum SimboloMercado {
+  ibovespa
+  dolar
+
+  @@map("simbolo_mercado")
+}
+
+/// SPEC-048: leitura do Ibovespa ou do dólar pela Yahoo Finance, no horário que ela informa.
+/// Guardada por 30 dias, como as cotações do pregão (valores positivos: CHECK na migração).
+model CotacaoMercado {
+  simbolo            SimboloMercado
+  momento            DateTime       @db.Timestamptz(3)
+  valor              Decimal        @db.Decimal(18, 6)
+  fechamentoAnterior Decimal?       @map("fechamento_anterior") @db.Decimal(18, 6)
+  coletadaEm         DateTime       @default(now()) @map("coletada_em") @db.Timestamptz(3)
+
+  @@id([simbolo, momento])
+  @@index([coletadaEm])
+  @@map("cotacao_mercado")
 }
 
 /// O que a equipe fez (SPEC-006, RNF15).
@@ -894,28 +918,34 @@ model FonteNoticia {
 
 /// SPEC-027: notícia coletada. Texto completo só da fonte pai, para a classificação (SPEC-028).
 model Noticia {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  fonteId             String    @map("fonte_id") @db.Uuid
-  url                 String    @db.VarChar(500)
-  titulo              String    @db.VarChar(500)
-  resumo              String?
-  texto               String?
-  autor               String?   @db.VarChar(150)
-  temas               String[]  @default([])
-  empresasMarcadas    String[]  @default([]) @map("empresas_marcadas")
-  publicadaEm         DateTime  @map("publicada_em") @db.Timestamptz(3)
-  atualizadaNaFonteEm DateTime? @map("atualizada_na_fonte_em") @db.Timestamptz(3)
-  coletadaEm          DateTime  @map("coletada_em") @db.Timestamptz(3)
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fonteId              String             @map("fonte_id") @db.Uuid
+  url                  String             @db.VarChar(500)
+  titulo               String             @db.VarChar(500)
+  resumo               String?
+  texto                String?
+  autor                String?            @db.VarChar(150)
+  temas                String[]           @default([])
+  empresasMarcadas     String[]           @default([]) @map("empresas_marcadas")
+  publicadaEm          DateTime           @map("publicada_em") @db.Timestamptz(3)
+  atualizadaNaFonteEm  DateTime?          @map("atualizada_na_fonte_em") @db.Timestamptz(3)
+  coletadaEm           DateTime           @map("coletada_em") @db.Timestamptz(3)
   /// SPEC-028: quando e com qual versão da regra a notícia foi vinculada aos ativos.
-  vinculadaEm         DateTime? @map("vinculada_em") @db.Timestamptz(3)
-  versaoVinculo       Int?      @map("versao_vinculo") @db.SmallInt
+  vinculadaEm          DateTime?          @map("vinculada_em") @db.Timestamptz(3)
+  versaoVinculo        Int?               @map("versao_vinculo") @db.SmallInt
   /// SPEC-044: o tom da notícia, a pontuação (−1 a 1), quando e por qual versão; vazios = pendente.
-  sentimento          SentimentoNoticia?
-  sentimentoPontuacao Decimal?           @map("sentimento_pontuacao") @db.Decimal(4, 3)
-  classificadaEm      DateTime?          @map("classificada_em") @db.Timestamptz(3)
-  versaoModeloId      Int?               @map("versao_modelo_id")
+  sentimento           SentimentoNoticia?
+  sentimentoPontuacao  Decimal?           @map("sentimento_pontuacao") @db.Decimal(4, 3)
+  classificadaEm       DateTime?          @map("classificada_em") @db.Timestamptz(3)
+  versaoModeloId       Int?               @map("versao_modelo_id")
+  /// SPEC-047: a original, quando esta é repetida de outra fonte, e por quê; e quando foi conferida.
+  repetidaDeId         String?            @map("repetida_de_id") @db.Uuid
+  repetidaPor          MotivoRepeticao?   @map("repetida_por")
+  repeticaoConferidaEm DateTime?          @map("repeticao_conferida_em") @db.Timestamptz(3)
 
   fonte        FonteNoticia   @relation(fields: [fonteId], references: [id], onDelete: Restrict)
+  repetidaDe   Noticia?       @relation("RepeticaoNoticia", fields: [repetidaDeId], references: [id], onDelete: SetNull)
+  repetidas    Noticia[]      @relation("RepeticaoNoticia")
   ativos       NoticiaAtivo[]
   versaoModelo VersaoModelo?  @relation(fields: [versaoModeloId], references: [id], onDelete: Restrict)
   rotulo       RotuloNoticia?
@@ -924,7 +954,17 @@ model Noticia {
   @@index([publicadaEm])
   @@index([versaoVinculo], map: "noticia_vinculo_idx")
   @@index([versaoModeloId], map: "noticia_versao_modelo_idx")
+  @@index([repetidaDeId], map: "noticia_repetida_de_idx")
+  @@index([repeticaoConferidaEm], map: "noticia_repeticao_conferida_idx")
   @@map("noticia")
+}
+
+/// SPEC-047: por que a notícia é repetida de outra (o mesmo endereço ou o título quase igual).
+enum MotivoRepeticao {
+  endereco
+  titulo
+
+  @@map("motivo_repeticao")
 }
 
 /// SPEC-044: positivo, neutro ou negativo, do modelo ou do rótulo da equipe.

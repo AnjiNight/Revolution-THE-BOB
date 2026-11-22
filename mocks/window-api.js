@@ -11,6 +11,7 @@
  *   `failNews: true` faz as leituras de notícias da ficha falharem (servidor fora do ar).
  *   `sentiment: 'visible'` mostra o tom das notícias na ficha (SPEC-044); `evaluation` força a
  *   nota do "Avaliar agora" na tela do colaborador.
+ *   `marketStale: true` traz o Ibovespa do "Mercado hoje" com o aviso de desatualizado (SPEC-048).
  * - As chamadas ficam em `window.__MOCK_CALLS__` (ex.: para conferir o clique duplo).
  */
 (() => {
@@ -60,6 +61,7 @@
     lastError: null,
     failures: 0,
     news: scenario === 'vazio' ? 0 : 251,
+    duplicates: 0,
   };
   const curated = [
     {
@@ -75,6 +77,8 @@
       lastError: null,
       failures: 0,
       news: 10,
+      // SPEC-047: 2 das 10 eram a mesma matéria já coletada do Investidor10.
+      duplicates: 2,
     },
     {
       id: '00000000-0000-4000-8000-000000000003',
@@ -89,6 +93,7 @@
       lastError: 'feed fora do ar: fetch failed',
       failures: 4,
       news: 0,
+      duplicates: 0,
     },
   ];
   const status = {
@@ -168,6 +173,23 @@
     day = new Date(day.getTime() + 86_400_000);
   }
   const lastPoint = points[points.length - 1];
+  // SPEC-046: sem cotação do pregão, a lista mostra o último fechamento (16/11/2026).
+  asset.lastClose = {
+    date: lastPoint.date,
+    price: lastPoint.close,
+    change: '-1.25',
+  };
+  // SPEC-046: outro ativo, com a cotação do pregão de agora (mais nova que o fechamento).
+  const liveAsset = {
+    id: '00000000-0000-4000-8000-0000000000a2',
+    ticker: 'VALE3',
+    name: 'MINERADORA FICTÍCIA S.A.',
+    class: 'stock',
+    sector: 'materiais_basicos',
+    quote: { price: '61.30', change: '0.42', at: new Date().toISOString(), source: 'brapi' },
+    lastClose: { date: lastPoint.date, price: '61.04', change: '0.10' },
+    hasLogo: false,
+  };
   const detail = {
     ...asset,
     active: true,
@@ -176,7 +198,7 @@
     history: { status: 'loaded', from: points[0].date, to: lastPoint.date },
   };
   const longSummary =
-    'Resumo fictício e longo de uma fonte curada, para conferir que a lista mostra só três linhas. '.repeat(
+    'Resumo fictício e longo de uma fonte curada, para conferir que a lista mostra só duas linhas. '.repeat(
       10,
     );
   // SPEC-044: com `sentiment: 'visible'`, a versão do modelo passou e as notícias têm o tom.
@@ -194,6 +216,17 @@
     relevance,
     // Uma em cada cinco fica pendente (sem tom).
     sentiment: sentimentVisible ? tones[toneIndex++ % tones.length] : null,
+    // SPEC-047: a mesma matéria em outras fontes.
+    alsoIn:
+      id === 'a1'
+        ? [
+            {
+              source: 'InfoMoney',
+              url: 'https://www.infomoney.com.br/mercados/exemplo-ficticio-a1/',
+            },
+            { source: 'Valor Econômico', url: 'https://valor.globo.com/exemplo-ficticio-a1.ghtml' },
+          ]
+        : [],
   });
   const mainNews =
     scenario === 'vazio'
@@ -391,7 +424,31 @@
     }),
     profile: group({}),
     calendar: group({}),
-    indexes: group({}),
+    // SPEC-048: o "Mercado hoje"; no cenário vazio, ainda sem leitura. Com `marketStale`, o
+    // Ibovespa vem com o aviso de desatualizado.
+    indexes: group({
+      today: () =>
+        ok(
+          scenario === 'vazio'
+            ? { ibovespa: null, dollar: null }
+            : {
+                ibovespa: {
+                  value: '166376.44',
+                  previousClose: '167538',
+                  change: '-0.69',
+                  at: minutesAgo(20),
+                  stale: options.marketStale === true,
+                },
+                dollar: {
+                  value: '5.9074',
+                  previousClose: '5.9052',
+                  change: '0.04',
+                  at: minutesAgo(10),
+                  stale: false,
+                },
+              },
+        ),
+    }),
     fundamentals: group({}),
     // SPEC-045: a lista de carteiras (uma de teste); o resto responde como servidor fora do ar.
     portfolios: group({
@@ -424,7 +481,7 @@
     assets: group({
       logo: () => Promise.resolve({ ok: true, data: null }),
       // SPEC-029: a busca, a ficha e o histórico do ativo fictício.
-      search: () => ok({ assets: [asset], hasMore: false, total: 1 }),
+      search: () => ok({ assets: [asset, liveAsset], hasMore: false, total: 2 }),
       detail: () => ok(structuredClone(detail)),
       history: (_id, period, adjusted) =>
         ok({
@@ -542,6 +599,7 @@
           lastError: null,
           failures: 0,
           news: 0,
+          duplicates: 0,
         };
         status.sources.push(source);
         return ok({ source: structuredClone(source), items: 20 });

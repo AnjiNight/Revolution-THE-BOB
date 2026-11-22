@@ -27,6 +27,7 @@ import type {
   StoredNewsToLabel,
 } from '../application/ports.js';
 import type { CatalogTicker } from '../domain/asset-links.js';
+import type { DuplicateCandidate, DuplicateReason } from '../domain/duplicates.js';
 import {
   NewsNotFoundError,
   NewsSourceExistsError,
@@ -51,6 +52,9 @@ type StoredNews = NewsToSave & {
   links: StoredLink[];
   /** SPEC-044: a classificação, ou `null` se a notícia está pendente. */
   classification: (StoredClassification & { score: number; at: Date }) | null;
+  /** SPEC-047: a original, quando esta é repetida, e quando foi conferida. */
+  duplicateOf?: { originalId: string; reason: DuplicateReason } | null;
+  checkedAt?: Date | null;
 };
 
 /** Fontes e notícias em memória (SPEC-027), com a fonte pai e a Agência Brasil da migração. */
@@ -121,6 +125,79 @@ export class InMemoryNewsRepository implements NewsRepository {
     return Promise.resolve(counts);
   }
 
+  duplicateCounts(): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    for (const item of this.news.filter((n) => n.duplicateOf)) {
+      counts.set(item.sourceId, (counts.get(item.sourceId) ?? 0) + 1);
+    }
+    return Promise.resolve(counts);
+  }
+
+  /** SPEC-047: a ordem em que valem como original (coleta, fonte pai, confiabilidade, id). */
+  private originalOrder(a: StoredNews, b: StoredNews): number {
+    const source = (item: StoredNews) => this.list.find((s) => s.id === item.sourceId);
+    const rank = (item: StoredNews) => (source(item)?.kind === 'parent' ? 0 : 1);
+    return (
+      a.collectedAt.getTime() - b.collectedAt.getTime() ||
+      rank(a) - rank(b) ||
+      (source(b)?.reliability ?? 0) - (source(a)?.reliability ?? 0) ||
+      a.id.localeCompare(b.id)
+    );
+  }
+
+  private candidate(item: StoredNews): DuplicateCandidate {
+    return {
+      id: item.id,
+      sourceId: item.sourceId,
+      url: item.url,
+      title: item.title,
+      publishedAt: item.publishedAt,
+    };
+  }
+
+  newsToCheck(limit: number): Promise<DuplicateCandidate[]> {
+    return Promise.resolve(
+      this.news
+        .filter((item) => !item.checkedAt)
+        .sort((a, b) => this.originalOrder(a, b))
+        .slice(0, limit)
+        .map((item) => this.candidate(item)),
+    );
+  }
+
+  originalsAround(from: Date, to: Date): Promise<DuplicateCandidate[]> {
+    return Promise.resolve(
+      this.news
+        .filter(
+          (item) =>
+            item.checkedAt &&
+            !item.duplicateOf &&
+            item.publishedAt >= from &&
+            item.publishedAt <= to,
+        )
+        .sort((a, b) => this.originalOrder(a, b))
+        .map((item) => this.candidate(item)),
+    );
+  }
+
+  markChecked(
+    newsId: string,
+    duplicateOf: { originalId: string; reason: DuplicateReason } | null,
+    at: Date,
+  ): Promise<void> {
+    const item = this.news.find((n) => n.id === newsId);
+    if (item) {
+      item.checkedAt = at;
+      item.duplicateOf = duplicateOf;
+      if (duplicateOf) {
+        item.links = [];
+        item.linkVersion = null;
+        item.classification = null;
+      }
+    }
+    return Promise.resolve();
+  }
+
   storedUrls(sourceId: string): Promise<Map<string, Date | null>> {
     return Promise.resolve(
       new Map(
@@ -180,7 +257,7 @@ export class InMemoryNewsRepository implements NewsRepository {
   newsToLink(version: number, limit: number): Promise<NewsToLink[]> {
     return Promise.resolve(
       [...this.news]
-        .filter((item) => item.linkVersion !== version)
+        .filter((item) => item.linkVersion !== version && !item.duplicateOf)
         .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
         .slice(0, limit)
         .map((item) => ({
@@ -211,6 +288,7 @@ export class InMemoryNewsRepository implements NewsRepository {
       this.catalog.find((asset) => asset.assetId === assetId)?.ticker ?? '';
     return Promise.resolve(
       [...this.news]
+        .filter((item) => !item.duplicateOf)
         .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
         .slice(0, limit)
         .map((item) => ({
@@ -229,7 +307,7 @@ export class InMemoryNewsRepository implements NewsRepository {
 
   linkCounts(): Promise<{ total: number; linked: number }> {
     return Promise.resolve({
-      total: this.news.length,
+      total: this.news.filter((item) => !item.duplicateOf).length,
       linked: this.news.filter((item) => item.links.length > 0).length,
     });
   }
@@ -255,6 +333,13 @@ export class InMemoryNewsRepository implements NewsRepository {
         publishedAt: item.publishedAt,
         relevance,
         classification: classificationOf(item),
+        alsoIn: this.news
+          .filter((other) => other.duplicateOf?.originalId === item.id)
+          .sort((a, b) => this.originalOrder(a, b))
+          .map((other) => ({
+            source: this.list.find((s) => s.id === other.sourceId)?.name ?? '',
+            url: other.url,
+          })),
       })),
     });
   }
@@ -381,7 +466,7 @@ export class InMemorySentimentRepository implements SentimentRepository {
   newsToClassify(versionId: number, limit: number): Promise<NewsToClassify[]> {
     return Promise.resolve(
       [...this.newsRepo.news]
-        .filter((item) => item.classification?.modelVersionId !== versionId)
+        .filter((item) => item.classification?.modelVersionId !== versionId && !item.duplicateOf)
         .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
         .slice(0, limit)
         .map((item) => ({ id: item.id, title: item.title, summary: item.summary })),
@@ -402,7 +487,7 @@ export class InMemorySentimentRepository implements SentimentRepository {
 
   classifiedCounts(versionId: number | null): Promise<{ total: number; classified: number }> {
     return Promise.resolve({
-      total: this.newsRepo.news.length,
+      total: this.newsRepo.news.filter((item) => !item.duplicateOf).length,
       classified: this.newsRepo.news.filter(
         (item) => versionId !== null && item.classification?.modelVersionId === versionId,
       ).length,
@@ -461,7 +546,7 @@ export class InMemorySentimentRepository implements SentimentRepository {
         )
         .sort();
     const candidates = this.newsRepo.news.filter(
-      (item) => !this.labelsById.has(item.id) && !skip.includes(item.id),
+      (item) => !this.labelsById.has(item.id) && !skip.includes(item.id) && !item.duplicateOf,
     );
     const item =
       candidates.find((candidate) => principal(candidate).length > 0) ?? candidates[0] ?? null;

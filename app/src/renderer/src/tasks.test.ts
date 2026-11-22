@@ -34,6 +34,9 @@ describe('tela Tarefas (SPEC-011)', () => {
     expect(scheduleText({ kind: 'session', minutes: 30 }, t, 'pt-BR')).toBe(
       'tasks.schedule.session {"minutes":30}',
     );
+    expect(scheduleText({ kind: 'market', indexMinutes: 15, dollarMinutes: 30 }, t, 'pt-BR')).toBe(
+      'tasks.schedule.market {"indexMinutes":15,"dollarMinutes":30}',
+    );
   });
 
   it('há quanto tempo o processador deu sinal', () => {

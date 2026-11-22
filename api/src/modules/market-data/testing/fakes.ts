@@ -5,6 +5,7 @@ import {
   type AssetOrigin,
   type IndicatorCode,
   type IsoDate,
+  type MarketTodaySymbol,
   type NonTradingDay,
   type SectorCode,
 } from '@simulador/shared';
@@ -15,7 +16,12 @@ import type { CorporateEvent } from '../domain/b3-events.js';
 import type { ParsedDividend } from '../domain/investidor10-page.js';
 import { INTERRUPTED_MESSAGE } from '../domain/task-errors.js';
 import {
+  MarketQuoteSourceError,
   QuoteSourceError,
+  type MarketQuote,
+  type MarketQuoteRepository,
+  type MarketQuoteSource,
+  type StoredMarketQuote,
   type AssetCollection,
   type AssetListing,
   type B3CompanySource,
@@ -460,6 +466,32 @@ export class InMemoryQuoteRepository implements QuoteRepository {
   }
 
   /** Volume do último pregão da B3 de cada ativo (SPEC-040). */
+  /** SPEC-046: o último fechamento da B3 de cada ativo e o anterior. */
+  lastCloses(): Promise<
+    Map<string, { date: IsoDate; close: string; previousClose: string | null }>
+  > {
+    const byAsset = new Map<string, DailyQuote[]>();
+    for (const quote of this.quotes.values()) {
+      if (quote.source !== 'b3_cotahist') continue;
+      byAsset.set(quote.assetId, [...(byAsset.get(quote.assetId) ?? []), quote]);
+    }
+    const result = new Map<
+      string,
+      { date: IsoDate; close: string; previousClose: string | null }
+    >();
+    for (const [assetId, quotes] of byAsset) {
+      const [last, previous] = quotes.sort((a, b) => (a.date < b.date ? 1 : -1));
+      if (last) {
+        result.set(assetId, {
+          date: last.date,
+          close: last.close,
+          previousClose: previous?.close ?? null,
+        });
+      }
+    }
+    return Promise.resolve(result);
+  }
+
   lastVolumes(): Promise<Map<string, string>> {
     const latest = new Map<string, DailyQuote>();
     for (const quote of this.quotes.values()) {
@@ -1215,5 +1247,49 @@ export class InMemoryTaskMonitor
       affectedAssets: run.result?.affectedAssets ?? 0,
       errorCount: run.result?.errors.length ?? 0,
     };
+  }
+}
+
+/** SPEC-048: as leituras do "Mercado hoje" em memória, com a mesma regra do upsert do banco. */
+export class InMemoryMarketQuotes implements MarketQuoteRepository {
+  readonly rows: StoredMarketQuote[] = [];
+
+  save(quote: StoredMarketQuote): Promise<void> {
+    const same = this.rows.find(
+      (row) => row.symbol === quote.symbol && row.at.getTime() === quote.at.getTime(),
+    );
+    if (same) same.collectedAt = quote.collectedAt;
+    else this.rows.push({ ...quote });
+    return Promise.resolve();
+  }
+
+  latest(symbol: MarketTodaySymbol): Promise<StoredMarketQuote | null> {
+    const found = this.rows
+      .filter((row) => row.symbol === symbol)
+      .sort((a, b) => b.at.getTime() - a.at.getTime())[0];
+    return Promise.resolve(found ? { ...found } : null);
+  }
+
+  deleteBefore(before: Date): Promise<number> {
+    const kept = this.rows.filter((row) => row.at.getTime() >= before.getTime());
+    const deleted = this.rows.length - kept.length;
+    this.rows.splice(0, this.rows.length, ...kept);
+    return Promise.resolve(deleted);
+  }
+}
+
+/** SPEC-048: a Yahoo falsa; sem resposta para o símbolo, falha como fora do ar. */
+export class FakeMarketQuoteSource implements MarketQuoteSource {
+  readonly answers = new Map<MarketTodaySymbol, MarketQuote | MarketQuoteSourceError>();
+  readonly asked: MarketTodaySymbol[] = [];
+
+  quote(symbol: MarketTodaySymbol): Promise<MarketQuote> {
+    this.asked.push(symbol);
+    const answer = this.answers.get(symbol);
+    if (answer instanceof MarketQuoteSourceError) return Promise.reject(answer);
+    if (!answer) {
+      return Promise.reject(new MarketQuoteSourceError('unavailable', 'Yahoo fora do ar (teste)'));
+    }
+    return Promise.resolve({ ...answer });
   }
 }

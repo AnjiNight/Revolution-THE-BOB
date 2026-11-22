@@ -378,6 +378,16 @@ describe.skipIf(!url)('histórico de cotações no PostgreSQL', () => {
         ]),
       );
     });
+
+    it('último fechamento e o anterior de cada ativo, sem o provisório da brapi (SPEC-046)', async () => {
+      expect(await quotes.lastCloses()).toEqual(
+        new Map([
+          [PETR4, { date: '2026-10-30', close: '38.25', previousClose: '38.000001' }],
+          // Um pregão só: sem o anterior.
+          [MXRF11, { date: '2026-10-30', close: '8.88', previousClose: null }],
+        ]),
+      );
+    });
   });
 
   describe('restrições do banco (CA11)', () => {

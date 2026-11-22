@@ -145,6 +145,20 @@
       "failing_one": "{{count}} task failing",
       "failing_other": "{{count}} tasks failing",
       "open": "Open the tasks"
+    },
+    "market": {
+      "title": "Market today",
+      "names": {
+        "ibovespa": "Ibovespa",
+        "dollar": "US dollar (in R$)"
+      },
+      "points": "{{value}} pts",
+      "today": "Today at {{time}} (delayed up to {{delay}} min)",
+      "otherDay": "Last value: {{date}}, {{time}}",
+      "stale": "May be out of date: the last reading is from {{date}}, {{time}}.",
+      "none": "No reading yet.",
+      "empty": "No market reading for today yet.",
+      "source": "Source: Yahoo Finance (delayed values)."
     }
   },
   "profile": {
@@ -550,7 +564,8 @@
       "none": "No quote yet",
       "today": "Quote at {{time}} (up to {{delay}} min delay)",
       "otherDay": "Quote from {{date}} at {{time}}",
-      "note": "Quotes from brapi, delayed by up to {{delay}} minutes. Not real-time."
+      "note": "The price is the brapi trading-session quote, delayed by up to {{delay}} minutes (never real-time), or the latest B3 close, whichever is more recent.",
+      "close": "Close on {{date}} (B3)"
     }
   },
   "detail": {
@@ -628,7 +643,12 @@
       "toneNegative_one": "{{count}} negative",
       "toneNegative_other": "{{count}} negative",
       "sentimentNote": "Tone classified automatically ({{model}}); it can be wrong. Not a recommendation.",
-      "sessionEmpty": "No news in this session."
+      "sessionEmpty": "No news in this session.",
+      "intro": "News about {{ticker}} or mentioning it, newest first. Click a headline to read the full story on the source website.",
+      "legendLabel": "What each tag means",
+      "legendPrincipal": ": the story is mainly about this asset.",
+      "legendCitado": ": the asset appears in the story, but the subject is something else.",
+      "alsoIn": "Also in:"
     },
     "history": {
       "title": "Price history",
@@ -1387,14 +1407,16 @@
       "cotacao_pregao": "Trading session quotes",
       "noticias_novas": "Latest news (Investidor10)",
       "noticias_arquivo": "News archive (Investidor10)",
-      "noticias_feeds": "News from the curated sources"
+      "noticias_feeds": "News from the curated sources",
+      "mercado_yahoo": "Market today (Yahoo: Ibovespa and dollar)"
     },
     "sources": {
       "b3": "B3",
       "brapi": "brapi",
       "bcb": "Central Bank of Brazil",
       "investidor10": "Investidor10",
-      "feeds": "RSS feeds of the curated sources"
+      "feeds": "RSS feeds of the curated sources",
+      "yahoo": "Yahoo Finance"
     },
     "source_one": "Source: {{sources}}",
     "source_other": "Sources: {{sources}}",
@@ -1403,7 +1425,8 @@
       "weekly": "Sundays at {{times}}",
       "every": "Every {{minutes}} minutes",
       "session": "Every {{minutes}} minutes during the trading session",
-      "sundaysAll": "(all assets on Sundays; only the new ones on other days)"
+      "sundaysAll": "(all assets on Sundays; only the new ones on other days)",
+      "market": "Ibovespa every {{indexMinutes}} minutes during the trading session; dollar every {{dollarMinutes}} minutes on weekdays"
     },
     "status": {
       "sucesso": "Success",
@@ -1455,7 +1478,8 @@
       "cotacao_pregao": "Outside trading hours, or no quota left.",
       "noticias_novas": "Nothing to fetch right now.",
       "noticias_arquivo": "Nothing to fetch right now.",
-      "noticias_feeds": "No active curated source."
+      "noticias_feeds": "No active curated source.",
+      "mercado_yahoo": "Nothing to collect now."
     },
     "processor": {
       "title": "Processor",
@@ -1583,7 +1607,10 @@
         "citado": "Mentioned",
         "lista": "List"
       }
-    }
+    },
+    "suggestions": "Tested suggestions (a click fills in the name, address and category; check the license before adding):",
+    "duplicates_one": "{{count}} duplicate",
+    "duplicates_other": "{{count}} duplicates"
   },
   "sentiment": {
     "title": "News sentiment",

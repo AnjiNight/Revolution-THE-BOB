@@ -198,6 +198,43 @@ export class PrismaQuoteRepository implements QuoteRepository {
    * os mais negociados primeiro. Um ativo por vez, pela chave (ativo, data): com o histórico inteiro
    * (1 milhão de linhas), leva milissegundos em vez de meio segundo (SPEC-010).
    */
+  /**
+   * SPEC-046: o último fechamento da B3 de cada ativo e o anterior, pela chave primária
+   * (`ativo_id`, `data`): duas linhas por ativo.
+   */
+  async lastCloses(): Promise<
+    Map<string, { date: IsoDate; close: string; previousClose: string | null }>
+  > {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ ativo_id: string; data: Date; fechamento: string; anterior: string | null }>
+    >`
+      SELECT a.id AS ativo_id, l.data, l.fechamento::text AS fechamento,
+        l.anterior::text AS anterior
+      FROM ativo a
+      CROSS JOIN LATERAL (
+        SELECT d.data, d.fechamento,
+          lead(d.fechamento) OVER (ORDER BY d.data DESC) AS anterior
+        FROM (
+          SELECT data, fechamento FROM cotacao_diaria
+          WHERE ativo_id = a.id AND fonte = 'b3_cotahist'
+          ORDER BY data DESC
+          LIMIT 2
+        ) d
+        ORDER BY d.data DESC
+        LIMIT 1
+      ) l`;
+    return new Map(
+      rows.map((row) => [
+        row.ativo_id,
+        {
+          date: toIsoDate(row.data),
+          close: normalize(row.fechamento),
+          previousClose: row.anterior === null ? null : normalize(row.anterior),
+        },
+      ]),
+    );
+  }
+
   async lastVolumes(): Promise<Map<string, string>> {
     const rows = await this.prisma.$queryRaw<Array<{ ativo_id: string; volume: string }>>`
       SELECT a.id AS ativo_id, v.volume::text AS volume

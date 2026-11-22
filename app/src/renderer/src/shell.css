@@ -936,3 +936,83 @@ button[aria-disabled='true']:active {
     white-space: nowrap;
   }
 }
+
+/* SPEC-048: "Mercado hoje" no Início do usuário: o Ibovespa e o dólar, com o horário e o atraso. */
+.market-today {
+  margin-bottom: 2rem;
+}
+
+.market-today-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.market-today-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+
+.market-today-card h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.market-today-card p {
+  margin: 0;
+}
+
+.market-today-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+}
+
+.market-today-value {
+  font-size: 1.35rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-today-line .quote-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.market-today-stale {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  color: var(--warn);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.market-today-stale svg {
+  flex: none;
+  margin-top: 0.15rem;
+}
+
+.market-today-empty,
+.market-today-source {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.market-today-source {
+  margin-top: 0.6rem;
+}

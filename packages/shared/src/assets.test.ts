@@ -5,6 +5,7 @@ import {
   FII_SEGMENTS,
   isKnownSector,
   isSectorOf,
+  latestPrice,
   normalizeSearchText,
   normalizeTicker,
   SECTOR_OPTIONS,
@@ -190,5 +191,32 @@ describe('rotas', () => {
     expect(assetPath(ASSET_PATHS.deactivate, 'abc')).toBe(
       '/api/collaborator/assets/abc/deactivate',
     );
+  });
+});
+
+describe('latestPrice (SPEC-046)', () => {
+  const quote = (at: string) => ({ price: '37.40', change: '0.75', at, source: 'brapi' as const });
+  const close = (date: string) => ({ date, price: '37.12', change: '0.85' });
+
+  it('sem nenhum dos dois: null', () => {
+    expect(latestPrice(null, null)).toBeNull();
+  });
+
+  it('só o fechamento ou só a cotação: o que houver', () => {
+    expect(latestPrice(null, close('2026-11-20'))).toEqual({
+      kind: 'close',
+      close: close('2026-11-20'),
+    });
+    expect(latestPrice(quote('2026-11-23T17:30:00Z'), null)?.kind).toBe('quote');
+  });
+
+  it('a cotação de um dia depois do fechamento vale (segunda, 14:30)', () => {
+    expect(latestPrice(quote('2026-11-23T17:30:00Z'), close('2026-11-20'))?.kind).toBe('quote');
+  });
+
+  it('no mesmo dia em Brasília, vale o fechamento; a de antes também perde', () => {
+    // 23/11 às 21:30 em Brasília é 24/11 em UTC: ainda é o pregão de 23/11.
+    expect(latestPrice(quote('2026-11-24T00:30:00Z'), close('2026-11-23'))?.kind).toBe('close');
+    expect(latestPrice(quote('2026-11-19T17:30:00Z'), close('2026-11-20'))?.kind).toBe('close');
   });
 });

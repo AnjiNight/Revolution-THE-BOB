@@ -10,7 +10,7 @@ import {
   type SentimentCounts,
   type SentimentModelName,
 } from '@simulador/shared';
-import { X } from '@phosphor-icons/react';
+import { ArrowSquareOut, CaretDown, X } from '@phosphor-icons/react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../../shared/auth-ipc';
@@ -134,43 +134,64 @@ function NewsList({
   );
 }
 
-/** Uma notícia: título com link, fonte, data, a relação com o ativo, resumo e "Ler no …". */
+/**
+ * Uma notícia, num cartão: a relação com o ativo e o tom em etiquetas no topo, o título (o link
+ * para a matéria), o resumo em duas linhas e, no rodapé, a fonte, quando saiu e "Ler no …".
+ */
 function NewsItem({ item, ticker }: { item: AssetNewsItem; ticker: string }) {
   const { t, i18n } = useTranslation();
   const when = new Intl.DateTimeFormat(i18n.language, {
-    dateStyle: 'short',
-    timeStyle: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
     timeZone: CALENDAR_TIME_ZONE,
   }).format(new Date(item.publishedAt));
   return (
     <li className="asset-news-item">
-      <a className="asset-news-title" href={item.url} target="_blank" rel="noreferrer" lang="pt-BR">
-        {item.title}
-      </a>
-      <p className="position-name">
-        {item.source} · {when} ·{' '}
+      <div className="asset-news-tags">
         <span className={`news-link is-${item.relevance}`}>
           {t(`detail.news.relevance.${item.relevance}`, { ticker })}
         </span>
         {/* SPEC-044: só quando a versão do modelo passou na avaliação. */}
-        {item.sentiment && (
-          <>
-            {' '}
-            <SentimentTag sentiment={item.sentiment} />
-          </>
-        )}
-      </p>
+        {item.sentiment && <SentimentTag sentiment={item.sentiment} />}
+      </div>
+      <a className="asset-news-title" href={item.url} target="_blank" rel="noreferrer" lang="pt-BR">
+        {item.title}
+      </a>
       {item.summary && (
         <p className="asset-news-summary" lang="pt-BR">
           {item.summary}
         </p>
       )}
-      <a className="asset-news-read" href={item.url} target="_blank" rel="noreferrer">
-        {item.source === 'Investidor10'
-          ? t('detail.news.readParent')
-          : t('detail.news.read', { source: item.source })}
-        <span className="visually-hidden">: {item.title}</span>
-      </a>
+      <div className="asset-news-foot">
+        <span className="asset-news-meta">
+          {item.source} · <time dateTime={item.publishedAt}>{when}</time>
+        </span>
+        <a className="asset-news-read" href={item.url} target="_blank" rel="noreferrer">
+          {item.source === 'Investidor10'
+            ? t('detail.news.readParent')
+            : t('detail.news.read', { source: item.source })}
+          <span className="visually-hidden">: {item.title}</span>
+          <ArrowSquareOut weight="bold" aria-hidden="true" />
+        </a>
+      </div>
+      {/* SPEC-047: a mesma matéria em outras fontes, uma notícia só na lista. */}
+      {item.alsoIn.length > 0 && (
+        <p className="asset-news-also">
+          {t('detail.news.alsoIn')}{' '}
+          {item.alsoIn.map((copy, index) => (
+            <span key={copy.url}>
+              {index > 0 && ', '}
+              <a href={copy.url} target="_blank" rel="noreferrer">
+                {copy.source}
+                <span className="visually-hidden">: {item.title}</span>
+              </a>
+            </span>
+          ))}
+        </p>
+      )}
     </li>
   );
 }
@@ -204,10 +225,27 @@ export function AssetNewsSection({
 
   return (
     <section className="profile-panel asset-news" aria-labelledby={titleId}>
-      <div className="asset-panel-head">
-        <h2 id={titleId}>{t('detail.news.title')}</h2>
+      <div className="asset-panel-head asset-news-head">
+        <div>
+          <h2 id={titleId}>{t('detail.news.title')}</h2>
+          <p className="field-hint">{t('detail.news.intro', { ticker })}</p>
+        </div>
         <PortugueseBadge />
       </div>
+      <ul className="asset-news-legend" aria-label={t('detail.news.legendLabel')}>
+        <li>
+          <span className="news-link is-principal">
+            {t('detail.news.relevance.principal', { ticker })}
+          </span>
+          {t('detail.news.legendPrincipal')}
+        </li>
+        <li>
+          <span className="news-link is-citado">
+            {t('detail.news.relevance.citado', { ticker })}
+          </span>
+          {t('detail.news.legendCitado')}
+        </li>
+      </ul>
       <NewsList
         assetId={assetId}
         ticker={ticker}
@@ -223,12 +261,13 @@ export function AssetNewsSection({
         <div className="asset-news-lists">
           <button
             type="button"
-            className="link"
+            className="secondary asset-news-lists-toggle"
             aria-expanded={listsOpen}
             aria-controls={listsId}
             onClick={() => setListsOpen((open) => !open)}
           >
             {t('detail.news.lists', { count: listTotal })}
+            <CaretDown weight="bold" aria-hidden="true" />
           </button>
           <div id={listsId} hidden={!listsOpen}>
             {listsOpen && (
