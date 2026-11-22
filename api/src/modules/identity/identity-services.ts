@@ -1,6 +1,7 @@
 import {
   AccountDataService,
   type PortfolioExportReader,
+  type SubscriptionExportReader,
 } from './application/account-data-service.js';
 import { AuthService } from './application/auth-service.js';
 import type { EmailCodeHasher } from './application/email-code.js';
@@ -37,6 +38,8 @@ export interface IdentityInfrastructure {
   generateCode?: (() => string) | undefined;
   /** SPEC-012: carteiras na exportação de dados pessoais. */
   portfolios?: PortfolioExportReader | undefined;
+  /** SPEC-025: assinaturas na exportação de dados pessoais. */
+  subscriptions?: SubscriptionExportReader | undefined;
 }
 
 /** Monta os serviços do módulo de identidade com a mesma ligação no servidor e nos testes. */
@@ -89,6 +92,7 @@ export function createIdentityServices(infra: IdentityInfrastructure) {
     refreshTokens: infra.refreshTokens,
     codes,
     ...(infra.portfolios ? { portfolios: infra.portfolios } : {}),
+    ...(infra.subscriptions ? { subscriptions: infra.subscriptions } : {}),
     ...mailer,
     ...optional,
   });

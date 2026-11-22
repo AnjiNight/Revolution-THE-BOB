@@ -1,4 +1,4 @@
-import type { PublicUser } from '@simulador/shared';
+import type { PremiumFeature, PublicUser } from '@simulador/shared';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ClientAuthError } from '../../shared/auth-ipc';
@@ -16,11 +16,13 @@ import { LoginForm } from './components/LoginForm';
 import { PortfolioComparison } from './components/PortfolioComparison';
 import { PortfolioPage, Portfolios, type CopiedCounts } from './components/Portfolios';
 import type { TradeAsset } from './components/TradeForm';
+import { PlanPage } from './components/PlanPage';
 import { Profile } from './components/Profile';
 import { RegisterForm } from './components/RegisterForm';
 import { Tasks } from './components/Tasks';
 import { TradingCalendar } from './components/TradingCalendar';
 import { ConnectionContext } from './connection';
+import { PlanContext } from './plan';
 import { useVariationNotices } from './useVariationNotices';
 
 /** SPEC-032: por quanto tempo o aviso "Conexão de volta" fica na tela. */
@@ -41,6 +43,8 @@ type View =
   | { kind: 'forgot-password'; origin: 'user' | 'collaborator'; email: string }
   | { kind: 'home'; user: PublicUser }
   | { kind: 'profile'; user: PublicUser }
+  /** SPEC-025: a tela Plano; `feature`, o recurso premium cujo cadeado trouxe até aqui. */
+  | { kind: 'plan'; user: PublicUser; feature?: PremiumFeature }
   | { kind: 'calendar'; user: PublicUser; year?: number }
   /** SPEC-011: as tarefas de dados (colaborador), abertas pelo Início. */
   | { kind: 'tasks'; user: PublicUser }
@@ -198,6 +202,7 @@ export function App() {
   if (
     view.kind === 'home' ||
     view.kind === 'profile' ||
+    view.kind === 'plan' ||
     view.kind === 'calendar' ||
     view.kind === 'news' ||
     view.kind === 'assets' ||
@@ -214,6 +219,11 @@ export function App() {
       // O foco vai para o conteúdo da tela nova (RNF18).
       requestAnimationFrame(() => document.getElementById('conteudo')?.focus());
     };
+    /** SPEC-025: a tela Plano, pelo menu ou pelo cadeado de um recurso premium. */
+    const openPlan = (planUser: PublicUser, feature?: PremiumFeature) => {
+      setView({ kind: 'plan', user: planUser, ...(feature ? { feature } : {}) });
+      requestAnimationFrame(() => document.getElementById('conteudo')?.focus());
+    };
     const openCalendar = (year?: number) =>
       setView({ kind: 'calendar', user, ...(year ? { year } : {}) });
     const openAsset = (assetId: string, opener: HTMLElement) => {
@@ -227,159 +237,169 @@ export function App() {
         : undefined;
     return (
       <ConnectionContext.Provider value={connectionValue}>
-        <AppShell
-          {...(shellConnection ? { connection: shellConnection } : {})}
-          user={user}
-          current={view.kind}
-          onHome={() => setView({ kind: 'home', user })}
-          onPortfolios={() => setView({ kind: 'portfolios', user })}
-          onProfile={() => setView({ kind: 'profile', user })}
-          onCalendar={() => openCalendar()}
-          onAssets={() => setView({ kind: 'assets', user })}
-          onNews={() => setView({ kind: 'news', user })}
-          onLogout={logout}
-          userView={inUserView}
-          {...(user.role === 'collaborator' ? { onToggleUserView: toggleUserView } : {})}
-        >
-          {/* SPEC-032: quando a conexão volta, a tela é montada de novo e relê tudo. */}
-          <Fragment key={screenVersion}>
-            {view.kind === 'news' && <NewsSources onSessionExpired={sessionExpired} />}
-            {view.kind === 'home' && (
-              <Home
-                user={{ ...user, role: shownRole }}
-                userView={inUserView}
-                onOpenProfile={() => setView({ kind: 'profile', user })}
-                onOpenCalendar={openCalendar}
-                onOpenAssets={() => setView({ kind: 'assets', user })}
-                onOpenPortfolios={(creating) =>
-                  setView({ kind: 'portfolios', user, ...(creating ? { creating: true } : {}) })
-                }
-                onOpenTasks={() => setView({ kind: 'tasks', user })}
-              />
-            )}
-            {view.kind === 'tasks' && (
-              <Tasks
-                onBack={() => setView({ kind: 'home', user })}
-                onSessionExpired={sessionExpired}
-              />
-            )}
-            {view.kind === 'portfolios' &&
-              (view.compare ? (
-                <PortfolioComparison
-                  key={view.compare.join(',')}
-                  ids={view.compare}
-                  onBack={() => setView({ kind: 'portfolios', user })}
-                  onOpen={(portfolioId) =>
-                    setView({
-                      kind: 'portfolios',
-                      user,
-                      portfolioId,
-                      ...(view.compare ? { fromComparison: view.compare } : {}),
-                    })
+        <PlanContext.Provider value={{ openPlan: (feature) => openPlan(user, feature) }}>
+          <AppShell
+            {...(shellConnection ? { connection: shellConnection } : {})}
+            user={user}
+            current={view.kind}
+            onHome={() => setView({ kind: 'home', user })}
+            onPortfolios={() => setView({ kind: 'portfolios', user })}
+            onProfile={() => setView({ kind: 'profile', user })}
+            onPlan={() => openPlan(user)}
+            onCalendar={() => openCalendar()}
+            onAssets={() => setView({ kind: 'assets', user })}
+            onNews={() => setView({ kind: 'news', user })}
+            onLogout={logout}
+            userView={inUserView}
+            {...(user.role === 'collaborator' ? { onToggleUserView: toggleUserView } : {})}
+          >
+            {/* SPEC-032: quando a conexão volta, a tela é montada de novo e relê tudo. */}
+            <Fragment key={screenVersion}>
+              {view.kind === 'news' && <NewsSources onSessionExpired={sessionExpired} />}
+              {view.kind === 'home' && (
+                <Home
+                  user={{ ...user, role: shownRole }}
+                  userView={inUserView}
+                  onOpenProfile={() => setView({ kind: 'profile', user })}
+                  onOpenCalendar={openCalendar}
+                  onOpenAssets={() => setView({ kind: 'assets', user })}
+                  onOpenPortfolios={(creating) =>
+                    setView({ kind: 'portfolios', user, ...(creating ? { creating: true } : {}) })
                   }
+                  onOpenTasks={() => setView({ kind: 'tasks', user })}
+                />
+              )}
+              {view.kind === 'tasks' && (
+                <Tasks
+                  onBack={() => setView({ kind: 'home', user })}
                   onSessionExpired={sessionExpired}
                 />
-              ) : view.portfolioId ? (
-                <PortfolioPage
-                  key={view.portfolioId}
-                  portfolioId={view.portfolioId}
-                  buyAsset={view.buyAsset ?? null}
-                  {...(view.fromComparison
-                    ? { backLabel: t('portfolios.comparison.backToComparison') }
-                    : {})}
-                  onBack={() =>
-                    setView(
-                      view.fromComparison
-                        ? { kind: 'portfolios', user, compare: view.fromComparison }
-                        : { kind: 'portfolios', user },
-                    )
-                  }
-                  onOpenAsset={(assetId) =>
-                    setView({
-                      kind: 'assets',
-                      user,
-                      assetId,
-                      ...(view.portfolioId ? { returnTo: view.portfolioId } : {}),
-                    })
-                  }
-                  justCopied={view.copied ?? null}
-                  onOpenPortfolio={(portfolioId, copied) =>
-                    setView({
-                      kind: 'portfolios',
-                      user,
-                      portfolioId,
-                      ...(copied ? { copied } : {}),
-                    })
-                  }
-                  onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
-                  onSessionExpired={sessionExpired}
-                />
-              ) : (
-                <Portfolios
-                  startCreating={view.creating === true}
-                  onOpen={(portfolioId, copied) =>
-                    setView({
-                      kind: 'portfolios',
-                      user,
-                      portfolioId,
-                      ...(copied ? { copied } : {}),
-                    })
-                  }
-                  onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
-                  onSessionExpired={sessionExpired}
-                />
-              ))}
-            {view.kind === 'calendar' && (
-              // A chave reabre a tela no ano pedido pelo aviso do Início.
-              <TradingCalendar
-                key={view.year ?? 'atual'}
-                initialYear={view.year}
-                onSessionExpired={sessionExpired}
-              />
-            )}
-            {view.kind === 'assets' && (
-              <>
-                {/* Com a ficha aberta, a lista fica escondida, mas montada: a busca não se perde. */}
-                <div hidden={view.assetId !== undefined}>
-                  {shownRole === 'collaborator' ? (
-                    <AssetCatalog onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
-                  ) : (
-                    <AssetSearch onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
-                  )}
-                </div>
-                {view.assetId !== undefined && (
-                  <AssetDetailPage
-                    key={view.assetId}
-                    assetId={view.assetId}
-                    onBack={() =>
-                      setView(
-                        view.returnTo
-                          ? { kind: 'portfolios', user, portfolioId: view.returnTo }
-                          : { kind: 'assets', user },
-                      )
+              )}
+              {view.kind === 'portfolios' &&
+                (view.compare ? (
+                  <PortfolioComparison
+                    key={view.compare.join(',')}
+                    ids={view.compare}
+                    onBack={() => setView({ kind: 'portfolios', user })}
+                    onOpen={(portfolioId) =>
+                      setView({
+                        kind: 'portfolios',
+                        user,
+                        portfolioId,
+                        ...(view.compare ? { fromComparison: view.compare } : {}),
+                      })
                     }
-                    // SPEC-014: só a conta de usuário compra (e o colaborador na Visão do usuário,
-                    // SPEC-045); abre a carteira escolhida já comprando.
-                    {...(shownRole === 'user'
-                      ? {
-                          onBuy: (portfolioId: string, asset: TradeAsset) =>
-                            setView({ kind: 'portfolios', user, portfolioId, buyAsset: asset }),
-                        }
-                      : {})}
                     onSessionExpired={sessionExpired}
                   />
-                )}
-              </>
-            )}
-            {view.kind === 'profile' && (
-              <Profile
-                onUserChanged={userChanged}
-                onSessionExpired={sessionExpired}
-                onAccountDeleted={() => setView({ kind: 'login', accountDeleted: true })}
-              />
-            )}
-          </Fragment>
-        </AppShell>
+                ) : view.portfolioId ? (
+                  <PortfolioPage
+                    key={view.portfolioId}
+                    portfolioId={view.portfolioId}
+                    buyAsset={view.buyAsset ?? null}
+                    {...(view.fromComparison
+                      ? { backLabel: t('portfolios.comparison.backToComparison') }
+                      : {})}
+                    onBack={() =>
+                      setView(
+                        view.fromComparison
+                          ? { kind: 'portfolios', user, compare: view.fromComparison }
+                          : { kind: 'portfolios', user },
+                      )
+                    }
+                    onOpenAsset={(assetId) =>
+                      setView({
+                        kind: 'assets',
+                        user,
+                        assetId,
+                        ...(view.portfolioId ? { returnTo: view.portfolioId } : {}),
+                      })
+                    }
+                    justCopied={view.copied ?? null}
+                    onOpenPortfolio={(portfolioId, copied) =>
+                      setView({
+                        kind: 'portfolios',
+                        user,
+                        portfolioId,
+                        ...(copied ? { copied } : {}),
+                      })
+                    }
+                    onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
+                    onSessionExpired={sessionExpired}
+                  />
+                ) : (
+                  <Portfolios
+                    startCreating={view.creating === true}
+                    onOpen={(portfolioId, copied) =>
+                      setView({
+                        kind: 'portfolios',
+                        user,
+                        portfolioId,
+                        ...(copied ? { copied } : {}),
+                      })
+                    }
+                    onCompare={(ids) => setView({ kind: 'portfolios', user, compare: ids })}
+                    onSessionExpired={sessionExpired}
+                  />
+                ))}
+              {view.kind === 'calendar' && (
+                // A chave reabre a tela no ano pedido pelo aviso do Início.
+                <TradingCalendar
+                  key={view.year ?? 'atual'}
+                  initialYear={view.year}
+                  onSessionExpired={sessionExpired}
+                />
+              )}
+              {view.kind === 'assets' && (
+                <>
+                  {/* Com a ficha aberta, a lista fica escondida, mas montada: a busca não se perde. */}
+                  <div hidden={view.assetId !== undefined}>
+                    {shownRole === 'collaborator' ? (
+                      <AssetCatalog onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
+                    ) : (
+                      <AssetSearch onSessionExpired={sessionExpired} onOpenAsset={openAsset} />
+                    )}
+                  </div>
+                  {view.assetId !== undefined && (
+                    <AssetDetailPage
+                      key={view.assetId}
+                      assetId={view.assetId}
+                      onBack={() =>
+                        setView(
+                          view.returnTo
+                            ? { kind: 'portfolios', user, portfolioId: view.returnTo }
+                            : { kind: 'assets', user },
+                        )
+                      }
+                      // SPEC-014: só a conta de usuário compra (e o colaborador na Visão do usuário,
+                      // SPEC-045); abre a carteira escolhida já comprando.
+                      {...(shownRole === 'user'
+                        ? {
+                            onBuy: (portfolioId: string, asset: TradeAsset) =>
+                              setView({ kind: 'portfolios', user, portfolioId, buyAsset: asset }),
+                          }
+                        : {})}
+                      onSessionExpired={sessionExpired}
+                    />
+                  )}
+                </>
+              )}
+              {view.kind === 'plan' && (
+                <PlanPage
+                  key={view.feature ?? 'plano'}
+                  feature={view.feature}
+                  onSessionExpired={sessionExpired}
+                />
+              )}
+              {view.kind === 'profile' && (
+                <Profile
+                  onUserChanged={userChanged}
+                  onSessionExpired={sessionExpired}
+                  onAccountDeleted={() => setView({ kind: 'login', accountDeleted: true })}
+                />
+              )}
+            </Fragment>
+          </AppShell>
+        </PlanContext.Provider>
       </ConnectionContext.Provider>
     );
   }

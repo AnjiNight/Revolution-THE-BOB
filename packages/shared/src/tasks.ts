@@ -20,6 +20,8 @@ export const INGESTION_TASKS = [
   'noticias_feeds',
   // SPEC-048: o Ibovespa e o dólar do dia pela Yahoo Finance.
   'mercado_yahoo',
+  // SPEC-025: renova as assinaturas que vencem (pagamento simulado).
+  'renovacao_assinaturas',
 ] as const;
 export type IngestionTaskCode = (typeof INGESTION_TASKS)[number];
 
@@ -28,7 +30,15 @@ export function isIngestionTask(value: unknown): value is IngestionTaskCode {
 }
 
 /** De onde cada tarefa traz os dados (`feeds`: os RSS das fontes curadas, SPEC-027). */
-export type TaskSource = 'b3' | 'brapi' | 'bcb' | 'investidor10' | 'feeds' | 'yahoo';
+export type TaskSource =
+  | 'b3'
+  | 'brapi'
+  | 'bcb'
+  | 'investidor10'
+  | 'feeds'
+  | 'yahoo'
+  /** SPEC-025: o próprio app (as assinaturas, sem fonte externa). */
+  | 'app';
 
 /**
  * Quando a tarefa roda, no horário de Brasília. `daily`: todo dia, nos horários (o Investidor10

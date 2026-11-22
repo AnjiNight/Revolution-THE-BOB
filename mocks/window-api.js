@@ -12,6 +12,8 @@
  *   `sentiment: 'visible'` mostra o tom das notícias na ficha (SPEC-044); `evaluation` força a
  *   nota do "Avaliar agora" na tela do colaborador.
  *   `marketStale: true` traz o Ibovespa do "Mercado hoje" com o aviso de desatualizado (SPEC-048).
+ *   `subscription`: sem ela, plano Gratuito; `'mensal'`, assinante mensal; `'ending'`, assinatura
+ *   cancelada que termina em 2 dias (SPEC-025). `twoPortfolios: true` lista duas carteiras.
  * - As chamadas ficam em `window.__MOCK_CALLS__` (ex.: para conferir o clique duplo).
  */
 (() => {
@@ -48,6 +50,44 @@
         };
 
   const minutesAgo = (m) => new Date(Date.now() - m * 60_000).toISOString();
+
+  // SPEC-025: a assinatura da usuária fictícia (o colaborador não tem plano).
+  const daysFromNow = (d) => new Date(Date.now() + d * 86_400_000).toISOString();
+  let subscriptionState =
+    options.subscription === 'mensal'
+      ? {
+          plan: 'assinante_mensal',
+          startedAt: daysFromNow(-5),
+          endsAt: daysFromNow(25),
+          autoRenew: true,
+          cancelledAt: null,
+        }
+      : options.subscription === 'ending'
+        ? {
+            plan: 'assinante_mensal',
+            startedAt: daysFromNow(-28),
+            endsAt: daysFromNow(2),
+            autoRenew: false,
+            cancelledAt: daysFromNow(-3),
+          }
+        : null;
+  const payments = subscriptionState
+    ? [
+        {
+          plan: subscriptionState.plan,
+          amountCents: 1990,
+          periodStart: subscriptionState.startedAt,
+          periodEnd: subscriptionState.endsAt,
+          recordedAt: subscriptionState.startedAt,
+        },
+      ]
+    : [];
+  const mySubscription = () => ({
+    active: subscriptionState !== null,
+    collaborator: user.role === 'collaborator',
+    subscription: subscriptionState,
+    payments: [...payments],
+  });
   const parent = {
     id: '00000000-0000-4000-8000-000000000001',
     kind: 'parent',
@@ -449,6 +489,48 @@
               },
         ),
     }),
+    // SPEC-025: planos e assinatura (pagamento simulado), com o estado guardado aqui.
+    subscription: group({
+      plans: () =>
+        ok({
+          plans: [
+            { code: 'gratuito', priceCents: 0, durationDays: null },
+            { code: 'assinante_mensal', priceCents: 1990, durationDays: 30 },
+            { code: 'assinante_anual', priceCents: 19900, durationDays: 365 },
+          ],
+        }),
+      mine: () => ok(mySubscription()),
+      subscribe: (plan) => {
+        calls.push(['subscribe', plan]);
+        const days = plan === 'assinante_anual' ? 365 : 30;
+        const start = new Date();
+        const end = new Date(start.getTime() + days * 86_400_000);
+        subscriptionState = {
+          plan,
+          startedAt: start.toISOString(),
+          endsAt: end.toISOString(),
+          autoRenew: true,
+          cancelledAt: null,
+        };
+        payments.unshift({
+          plan,
+          amountCents: plan === 'assinante_anual' ? 19900 : 1990,
+          periodStart: start.toISOString(),
+          periodEnd: end.toISOString(),
+          recordedAt: start.toISOString(),
+        });
+        return ok(mySubscription());
+      },
+      cancel: () => {
+        calls.push(['cancel']);
+        subscriptionState = { ...subscriptionState, autoRenew: false, cancelledAt: minutesAgo(0) };
+        return ok(mySubscription());
+      },
+      resume: () => {
+        subscriptionState = { ...subscriptionState, autoRenew: true, cancelledAt: null };
+        return ok(mySubscription());
+      },
+    }),
     fundamentals: group({}),
     // SPEC-045: a lista de carteiras (uma de teste); o resto responde como servidor fora do ar.
     portfolios: group({
@@ -465,6 +547,19 @@
               updatedAt: '2026-11-21T13:00:00.000Z',
               copiedFrom: null,
             },
+            ...(options.twoPortfolios
+              ? [
+                  {
+                    id: '00000000-0000-4000-8000-0000000000c2',
+                    name: 'Dividendos',
+                    type: 'historical',
+                    startDate: '2025-01-02',
+                    createdAt: '2026-11-21T13:00:00.000Z',
+                    updatedAt: '2026-11-21T13:00:00.000Z',
+                    copiedFrom: null,
+                  },
+                ]
+              : []),
           ],
           limit: 20,
         });

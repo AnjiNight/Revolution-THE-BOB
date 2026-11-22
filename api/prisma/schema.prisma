@@ -58,6 +58,8 @@ model Usuario {
   carteiras       Carteira[]
   /// SPEC-011: execuções que o colaborador pediu.
   pedidosExecucao PedidoExecucao[]
+  /// SPEC-025: assinaturas com pagamento simulado.
+  assinaturas     Assinatura[]
 
   @@map("usuario")
 }
@@ -412,6 +414,8 @@ enum TarefaIngestao {
   noticias_feeds
   /// SPEC-048: o Ibovespa e o dólar do dia pela Yahoo Finance.
   mercado_yahoo
+  /// SPEC-025: renovação das assinaturas (pagamento simulado).
+  renovacao_assinaturas
 
   @@map("tarefa_ingestao")
 }
@@ -1057,4 +1061,69 @@ model ColetaNoticiaArquivo {
   fonte FonteNoticia @relation(fields: [fonteId], references: [id], onDelete: Cascade)
 
   @@map("coleta_noticia_arquivo")
+}
+
+/// SPEC-025: os planos; "gratuito" é a ausência de assinatura.
+enum CodigoPlano {
+  gratuito
+  assinante_mensal
+  assinante_anual
+
+  @@map("codigo_plano")
+}
+
+/// SPEC-025: o pagamento é simulado e sempre aprovado; nenhum dado de pagamento é guardado.
+enum SituacaoPagamento {
+  aprovado
+
+  @@map("situacao_pagamento")
+}
+
+/// SPEC-025: preço (centavos) e duração (dias) de cada plano; ficam aqui, não no código.
+model Plano {
+  codigo        CodigoPlano @id
+  precoCentavos Int         @map("preco_centavos")
+  duracaoDias   Int?        @map("duracao_dias")
+  ativo         Boolean     @default(true)
+
+  assinaturas Assinatura[]
+
+  @@map("plano")
+}
+
+/// SPEC-025: "assinante" é calculado pela validade, nunca guardado no perfil.
+model Assinatura {
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId           String      @map("usuario_id") @db.Uuid
+  plano               CodigoPlano
+  inicio              DateTime    @db.Timestamptz(3)
+  fim                 DateTime    @db.Timestamptz(3)
+  renovacaoAutomatica Boolean     @default(true) @map("renovacao_automatica")
+  canceladaEm         DateTime?   @map("cancelada_em") @db.Timestamptz(3)
+  criadaEm            DateTime    @default(now()) @map("criada_em") @db.Timestamptz(3)
+
+  usuario    Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  planoRef   Plano               @relation(fields: [plano], references: [codigo], onDelete: Restrict)
+  pagamentos PagamentoSimulado[]
+
+  @@index([usuarioId, fim])
+  @@index([fim])
+  @@map("assinatura")
+}
+
+/// SPEC-025: um por período "pago" (a assinatura e cada renovação); não muda depois de gravado (DA09).
+model PagamentoSimulado {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assinaturaId  String            @map("assinatura_id") @db.Uuid
+  plano         CodigoPlano
+  valorCentavos Int               @map("valor_centavos")
+  periodoInicio DateTime          @map("periodo_inicio") @db.Timestamptz(3)
+  periodoFim    DateTime          @map("periodo_fim") @db.Timestamptz(3)
+  situacao      SituacaoPagamento @default(aprovado)
+  registradoEm  DateTime          @default(now()) @map("registrado_em") @db.Timestamptz(3)
+
+  assinatura Assinatura @relation(fields: [assinaturaId], references: [id], onDelete: Cascade)
+
+  @@unique([assinaturaId, periodoInicio])
+  @@map("pagamento_simulado")
 }

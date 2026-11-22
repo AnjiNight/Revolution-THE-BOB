@@ -88,6 +88,8 @@
 | 1.78 | SPEC-047 aprovada pela Nicoly em 21/11/2026, como escrita ("aprovo spec 047"). SPEC-048 detalhada ([SPEC-048.md](SPEC-048.md)) a pedido da Nicoly, aguardando a aprovação: Ibovespa e dólar do dia pela Yahoo Finance no painel "Mercado hoje" do Início, com atraso e a última leitura válida quando a fonte falha |
 | 1.79 | SPEC-047 implementada ([SPEC-047 §9](SPEC-047.md)): sugestões das quatro fontes no formulário, notícias repetidas entre fontes ligadas à original (fora do vínculo, do sentimento e das contagens), "Também em" na ficha e as repetidas por fonte; migração `noticias_repetidas` com gatilho que solta a repetida quando a original é apagada |
 | 1.80 | SPEC-048 aprovada pela Nicoly em 21/11/2026, como escrita ("Aprovo, implemente"), e implementada ([SPEC-048 §9](SPEC-048.md)): tarefa `mercado_yahoo` (Ibovespa a cada 15 minutos no pregão, dólar a cada 30 nos dias úteis), tabela `cotacao_mercado` (30 dias), rota `GET /api/market/today` e o painel "Mercado hoje" no Início do usuário, com o atraso e o aviso de desatualizado |
+| 1.81 | SPEC-025 detalhada ([SPEC-025.md](SPEC-025.md)) a pedido da Nicoly, aguardando a aprovação: planos Gratuito e Assinante (mensal R$ 19,90 e anual R$ 199,00) com pagamento simulado sem nenhum campo de pagamento, renovação diária pelo processador, cancelamento que vale até o fim do período, "assinante" calculado pela validade e verificado no servidor; premium nesta Spec: comparar carteiras e relatório PDF; propostas para a OPEN-25 (e INC-01) e a OPEN-26 |
+| 1.82 | SPEC-025 aprovada pela Nicoly em 22/11/2026, como escrita ("Aprovo, implemente"), e implementada ([SPEC-025 §9](SPEC-025.md)): tabelas `plano`, `assinatura` e `pagamento_simulado`; rotas de planos e assinatura; comparação de carteiras bloqueada no servidor (403 `premium_required`) e o relatório PDF no app; tarefa diária "Renovação das assinaturas"; tela Plano, cadeado nos recursos premium e aviso de fim no Início; assinaturas na exportação de dados (versão 8). INC-01, OPEN-25 e OPEN-26 resolvidas |
 ---
 
 ## 0. Como ler este documento
@@ -291,7 +293,7 @@ Nenhuma delas foi resolvida neste mapa. Cada uma aponta para uma decisão em abe
 
 | ID | Inconsistência / lacuna | Documentos | OPEN |
 |---|---|---|---|
-| INC-01 | O diagrama de casos de uso tem o ator **"Gateway de pagamento"**, mas os requisitos dizem que o pagamento é **simulado** e que pagamento real está fora do escopo | Casos de uso × Requisitos §1.1 | OPEN-25 |
+| INC-01 | O diagrama de casos de uso tem o ator **"Gateway de pagamento"**, mas os requisitos dizem que o pagamento é **simulado** e que pagamento real está fora do escopo | Casos de uso × Requisitos §1.1 | OPEN-25 ✅ |
 | INC-02 | O diagrama não tem os atores **Colaborador** (antes chamado de administrador) e **Sistema**, nem casos de uso de aporte/retirada, LGPD, administração, offline, notificações, fontes de notícias e carteira histórica | Casos de uso × Requisitos × ADRs | OPEN-43 |
 | INC-03 | **RB07** ("cotação da data do lançamento") não foi reescrita após DA16/DA17, que definem preço diferente para carteira ao vivo e histórica | Requisitos × DA16, DA17 | OPEN-09 |
 | INC-04 | **RF37** (sincronizar dados pendentes) pressupõe escrita offline; **RNF14** e **DA08** definem offline somente leitura | Requisitos × DA08 | OPEN-10 |
@@ -341,8 +343,8 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-22 | ✅ **Resolvida nas SPECs [022](SPEC-022.md) e [023](SPEC-023.md):** cada cenário é uma carteira, e "Comparar cenários" é a comparação de carteiras (RF19); a SIMULACAO do modelo (projeção) fica com a SPEC-031; o RF20 virou "Nova carteira a partir de outra" (requisitos 1.12). Original: significado de "simulação" (RF20 × SIMULACAO × personas) e de "Comparar cenários" × RF19 | INC-07 | 022, 023 |
 | OPEN-23 | ✅ **Resolvida na [SPEC-022](SPEC-022.md):** pode misturar, com o rótulo do tipo sempre visível e a nota da DA17. Original: comparação pode misturar carteira ao vivo e histórica? | DA17 PO3 | 022 |
 | OPEN-24 | ✅ **Resolvida nas SPECs [014](SPEC-014.md) e [016](SPEC-016.md):** a API registra por quantidade (RF12); a tela tem "Calcular por valor", em reais ou em "% do caixa" (o "50% em PETR4" da P01); montar vários ativos de uma vez fica fora. Original: montagem da carteira por percentual × registro por quantidade | INC-15 | 014, 016 |
-| OPEN-25 | Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
-| OPEN-26 | Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
+| OPEN-25 | ✅ **Resolvida na [SPEC-025](SPEC-025.md) (22/11/2026):** períodos de 30 e 365 dias, renovação sozinha pelo processador, cancelamento que vale até o fim do período, expiração na hora; sem gateway (o ator sai dos casos de uso). Original: Fluxo da assinatura com pagamento simulado (duração, renovação, cancelamento, expiração) e ator "Gateway de pagamento" | INC-01 | 025 |
+| OPEN-26 | ✅ **Resolvida na [SPEC-025](SPEC-025.md) (22/11/2026):** comparar carteiras e relatório PDF; depois, cotações com menor atraso (SPEC-026) e cenários (SPEC-031). Original: Lista de recursos premium além de cenários e cotações com menor atraso | RF33 | 025 |
 | OPEN-27 | Quem paga o provedor de cotações do assinante | PE01 | 026 |
 | OPEN-28 | ✅ **Resolvida.** Dados (04/11/2026): autorização por escrito para dados e indicadores, só neste projeto acadêmico, com "Fonte: Investidor10" e válida até a apresentação ([SPEC-041 §4.1](SPEC-041.md)). Notícias (12/11/2026): autorizadas por telefone para fins universitários, nas mesmas condições ([SPEC-027 §4.1](SPEC-027.md)). Original: autorização de uso do Investidor10 como fonte pai, ou troca por fonte aberta | PE07 | 027, 041, 042 |
 | OPEN-29 | ⏳ **Em parte resolvida na [SPEC-027](SPEC-027.md):** fontes curadas por RSS ou Atom, cadastradas pelo colaborador com categoria, confiabilidade de 1 a 5 (critério da equipe) e licença conferida; a primeira é a Agência Brasil – Economia. As outras fontes ficam com a equipe. Original: lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
@@ -991,6 +993,8 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 
 #### SPEC-025 — Planos e assinatura com pagamento simulado
 
+📄 Detalhada em [SPEC-025.md](SPEC-025.md), aprovada (Nicoly, 22/11/2026) e implementada.
+
 | Campo | Conteúdo |
 |---|---|
 | Objetivo | O usuário escolhe um plano e assina com pagamento simulado; o servidor bloqueia recursos premium para quem não tem assinatura ativa |
@@ -1004,7 +1008,7 @@ Detalhada em [SPEC-022.md](SPEC-022.md), aprovada e implementada.
 | ADRs | DA12, DA16 |
 | Depende de | SPEC-002 |
 | Posição | Precede os recursos premium (026, 031) |
-| Em aberto | OPEN-25, OPEN-26 |
+| Em aberto | — (OPEN-25 e OPEN-26 resolvidas na própria Spec) |
 | Prioridade derivada | Should |
 
 #### SPEC-026 — Cotações do nível assinante

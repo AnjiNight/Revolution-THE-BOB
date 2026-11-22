@@ -8,6 +8,7 @@ import {
   FUNDAMENTALS_PATHS,
   INDEX_PATHS,
   MARKET_TODAY_PATHS,
+  SUBSCRIPTION_PATHS,
   NEWS_PATHS,
   newsLabelPath,
   newsSourcePath,
@@ -51,6 +52,10 @@ import {
   type DayChanges,
   type MarketIndexStatus,
   type MarketToday,
+  type MySubscription,
+  type PaidPlanCode,
+  type PlanList,
+  type SubscriptionErrorCode,
   type ChangeEmailInput,
   type ChangePasswordInput,
   type ConfirmEmailChangeInput,
@@ -150,9 +155,15 @@ const KNOWN_ERRORS: ReadonlyArray<
   | CatalogErrorCode
   | FundamentalsErrorCode
   | PortfolioErrorCode
+  | SubscriptionErrorCode
   | TaskErrorCode
   | NewsErrorCode
 > = [
+  // SPEC-025
+  'premium_required',
+  'plan_not_found',
+  'subscription_active',
+  'subscription_not_found',
   'validation_error',
   // SPEC-027
   'news_source_not_found',
@@ -623,6 +634,35 @@ export class AuthClient {
   /** Colaborador (SPEC-007): até que dia a série do CDI está carregada e a última atualização. */
   cdiStatus(): Promise<ClientResult<CdiStatus>> {
     return this.call(() => this.authorizedRequest<CdiStatus>('GET', INDEX_PATHS.cdi));
+  }
+
+  /** SPEC-025: os planos (preço e duração). */
+  plans(): Promise<ClientResult<PlanList>> {
+    return this.read<PlanList>(() => SUBSCRIPTION_PATHS.plans);
+  }
+
+  /** SPEC-025: a minha assinatura; entra na cópia local, como as outras leituras. */
+  mySubscription(): Promise<ClientResult<MySubscription>> {
+    return this.read<MySubscription>(() => SUBSCRIPTION_PATHS.mine);
+  }
+
+  /** SPEC-025: assina com pagamento simulado (nenhum dado de pagamento vai ao servidor). */
+  subscribe(plan: PaidPlanCode): Promise<ClientResult<MySubscription>> {
+    return this.call(() =>
+      this.authorizedRequest<MySubscription>('POST', SUBSCRIPTION_PATHS.mine, { plan }),
+    );
+  }
+
+  cancelSubscription(): Promise<ClientResult<MySubscription>> {
+    return this.call(() =>
+      this.authorizedRequest<MySubscription>('POST', SUBSCRIPTION_PATHS.cancel),
+    );
+  }
+
+  resumeSubscription(): Promise<ClientResult<MySubscription>> {
+    return this.call(() =>
+      this.authorizedRequest<MySubscription>('POST', SUBSCRIPTION_PATHS.resume),
+    );
   }
 
   /** SPEC-048: o Ibovespa e o dólar do dia; entra na cópia local, como as outras leituras. */

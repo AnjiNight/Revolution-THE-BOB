@@ -21,6 +21,8 @@ import type {
   CdiStatus,
   MarketIndexStatus,
   MarketToday,
+  MySubscription,
+  PlanList,
   ConsentList,
   Investidor10Status,
   LatestNews,
@@ -49,6 +51,7 @@ import {
   FUNDAMENTALS_CHANNELS,
   NEWS_CHANNELS,
   INDEX_CHANNELS,
+  SUBSCRIPTION_CHANNELS,
   PORTFOLIO_CHANNELS,
   NOTIFY_CHANNELS,
   PROFILE_CHANNELS,
@@ -135,6 +138,14 @@ const api: DesktopApi = {
       invoke<ClientResult<CalendarSuggestion>>(CALENDAR_CHANNELS.suggestion, year),
     publish: (year, input) =>
       invoke<ClientResult<TradingCalendarYear>>(CALENDAR_CHANNELS.publish, year, input),
+  },
+  subscription: {
+    plans: () => read<PlanList>(SUBSCRIPTION_CHANNELS.plans),
+    mine: () => read<MySubscription>(SUBSCRIPTION_CHANNELS.mine),
+    subscribe: (plan) =>
+      invoke<ClientResult<MySubscription>>(SUBSCRIPTION_CHANNELS.subscribe, plan),
+    cancel: () => invoke<ClientResult<MySubscription>>(SUBSCRIPTION_CHANNELS.cancel),
+    resume: () => invoke<ClientResult<MySubscription>>(SUBSCRIPTION_CHANNELS.resume),
   },
   indexes: {
     cdi: () => invoke<ClientResult<CdiStatus>>(INDEX_CHANNELS.cdi),

@@ -36,6 +36,8 @@ import { JwtAccessTokenService } from './jwt-access-token-service.js';
 import { PrismaEmailCodeRepository } from './prisma-email-code-repository.js';
 import { PrismaRefreshTokenRepository } from './prisma-refresh-token-repository.js';
 import { PrismaUserRepository } from './prisma-user-repository.js';
+import { SubscriptionService } from '../../subscriptions/application/subscription-service.js';
+import { PrismaSubscriptionRepository } from '../../subscriptions/infrastructure/prisma-subscription-repository.js';
 
 /**
  * Testes contra PostgreSQL real (CA02, CA16). Rodam só com TEST_DATABASE_URL apontando para
@@ -109,7 +111,9 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
     const mailer = new FakeEmailSender();
     const background = new BackgroundTasks();
     const accessTokens = new JwtAccessTokenService(SECRET, 15);
+    const subscriptionRepo = new PrismaSubscriptionRepository(prisma);
     const services = createIdentityServices({
+      subscriptions: subscriptionRepo,
       users,
       refreshTokens: tokens,
       emailCodes: codes,
@@ -162,6 +166,7 @@ describe.skipIf(!url)('identidade no PostgreSQL', () => {
         monitor: new InMemoryTaskMonitor(new InMemoryTaskRuns()),
         investidor10Enabled: false,
       }),
+      subscriptions: new SubscriptionService({ subscriptions: subscriptionRepo }),
     });
     return { app, mailer, background };
   }

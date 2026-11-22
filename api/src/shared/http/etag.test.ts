@@ -190,6 +190,8 @@ describe('ETag nas leituras que o app guarda (SPEC-032 CA02)', () => {
     t.newsRepo.catalog.push({ assetId: petr4.id, ticker: 'PETR4', name: 'PETR4', active: true });
 
     ana = await t.registerConfirmed();
+    // SPEC-025: a comparação de carteiras é do plano Assinante.
+    await t.subscribe(ana);
     t.market.assets.set(petr4.id, {
       id: petr4.id,
       ticker: 'PETR4',

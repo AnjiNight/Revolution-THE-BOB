@@ -1,5 +1,6 @@
 import {
   FREE_QUOTE_DELAY_MINUTES,
+  hasPremium,
   isoDateInBrasilia,
   type BenchmarkCode,
   type CashEntry,
@@ -40,6 +41,8 @@ import { formatShare } from './PortfolioAllocation';
 import { entryWhen } from './PortfolioCash';
 import { Benchmarks, formatAxisPercent, pathOf, signed } from './PortfolioPerformance';
 import { changeDirection } from './QuoteText';
+import { PremiumLock } from './PremiumLock';
+import { useOpenPlan } from '../plan';
 
 /** Largura útil de uma página A4 com as margens do PDF (pixels de tela, a 96 por polegada). */
 const CHART_WIDTH = 680;
@@ -163,11 +166,14 @@ interface PendingReport {
  * Abrir; cancelado, nada muda.
  */
 export function ReportButton({
+  premium = null,
   portfolio,
   query,
   version,
   onSessionExpired,
 }: {
+  /** SPEC-025: o relatório é do plano Assinante; `false` mostra o cadeado. */
+  premium?: boolean | null;
   portfolio: Portfolio;
   /** O período escolhido na Rentabilidade. */
   query: PerformanceQuery;
@@ -178,6 +184,7 @@ export function ReportButton({
   const { t } = useTranslation();
   const hintId = useId();
   const periodText = usePeriodText();
+  const openPlan = useOpenPlan();
   const [hasEntries, setHasEntries] = useState<boolean | null>(null);
   const [status, setStatus] = useState<ReportStatus>({ kind: 'idle' });
   const [pending, setPending] = useState<PendingReport | null>(null);
@@ -240,6 +247,13 @@ export function ReportButton({
 
   const generate = async () => {
     setStatus({ kind: 'generating' });
+    // SPEC-025: o PDF é montado aqui, com dados que o gratuito já vê; por isso o app confere a
+    // assinatura antes de gerar (o único bloqueio feito no app).
+    const subscription = await window.api.subscription.mine();
+    if (subscription.ok && !hasPremium(subscription.data)) {
+      setStatus({ kind: 'idle' });
+      return openPlan('portfolio_report');
+    }
     const loaded = await loadReport(portfolio, query);
     if (!loaded.ok) {
       if (loaded.error === 'unauthorized') return onSessionExpired();
@@ -269,6 +283,14 @@ export function ReportButton({
       setStatus({ kind: 'saved', file, folder, openFailed: true });
     }
   };
+
+  if (premium === false) {
+    return (
+      <div className="report-action">
+        <PremiumLock feature="portfolio_report">{t('report.button')}</PremiumLock>
+      </div>
+    );
+  }
 
   return (
     <div className="report-action">

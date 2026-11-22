@@ -33,6 +33,11 @@ import type { AssetNewsService } from './modules/news/application/asset-news-ser
 import type { NewsSourcesService } from './modules/news/application/news-sources-service.js';
 import type { SentimentService } from './modules/news/application/sentiment-service.js';
 import { registerNewsRoutes } from './modules/news/controllers/news-routes.js';
+import type { SubscriptionService } from './modules/subscriptions/application/subscription-service.js';
+import {
+  makeRequirePremium,
+  registerSubscriptionRoutes,
+} from './modules/subscriptions/controllers/subscription-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { registerEtag } from './shared/http/etag.js';
 import { HttpError } from './shared/http/http-error.js';
@@ -61,6 +66,8 @@ export interface AppDependencies {
   portfolios: PortfolioService;
   /** SPEC-014: compra e venda na carteira ao vivo. */
   trading: TradingService;
+  /** SPEC-025: planos, assinatura e a verificação dos recursos premium. */
+  subscriptions: SubscriptionService;
   /** SPEC-011: tarefas de ingestão (monitoramento e "Executar agora"). */
   tasks: TaskMonitorService;
   /** SPEC-027: fontes de notícias (colaborador). Sem ele, as rotas de notícias não existem. */
@@ -127,6 +134,11 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
   registerPortfolioRoutes(app, {
     portfolios: deps.portfolios,
     trading: deps.trading,
+    accessTokens: deps.accessTokens,
+    requirePremium: makeRequirePremium(deps.subscriptions),
+  });
+  registerSubscriptionRoutes(app, {
+    subscriptions: deps.subscriptions,
     accessTokens: deps.accessTokens,
   });
   registerTaskRoutes(app, { tasks: deps.tasks, accessTokens: deps.accessTokens });

@@ -303,7 +303,11 @@
     "parent_source": "A fonte pai não pode ser alterada pela tela.",
     "news_not_found": "Notícia não encontrada.",
     "no_model": "O processador ainda não classificou nenhuma notícia.",
-    "not_enough_labels": "Rotule mais notícias: para avaliar, é preciso ter pelo menos 10 de teste."
+    "not_enough_labels": "Rotule mais notícias: para avaliar, é preciso ter pelo menos 10 de teste.",
+    "premium_required": "Este é um recurso do plano Assinante.",
+    "plan_not_found": "Escolha o plano mensal ou o anual.",
+    "subscription_active": "Você já tem uma assinatura ativa.",
+    "subscription_not_found": "Você não tem assinatura ativa."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -444,7 +448,8 @@
     "userView": "Visão do usuário",
     "userViewBannerTitle": "Visão do usuário.",
     "userViewBannerText": "Você está vendo o app como um usuário, com as suas carteiras de teste.",
-    "backToCollaborator": "Voltar à Área do colaborador"
+    "backToCollaborator": "Voltar à Área do colaborador",
+    "plan": "Plano"
   },
   "offline": {
     "title": "Sem conexão com o servidor.",
@@ -1408,7 +1413,8 @@
       "noticias_novas": "Notícias novas (Investidor10)",
       "noticias_arquivo": "Arquivo de notícias (Investidor10)",
       "noticias_feeds": "Notícias das fontes curadas",
-      "mercado_yahoo": "Mercado do dia (Yahoo: Ibovespa e dólar)"
+      "mercado_yahoo": "Mercado do dia (Yahoo: Ibovespa e dólar)",
+      "renovacao_assinaturas": "Renovação das assinaturas (pagamento simulado)"
     },
     "sources": {
       "b3": "B3",
@@ -1416,7 +1422,8 @@
       "bcb": "Banco Central",
       "investidor10": "Investidor10",
       "feeds": "feeds RSS das fontes curadas",
-      "yahoo": "Yahoo Finance"
+      "yahoo": "Yahoo Finance",
+      "app": "o próprio app"
     },
     "source_one": "Fonte: {{sources}}",
     "source_other": "Fontes: {{sources}}",
@@ -1479,7 +1486,8 @@
       "noticias_novas": "Nada a buscar agora.",
       "noticias_arquivo": "Nada a buscar agora.",
       "noticias_feeds": "Nenhuma fonte curada ativa.",
-      "mercado_yahoo": "Nada a coletar agora."
+      "mercado_yahoo": "Nada a coletar agora.",
+      "renovacao_assinaturas": "Nenhuma assinatura para renovar."
     },
     "processor": {
       "title": "Processador",
@@ -1540,7 +1548,10 @@
       "changed": "Atualizadas no site",
       "items": "Itens nos feeds",
       "saved": "Guardadas",
-      "gone": "Sumiram do site (404)"
+      "gone": "Sumiram do site (404)",
+      "renovadas": "Renovadas",
+      "pagamentos": "Pagamentos simulados",
+      "expiradas": "Terminadas sem renovação"
     }
   },
   "news": {
@@ -1753,6 +1764,68 @@
       "groupUp": "{{total}} ativos das suas carteiras subiram {{threshold}} ou mais hoje",
       "groupDown": "{{total}} ativos das suas carteiras caíram {{threshold}} ou mais hoje",
       "groupMixed": "{{total}} ativos das suas carteiras variaram {{threshold}} ou mais hoje"
+    }
+  },
+  "plan": {
+    "title": "Plano",
+    "subtitle": "Escolha entre o Gratuito e o Assinante. Você pode cancelar quando quiser.",
+    "simulated": "Pagamento simulado: nenhuma cobrança é feita e nenhum dado de pagamento é pedido.",
+    "featureNotice": "{{feature}} é um recurso do plano Assinante.",
+    "features": {
+      "portfolio_comparison": "Comparar carteiras",
+      "portfolio_report": "Baixar relatório (PDF)"
+    },
+    "lockHint": "Recurso do plano Assinante",
+    "names": {
+      "gratuito": "Gratuito",
+      "assinante_mensal": "Assinante mensal",
+      "assinante_anual": "Assinante anual"
+    },
+    "free": "R$ 0",
+    "per": {
+      "assinante_mensal": "{{price}} por mês",
+      "assinante_anual": "{{price}} por ano"
+    },
+    "includes": {
+      "portfolios": "Até 20 carteiras, ao vivo e históricas",
+      "performance": "Rentabilidade, benchmarks e distribuição",
+      "news": "Ficha dos ativos, notícias e avisos",
+      "everything": "Tudo do Gratuito",
+      "portfolio_comparison": "Comparar carteiras",
+      "portfolio_report": "Relatório da carteira em PDF"
+    },
+    "list": "Planos",
+    "yours": "Seu plano",
+    "current": {
+      "title": "Seu plano",
+      "collaborator": "A equipe não tem plano. Na Visão do usuário, os recursos do Assinante ficam liberados para conferência.",
+      "renews": "Renova sozinho em {{date}}.",
+      "ends": "Termina em {{date}}, sem renovação."
+    },
+    "subscribe": "Assinar {{plan}}",
+    "confirmTitle": "Confirmar a assinatura.",
+    "confirmText": "{{plan}}: {{price}} por {{days}} dias, renovado sozinho até você cancelar.",
+    "confirm": "Confirmar assinatura",
+    "back": "Voltar",
+    "subscribed": "Pronto! Você é {{plan}} até {{date}}.",
+    "cancel": "Cancelar renovação",
+    "cancelConfirm": "Cancelar a renovação? Você continua com os recursos do Assinante até {{date}}.",
+    "cancelButton": "Cancelar renovação",
+    "keep": "Manter",
+    "cancelled": "Renovação cancelada. Os recursos do Assinante continuam até {{date}}.",
+    "resume": "Reativar renovação",
+    "resumed": "Renovação reativada. A próxima é em {{date}}.",
+    "ending": "Sua assinatura termina em {{date}}.",
+    "endingAction": "Ver plano",
+    "seePlans": "Ver planos",
+    "payments": {
+      "title": "Pagamentos simulados",
+      "period": "Período",
+      "plan": "Plano",
+      "amount": "Valor",
+      "status": "Situação",
+      "range": "{{from}} a {{to}}",
+      "approved": "Aprovado (simulado)"
     }
   }
 }

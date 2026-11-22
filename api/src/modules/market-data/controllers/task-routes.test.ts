@@ -75,7 +75,7 @@ describe('tarefas de ingestão (SPEC-011)', () => {
     await t.app.close();
   });
 
-  it('lista as 12 tarefas, as com falha ou parcial primeiro, com a fonte e quando rodam (CA01)', async () => {
+  it('lista as 14 tarefas, as com falha ou parcial primeiro, com a fonte e quando rodam (CA01)', async () => {
     await finished('fechamento_diario', '2026-11-16T11:00:00Z', 'sucesso', {
       records: 712,
       affectedAssets: 712,
@@ -103,6 +103,8 @@ describe('tarefas de ingestão (SPEC-011)', () => {
       'noticias_feeds',
       // SPEC-048: o Ibovespa e o dólar do dia.
       'mercado_yahoo',
+      // SPEC-025: a renovação das assinaturas.
+      'renovacao_assinaturas',
     ]);
     expect(body.tasks.find((task) => task.task === 'noticias_feeds')).toMatchObject({
       sources: ['feeds'],
@@ -112,6 +114,10 @@ describe('tarefas de ingestão (SPEC-011)', () => {
       sources: ['yahoo'],
       schedule: { kind: 'market', indexMinutes: 15, dollarMinutes: 30 },
       blockedReason: null,
+    });
+    expect(body.tasks.find((task) => task.task === 'renovacao_assinaturas')).toMatchObject({
+      sources: ['app'],
+      schedule: { kind: 'daily', times: ['00:15'] },
     });
     const daily = body.tasks.find((task) => task.task === 'fechamento_diario');
     expect(daily).toMatchObject({

@@ -50,6 +50,8 @@ export const INGESTION_SCHEDULE: Record<
       dollarMinutes: MARKET_HOURS.dollar.every,
     },
   },
+  // SPEC-025: as assinaturas que venceram, renovadas com um pagamento simulado, às 00:15.
+  renovacao_assinaturas: { sources: ['app'], schedule: { kind: 'daily', times: ['00:15'] } },
 };
 
 /**

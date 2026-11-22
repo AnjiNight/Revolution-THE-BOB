@@ -303,7 +303,11 @@
     "parent_source": "The parent source can't be changed here.",
     "news_not_found": "News item not found.",
     "no_model": "The task runner hasn't classified any news yet.",
-    "not_enough_labels": "Label more news: at least 10 test items are needed to evaluate."
+    "not_enough_labels": "Label more news: at least 10 test items are needed to evaluate.",
+    "premium_required": "This is a Subscriber plan feature.",
+    "plan_not_found": "Choose the monthly or the yearly plan.",
+    "subscription_active": "You already have an active subscription.",
+    "subscription_not_found": "You have no active subscription."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -444,7 +448,8 @@
     "userView": "User view",
     "userViewBannerTitle": "User view.",
     "userViewBannerText": "You are seeing the app as a user, with your test portfolios.",
-    "backToCollaborator": "Back to the Collaborator area"
+    "backToCollaborator": "Back to the Collaborator area",
+    "plan": "Plan"
   },
   "offline": {
     "title": "No connection to the server.",
@@ -1408,7 +1413,8 @@
       "noticias_novas": "Latest news (Investidor10)",
       "noticias_arquivo": "News archive (Investidor10)",
       "noticias_feeds": "News from the curated sources",
-      "mercado_yahoo": "Market today (Yahoo: Ibovespa and dollar)"
+      "mercado_yahoo": "Market today (Yahoo: Ibovespa and dollar)",
+      "renovacao_assinaturas": "Subscription renewal (simulated payment)"
     },
     "sources": {
       "b3": "B3",
@@ -1416,7 +1422,8 @@
       "bcb": "Central Bank of Brazil",
       "investidor10": "Investidor10",
       "feeds": "RSS feeds of the curated sources",
-      "yahoo": "Yahoo Finance"
+      "yahoo": "Yahoo Finance",
+      "app": "the app itself"
     },
     "source_one": "Source: {{sources}}",
     "source_other": "Sources: {{sources}}",
@@ -1479,7 +1486,8 @@
       "noticias_novas": "Nothing to fetch right now.",
       "noticias_arquivo": "Nothing to fetch right now.",
       "noticias_feeds": "No active curated source.",
-      "mercado_yahoo": "Nothing to collect now."
+      "mercado_yahoo": "Nothing to collect now.",
+      "renovacao_assinaturas": "No subscription to renew."
     },
     "processor": {
       "title": "Processor",
@@ -1540,7 +1548,10 @@
       "changed": "Updated on the site",
       "items": "Items in the feeds",
       "saved": "Saved",
-      "gone": "Gone from the site (404)"
+      "gone": "Gone from the site (404)",
+      "renovadas": "Renewed",
+      "pagamentos": "Simulated payments",
+      "expiradas": "Ended without renewal"
     }
   },
   "news": {
@@ -1753,6 +1764,68 @@
       "groupUp": "{{total}} assets in your portfolios rose {{threshold}} or more today",
       "groupDown": "{{total}} assets in your portfolios fell {{threshold}} or more today",
       "groupMixed": "{{total}} assets in your portfolios moved {{threshold}} or more today"
+    }
+  },
+  "plan": {
+    "title": "Plan",
+    "subtitle": "Choose between Free and Subscriber. You can cancel at any time.",
+    "simulated": "Simulated payment: nothing is charged and no payment details are requested.",
+    "featureNotice": "{{feature}} is a Subscriber plan feature.",
+    "features": {
+      "portfolio_comparison": "Compare portfolios",
+      "portfolio_report": "Download report (PDF)"
+    },
+    "lockHint": "Subscriber plan feature",
+    "names": {
+      "gratuito": "Free",
+      "assinante_mensal": "Monthly subscriber",
+      "assinante_anual": "Yearly subscriber"
+    },
+    "free": "R$0",
+    "per": {
+      "assinante_mensal": "{{price}} per month",
+      "assinante_anual": "{{price}} per year"
+    },
+    "includes": {
+      "portfolios": "Up to 20 portfolios, live and historical",
+      "performance": "Performance, benchmarks and allocation",
+      "news": "Asset pages, news and alerts",
+      "everything": "Everything in Free",
+      "portfolio_comparison": "Compare portfolios",
+      "portfolio_report": "Portfolio report in PDF"
+    },
+    "list": "Plans",
+    "yours": "Your plan",
+    "current": {
+      "title": "Your plan",
+      "collaborator": "The team has no plan. In the user view, Subscriber features are unlocked for checking.",
+      "renews": "Renews automatically on {{date}}.",
+      "ends": "Ends on {{date}}, without renewal."
+    },
+    "subscribe": "Subscribe: {{plan}}",
+    "confirmTitle": "Confirm the subscription.",
+    "confirmText": "{{plan}}: {{price}} for {{days}} days, renewed automatically until you cancel.",
+    "confirm": "Confirm subscription",
+    "back": "Back",
+    "subscribed": "Done! You are a {{plan}} until {{date}}.",
+    "cancel": "Cancel renewal",
+    "cancelConfirm": "Cancel the renewal? You keep the Subscriber features until {{date}}.",
+    "cancelButton": "Cancel renewal",
+    "keep": "Keep",
+    "cancelled": "Renewal cancelled. Subscriber features stay until {{date}}.",
+    "resume": "Resume renewal",
+    "resumed": "Renewal resumed. The next one is on {{date}}.",
+    "ending": "Your subscription ends on {{date}}.",
+    "endingAction": "See plan",
+    "seePlans": "See plans",
+    "payments": {
+      "title": "Simulated payments",
+      "period": "Period",
+      "plan": "Plan",
+      "amount": "Amount",
+      "status": "Status",
+      "range": "{{from}} to {{to}}",
+      "approved": "Approved (simulated)"
     }
   }
 }

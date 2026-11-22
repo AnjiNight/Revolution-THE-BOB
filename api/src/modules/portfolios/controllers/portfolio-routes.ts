@@ -11,7 +11,7 @@ import {
   validateRenamePortfolio,
   validateTradeQuoteQuery,
 } from '@simulador/shared';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
 import { domainErrorRunner } from '../../../shared/http/domain-errors.js';
 import { HttpError } from '../../../shared/http/http-error.js';
 import { ensureValid } from '../../../shared/http/validation.js';
@@ -31,6 +31,8 @@ export interface PortfolioRoutesOptions {
   /** SPEC-014: compra e venda na carteira ao vivo. */
   trading: TradingService;
   accessTokens: AccessTokenService;
+  /** SPEC-025: o preHandler dos recursos premium (a comparação de carteiras). */
+  requirePremium: preHandlerAsyncHookHandler;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -99,6 +101,14 @@ export function registerPortfolioRoutes(
   const portfolioAccounts = {
     preHandler: [makeAuthenticate(options.accessTokens), requirePortfolioAccount],
   };
+  // SPEC-025: a comparação é do plano Assinante (o colaborador passa, decisão 6).
+  const premiumPortfolioAccounts = {
+    preHandler: [
+      makeAuthenticate(options.accessTokens),
+      requirePortfolioAccount,
+      options.requirePremium,
+    ],
+  };
 
   /** Rota de uma carteira: a de outra pessoa vira o mesmo 404 e só deixa o aviso no log. */
   const owned = <T>(request: FastifyRequest, action: () => Promise<T>) =>
@@ -126,9 +136,9 @@ export function registerPortfolioRoutes(
     return reply.status(201).send({ portfolio });
   });
 
-  // SPEC-022 §5.1: de 2 a 4 carteiras no mesmo período, só leitura. Uma delas de outra pessoa (ou
+  // SPEC-022 §5.1: de 2 a 4 carteiras no mesmo período, só leitura; SPEC-025: só com assinatura. Uma delas de outra pessoa (ou
   // que não existe) é o mesmo 404, sem dizer qual.
-  app.get(PORTFOLIO_PATHS.comparison, portfolioAccounts, async (request, reply) => {
+  app.get(PORTFOLIO_PATHS.comparison, premiumPortfolioAccounts, async (request, reply) => {
     const query = ensureValid(validateComparisonQuery(request.query));
     const result = await owned(request, () =>
       trading.comparison(requireAuth(request).userId, query),

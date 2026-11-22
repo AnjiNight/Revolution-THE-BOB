@@ -32,10 +32,16 @@ export interface PortfolioExportReader {
   exportForUser(userId: string): Promise<PersonalDataExport['portfolios']>;
 }
 
+/** SPEC-025: as assinaturas e os pagamentos simulados, que o módulo Assinaturas fornece. */
+export interface SubscriptionExportReader {
+  exportForUser(userId: string): Promise<PersonalDataExport['subscriptions']>;
+}
+
 export interface AccountDataServiceDeps {
   users: UserRepository;
   refreshTokens: RefreshTokenRepository;
   portfolios?: PortfolioExportReader;
+  subscriptions?: SubscriptionExportReader;
   codes: EmailCodes;
   /** Ausente sem SMTP (só fora de produção): a exclusão fica desligada; a exportação, não. */
   mailer?: EmailSender;
@@ -62,10 +68,11 @@ export class AccountDataService {
    */
   async exportData(userId: string): Promise<PersonalDataExport> {
     const user = await this.load(userId);
-    const [consents, sessions, portfolios] = await Promise.all([
+    const [consents, sessions, portfolios, subscriptions] = await Promise.all([
       this.deps.users.listConsents(userId),
       this.deps.refreshTokens.listSessions(userId),
       this.deps.portfolios?.exportForUser(userId) ?? Promise.resolve([]),
+      this.deps.subscriptions?.exportForUser(userId) ?? Promise.resolve([]),
     ]);
     return {
       format: PERSONAL_DATA_FORMAT,
@@ -96,6 +103,7 @@ export class AccountDataService {
         ended: session.ended,
       })),
       portfolios,
+      subscriptions,
     };
   }
 

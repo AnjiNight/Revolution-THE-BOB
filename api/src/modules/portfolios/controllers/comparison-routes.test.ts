@@ -32,6 +32,8 @@ describe('comparação de carteiras (SPEC-022)', () => {
     t = await buildTestApp({ clock: () => now });
     await t.calendar.publish(2026, { nonTradingDays: suggestNonTradingDays(2026) }, 'colab');
     ana = await t.registerConfirmed();
+    // SPEC-025: a comparação de carteiras é do plano Assinante.
+    await t.subscribe(ana);
     t.market.assets.set(PETR4, {
       id: PETR4,
       ticker: 'PETR4',

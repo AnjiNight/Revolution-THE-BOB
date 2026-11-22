@@ -23,6 +23,7 @@ import type {
   NewsErrorCode,
   PortfolioErrorCode,
   RenamePortfolioInput,
+  SubscriptionErrorCode,
   TaskErrorCode,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
@@ -115,6 +116,15 @@ export const NEWS_CHANNELS = {
   label: 'news:label',
   unlabel: 'news:unlabel',
   evaluate: 'news:evaluate-sentiment',
+} as const;
+
+/** SPEC-025: planos e a assinatura da pessoa conectada (pagamento simulado). */
+export const SUBSCRIPTION_CHANNELS = {
+  plans: 'subscription:plans',
+  mine: 'subscription:mine',
+  subscribe: 'subscription:subscribe',
+  cancel: 'subscription:cancel',
+  resume: 'subscription:resume',
 } as const;
 
 /** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */
@@ -234,6 +244,7 @@ export type ClientAuthError =
   | FundamentalsErrorCode
   | NewsErrorCode
   | PortfolioErrorCode
+  | SubscriptionErrorCode
   | TaskErrorCode
   | 'server_unavailable'
   | 'invalid_url'

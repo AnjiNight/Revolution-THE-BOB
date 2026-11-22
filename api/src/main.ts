@@ -76,6 +76,9 @@ import { PortfolioService } from './modules/portfolios/application/portfolio-ser
 import { TradingService } from './modules/portfolios/application/trading-service.js';
 import { PrismaLedgerRepository } from './modules/portfolios/infrastructure/prisma-ledger-repository.js';
 import { PrismaPortfolioRepository } from './modules/portfolios/infrastructure/prisma-portfolio-repository.js';
+import { SubscriptionRenewal } from './modules/subscriptions/application/subscription-renewal.js';
+import { SubscriptionService } from './modules/subscriptions/application/subscription-service.js';
+import { PrismaSubscriptionRepository } from './modules/subscriptions/infrastructure/prisma-subscription-repository.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 import { readVersion } from './version.js';
@@ -217,6 +220,10 @@ async function main(): Promise<void> {
     linker: { run: afterNews },
   });
 
+  // SPEC-025: planos e assinatura com pagamento simulado; a renovação roda no processador.
+  const subscriptionRepo = new PrismaSubscriptionRepository(prisma);
+  const subscriptions = new SubscriptionService({ subscriptions: subscriptionRepo });
+
   // SPEC-011: o registro das execuções, os pedidos de "Executar agora" e o sinal de vida.
   const taskMonitor = new PrismaTaskMonitorRepository(prisma);
 
@@ -265,6 +272,7 @@ async function main(): Promise<void> {
     const sentiment = new SentimentService({ sentiment: sentimentRepo });
     const { auth, profile, passwordReset, accountData } = createIdentityServices({
       portfolios,
+      subscriptions: subscriptionRepo,
       users: new PrismaUserRepository(prisma),
       refreshTokens: new PrismaRefreshTokenRepository(prisma),
       emailCodes: new PrismaEmailCodeRepository(prisma),
@@ -289,6 +297,7 @@ async function main(): Promise<void> {
       calendar,
       portfolios,
       trading,
+      subscriptions,
       catalog: new AssetCatalogService({
         assets: assetRepository,
         history: new HistoryStatusService({ quotes, calendars }),
@@ -334,6 +343,7 @@ async function main(): Promise<void> {
 
     // O número que vai para o log do processador: os registros; nas notícias, as que chegaram.
     const records = async (run: Promise<RunResult | null>) => (await run)?.records ?? 0;
+    const renewal = new SubscriptionRenewal({ subscriptions, runs });
     const collected = async (run: Promise<RunSummary | null>) => (await run)?.collected ?? 0;
 
     // Cada tarefa de ingestão: o que roda no horário e o que o "Executar agora" faz (SPEC-011 §4.2).
@@ -393,6 +403,11 @@ async function main(): Promise<void> {
         name: 'mercado do dia (Yahoo)',
         run: () => records(marketToday.collect()),
         runNow: () => records(marketToday.collect({ force: true })),
+      },
+      // SPEC-025: às 00:15, as assinaturas vencidas com a renovação ligada (pagamento simulado).
+      renovacao_assinaturas: {
+        name: 'renovação das assinaturas',
+        run: () => records(renewal.run()),
       },
     };
     const worker = startWorker({

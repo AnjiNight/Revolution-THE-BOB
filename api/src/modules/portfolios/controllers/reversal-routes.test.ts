@@ -307,7 +307,7 @@ describe('estorno de lançamento (SPEC-015)', () => {
       version: number;
       portfolios: Array<{ cashEntries: unknown[]; trades: unknown[] }>;
     }>();
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(exported.portfolios[0]?.cashEntries).toEqual([
       expect.objectContaining({ amount: '5000.00', reversedAt: null }),
     ]);

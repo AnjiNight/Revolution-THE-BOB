@@ -24,6 +24,9 @@ import type {
   CdiStatus,
   MarketIndexStatus,
   MarketToday,
+  MySubscription,
+  PaidPlanCode,
+  PlanList,
   ConsentList,
   DividendPeriod,
   Investidor10Status,
@@ -144,6 +147,14 @@ export interface DesktopApi {
    * Indexadores (SPEC-007) e índices da B3 (SPEC-020): situação das séries, só colaborador (403
    * para usuário).
    */
+  /** SPEC-025: planos e assinatura com pagamento simulado (assinar, cancelar e reativar: só o usuário). */
+  subscription: {
+    plans(): Promise<ClientResult<PlanList>>;
+    mine(): Promise<ClientResult<MySubscription>>;
+    subscribe(plan: PaidPlanCode): Promise<ClientResult<MySubscription>>;
+    cancel(): Promise<ClientResult<MySubscription>>;
+    resume(): Promise<ClientResult<MySubscription>>;
+  };
   indexes: {
     cdi(): Promise<ClientResult<CdiStatus>>;
     market(): Promise<ClientResult<MarketIndexStatus>>;

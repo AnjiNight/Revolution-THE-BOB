@@ -339,7 +339,7 @@ describe('nova carteira a partir de outra (SPEC-023)', () => {
     expect(alone.portfolio.copiedFrom).toEqual({ id: historical, name: null });
 
     const exported = (await call('GET', PROFILE_PATHS.export)).json<PersonalDataExport>();
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(exported.portfolios.map((p) => [p.name, p.copiedFrom])).toEqual([
       ['Cenário B', { id: historical, name: null }],
     ]);
