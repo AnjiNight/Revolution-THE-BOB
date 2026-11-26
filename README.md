@@ -186,6 +186,58 @@ npm run test:e2e
 
 O comando sobe o renderer do app (`http://localhost:5173`) se ele ainda não estiver rodando e abre o Edge do Windows, devagar, para dar para acompanhar. As telas usam o `window.api` falso de [`mocks/window-api.js`](mocks/README.md), com dados fictícios: não precisa do servidor, do Electron nem de login. Os testes E2E não fazem parte do `npm test` nem do GitHub Actions.
 
+## Demonstração no Render
+
+Para o professor usar o app sem montar nada ([SPEC-049](specs/SPEC-049.md)): o servidor e o banco ficam no [Render](https://render.com), no plano gratuito, e o instalador do Windows aponta para eles. O [`render.yaml`](render.yaml) descreve os dois.
+
+**Limites do plano gratuito:** o servidor dorme depois de 15 minutos sem uso (o primeiro acesso leva até 1 minuto: o app mostra "Servidor indisponível" e depois conecta); o banco é apagado 30 dias depois de criado, mais 14 de carência; o processador não roda lá, então cotações e notícias ficam paradas na data da cópia.
+
+1. **Render:** crie a conta, ligada ao GitHub, e em **New → Blueprint** escolha este repositório (branch `main`). O Render cria o serviço `simulador-api` e o banco `simulador-db` e pede três valores, que ficam só no painel dele:
+   - `SMTP_USER` e `EMAIL_FROM`: o endereço do Gmail que manda os códigos de confirmação;
+   - `SMTP_PASSWORD`: uma **senha de app** desse Gmail (Conta Google → Segurança → Verificação em duas etapas → Senhas de app), não a senha da conta.
+
+   Quando o deploy terminar, `https://<serviço>.onrender.com/api/health` responde com o banco ligado (as migrações rodam a cada início).
+
+2. **Notícias:** o banco local precisa ter notícias antes da cópia. Rode o processador por uns 30 minutos, apontando para o cache da B3 já baixado (sem ele, o processador baixa centenas de MB):
+
+   ```powershell
+   $env:B3_CACHE_DIR = 'C:\caminho\do\projeto\api\.cache\b3'; npm.cmd run dev:worker
+   ```
+
+3. **Dados de mercado:** no painel do banco no Render, copie o **External Database URL** e rode os três comandos abaixo, que usam o `psql` e o `pg_dump` do contêiner do Docker. A cópia leva só as tabelas de mercado (catálogo, calendário, histórico, índices, indicadores, proventos, eventos e notícias): nenhuma conta, carteira, consentimento ou registro de auditoria sai do seu computador. O primeiro comando se recusa a rodar se o banco do Render já tiver alguma conta.
+
+   ```powershell
+   $destino = 'cole aqui o External Database URL'
+   ```
+
+   ```powershell
+   'DO $$ BEGIN IF EXISTS (SELECT 1 FROM usuario) THEN RAISE EXCEPTION ''o banco ja tem contas: a copia e so para o banco novo''; END IF; END $$; TRUNCATE ano_calendario, dia_sem_pregao, setor, ativo, cotacao_diaria, carga_historico, indexador, taxa_diaria, carga_indexador, indice_bolsa, fechamento_indice, carga_indice, cotacao_pregao, negociacao_b3, indicador_ativo, informacao_fii, coleta_investidor10, provento, evento_corporativo, logo_ativo, classificacao_b3, fonte_noticia, noticia, versao_modelo, rotulo_noticia, noticia_ativo, coleta_noticia_arquivo CASCADE;' | docker exec -i revolution-the-bob-db-1 psql $destino -v ON_ERROR_STOP=1 -q
+   ```
+
+   ```powershell
+   docker exec -e DESTINO=$destino revolution-the-bob-db-1 sh -c 'pg_dump -U simulador -d simulador --data-only --no-owner -t ano_calendario -t dia_sem_pregao -t setor -t ativo -t cotacao_diaria -t carga_historico -t indexador -t taxa_diaria -t carga_indexador -t indice_bolsa -t fechamento_indice -t carga_indice -t cotacao_pregao -t negociacao_b3 -t indicador_ativo -t informacao_fii -t coleta_investidor10 -t provento -t evento_corporativo -t logo_ativo -t classificacao_b3 -t fonte_noticia -t noticia -t versao_modelo -t rotulo_noticia -t noticia_ativo -t coleta_noticia_arquivo | psql $DESTINO -v ON_ERROR_STOP=1 --single-transaction -q'
+   ```
+
+   ```powershell
+   'DELETE FROM noticia WHERE fonte_id IN (SELECT id FROM fonte_noticia WHERE tipo::text = ''usuario''); DELETE FROM fonte_noticia WHERE tipo::text = ''usuario''; SELECT setval(pg_get_serial_sequence(''versao_modelo'', ''id''), GREATEST(COALESCE(MAX(id), 1), 1), MAX(id) IS NOT NULL) FROM versao_modelo;' | docker exec -i revolution-the-bob-db-1 psql $destino -v ON_ERROR_STOP=1 -q
+   ```
+
+   Os comandos não usam aspas duplas nem acentos fora do contêiner: o PowerShell 5.1 estraga os dois ao repassar para o `docker`. A cópia em si (o segundo) acontece toda dentro do contêiner.
+
+   O último comando tira os feeds próprios de usuários que estivessem no banco local (SPEC-030) e acerta o contador das versões do modelo de sentimento.
+
+4. **Instalador:** com um `app/.env` que tenha só `MAIN_VITE_API_URL=https://<serviço>.onrender.com` (sem as credenciais do Google, que o instalador embutiria), gere o `.exe`:
+
+   ```powershell
+   npm.cmd run build --workspace packages/shared; npm.cmd run dist --workspace app
+   ```
+
+   O instalador fica em `app/release/`. Depois, volte o `app/.env` que você usa no desenvolvimento.
+
+5. **Release:** no GitHub, em **Releases → Draft a new release**, crie uma tag (por exemplo `demo-2026-11`), marque **Set as a pre-release** e anexe o `.exe`. Na descrição, avise que o Windows pode dizer que o editor é desconhecido (o instalador não é assinado: **Mais informações → Executar assim mesmo**) e que o primeiro acesso depois de um tempo parado leva até 1 minuto.
+
+**Depois da apresentação:** apague o serviço e o banco no Render e a release no GitHub. A autorização do Investidor10 vale só para este projeto acadêmico, até a apresentação ([SPEC-041](specs/SPEC-041.md)).
+
 ## Aviso legal
 
 Projeto acadêmico de caráter educacional. Não constitui recomendação de investimento nem consultoria financeira. Todas as operações são simuladas, sem movimentação de recursos reais. Projeções são cenários estatísticos e não garantem resultado futuro.
