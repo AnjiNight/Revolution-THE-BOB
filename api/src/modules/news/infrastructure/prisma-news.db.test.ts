@@ -172,7 +172,7 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
           confiabilidade: 3,
         },
       }),
-    ).rejects.toThrow(/fonte_noticia_curada_chk/);
+    ).rejects.toThrow(/fonte_noticia_tipo_chk/);
     await expect(
       prisma.fonteNoticia.updateMany({ where: { tipo: 'pai' }, data: { ativa: false } }),
     ).rejects.toThrow(/fonte_noticia_pai_ativa_chk/);
@@ -268,7 +268,7 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
     expect(await repo.assetExists(randomUUID())).toBe(false);
     const main = await repo.assetNews(
       asset.id,
-      { relevances: ['principal', 'citado'] },
+      { viewerId: randomUUID(), relevances: ['principal', 'citado'] },
       { offset: 0, limit: 10 },
     );
     expect(main.total).toBe(2);
@@ -280,18 +280,23 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
       (
         await repo.assetNews(
           asset.id,
-          { relevances: ['principal', 'citado'] },
+          { viewerId: randomUUID(), relevances: ['principal', 'citado'] },
           { offset: 1, limit: 10 },
         )
       ).rows.map((r) => r.title),
     ).toEqual(['Notícia 1']);
     expect(
-      await repo.assetNews(asset.id, { relevances: ['lista'] }, { offset: 0, limit: 0 }),
+      await repo.assetNews(
+        asset.id,
+        { viewerId: randomUUID(), relevances: ['lista'] },
+        { offset: 0, limit: 0 },
+      ),
     ).toEqual({ total: 1, rows: [] });
     // Intervalo [from, to): a quarta (dia de referência) começa às 18h da terça.
     const wednesday = await repo.assetNews(
       asset.id,
       {
+        viewerId: randomUUID(),
         relevances: ['principal', 'citado', 'lista'],
         from: new Date('2026-11-10T21:00:00Z'),
         to: new Date('2026-11-11T21:00:00Z'),
@@ -300,6 +305,7 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
     );
     expect(wednesday.rows.map((r) => r.title)).toEqual(['Notícia 2', 'Notícia 1']);
     const dates = await repo.assetNewsDates(asset.id, {
+      viewerId: randomUUID(),
       relevances: ['principal', 'citado'],
       from: new Date('2026-11-11T00:00:00Z'),
     });

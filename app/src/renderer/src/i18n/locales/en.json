@@ -229,7 +229,9 @@
     "not_https": "Use an address that starts with https://.",
     "private_address": "Use a public https address (not an internal network one).",
     "not_a_feed": "Could not read an RSS or Atom feed at this address.",
-    "invalid_url": "Invalid address."
+    "invalid_url": "Invalid address.",
+    "too_large": "The feed is larger than 2 MB.",
+    "unreachable": "The address didn't respond. Check it and try again."
   },
   "authErrors": {
     "validation_error": "Check the highlighted fields.",
@@ -289,7 +291,12 @@
     "parent_source": "The parent source can't be changed here.",
     "news_not_found": "News item not found.",
     "no_model": "The task runner hasn't classified any news yet.",
-    "not_enough_labels": "Label more news: at least 10 test items are needed to evaluate."
+    "not_enough_labels": "Label more news: at least 10 test items are needed to evaluate.",
+    "source_limit_reached": "You already have 10 feeds of your own. Remove one to add another.",
+    "already_added": "You have already added this feed.",
+    "already_in_app": "This source is already in the app.",
+    "not_stopped": "The feed isn't stopped.",
+    "not_own_source": "Only your own feeds can be removed."
   },
   "landing": {
     "skip": "Skip to sign-in",
@@ -1387,14 +1394,16 @@
       "cotacao_pregao": "Trading session quotes",
       "noticias_novas": "Latest news (Investidor10)",
       "noticias_arquivo": "News archive (Investidor10)",
-      "noticias_feeds": "News from the curated sources"
+      "noticias_feeds": "News from the curated sources",
+      "noticias_feeds_usuario": "News from users' feeds"
     },
     "sources": {
       "b3": "B3",
       "brapi": "brapi",
       "bcb": "Central Bank of Brazil",
       "investidor10": "Investidor10",
-      "feeds": "RSS feeds of the curated sources"
+      "feeds": "RSS feeds of the curated sources",
+      "user_feeds": "users' RSS feeds"
     },
     "source_one": "Source: {{sources}}",
     "source_other": "Sources: {{sources}}",
@@ -1455,7 +1464,8 @@
       "cotacao_pregao": "Outside trading hours, or no quota left.",
       "noticias_novas": "Nothing to fetch right now.",
       "noticias_arquivo": "Nothing to fetch right now.",
-      "noticias_feeds": "No active curated source."
+      "noticias_feeds": "No active curated source.",
+      "noticias_feeds_usuario": "No user feed to read."
     },
     "processor": {
       "title": "Processor",
@@ -1583,7 +1593,119 @@
         "citado": "Mentioned",
         "lista": "List"
       }
-    }
+    },
+    "userSources": "Users' sources: {{total}} addresses, {{failing}} having trouble, {{stopped}} stopped (the addresses aren't shown here)."
+  },
+  "userNews": {
+    "title": "News",
+    "subtitle": "News from your sources, newest first. On the same day, news from higher-priority sources comes first.",
+    "offline": "No connection: news comes back when the app reconnects.",
+    "mySources": "My sources",
+    "filters": "News filters",
+    "asset": "Asset",
+    "assetPlaceholder": "Ticker or name",
+    "assetResults": "Assets found",
+    "removeAsset": "Remove the {{ticker}} filter",
+    "sector": "Sector",
+    "allSectors": "All sectors",
+    "classes": {
+      "stock": "Stocks",
+      "fii": "REITs"
+    },
+    "period": "Period",
+    "periods": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "12m": "12 months"
+    },
+    "sentiment": "Sentiment",
+    "allSentiments": "All",
+    "sentiments": {
+      "positive": "Positive",
+      "neutral": "Neutral",
+      "negative": "Negative"
+    },
+    "source": "Source",
+    "allSources": "All your sources",
+    "clearFilters": "Clear filters",
+    "loading": "Loading news…",
+    "total_one": "{{count}} news item",
+    "total_other": "{{count}} news items",
+    "empty": "No news from your sources for this filter.",
+    "more_one": "Show more ({{count}} item)",
+    "more_other": "Show more ({{count}} items)",
+    "ownSource": "Your source",
+    "assets": "Assets in this news item:",
+    "openAsset": "Open {{ticker}}",
+    "read": "Read on {{source}}",
+    "toneTitle": "News tone",
+    "toneValue": {
+      "positive": "{{value}} positive",
+      "neutral": "{{value}} neutral",
+      "negative": "{{value}} negative"
+    },
+    "toneCount_one": "Weighted by source priority, over {{count}} classified news item.",
+    "toneCount_other": "Weighted by source priority, over {{count}} classified news items.",
+    "toneFew": "Too few news items to summarize the tone.",
+    "tonePersonal": "Personalized by your sources and priorities; it isn't the app's official sentiment.",
+    "toneEducational": "Summarizes the tone of the headlines; it isn't investment advice.",
+    "backToNews": "Back to news",
+    "sourcesTitle": "My sources",
+    "sourcesSubtitle": "Choose which sources to follow and the priority of each one. Priority sets the order of news on the same day and the weight of each source in the news tone.",
+    "sourcesLoading": "Loading your sources…",
+    "parentGroup": "The app's main source",
+    "parentNote": "Always on, with the highest priority.",
+    "curatedGroup": "The app's sources",
+    "ownGroup": "Your feeds ({{count}} of {{limit}})",
+    "noOwn": "You haven't added any feeds yet.",
+    "on": "On",
+    "off": "Off",
+    "turnOnLabel": "Turn on {{name}}",
+    "turnOffLabel": "Turn off {{name}}",
+    "turnedOn": "{{name}} turned on.",
+    "turnedOff": "{{name}} turned off.",
+    "turnedOnInApp": "The app's source is on.",
+    "priority": "Priority",
+    "priorityLabel": "Priority of {{name}}",
+    "priorities": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "prioritySaved": "{{name}}: {{priority}} priority.",
+    "status": {
+      "ok": "Last read {{date}} · {{count}} news items",
+      "pending": "Waiting for the first read",
+      "failing": "Having trouble: the address didn't respond in the last reads",
+      "stopped": "Stopped: the address hasn't responded for a day"
+    },
+    "retry": "Try again",
+    "retried": "{{name}} responded and will be read every hour again.",
+    "rename": "Rename",
+    "renameLabel": "Rename {{name}}",
+    "newName": "New name",
+    "renamed": "Feed renamed to {{name}}.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "removeLabel": "Remove {{name}}",
+    "removeTitle": "Remove the feed",
+    "removeConfirm": "Remove {{name}}? Its news leaves your News screen.",
+    "removeYes": "Remove feed",
+    "removed": "{{name}} removed.",
+    "addTitle": "Add a feed",
+    "addHint": "Use the address of an RSS or Atom feed (https). News from your feeds is shown only to you and isn't used in the app's official analyses.",
+    "feedUrl": "Feed address",
+    "feedName": "Name (optional)",
+    "feedNameHint": "Without a name, we use the feed's title.",
+    "add": "Add feed",
+    "adding": "Reading the feed…",
+    "added_one": "Feed added: {{name}}, {{count}} news item found.",
+    "added_other": "Feed added: {{name}}, {{count}} news items found.",
+    "alreadyInApp": "This source is already in the app.",
+    "turnOn": "Turn on",
+    "limitReached": "You already have {{limit}} feeds of your own. Remove one to add another."
   },
   "sentiment": {
     "title": "News sentiment",

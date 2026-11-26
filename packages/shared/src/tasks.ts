@@ -3,7 +3,8 @@ import type { IsoDate } from './calendar.js';
 /**
  * SPEC-011: as tarefas de ingestão, na ordem do dia (a ordem da tela Tarefas). São as que gravam
  * cada execução (SPEC-008, DA14); as limpezas diárias do processador e o vínculo das notícias com
- * os ativos (SPEC-028) ficam de fora. As três de notícias são da SPEC-027.
+ * os ativos (SPEC-028) ficam de fora. As três primeiras de notícias são da SPEC-027; a dos feeds dos
+ * usuários, da SPEC-030.
  */
 export const INGESTION_TASKS = [
   'calendario_b3',
@@ -18,6 +19,8 @@ export const INGESTION_TASKS = [
   'noticias_novas',
   'noticias_arquivo',
   'noticias_feeds',
+  // SPEC-030: os feeds próprios dos usuários.
+  'noticias_feeds_usuario',
 ] as const;
 export type IngestionTaskCode = (typeof INGESTION_TASKS)[number];
 
@@ -25,8 +28,11 @@ export function isIngestionTask(value: unknown): value is IngestionTaskCode {
   return typeof value === 'string' && (INGESTION_TASKS as readonly string[]).includes(value);
 }
 
-/** De onde cada tarefa traz os dados (`feeds`: os RSS das fontes curadas, SPEC-027). */
-export type TaskSource = 'b3' | 'brapi' | 'bcb' | 'investidor10' | 'feeds';
+/**
+ * De onde cada tarefa traz os dados (`feeds`: os RSS das fontes curadas, SPEC-027; `user_feeds`: os
+ * feeds próprios dos usuários, SPEC-030).
+ */
+export type TaskSource = 'b3' | 'brapi' | 'bcb' | 'investidor10' | 'feeds' | 'user_feeds';
 
 /**
  * Quando a tarefa roda, no horário de Brasília. `daily`: todo dia, nos horários (o Investidor10

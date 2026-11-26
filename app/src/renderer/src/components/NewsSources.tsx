@@ -121,6 +121,15 @@ export function NewsSources({ onSessionExpired }: { onSessionExpired: () => void
             </p>
           )}
 
+          {/* SPEC-030: só os totais dos feeds dos usuários, sem os endereços (DA13). */}
+          <p className="field-hint">
+            {t('news.userSources', {
+              total: number(data.userSources.total),
+              failing: number(data.userSources.failing),
+              stopped: number(data.userSources.stopped),
+            })}
+          </p>
+
           {notice && (
             <p className="form-success" role="status">
               {notice}

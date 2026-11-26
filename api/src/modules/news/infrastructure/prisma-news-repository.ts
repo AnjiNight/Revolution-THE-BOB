@@ -1,5 +1,20 @@
-import type { NewsCategory } from '@simulador/shared';
-import { Prisma, type FonteNoticia, type PrismaClient } from '../../../generated/prisma/client.js';
+import {
+  PARENT_SOURCE_WEIGHT,
+  SOURCE_PRIORITY_WEIGHT,
+  type AssetClass,
+  type NewsCategory,
+  type NewsSentiment,
+  type SourcePriority,
+  type UserSourcesTotals,
+} from '@simulador/shared';
+import {
+  Prisma,
+  type FonteNoticia,
+  type PreferenciaFonte,
+  type PrioridadeFonte,
+  type PrismaClient,
+  type SentimentoNoticia,
+} from '../../../generated/prisma/client.js';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import { auditRow } from '../../audit/infrastructure/prisma-audit.js';
 import type {
@@ -8,20 +23,34 @@ import type {
   AssetNewsFilter,
   AssetNewsRow,
   LatestNewsRow,
+  NewsFeedFilter,
+  NewsFeedRow,
   NewsRepository,
   NewsToLink,
   NewsToSave,
   StoredLink,
   StoredNewsSource,
+  StoredPreference,
+  UserSourceRow,
 } from '../application/ports.js';
 import type { CatalogTicker, LinkRelevance } from '../domain/asset-links.js';
-import { NewsSourceExistsError, NewsSourceNotFoundError } from '../domain/errors.js';
-import { storedClassification } from './prisma-sentiment-repository.js';
+import {
+  NewsSourceExistsError,
+  NewsSourceNotFoundError,
+  OwnFeedExistsError,
+  OwnFeedLimitError,
+  SourceAlreadyInAppError,
+} from '../domain/errors.js';
+import {
+  sentimentFromDb,
+  sentimentToDb,
+  storedClassification,
+} from './prisma-sentiment-repository.js';
 
 function toStored(row: FonteNoticia): StoredNewsSource {
   return {
     id: row.id,
-    kind: row.tipo === 'pai' ? 'parent' : 'curated',
+    kind: row.tipo === 'pai' ? 'parent' : row.tipo === 'curada' ? 'curated' : 'user',
     name: row.nome,
     url: row.url,
     category: row.categoria,
@@ -37,25 +66,121 @@ function toStored(row: FonteNoticia): StoredNewsSource {
           : null,
     lastError: row.ultimoErro,
     failures: row.falhasSeguidas,
+    stoppedAt: row.paradaEm,
   };
 }
 
-/** SPEC-029: os vínculos do ativo com as relevâncias pedidas, pela data de publicação. */
-function linkWhere(assetId: string, filter: AssetNewsFilter): Prisma.NoticiaAtivoWhereInput {
+const PRIORITY_TO_DB: Record<SourcePriority, PrioridadeFonte> = {
+  high: 'alta',
+  medium: 'media',
+  low: 'baixa',
+};
+const PRIORITY_FROM_DB: Record<PrioridadeFonte, SourcePriority> = {
+  alta: 'high',
+  media: 'medium',
+  baixa: 'low',
+};
+const CLASS_TO_DB: Record<AssetClass, string> = { stock: 'acao', fii: 'fii' };
+
+function toPreference(row: PreferenciaFonte): StoredPreference {
   return {
-    ativoId: assetId,
-    relevancia: { in: [...filter.relevances] },
-    ...(filter.from || filter.to
-      ? {
-          noticia: {
-            publicadaEm: {
-              ...(filter.from ? { gte: filter.from } : {}),
-              ...(filter.to ? { lt: filter.to } : {}),
-            },
-          },
-        }
-      : {}),
+    sourceId: row.fonteId,
+    active: row.ativa,
+    priority: PRIORITY_FROM_DB[row.prioridade],
+    name: row.nome,
   };
+}
+
+/** SPEC-030: a fonte de cada notícia (`f`) e a escolha de quem vê (`p`). */
+function viewerJoin(userId: string): Prisma.Sql {
+  return Prisma.sql`JOIN fonte_noticia f ON f.id = n.fonte_id
+    LEFT JOIN preferencia_fonte p ON p.fonte_id = f.id AND p.usuario_id = ${userId}::uuid`;
+}
+
+/**
+ * Quem vê cada notícia (§4.2): a fonte pai sempre (RB29); a curada ligada pelo colaborador e não
+ * desligada pelo usuário; o feed próprio só para quem o tem ligado.
+ */
+const VIEWER_VISIBLE = Prisma.sql`(f.tipo::text = 'pai'
+  OR (f.tipo::text = 'curada' AND f.ativa AND COALESCE(p.ativa, true))
+  OR (f.tipo::text = 'usuario' AND p.ativa IS TRUE))`;
+
+const weightSql = (value: number) => Prisma.raw(String(value));
+
+/** O peso da fonte (§4.1, decisão 2): a pai 4; alta 3, média 2 (também sem escolha), baixa 1. */
+const VIEWER_WEIGHT = Prisma.sql`(CASE
+  WHEN f.tipo::text = 'pai' THEN ${weightSql(PARENT_SOURCE_WEIGHT)}
+  WHEN p.prioridade::text = 'alta' THEN ${weightSql(SOURCE_PRIORITY_WEIGHT.high)}
+  WHEN p.prioridade::text = 'baixa' THEN ${weightSql(SOURCE_PRIORITY_WEIGHT.low)}
+  ELSE ${weightSql(SOURCE_PRIORITY_WEIGHT.medium)} END)`;
+
+/** Por dia de publicação em Brasília; no mesmo dia, pelo peso da fonte; depois, pelo horário. */
+const VIEWER_ORDER = Prisma.sql`ORDER BY (n.publicada_em AT TIME ZONE 'America/Sao_Paulo')::date DESC,
+  ${VIEWER_WEIGHT} DESC, n.publicada_em DESC, n.id`;
+
+/** No feed próprio, o nome que o usuário deu (ou o título do feed). */
+const NEWS_COLUMNS = Prisma.sql`n.id, n.titulo, n.resumo, n.url, n.publicada_em, n.sentimento,
+  n.versao_modelo_id, COALESCE(CASE WHEN f.tipo::text = 'usuario' THEN p.nome END, f.nome) AS fonte,
+  (f.tipo::text = 'usuario') AS propria`;
+
+interface NewsRawRow {
+  id: string;
+  titulo: string;
+  resumo: string | null;
+  url: string;
+  publicada_em: Date;
+  sentimento: SentimentoNoticia | null;
+  versao_modelo_id: number | null;
+  fonte: string;
+  propria: boolean;
+}
+
+function fromRaw(row: NewsRawRow) {
+  return {
+    id: row.id,
+    title: row.titulo,
+    summary: row.resumo,
+    url: row.url,
+    source: row.fonte,
+    ownSource: row.propria,
+    publishedAt: row.publicada_em,
+    classification: storedClassification({
+      sentimento: row.sentimento,
+      versaoModeloId: row.versao_modelo_id,
+    }),
+  };
+}
+
+/** SPEC-029 e 030: os vínculos do ativo com as relevâncias pedidas, das fontes de quem vê. */
+function assetWhere(assetId: string, filter: AssetNewsFilter): Prisma.Sql {
+  const parts = [
+    Prisma.sql`a.ativo_id = ${assetId}::uuid`,
+    Prisma.sql`a.relevancia::text IN (${Prisma.join([...filter.relevances])})`,
+    VIEWER_VISIBLE,
+  ];
+  if (filter.from) parts.push(Prisma.sql`n.publicada_em >= ${filter.from}`);
+  if (filter.to) parts.push(Prisma.sql`n.publicada_em < ${filter.to}`);
+  return Prisma.join(parts, ' AND ');
+}
+
+/** SPEC-030: o filtro da tela Notícias; ativo e setor pelas notícias principal ou citado. */
+function feedWhere(filter: NewsFeedFilter): Prisma.Sql {
+  const parts = [Prisma.sql`n.publicada_em >= ${filter.from}`, VIEWER_VISIBLE];
+  if (filter.assetId) {
+    parts.push(Prisma.sql`EXISTS (SELECT 1 FROM noticia_ativo a WHERE a.noticia_id = n.id
+      AND a.ativo_id = ${filter.assetId}::uuid AND a.relevancia::text IN ('principal', 'citado'))`);
+  }
+  if (filter.sector) {
+    parts.push(Prisma.sql`EXISTS (SELECT 1 FROM noticia_ativo a JOIN ativo t ON t.id = a.ativo_id
+      WHERE a.noticia_id = n.id AND a.relevancia::text IN ('principal', 'citado')
+      AND t.classe::text = ${CLASS_TO_DB[filter.sector.class]} AND t.setor = ${filter.sector.code})`);
+  }
+  if (filter.sourceId) parts.push(Prisma.sql`n.fonte_id = ${filter.sourceId}::uuid`);
+  if (filter.sentiment) {
+    parts.push(Prisma.sql`n.sentimento::text = ${sentimentToDb(filter.sentiment.value)}
+      AND n.versao_modelo_id = ${filter.sentiment.modelVersionId}`);
+  }
+  return Prisma.join(parts, ' AND ');
 }
 
 /** Fontes e notícias no PostgreSQL (SPEC-027 §6). */
@@ -67,7 +192,9 @@ export class PrismaNewsRepository implements NewsRepository {
    * data não bastava: num banco novo, as duas da migração nascem no mesmo milissegundo.
    */
   async sources(): Promise<StoredNewsSource[]> {
+    // SPEC-030: os feeds dos usuários não são fontes do app.
     const rows = await this.prisma.fonteNoticia.findMany({
+      where: { tipo: { in: ['pai', 'curada'] } },
       orderBy: [{ tipo: 'asc' }, { criadaEm: 'asc' }, { nome: 'asc' }],
     });
     return rows.map(toStored);
@@ -294,7 +421,9 @@ export class PrismaNewsRepository implements NewsRepository {
   }
 
   async latestNews(limit: number): Promise<LatestNewsRow[]> {
+    // SPEC-030 (RB30): só as notícias da fonte pai e das curadas.
     const rows = await this.prisma.noticia.findMany({
+      where: { fonte: { tipo: { not: 'usuario' } } },
       orderBy: [{ publicadaEm: 'desc' }, { id: 'asc' }],
       take: limit,
       select: {
@@ -322,11 +451,220 @@ export class PrismaNewsRepository implements NewsRepository {
   }
 
   async linkCounts(): Promise<{ total: number; linked: number }> {
+    const official = { fonte: { tipo: { not: 'usuario' as const } } };
     const [total, linked] = await Promise.all([
-      this.prisma.noticia.count(),
-      this.prisma.noticia.count({ where: { ativos: { some: {} } } }),
+      this.prisma.noticia.count({ where: official }),
+      this.prisma.noticia.count({ where: { ...official, ativos: { some: {} } } }),
     ]);
     return { total, linked };
+  }
+
+  // --- SPEC-030: fontes do usuário ---
+
+  async userSources(userId: string): Promise<UserSourceRow[]> {
+    const rows = await this.prisma.fonteNoticia.findMany({
+      where: {
+        OR: [
+          { tipo: 'pai' },
+          { tipo: 'curada', ativa: true },
+          { tipo: 'usuario', preferencias: { some: { usuarioId: userId } } },
+        ],
+      },
+      include: {
+        preferencias: { where: { usuarioId: userId } },
+        _count: { select: { noticias: true } },
+      },
+      orderBy: [{ tipo: 'asc' }, { criadaEm: 'asc' }, { nome: 'asc' }],
+    });
+    return rows.map((row) => {
+      const preference = row.preferencias[0];
+      return {
+        source: toStored(row),
+        preference: preference ? toPreference(preference) : null,
+        news: row._count.noticias,
+      };
+    });
+  }
+
+  async sourceByUrl(url: string): Promise<StoredNewsSource | null> {
+    const row = await this.prisma.fonteNoticia.findUnique({ where: { url } });
+    return row ? toStored(row) : null;
+  }
+
+  async savePreference(
+    userId: string,
+    sourceId: string,
+    changes: { active?: boolean; priority?: SourcePriority; name?: string },
+    at: Date,
+  ): Promise<StoredPreference> {
+    const data = {
+      ...(changes.active !== undefined ? { ativa: changes.active } : {}),
+      ...(changes.priority !== undefined ? { prioridade: PRIORITY_TO_DB[changes.priority] } : {}),
+      ...(changes.name !== undefined ? { nome: changes.name } : {}),
+      atualizadaEm: at,
+    };
+    const row = await this.prisma.preferenciaFonte.upsert({
+      where: { usuarioId_fonteId: { usuarioId: userId, fonteId: sourceId } },
+      create: { usuarioId: userId, fonteId: sourceId, criadaEm: at, ...data },
+      update: data,
+    });
+    return toPreference(row);
+  }
+
+  async addOwnSource(
+    userId: string,
+    feed: { url: string; title: string; name: string | null },
+    limit: number,
+    at: Date,
+  ): Promise<UserSourceRow> {
+    // Duas pessoas adicionando o mesmo endereço novo ao mesmo tempo: a segunda acha a fonte na
+    // segunda tentativa (P2002). A fonte apagada pelo último usuário no meio do caminho: P2003.
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          // Um pedido de cada vez por usuário: o limite de 10 vale mesmo com cliques seguidos.
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`fontes:${userId}`}))`;
+          const existing = await tx.fonteNoticia.findUnique({ where: { url: feed.url } });
+          if (existing && existing.tipo !== 'usuario')
+            throw new SourceAlreadyInAppError(existing.id);
+          if (
+            existing &&
+            (await tx.preferenciaFonte.count({
+              where: { usuarioId: userId, fonteId: existing.id },
+            })) > 0
+          ) {
+            throw new OwnFeedExistsError();
+          }
+          const own = await tx.preferenciaFonte.count({
+            where: { usuarioId: userId, fonte: { tipo: 'usuario' } },
+          });
+          if (own >= limit) throw new OwnFeedLimitError();
+          const source =
+            existing ??
+            (await tx.fonteNoticia.create({
+              data: {
+                tipo: 'usuario',
+                nome: feed.title,
+                url: feed.url,
+                criadaEm: at,
+                atualizadaEm: at,
+              },
+            }));
+          const preference = await tx.preferenciaFonte.create({
+            data: {
+              usuarioId: userId,
+              fonteId: source.id,
+              nome: feed.name,
+              criadaEm: at,
+              atualizadaEm: at,
+            },
+          });
+          const news = await tx.noticia.count({ where: { fonteId: source.id } });
+          return { source: toStored(source), preference: toPreference(preference), news };
+        });
+      } catch (error) {
+        const retry =
+          attempt === 0 &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === 'P2002' || error.code === 'P2003');
+        if (!retry) throw error;
+      }
+    }
+  }
+
+  async removeOwnSource(userId: string, sourceId: string): Promise<boolean> {
+    const { count } = await this.prisma.preferenciaFonte.deleteMany({
+      where: { usuarioId: userId, fonteId: sourceId, fonte: { tipo: 'usuario' } },
+    });
+    return count > 0;
+  }
+
+  async collectableUserSources(): Promise<StoredNewsSource[]> {
+    const rows = await this.prisma.fonteNoticia.findMany({
+      where: { tipo: 'usuario', paradaEm: null, preferencias: { some: { ativa: true } } },
+      orderBy: [{ criadaEm: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(toStored);
+  }
+
+  async setStopped(sourceId: string, stoppedAt: Date | null): Promise<void> {
+    await this.prisma.fonteNoticia.update({
+      where: { id: sourceId },
+      data: { paradaEm: stoppedAt, ...(stoppedAt === null ? { falhasSeguidas: 0 } : {}) },
+    });
+  }
+
+  async deleteUserNewsBefore(cutoff: Date): Promise<number> {
+    const { count } = await this.prisma.noticia.deleteMany({
+      where: { publicadaEm: { lt: cutoff }, fonte: { tipo: 'usuario' } },
+    });
+    return count;
+  }
+
+  async userSourceTotals(problemAfter: number): Promise<UserSourcesTotals> {
+    const [total, failing, stopped] = await Promise.all([
+      this.prisma.fonteNoticia.count({ where: { tipo: 'usuario' } }),
+      this.prisma.fonteNoticia.count({
+        where: { tipo: 'usuario', paradaEm: null, falhasSeguidas: { gte: problemAfter } },
+      }),
+      this.prisma.fonteNoticia.count({ where: { tipo: 'usuario', paradaEm: { not: null } } }),
+    ]);
+    return { total, failing, stopped };
+  }
+
+  async newsFeed(
+    userId: string,
+    filter: NewsFeedFilter,
+    page: { offset: number; limit: number },
+  ): Promise<{ total: number; rows: NewsFeedRow[] }> {
+    const where = feedWhere(filter);
+    const [counted, rows] = await Promise.all([
+      this.prisma.$queryRaw<Array<{ total: number }>>`
+        SELECT count(*)::int AS total FROM noticia n ${viewerJoin(userId)} WHERE ${where}`,
+      this.prisma.$queryRaw<NewsRawRow[]>`
+        SELECT ${NEWS_COLUMNS} FROM noticia n ${viewerJoin(userId)}
+        WHERE ${where} ${VIEWER_ORDER} OFFSET ${page.offset} LIMIT ${page.limit}`,
+    ]);
+    const links = await this.prisma.noticiaAtivo.findMany({
+      where: {
+        noticiaId: { in: rows.map((row) => row.id) },
+        relevancia: { in: ['principal', 'citado'] },
+      },
+      select: {
+        noticiaId: true,
+        relevancia: true,
+        ativo: { select: { id: true, ticker: true } },
+      },
+    });
+    return {
+      total: counted[0]?.total ?? 0,
+      rows: rows.map((row) => ({
+        ...fromRaw(row),
+        assets: links
+          .filter((link) => link.noticiaId === row.id)
+          .sort(
+            (a, b) =>
+              (a.relevancia === 'principal' ? 0 : 1) - (b.relevancia === 'principal' ? 0 : 1) ||
+              a.ativo.ticker.localeCompare(b.ativo.ticker),
+          )
+          .map((link) => ({ id: link.ativo.id, ticker: link.ativo.ticker })),
+      })),
+    };
+  }
+
+  async newsFeedTones(
+    userId: string,
+    filter: NewsFeedFilter,
+    modelVersionId: number,
+  ): Promise<Array<{ sentiment: NewsSentiment; weight: number }>> {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ sentimento: SentimentoNoticia; peso: number }>
+    >`
+      SELECT n.sentimento AS sentimento, ${VIEWER_WEIGHT} AS peso
+      FROM noticia n ${viewerJoin(userId)}
+      WHERE ${feedWhere(filter)} AND n.versao_modelo_id = ${modelVersionId}
+        AND n.sentimento IS NOT NULL`;
+    return rows.map((row) => ({ sentiment: sentimentFromDb(row.sentimento), weight: row.peso }));
   }
 
   async assetExists(assetId: string): Promise<boolean> {
@@ -338,59 +676,35 @@ export class PrismaNewsRepository implements NewsRepository {
     filter: AssetNewsFilter,
     page: { offset: number; limit: number },
   ): Promise<{ total: number; rows: AssetNewsRow[] }> {
-    const where = linkWhere(assetId, filter);
-    const [total, rows] = await Promise.all([
-      this.prisma.noticiaAtivo.count({ where }),
+    const where = assetWhere(assetId, filter);
+    const join = viewerJoin(filter.viewerId);
+    const [counted, rows] = await Promise.all([
+      this.prisma.$queryRaw<Array<{ total: number }>>`
+        SELECT count(*)::int AS total
+        FROM noticia_ativo a JOIN noticia n ON n.id = a.noticia_id ${join}
+        WHERE ${where}`,
       page.limit === 0
         ? Promise.resolve([])
-        : this.prisma.noticiaAtivo.findMany({
-            where,
-            orderBy: [{ noticia: { publicadaEm: 'desc' } }, { noticiaId: 'asc' }],
-            skip: page.offset,
-            take: page.limit,
-            select: {
-              relevancia: true,
-              noticia: {
-                select: {
-                  id: true,
-                  titulo: true,
-                  resumo: true,
-                  url: true,
-                  publicadaEm: true,
-                  sentimento: true,
-                  versaoModeloId: true,
-                  fonte: { select: { nome: true } },
-                },
-              },
-            },
-          }),
+        : this.prisma.$queryRaw<Array<NewsRawRow & { relevancia: LinkRelevance }>>`
+            SELECT ${NEWS_COLUMNS}, a.relevancia::text AS relevancia
+            FROM noticia_ativo a JOIN noticia n ON n.id = a.noticia_id ${join}
+            WHERE ${where} ${VIEWER_ORDER} OFFSET ${page.offset} LIMIT ${page.limit}`,
     ]);
     return {
-      total,
-      rows: rows.map(({ relevancia, noticia }) => ({
-        id: noticia.id,
-        title: noticia.titulo,
-        summary: noticia.resumo,
-        url: noticia.url,
-        source: noticia.fonte.nome,
-        publishedAt: noticia.publicadaEm,
-        relevance: relevancia,
-        classification: storedClassification(noticia),
-      })),
+      total: counted[0]?.total ?? 0,
+      rows: rows.map((row) => ({ ...fromRaw(row), relevance: row.relevancia })),
     };
   }
 
   async assetNewsDates(assetId: string, filter: AssetNewsFilter): Promise<AssetNewsDate[]> {
-    const rows = await this.prisma.noticiaAtivo.findMany({
-      where: linkWhere(assetId, filter),
-      select: {
-        noticia: { select: { publicadaEm: true, sentimento: true, versaoModeloId: true } },
-      },
+    const rows = await this.prisma.$queryRaw<NewsRawRow[]>`
+      SELECT ${NEWS_COLUMNS}
+      FROM noticia_ativo a JOIN noticia n ON n.id = a.noticia_id ${viewerJoin(filter.viewerId)}
+      WHERE ${assetWhere(assetId, filter)}`;
+    return rows.map((row) => {
+      const { publishedAt, classification } = fromRaw(row);
+      return { publishedAt, classification };
     });
-    return rows.map(({ noticia }) => ({
-      publishedAt: noticia.publicadaEm,
-      classification: storedClassification(noticia),
-    }));
   }
 
   async clearParent(): Promise<number> {

@@ -10,6 +10,7 @@ import { EmailCodeHasher } from '../modules/identity/application/email-code.js';
 import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
 import { AssetNewsService } from '../modules/news/application/asset-news-service.js';
+import { UserNewsService } from '../modules/news/application/user-news-service.js';
 import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
 import { SentimentService } from '../modules/news/application/sentiment-service.js';
 import {
@@ -274,6 +275,7 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     newsSources,
     assetNews: new AssetNewsService({ news: newsRepo, sentiment, clock }),
     sentiment,
+    userNews: new UserNewsService({ news: newsRepo, feeds: feedFetcher, sentiment, clock }),
     logStream: logs,
   });
 

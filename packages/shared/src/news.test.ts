@@ -4,6 +4,10 @@ import {
   newsReferenceDayStart,
   validateAssetNewsDaysQuery,
   validateAssetNewsQuery,
+  validateNewOwnFeed,
+  validateNewsFeedQuery,
+  validateUpdateMySource,
+  weightedTone,
 } from './news.js';
 
 describe('dia de referência da notícia (SPEC-029 §4.1, decisão 3)', () => {
@@ -82,5 +86,102 @@ describe('consulta das notícias do ativo (SPEC-029 §5.1)', () => {
       success: false,
       fields: { period: 'invalid_option' },
     });
+  });
+});
+
+describe('fontes do usuário e tela Notícias (SPEC-030)', () => {
+  it('feed próprio: https obrigatório, nome opcional e limpo', () => {
+    expect(validateNewOwnFeed({ url: 'https://Blog.Exemplo/feed', name: '  Meu   blog ' })).toEqual(
+      {
+        success: true,
+        data: { url: 'https://blog.exemplo/feed', name: 'Meu blog' },
+      },
+    );
+    expect(validateNewOwnFeed({ url: 'https://blog.exemplo/feed', name: '' })).toEqual({
+      success: true,
+      data: { url: 'https://blog.exemplo/feed' },
+    });
+    expect(validateNewOwnFeed({ url: 'http://blog.exemplo/feed' })).toMatchObject({
+      fields: { url: 'not_https' },
+    });
+    expect(validateNewOwnFeed({ url: 'https://blog.exemplo', name: 'x'.repeat(81) })).toMatchObject(
+      {
+        fields: { name: 'too_long' },
+      },
+    );
+  });
+
+  it('mudança da fonte: ligada, prioridade e nome; o endereço não muda', () => {
+    expect(validateUpdateMySource({ active: false, priority: 'high' })).toEqual({
+      success: true,
+      data: { active: false, priority: 'high' },
+    });
+    expect(validateUpdateMySource({ priority: 'urgente' })).toMatchObject({
+      fields: { priority: 'invalid_option' },
+    });
+    expect(validateUpdateMySource({ url: 'https://outro' })).toMatchObject({
+      fields: { url: 'immutable' },
+    });
+    expect(validateUpdateMySource({})).toMatchObject({ success: false });
+  });
+
+  it('filtros da tela Notícias: 30 dias por padrão, setor com a classe, página de 20', () => {
+    const asset = '6f1c7e0a-1b2c-4d3e-8f90-123456789abc';
+    expect(validateNewsFeedQuery({})).toEqual({
+      success: true,
+      data: { period: '30d', offset: 0 },
+    });
+    expect(
+      validateNewsFeedQuery({
+        period: '12m',
+        offset: '40',
+        asset: asset.toUpperCase(),
+        sector: 'fii:logistica',
+        sentiment: 'negative',
+      }),
+    ).toEqual({
+      success: true,
+      data: {
+        period: '12m',
+        offset: 40,
+        asset,
+        sector: { class: 'fii', code: 'logistica' },
+        sentiment: 'negative',
+      },
+    });
+    expect(
+      validateNewsFeedQuery({ sector: 'stock:logistica', offset: '10', period: '1d' }),
+    ).toEqual({
+      success: false,
+      fields: { sector: 'invalid_option', offset: 'invalid_option', period: 'invalid_option' },
+    });
+  });
+
+  it('filtros vindos da tela: offset em número e setor como objeto', () => {
+    expect(
+      validateNewsFeedQuery({
+        period: '30d',
+        offset: 20,
+        sector: { class: 'stock', code: 'financeiro' },
+      }),
+    ).toEqual({
+      success: true,
+      data: { period: '30d', offset: 20, sector: { class: 'stock', code: 'financeiro' } },
+    });
+    expect(validateNewsFeedQuery({ offset: -20 })).toMatchObject({
+      fields: { offset: 'invalid_option' },
+    });
+  });
+
+  it('tom ponderado: a soma dos pesos de cada tom sobre a soma dos pesos (CA09)', () => {
+    expect(weightedTone([])).toBeNull();
+    // Pai (4) positiva, alta (3) neutra, baixa (1) negativa: 4/8, 3/8, 1/8.
+    expect(
+      weightedTone([
+        { sentiment: 'positive', weight: 4 },
+        { sentiment: 'neutral', weight: 3 },
+        { sentiment: 'negative', weight: 1 },
+      ]),
+    ).toEqual({ shares: { positive: 0.5, neutral: 0.375, negative: 0.125 }, classified: 3 });
   });
 });

@@ -75,7 +75,7 @@ describe('tarefas de ingestão (SPEC-011)', () => {
     await t.app.close();
   });
 
-  it('lista as 12 tarefas, as com falha ou parcial primeiro, com a fonte e quando rodam (CA01)', async () => {
+  it('lista as 13 tarefas, as com falha ou parcial primeiro, com a fonte e quando rodam (CA01)', async () => {
     await finished('fechamento_diario', '2026-11-16T11:00:00Z', 'sucesso', {
       records: 712,
       affectedAssets: 712,
@@ -101,6 +101,8 @@ describe('tarefas de ingestão (SPEC-011)', () => {
       'noticias_novas',
       'noticias_arquivo',
       'noticias_feeds',
+      // SPEC-030: os feeds próprios dos usuários, a cada 60 minutos.
+      'noticias_feeds_usuario',
     ]);
     expect(body.tasks.find((task) => task.task === 'noticias_feeds')).toMatchObject({
       sources: ['feeds'],

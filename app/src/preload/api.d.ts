@@ -27,6 +27,13 @@ import type {
   DividendPeriod,
   Investidor10Status,
   LatestNews,
+  MyNewsSource,
+  MyNewsSources,
+  NewOwnFeedInput,
+  NewsFeedPage,
+  NewsFeedQuery,
+  OwnFeedCreated,
+  UpdateMySourceInput,
   NewNewsSourceInput,
   NewsSource,
   NewsSourceCreated,
@@ -231,6 +238,18 @@ export interface DesktopApi {
     unlabel(id: string): Promise<ClientResult<null>>;
     /** Recusada (409) sem versão do modelo ou com poucas notícias de teste. */
     evaluate(): Promise<ClientResult<{ version: SentimentModelVersion }>>;
+    /** SPEC-030: a fonte pai, as curadas ligadas e os feeds próprios, com as escolhas da pessoa. */
+    mySources(): Promise<ClientResult<MyNewsSources>>;
+    /** Lê o feed na hora; recusado, o motivo vem em `fields.url` (ou `already_in_app`). */
+    addFeed(input: NewOwnFeedInput): Promise<ClientResult<OwnFeedCreated>>;
+    updateMySource(
+      id: string,
+      input: UpdateMySourceInput,
+    ): Promise<ClientResult<{ source: MyNewsSource }>>;
+    retryFeed(id: string): Promise<ClientResult<OwnFeedCreated>>;
+    removeFeed(id: string): Promise<ClientResult<null>>;
+    /** A tela Notícias, 20 por vez; pede conexão. */
+    feed(query: Partial<NewsFeedQuery>): Promise<ClientResult<NewsFeedPage>>;
   };
   /**
    * Catálogo de ativos (SPECs 006, 010 e 040). Busca, ficha e logos para todos; o resto só

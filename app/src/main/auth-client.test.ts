@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   ASSET_NEWS_PATHS,
+  MY_NEWS_PATHS,
   ASSET_PATHS,
   assetPath,
   AUTH_PATHS,
@@ -263,6 +264,9 @@ class FakeServer {
         return json(200, { period: url.searchParams.get('period'), points: [] });
       case assetPath(ASSET_NEWS_PATHS.list, ASSET.id):
         return json(200, NEWS_PAGE);
+      // SPEC-030: a tela Notícias.
+      case MY_NEWS_PATHS.feed:
+        return json(200, { total: 0, news: [], model: null, tone: null, toneHidden: 'no_model' });
       // SPEC-044: as rotas do colaborador para o sentimento.
       case SENTIMENT_PATHS.summary:
         return json(200, { total: 1 });
@@ -1166,5 +1170,36 @@ describe('consulta sem conexão (SPEC-032)', () => {
     // O servidor falso não conhece a rota da carteira (500): nada é guardado para ela.
     await expect(cache.get(`GET ${portfolioPath(P1)}`)).resolves.toBeNull();
     await expect(cache.get(LIST_KEY)).resolves.not.toBeNull();
+  });
+});
+
+describe('tela Notícias (SPEC-030)', () => {
+  it('aceita a consulta como a tela manda (número e setor como objeto) e monta a URL', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    const result = await client.newsFeed({ period: '30d', offset: 0 });
+    expect(result).toMatchObject({ ok: true, data: { total: 0 } });
+    expect(server.calls.at(-1)?.path).toBe(MY_NEWS_PATHS.feed);
+    expect(server.calls.at(-1)?.search || '').toBe('');
+
+    await client.newsFeed({
+      period: '12m',
+      offset: 20,
+      asset: ASSET.id,
+      sector: { class: 'stock', code: 'financeiro' },
+      sentiment: 'negative',
+    });
+    expect(server.calls.at(-1)?.search).toBe(
+      `?period=12m&offset=20&asset=${ASSET.id}&sector=stock%3Afinanceiro&sentiment=negative`,
+    );
+
+    const before = server.calls.length;
+    for (const query of [
+      { offset: 5 },
+      { period: '1d' },
+      { sector: { class: 'stock', code: 'x' } },
+    ]) {
+      await expect(client.newsFeed(query)).resolves.toEqual({ ok: false, error: 'unexpected' });
+    }
+    expect(server.calls).toHaveLength(before);
   });
 });

@@ -9,6 +9,7 @@ import { AssetSearch } from './components/AssetSearch';
 import { AuthLanding } from './components/AuthLanding';
 import { CollaboratorLoginForm } from './components/CollaboratorLoginForm';
 import { NewsSources } from './components/NewsSources';
+import { MySources, UserNews } from './components/UserNews';
 import { ConfirmEmailForm } from './components/ConfirmEmailForm';
 import { ForgotPasswordForm } from './components/ForgotPasswordForm';
 import { Home } from './components/Home';
@@ -46,6 +47,8 @@ type View =
   | { kind: 'tasks'; user: PublicUser }
   /** SPEC-027: fontes de notícias (colaborador). */
   | { kind: 'news'; user: PublicUser }
+  /** SPEC-030: a tela Notícias do usuário; `sources` abre a Minhas fontes. */
+  | { kind: 'user-news'; user: PublicUser; sources?: boolean }
   /**
    * `assetId`: a ficha do ativo aberta por cima da lista (SPEC-010). `returnTo`: a ficha foi aberta
    * por uma carteira (SPEC-014), e o Voltar leva de volta a ela.
@@ -200,6 +203,7 @@ export function App() {
     view.kind === 'profile' ||
     view.kind === 'calendar' ||
     view.kind === 'news' ||
+    view.kind === 'user-news' ||
     view.kind === 'assets' ||
     view.kind === 'portfolios' ||
     view.kind === 'tasks'
@@ -237,6 +241,7 @@ export function App() {
           onCalendar={() => openCalendar()}
           onAssets={() => setView({ kind: 'assets', user })}
           onNews={() => setView({ kind: 'news', user })}
+          onUserNews={() => setView({ kind: 'user-news', user })}
           onLogout={logout}
           userView={inUserView}
           {...(user.role === 'collaborator' ? { onToggleUserView: toggleUserView } : {})}
@@ -244,6 +249,19 @@ export function App() {
           {/* SPEC-032: quando a conexão volta, a tela é montada de novo e relê tudo. */}
           <Fragment key={screenVersion}>
             {view.kind === 'news' && <NewsSources onSessionExpired={sessionExpired} />}
+            {view.kind === 'user-news' &&
+              (view.sources ? (
+                <MySources
+                  onBack={() => setView({ kind: 'user-news', user })}
+                  onSessionExpired={sessionExpired}
+                />
+              ) : (
+                <UserNews
+                  onOpenSources={() => setView({ kind: 'user-news', user, sources: true })}
+                  onOpenAsset={openAsset}
+                  onSessionExpired={sessionExpired}
+                />
+              ))}
             {view.kind === 'home' && (
               <Home
                 user={{ ...user, role: shownRole }}

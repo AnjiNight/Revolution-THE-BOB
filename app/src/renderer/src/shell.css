@@ -760,16 +760,17 @@
   }
 }
 
-/* Com "Notícias" (SPEC-027), o menu do colaborador tem 5 itens: até 719 px, a ilha fica compacta
+/* Com "Notícias" (SPEC-027), o menu do colaborador tem 5 itens, e o do usuário também, desde a
+   SPEC-030: até 719 px, a ilha fica compacta
    (sem o avatar, o Sair só com o ícone e os espaços apertados) para todos caberem com o Sair dentro
    dela, até 480 px, a largura mínima da janela (RNF04), com uns 10 px de folga. Abaixo disso, a
    lista rola de lado. */
 @media (max-width: 719px) {
-  .shell-collaborator .shell-account .avatar {
+  :is(.shell-collaborator, .shell-user) .shell-account .avatar {
     display: none;
   }
 
-  .shell-collaborator .logout-text {
+  :is(.shell-collaborator, .shell-user) .logout-text {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -778,20 +779,20 @@
     white-space: nowrap;
   }
 
-  .shell-collaborator .pill.logout-button {
+  :is(.shell-collaborator, .shell-user) .pill.logout-button {
     padding-left: 0.375rem;
   }
 
-  .shell-collaborator .island {
+  :is(.shell-collaborator, .shell-user) .island {
     gap: 0.35rem;
     padding-left: 0.45rem;
   }
 
-  .shell-collaborator .brand-button {
+  :is(.shell-collaborator, .shell-user) .brand-button {
     padding-right: 0;
   }
 
-  .shell-collaborator .island-links {
+  :is(.shell-collaborator, .shell-user) .island-links {
     flex: 1 1 auto;
     gap: 0;
     min-width: 0;
@@ -799,16 +800,16 @@
     scrollbar-width: none;
   }
 
-  .shell-collaborator .island-links::-webkit-scrollbar {
+  :is(.shell-collaborator, .shell-user) .island-links::-webkit-scrollbar {
     display: none;
   }
 
-  .shell-collaborator .island-links button {
+  :is(.shell-collaborator, .shell-user) .island-links button {
     padding-inline: 0.4rem;
     font-size: 0.85rem;
   }
 
-  .shell-collaborator .island-links button:focus-visible {
+  :is(.shell-collaborator, .shell-user) .island-links button:focus-visible {
     outline-offset: -2px;
   }
 }

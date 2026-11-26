@@ -23,12 +23,13 @@ test('entra na Visão do usuário e volta à Área do colaborador (CA01, CA05)',
     .getByRole('status')
     .filter({ hasText: 'Você está vendo o app como um usuário' });
   await expect(banner).toBeVisible();
-  // O menu do usuário: sem Calendário e Notícias, com Carteiras.
+  // O menu do usuário: sem Calendário, com Carteiras e, desde a SPEC-030, a tela Notícias dele.
   await expect(nav(page).getByRole('button', { name: 'Carteiras' })).toBeVisible();
   await expect(nav(page).getByRole('button', { name: 'Calendário', exact: true })).toHaveCount(0);
-  await expect(nav(page).getByRole('button', { name: 'Notícias', exact: true })).toHaveCount(0);
   await expect(nav(page).getByRole('button', { name: 'Visão do usuário' })).toHaveCount(0);
   await expect(page.locator('#conteudo')).toBeFocused();
+  await nav(page).getByRole('button', { name: 'Notícias', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Minhas fontes' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Voltar à Área do colaborador' }).click();
   await expect(banner).toHaveCount(0);

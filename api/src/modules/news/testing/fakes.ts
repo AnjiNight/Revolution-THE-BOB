@@ -1,5 +1,16 @@
 import { randomUUID } from 'node:crypto';
-import type { NewsCategory, NewsSentiment } from '@simulador/shared';
+import {
+  DEFAULT_SOURCE_PRIORITY,
+  isoDateInBrasilia,
+  PARENT_SOURCE_WEIGHT,
+  SOURCE_PRIORITY_WEIGHT,
+  type AssetClass,
+  type NewsCategory,
+  type NewsSentiment,
+  type SectorCode,
+  type SourcePriority,
+  type UserSourcesTotals,
+} from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type {
   ArchiveProgress,
@@ -10,6 +21,8 @@ import type {
   FeedFetcher,
   LabelRow,
   LatestNewsRow,
+  NewsFeedFilter,
+  NewsFeedRow,
   NewsRepository,
   NewsRunLog,
   NewsTask,
@@ -25,13 +38,28 @@ import type {
   StoredModelVersion,
   StoredNewsSource,
   StoredNewsToLabel,
+  StoredPreference,
+  UserSourceRow,
 } from '../application/ports.js';
 import type { CatalogTicker } from '../domain/asset-links.js';
 import {
   NewsNotFoundError,
   NewsSourceExistsError,
   NewsSourceNotFoundError,
+  OwnFeedExistsError,
+  OwnFeedLimitError,
+  SourceAlreadyInAppError,
 } from '../domain/errors.js';
+
+/** SPEC-030: a escolha de um usuário sobre uma fonte, em memória. */
+interface MemoryPreference extends StoredPreference {
+  userId: string;
+  createdAt: Date;
+}
+
+function toStoredPreference(p: MemoryPreference): StoredPreference {
+  return { sourceId: p.sourceId, active: p.active, priority: p.priority, name: p.name };
+}
 
 function classificationOf(item: StoredNews): StoredClassification | null {
   return item.classification
@@ -61,6 +89,9 @@ export class InMemoryNewsRepository implements NewsRepository {
   readonly audit: AuditEntry[] = [];
   /** SPEC-028: o catálogo que o vinculador usa. */
   readonly catalog: CatalogTicker[] = [];
+  /** SPEC-030: as escolhas dos usuários e o setor de cada ativo, para o filtro. */
+  readonly preferences: MemoryPreference[] = [];
+  readonly sectors = new Map<string, { class: AssetClass; code: SectorCode }>();
 
   constructor() {
     const base = {
@@ -69,6 +100,7 @@ export class InMemoryNewsRepository implements NewsRepository {
       lastStatus: null,
       lastError: null,
       failures: 0,
+      stoppedAt: null,
       active: true,
     };
     this.list.push(
@@ -103,7 +135,9 @@ export class InMemoryNewsRepository implements NewsRepository {
   }
 
   sources(): Promise<StoredNewsSource[]> {
-    return Promise.resolve(this.list.map((source) => ({ ...source })));
+    return Promise.resolve(
+      this.list.filter((source) => source.kind !== 'user').map((source) => ({ ...source })),
+    );
   }
 
   source(id: string): Promise<StoredNewsSource | null> {
@@ -210,7 +244,7 @@ export class InMemoryNewsRepository implements NewsRepository {
     const ticker = (assetId: string) =>
       this.catalog.find((asset) => asset.assetId === assetId)?.ticker ?? '';
     return Promise.resolve(
-      [...this.news]
+      this.official()
         .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
         .slice(0, limit)
         .map((item) => ({
@@ -228,10 +262,18 @@ export class InMemoryNewsRepository implements NewsRepository {
   }
 
   linkCounts(): Promise<{ total: number; linked: number }> {
+    const official = this.official();
     return Promise.resolve({
-      total: this.news.length,
-      linked: this.news.filter((item) => item.links.length > 0).length,
+      total: official.length,
+      linked: official.filter((item) => item.links.length > 0).length,
     });
+  }
+
+  /** SPEC-030 (RB30): as notícias da fonte pai e das curadas. */
+  official(): StoredNews[] {
+    return this.news.filter(
+      (item) => this.list.find((s) => s.id === item.sourceId)?.kind !== 'user',
+    );
   }
 
   assetExists(assetId: string): Promise<boolean> {
@@ -255,6 +297,7 @@ export class InMemoryNewsRepository implements NewsRepository {
         publishedAt: item.publishedAt,
         relevance,
         classification: classificationOf(item),
+        ownSource: this.viewOf(filter.viewerId, item).own,
       })),
     });
   }
@@ -268,9 +311,11 @@ export class InMemoryNewsRepository implements NewsRepository {
     );
   }
 
-  /** As notícias ligadas ao ativo, com a relevância do vínculo, das mais novas. */
+  /** As notícias ligadas ao ativo, das fontes de quem vê, na ordem da SPEC-030. */
   private linkedTo(assetId: string, filter: AssetNewsFilter) {
+    const order = this.byViewerOrder(filter.viewerId);
     return this.news
+      .filter((item) => this.viewOf(filter.viewerId, item).visible)
       .flatMap((item) => {
         const link = item.links.find((l) => l.assetId === assetId);
         return link ? [{ item, relevance: link.relevance }] : [];
@@ -281,7 +326,7 @@ export class InMemoryNewsRepository implements NewsRepository {
           (!filter.from || item.publishedAt >= filter.from) &&
           (!filter.to || item.publishedAt < filter.to),
       )
-      .sort((a, b) => b.item.publishedAt.getTime() - a.item.publishedAt.getTime());
+      .sort((a, b) => order(a.item, b.item));
   }
 
   archive(sourceId: string): Promise<ArchiveProgress | null> {
@@ -315,6 +360,7 @@ export class InMemoryNewsRepository implements NewsRepository {
       lastStatus: null,
       lastError: null,
       failures: 0,
+      stoppedAt: null,
     };
     this.list.push(stored);
     this.audit.push(audit(stored.id));
@@ -332,6 +378,277 @@ export class InMemoryNewsRepository implements NewsRepository {
     Object.assign(source, changes);
     this.audit.push(audit);
     return Promise.resolve({ ...source });
+  }
+
+  // --- SPEC-030: fontes do usuário ---
+
+  /** A notícia é de uma fonte que o usuário vê (§4.2), e o peso dela para ele. */
+  viewOf(userId: string, item: StoredNews): { visible: boolean; weight: number; own: boolean } {
+    const source = this.list.find((s) => s.id === item.sourceId);
+    const preference = this.preferences.find(
+      (p) => p.userId === userId && p.sourceId === item.sourceId,
+    );
+    if (!source) return { visible: false, weight: 0, own: false };
+    const weight =
+      source.kind === 'parent'
+        ? PARENT_SOURCE_WEIGHT
+        : SOURCE_PRIORITY_WEIGHT[preference?.priority ?? DEFAULT_SOURCE_PRIORITY];
+    const visible =
+      source.kind === 'parent' ||
+      (source.kind === 'curated' && source.active && (preference?.active ?? true)) ||
+      (source.kind === 'user' && preference?.active === true);
+    return { visible, weight, own: source.kind === 'user' };
+  }
+
+  /** Por dia de publicação em Brasília, pelo peso dentro do dia e pelo horário. */
+  private byViewerOrder(userId: string) {
+    const day = (date: Date) => isoDateInBrasilia(date);
+    return (a: StoredNews, b: StoredNews) =>
+      day(b.publishedAt).localeCompare(day(a.publishedAt)) ||
+      this.viewOf(userId, b).weight - this.viewOf(userId, a).weight ||
+      b.publishedAt.getTime() - a.publishedAt.getTime() ||
+      a.id.localeCompare(b.id);
+  }
+
+  private sourceName(userId: string, item: StoredNews): string {
+    const source = this.list.find((s) => s.id === item.sourceId);
+    const preference = this.preferences.find(
+      (p) => p.userId === userId && p.sourceId === item.sourceId,
+    );
+    return (source?.kind === 'user' ? preference?.name : null) ?? source?.name ?? '';
+  }
+
+  userSources(userId: string): Promise<UserSourceRow[]> {
+    const rows = this.list
+      .filter(
+        (source) =>
+          source.kind === 'parent' ||
+          (source.kind === 'curated' && source.active) ||
+          (source.kind === 'user' &&
+            this.preferences.some((p) => p.userId === userId && p.sourceId === source.id)),
+      )
+      .map((source) => {
+        const preference = this.preferences.find(
+          (p) => p.userId === userId && p.sourceId === source.id,
+        );
+        return {
+          source: { ...source },
+          preference: preference ? toStoredPreference(preference) : null,
+          news: this.news.filter((item) => item.sourceId === source.id).length,
+        };
+      });
+    return Promise.resolve(rows);
+  }
+
+  sourceByUrl(url: string): Promise<StoredNewsSource | null> {
+    const found = this.list.find((s) => s.url === url);
+    return Promise.resolve(found ? { ...found } : null);
+  }
+
+  savePreference(
+    userId: string,
+    sourceId: string,
+    changes: { active?: boolean; priority?: SourcePriority; name?: string },
+    at: Date,
+  ): Promise<StoredPreference> {
+    const source = this.list.find((s) => s.id === sourceId);
+    if (source?.kind === 'parent') return Promise.reject(new Error('RB29: sem preferência'));
+    let preference = this.preferences.find((p) => p.userId === userId && p.sourceId === sourceId);
+    if (!preference) {
+      preference = {
+        userId,
+        sourceId,
+        active: true,
+        priority: DEFAULT_SOURCE_PRIORITY,
+        name: null,
+        createdAt: at,
+      };
+      this.preferences.push(preference);
+    }
+    if (changes.active !== undefined) preference.active = changes.active;
+    if (changes.priority !== undefined) preference.priority = changes.priority;
+    if (changes.name !== undefined) preference.name = changes.name;
+    return Promise.resolve(toStoredPreference(preference));
+  }
+
+  addOwnSource(
+    userId: string,
+    feed: { url: string; title: string; name: string | null },
+    limit: number,
+    at: Date,
+  ): Promise<UserSourceRow> {
+    let source = this.list.find((s) => s.url === feed.url);
+    if (source && source.kind !== 'user') {
+      return Promise.reject(new SourceAlreadyInAppError(source.id));
+    }
+    if (source && this.preferences.some((p) => p.userId === userId && p.sourceId === source?.id)) {
+      return Promise.reject(new OwnFeedExistsError());
+    }
+    const own = this.preferences.filter(
+      (p) => p.userId === userId && this.list.find((s) => s.id === p.sourceId)?.kind === 'user',
+    ).length;
+    if (own >= limit) return Promise.reject(new OwnFeedLimitError());
+    if (!source) {
+      source = {
+        id: randomUUID(),
+        kind: 'user',
+        name: feed.title,
+        url: feed.url,
+        category: null,
+        reliability: null,
+        active: true,
+        licenseCheckedAt: null,
+        lastRunAt: null,
+        lastStatus: null,
+        lastError: null,
+        failures: 0,
+        stoppedAt: null,
+      };
+      this.list.push(source);
+    }
+    const preference = {
+      userId,
+      sourceId: source.id,
+      active: true,
+      priority: DEFAULT_SOURCE_PRIORITY,
+      name: feed.name,
+      createdAt: at,
+    };
+    this.preferences.push(preference);
+    const sourceId = source.id;
+    return Promise.resolve({
+      source: { ...source },
+      preference: toStoredPreference(preference),
+      news: this.news.filter((item) => item.sourceId === sourceId).length,
+    });
+  }
+
+  /** Como o gatilho do banco: sem ninguém, a fonte e as notícias dela saem. */
+  removeOwnSource(userId: string, sourceId: string): Promise<boolean> {
+    const index = this.preferences.findIndex(
+      (p) =>
+        p.userId === userId &&
+        p.sourceId === sourceId &&
+        this.list.find((s) => s.id === sourceId)?.kind === 'user',
+    );
+    if (index < 0) return Promise.resolve(false);
+    this.preferences.splice(index, 1);
+    if (!this.preferences.some((p) => p.sourceId === sourceId)) {
+      for (let i = this.news.length - 1; i >= 0; i -= 1) {
+        if (this.news[i]?.sourceId === sourceId) this.news.splice(i, 1);
+      }
+      this.list.splice(
+        this.list.findIndex((s) => s.id === sourceId),
+        1,
+      );
+    }
+    return Promise.resolve(true);
+  }
+
+  collectableUserSources(): Promise<StoredNewsSource[]> {
+    return Promise.resolve(
+      this.list
+        .filter(
+          (s) =>
+            s.kind === 'user' &&
+            s.stoppedAt === null &&
+            this.preferences.some((p) => p.sourceId === s.id && p.active),
+        )
+        .map((s) => ({ ...s })),
+    );
+  }
+
+  setStopped(sourceId: string, stoppedAt: Date | null): Promise<void> {
+    const source = this.list.find((s) => s.id === sourceId);
+    if (source) {
+      source.stoppedAt = stoppedAt;
+      if (stoppedAt === null) source.failures = 0;
+    }
+    return Promise.resolve();
+  }
+
+  deleteUserNewsBefore(cutoff: Date): Promise<number> {
+    const before = this.news.length;
+    for (let i = this.news.length - 1; i >= 0; i -= 1) {
+      const item = this.news[i];
+      const source = this.list.find((s) => s.id === item?.sourceId);
+      if (item && source?.kind === 'user' && item.publishedAt < cutoff) this.news.splice(i, 1);
+    }
+    return Promise.resolve(before - this.news.length);
+  }
+
+  userSourceTotals(problemAfter: number): Promise<UserSourcesTotals> {
+    const user = this.list.filter((s) => s.kind === 'user');
+    return Promise.resolve({
+      total: user.length,
+      failing: user.filter((s) => s.stoppedAt === null && s.failures >= problemAfter).length,
+      stopped: user.filter((s) => s.stoppedAt !== null).length,
+    });
+  }
+
+  private feedMatches(userId: string, filter: NewsFeedFilter) {
+    const linkedMain = (item: StoredNews) =>
+      item.links.filter((l) => l.relevance === 'principal' || l.relevance === 'citado');
+    return this.news.filter(
+      (item) =>
+        this.viewOf(userId, item).visible &&
+        item.publishedAt >= filter.from &&
+        (!filter.assetId || linkedMain(item).some((l) => l.assetId === filter.assetId)) &&
+        (!filter.sector ||
+          linkedMain(item).some((l) => {
+            const sector = this.sectors.get(l.assetId);
+            return sector?.class === filter.sector?.class && sector?.code === filter.sector?.code;
+          })) &&
+        (!filter.sourceId || item.sourceId === filter.sourceId) &&
+        (!filter.sentiment ||
+          (item.classification?.sentiment === filter.sentiment.value &&
+            item.classification.modelVersionId === filter.sentiment.modelVersionId)),
+    );
+  }
+
+  newsFeed(
+    userId: string,
+    filter: NewsFeedFilter,
+    page: { offset: number; limit: number },
+  ): Promise<{ total: number; rows: NewsFeedRow[] }> {
+    const found = this.feedMatches(userId, filter).sort(this.byViewerOrder(userId));
+    const ticker = (assetId: string) =>
+      this.catalog.find((asset) => asset.assetId === assetId)?.ticker ?? '';
+    return Promise.resolve({
+      total: found.length,
+      rows: found.slice(page.offset, page.offset + page.limit).map((item) => ({
+        id: item.id,
+        title: item.title,
+        summary: item.summary,
+        url: item.url,
+        source: this.sourceName(userId, item),
+        ownSource: this.viewOf(userId, item).own,
+        publishedAt: item.publishedAt,
+        classification: classificationOf(item),
+        assets: item.links
+          .filter((l) => l.relevance === 'principal' || l.relevance === 'citado')
+          .sort(
+            (a, b) =>
+              (a.relevance === 'principal' ? 0 : 1) - (b.relevance === 'principal' ? 0 : 1) ||
+              ticker(a.assetId).localeCompare(ticker(b.assetId)),
+          )
+          .map((l) => ({ id: l.assetId, ticker: ticker(l.assetId) })),
+      })),
+    });
+  }
+
+  newsFeedTones(
+    userId: string,
+    filter: NewsFeedFilter,
+    modelVersionId: number,
+  ): Promise<Array<{ sentiment: NewsSentiment; weight: number }>> {
+    return Promise.resolve(
+      this.feedMatches(userId, filter).flatMap((item) =>
+        item.classification?.modelVersionId === modelVersionId
+          ? [{ sentiment: item.classification.sentiment, weight: this.viewOf(userId, item).weight }]
+          : [],
+      ),
+    );
   }
 
   clearParent(): Promise<number> {
@@ -401,9 +718,10 @@ export class InMemorySentimentRepository implements SentimentRepository {
   }
 
   classifiedCounts(versionId: number | null): Promise<{ total: number; classified: number }> {
+    const official = this.newsRepo.official();
     return Promise.resolve({
-      total: this.newsRepo.news.length,
-      classified: this.newsRepo.news.filter(
+      total: official.length,
+      classified: official.filter(
         (item) => versionId !== null && item.classification?.modelVersionId === versionId,
       ).length,
     });
@@ -460,9 +778,9 @@ export class InMemorySentimentRepository implements SentimentRepository {
             this.newsRepo.catalog.find((asset) => asset.assetId === link.assetId)?.ticker ?? '',
         )
         .sort();
-    const candidates = this.newsRepo.news.filter(
-      (item) => !this.labelsById.has(item.id) && !skip.includes(item.id),
-    );
+    const candidates = this.newsRepo
+      .official()
+      .filter((item) => !this.labelsById.has(item.id) && !skip.includes(item.id));
     const item =
       candidates.find((candidate) => principal(candidate).length > 0) ?? candidates[0] ?? null;
     if (!item) return Promise.resolve(null);
@@ -478,7 +796,7 @@ export class InMemorySentimentRepository implements SentimentRepository {
   }
 
   saveLabel(newsId: string, sentiment: NewsSentiment, at: Date): Promise<void> {
-    if (!this.newsRepo.news.some((n) => n.id === newsId)) {
+    if (!this.newsRepo.official().some((n) => n.id === newsId)) {
       return Promise.reject(new NewsNotFoundError());
     }
     this.labelsById.set(newsId, { label: sentiment, at });

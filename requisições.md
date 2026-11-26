@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.14
+**Versão:** 1.15
 
 | Versão | Alteração |
 |---|---|
@@ -22,6 +22,7 @@
 | 1.12 | RF20 reescrito: com cenário = carteira ([SPEC-022](specs/SPEC-022.md)), "salvar e recuperar" já é a lista de carteiras (RF11); o requisito passa a ser criar uma carteira a partir de outra ([SPEC-023](specs/SPEC-023.md)) |
 | 1.13 | RF37 reescrito: sem conexão, o app é só para consulta (RNF14, [DA08](adr/DA08-cache-dois-niveis-offline-leitura.md)); ao reconectar, atualiza os dados guardados trazendo só o que mudou, e não há lançamento pendente a sincronizar ([SPEC-032](specs/SPEC-032.md)) |
 | 1.14 | Novo RF44: o colaborador vê o app como um usuário (Visão do usuário), com carteiras de teste da própria conta e sem acesso às carteiras de outras contas ([SPEC-045](specs/SPEC-045.md)) |
+| 1.15 | Fontes de notícias do usuário ([SPEC-030](specs/SPEC-030.md), [DA19](adr/DA19-fontes-de-noticias.md)): novos RF45 (escolher as fontes e a prioridade de cada uma), RF46 (feeds próprios, até 10) e RF47 (tela Notícias com filtros); novas RB29 (a fonte pai está sempre ligada) e RB30 (as fontes dos usuários ficam fora dos números oficiais) |
 
 ---
 
@@ -108,6 +109,9 @@ Adiada para fase futura. RF23, RF24 e RF25 estão preservados na seção 9.
 | RF27 | Vincular notícias aos ativos mencionados | Sistema | Could |
 | RF28 | Classificar sentimento das notícias | Sistema | Could |
 | RF29 | Exibir notícias relacionadas na ficha do ativo | Usuário | Could |
+| RF45 | Escolher quais fontes de notícias acompanhar e definir a prioridade (alta, média ou baixa) de cada uma | Usuário | Could |
+| RF46 | Adicionar e remover feeds RSS ou Atom próprios, até 10 por usuário | Usuário | Could |
+| RF47 | Consultar as notícias das suas fontes com filtros por ativo, setor, período, sentimento e fonte | Usuário | Could |
 
 ### 2.6 Projeção e assinatura
 
@@ -218,6 +222,13 @@ Adiada para fase futura. RB14 a RB17 estão preservadas na seção 9.
 |---|---|
 | RB22 | Todo ativo pertence a exatamente uma classe — Ação (incluindo units) ou FII —, definida pelo colaborador no cadastro e não alterada depois; a classe nunca é deduzida do ticker |
 
+### 4.6 Notícias
+
+| ID | Regra |
+|---|---|
+| RB29 | A fonte pai de notícias está sempre ligada, com a maior prioridade, e não pode ser desativada, removida nem trocada pelo usuário |
+| RB30 | As notícias das fontes adicionadas pelos usuários nunca entram no treino nem na avaliação do modelo de sentimento, nem nos números oficiais do app |
+
 ---
 
 ## 5. Rastreabilidade
@@ -240,6 +251,8 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | RB11 | Tabela `CalendarioPregao` com dias úteis e feriados da B3 |
 | RB13 | Colunas monetárias em tipo `Decimal(15,2)` |
 | RB22 | `Ativo.classe` com domínio fechado (Ação, FII), preenchido no cadastro e sem operação de alteração |
+| RB29 | `FonteNoticia` do tipo pai é única e sempre ativa (restrições no banco); `PreferenciaFonte` nunca aponta para ela (gatilho) |
+| RB30 | `FonteNoticia.tipo` = usuário fica fora da amostra rotulada, da avaliação e das contagens do colaborador (consultas do módulo Notícias) |
 
 ---
 

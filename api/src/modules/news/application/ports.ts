@@ -1,11 +1,18 @@
-import type { NewsCategory, NewsSentiment } from '@simulador/shared';
+import type {
+  NewsCategory,
+  NewsFeedSector,
+  NewsSentiment,
+  SourcePriority,
+  UserSourcesTotals,
+} from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type { CatalogTicker, LinkOrigin, LinkRelevance } from '../domain/asset-links.js';
 
 /** Fonte como fica guardada (SPEC-027 §6). */
 export interface StoredNewsSource {
   id: string;
-  kind: 'parent' | 'curated';
+  /** SPEC-030: `user`, o feed próprio de um ou mais usuários. */
+  kind: 'parent' | 'curated' | 'user';
   name: string;
   url: string;
   category: NewsCategory | null;
@@ -16,6 +23,48 @@ export interface StoredNewsSource {
   lastStatus: 'success' | 'failure' | null;
   lastError: string | null;
   failures: number;
+  /** SPEC-030: o feed próprio parado depois de 24 falhas seguidas. */
+  stoppedAt: Date | null;
+}
+
+/** SPEC-030: a escolha do usuário sobre uma fonte (nas curadas, só se ele mudou algo). */
+export interface StoredPreference {
+  sourceId: string;
+  active: boolean;
+  priority: SourcePriority;
+  /** Só no feed próprio: o nome que o usuário deu, ou `null` (vale o título do feed). */
+  name: string | null;
+}
+
+/** SPEC-030: uma fonte que o usuário vê na Minhas fontes. */
+export interface UserSourceRow {
+  source: StoredNewsSource;
+  preference: StoredPreference | null;
+  /** Notícias guardadas da fonte. */
+  news: number;
+}
+
+/** SPEC-030: o que filtra a tela Notícias; sempre só as notícias que o usuário vê. */
+export interface NewsFeedFilter {
+  from: Date;
+  assetId?: string;
+  sector?: NewsFeedSector;
+  /** Só com o modelo visível: as classificadas por ele com esse tom. */
+  sentiment?: { value: NewsSentiment; modelVersionId: number };
+  sourceId?: string;
+}
+
+export interface NewsFeedRow {
+  id: string;
+  title: string;
+  summary: string | null;
+  url: string;
+  source: string;
+  ownSource: boolean;
+  publishedAt: Date;
+  classification: StoredClassification | null;
+  /** Principal e citado, principais primeiro. */
+  assets: Array<{ id: string; ticker: string }>;
 }
 
 /** Notícia a guardar. O texto completo só existe na fonte pai. */
@@ -87,6 +136,51 @@ export interface NewsRepository {
   latestNews(limit: number): Promise<LatestNewsRow[]>;
   /** Quantas notícias há e quantas têm pelo menos um vínculo. */
   linkCounts(): Promise<{ total: number; linked: number }>;
+  // --- SPEC-030: fontes do usuário ---
+  /** A pai, as curadas ligadas pelo colaborador e os feeds próprios do usuário. */
+  userSources(userId: string): Promise<UserSourceRow[]>;
+  /** A fonte de qualquer tipo com este endereço, ou `null`. */
+  sourceByUrl(url: string): Promise<StoredNewsSource | null>;
+  /** Grava a escolha do usuário (cria se não havia). */
+  savePreference(
+    userId: string,
+    sourceId: string,
+    changes: { active?: boolean; priority?: SourcePriority; name?: string },
+    at: Date,
+  ): Promise<StoredPreference>;
+  /**
+   * Liga o usuário ao feed próprio, criando a fonte se ninguém a tinha. Numa transação, confere o
+   * limite (OwnFeedLimitError), se ele já tinha (OwnFeedExistsError) e se o endereço é de uma
+   * fonte do app (SourceAlreadyInAppError).
+   */
+  addOwnSource(
+    userId: string,
+    feed: { url: string; title: string; name: string | null },
+    limit: number,
+    at: Date,
+  ): Promise<UserSourceRow>;
+  /** `false` se o usuário não tinha o feed. Sem ninguém, a fonte e as notícias saem (gatilho). */
+  removeOwnSource(userId: string, sourceId: string): Promise<boolean>;
+  /** Feeds próprios a ler: não parados e com pelo menos um usuário com ele ligado. */
+  collectableUserSources(): Promise<StoredNewsSource[]>;
+  /** Para (com a data) ou volta a ler (`null`, zerando as falhas) o feed próprio. */
+  setStopped(sourceId: string, stoppedAt: Date | null): Promise<void>;
+  /** Apaga as notícias dos feeds próprios publicadas antes de `cutoff`. Devolve quantas. */
+  deleteUserNewsBefore(cutoff: Date): Promise<number>;
+  /** Os totais dos feeds dos usuários, para o colaborador (sem os endereços). */
+  userSourceTotals(problemAfter: number): Promise<UserSourcesTotals>;
+  /** A tela Notícias: por dia, pelo peso da fonte dentro do dia e pelo horário. */
+  newsFeed(
+    userId: string,
+    filter: NewsFeedFilter,
+    page: { offset: number; limit: number },
+  ): Promise<{ total: number; rows: NewsFeedRow[] }>;
+  /** O tom e o peso de cada notícia do filtro classificada pela versão. */
+  newsFeedTones(
+    userId: string,
+    filter: NewsFeedFilter,
+    modelVersionId: number,
+  ): Promise<Array<{ sentiment: NewsSentiment; weight: number }>>;
   /** SPEC-029: o ativo está no catálogo (ativo ou desativado). */
   assetExists(assetId: string): Promise<boolean>;
   /**
@@ -106,6 +200,8 @@ export interface NewsRepository {
 }
 
 export interface AssetNewsFilter {
+  /** SPEC-030: quem vê; só as notícias das fontes ligadas para ele. */
+  viewerId: string;
   relevances: readonly LinkRelevance[];
   from?: Date;
   to?: Date;
@@ -126,6 +222,8 @@ export interface AssetNewsRow {
   publishedAt: Date;
   relevance: LinkRelevance;
   classification: StoredClassification | null;
+  /** SPEC-030: de um feed próprio do usuário. */
+  ownSource: boolean;
 }
 
 export interface AssetNewsDate {
@@ -256,7 +354,12 @@ export interface FeedFetcher {
   fetch(url: string): Promise<string>;
 }
 
-export type NewsTask = 'noticias_novas' | 'noticias_arquivo' | 'noticias_feeds';
+export type NewsTask =
+  | 'noticias_novas'
+  | 'noticias_arquivo'
+  | 'noticias_feeds'
+  // SPEC-030
+  | 'noticias_feeds_usuario';
 
 /** O mesmo registro de execuções das ingestões (SPEC-008, DA14). */
 export interface NewsRunLog {
@@ -283,6 +386,9 @@ export class FeedAddressError extends Error {
     super(reason === 'not_https' ? 'o feed precisa ser https' : 'endereço da rede interna');
   }
 }
+
+/** SPEC-030: a resposta do feed passou de 2 MB (o motivo vai para o usuário). */
+export const FEED_TOO_LARGE = 'feed maior que 2 MB';
 
 /** Erro da fonte: `blocked` (403 ou 429) para tudo; `retryable` tenta de novo; `invalid` não. */
 export class NewsSourceError extends Error {
