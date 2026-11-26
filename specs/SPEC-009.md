@@ -2,7 +2,7 @@
 
 | Campo | Conteúdo |
 |---|---|
-| Status | Aprovada pelo Luís em 02/11/2026 e implementada (ver §9). **Mudada pela [SPEC-040](SPEC-040.md):** a coleta passa a usar a lista da brapi (todos os ativos, sem gastar a cota), o atraso informado passa a 45 minutos e o fechamento provisório sai |
+| Status | Aprovada pelo Luís em 02/11/2026 e implementada (ver §9). **Mudada pela [SPEC-040](SPEC-040.md):** a coleta passa a usar a lista da brapi (todos os ativos, sem gastar a cota), o atraso informado passa a 45 minutos e o fechamento provisório sai. **Mudada pela [SPEC-046](SPEC-046.md) (21/11/2026):** a coluna "Último preço" da lista mostra o mais recente entre a cotação do pregão e o último fechamento da B3 ("Fechamento de {data} (B3)"), e não fica mais "Sem cotação ainda" quando há histórico |
 | Fase | 2 — Dados de mercado ([mapa de specs](mapa_specs.md)) |
 | Prioridade | *Must* |
 | Depende de | [SPEC-005](SPEC-005.md) (calendário de pregão), [SPEC-006](SPEC-006.md) (catálogo), [SPEC-008](SPEC-008.md) (padrão de ingestão e fechamento diário) |

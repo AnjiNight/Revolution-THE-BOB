@@ -146,7 +146,7 @@ function AssetTable({
                   <span className="asset-name">{asset.name}</span>
                   {/* Janela estreita: o preço vai para baixo do nome. */}
                   <span className="narrow-only quote-narrow">
-                    <QuoteText quote={asset.quote} />
+                    <QuoteText quote={asset.quote} lastClose={asset.lastClose} />
                   </span>
                 </div>
               </div>
@@ -158,7 +158,7 @@ function AssetTable({
             </td>
             <td>{sectorName(asset.class, asset.sector)}</td>
             <td className="wide-only">
-              <QuoteText quote={asset.quote} />
+              <QuoteText quote={asset.quote} lastClose={asset.lastClose} />
             </td>
           </tr>
         ))}

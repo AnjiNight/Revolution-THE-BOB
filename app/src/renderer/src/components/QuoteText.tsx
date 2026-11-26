@@ -1,11 +1,13 @@
 import {
   FREE_QUOTE_DELAY_MINUTES,
+  latestPrice,
+  type AssetClose,
   type AssetQuote,
   type QuoteCollectionStatus,
 } from '@simulador/shared';
 import { Info, Warning } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { formatChange, formatMoney, quoteMoment } from '../format';
+import { formatCalendarDay, formatChange, formatMoney, quoteMoment } from '../format';
 
 /** Cor da variação (a variação também traz o sinal, RNF18). */
 export function changeDirection(change: string | null): 'up' | 'down' | 'flat' {
@@ -15,11 +17,46 @@ export function changeDirection(change: string | null): 'up' | 'down' | 'flat' {
 
 /**
  * Último preço, variação do dia e horário da cotação (SPEC-009 §5.3), sempre com o atraso e nunca
- * como "tempo real" (DA16). A variação traz o sinal: não depende só da cor (RNF18).
+ * como "tempo real" (DA16). A variação traz o sinal: não depende só da cor (RNF18). SPEC-046: com o
+ * último fechamento da B3, mostra o mais recente dos dois.
  */
-export function QuoteText({ quote }: { quote: AssetQuote | null }) {
+export function QuoteText({
+  quote,
+  lastClose = null,
+}: {
+  quote: AssetQuote | null;
+  lastClose?: AssetClose | null;
+}) {
+  const { t } = useTranslation();
+  const shown = latestPrice(quote, lastClose);
+  if (!shown) return <span className="quote-none">{t('assets.quote.none')}</span>;
+  if (shown.kind === 'close') return <CloseText close={shown.close} />;
+  return <SessionQuote quote={shown.quote} />;
+}
+
+/** SPEC-046: o último fechamento da B3, com o dia e a variação sobre o anterior. */
+function CloseText({ close }: { close: AssetClose }) {
   const { t, i18n } = useTranslation();
-  if (!quote) return <span className="quote-none">{t('assets.quote.none')}</span>;
+  return (
+    <span className="quote">
+      <span className="quote-line">
+        <span className="quote-price">{formatMoney(close.price, i18n.language)}</span>
+        {close.change !== null && (
+          <span className={`quote-change is-${changeDirection(close.change)}`}>
+            {formatChange(close.change, i18n.language)}
+          </span>
+        )}
+      </span>
+      <span className="quote-time">
+        {t('assets.quote.close', { date: formatCalendarDay(close.date, i18n.language) })}
+      </span>
+    </span>
+  );
+}
+
+/** A cotação do pregão (brapi), com o horário e o atraso (SPEC-009). */
+function SessionQuote({ quote }: { quote: AssetQuote }) {
+  const { t, i18n } = useTranslation();
 
   const moment = quoteMoment(quote.at, i18n.language);
   const direction = changeDirection(quote.change);

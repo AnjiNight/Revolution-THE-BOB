@@ -191,6 +191,37 @@ O sinal de vida do processador ([SPEC-011](specs/SPEC-011.md)): uma linha só, r
 | visto_em | datetime | O último sinal |
 | intervalo_segundos | integer | De quanto em quanto tempo ele grava o sinal |
 
+### PLANO
+Os planos ([SPEC-025](specs/SPEC-025.md)): Gratuito, Assinante mensal e Assinante anual. Os preços ficam aqui, não no código.
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| codigo | enum | `gratuito`, `assinante_mensal` ou `assinante_anual` |
+| preco_centavos | integer | Preço do período em centavos de real (1990 = R$ 19,90) |
+| duracao_dias | integer | 30 ou 365; vazio no Gratuito |
+| ativo | boolean | Só os ativos aparecem e se assinam |
+
+### ASSINATURA
+A assinatura com pagamento simulado ([SPEC-025](specs/SPEC-025.md)). "Assinante" não é perfil guardado: é calculado pela validade (início ≤ agora < fim, ou renovação ligada à espera da tarefa diária).
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| plano | enum | `assinante_mensal` ou `assinante_anual` |
+| inicio | datetime | Quando foi assinada |
+| fim | datetime | Fim do período já "pago"; cada renovação estende |
+| renovacao_automatica | boolean | Desligada ao cancelar; o acesso segue até o fim |
+| cancelada_em | datetime | Quando a renovação foi cancelada, ou vazio |
+
+### PAGAMENTO_SIMULADO
+Um por período "pago": a assinatura e cada renovação. Sempre aprovado, sem cobrança e sem nenhum dado de pagamento; não muda depois de gravado (DA09).
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| valor_centavos | integer | O preço do plano no momento |
+| periodo_inicio, periodo_fim | datetime | O período coberto |
+| situacao | enum | `aprovado` |
+| registrado_em | datetime | Quando foi gravado |
+
 ## Relacionamentos
 
 | Origem | Cardinalidade | Destino | Nome |
@@ -198,6 +229,9 @@ O sinal de vida do processador ([SPEC-011](specs/SPEC-011.md)): uma linha só, r
 | USUARIO | 1 : N | CARTEIRA | possui |
 | USUARIO | 1 : N | CONSENTIMENTO | aceita |
 | USUARIO | 1 : N | TOKEN_RENOVACAO | mantém sessão |
+| USUARIO | 1 : N | ASSINATURA | assina ([SPEC-025](specs/SPEC-025.md)) |
+| PLANO | 1 : N | ASSINATURA | define o preço e a duração |
+| ASSINATURA | 1 : N | PAGAMENTO_SIMULADO | registra |
 | CARTEIRA | 1 : N | LANCAMENTO_CAIXA | registra |
 | CARTEIRA | 1 : N | TRANSACAO | registra |
 | CARTEIRA | 1 : N | SIMULACAO | origina |

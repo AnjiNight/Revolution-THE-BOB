@@ -5,6 +5,8 @@ export * from './calendar.js';
 export * from './fundamentals.js';
 export * from './health.js';
 export * from './indexes.js';
+export * from './market-today.js';
 export * from './portfolios.js';
 export * from './news.js';
+export * from './subscriptions.js';
 export * from './tasks.js';

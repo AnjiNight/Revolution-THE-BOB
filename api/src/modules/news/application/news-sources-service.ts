@@ -47,9 +47,10 @@ export class NewsSourcesService {
   }
 
   async status(): Promise<NewsSourcesStatus> {
-    const [sources, counts] = await Promise.all([
+    const [sources, counts, duplicates] = await Promise.all([
       this.deps.news.sources(),
       this.deps.news.newsCounts(),
+      this.deps.news.duplicateCounts(),
     ]);
     const parent = sources.find((source) => source.kind === 'parent');
     const archive = parent ? await this.deps.news.archive(parent.id) : null;
@@ -58,7 +59,9 @@ export class NewsSourcesService {
         .sort((a, b) =>
           a.kind !== b.kind ? (a.kind === 'parent' ? -1 : 1) : a.name.localeCompare(b.name),
         )
-        .map((source) => toPublic(source, counts.get(source.id) ?? 0)),
+        .map((source) =>
+          toPublic(source, counts.get(source.id) ?? 0, duplicates.get(source.id) ?? 0),
+        ),
       archive: archive
         ? {
             done: archive.done,
@@ -126,7 +129,7 @@ export class NewsSourcesService {
       after[key] = value;
     }
     if (Object.keys(after).length === 0) {
-      return toPublic(current, (await this.deps.news.newsCounts()).get(id) ?? 0);
+      return toPublic(current, ...(await this.countsOf(id)));
     }
     const at = this.clock();
     const updated = await this.deps.news.updateSource(id, input, at, {
@@ -137,11 +140,20 @@ export class NewsSourcesService {
       entityId: id,
       details: { before, after },
     });
-    return toPublic(updated, (await this.deps.news.newsCounts()).get(id) ?? 0);
+    return toPublic(updated, ...(await this.countsOf(id)));
+  }
+
+  /** As notícias e as repetidas (SPEC-047) de uma fonte. */
+  private async countsOf(id: string): Promise<[number, number]> {
+    const [counts, duplicates] = await Promise.all([
+      this.deps.news.newsCounts(),
+      this.deps.news.duplicateCounts(),
+    ]);
+    return [counts.get(id) ?? 0, duplicates.get(id) ?? 0];
   }
 }
 
-function toPublic(source: StoredNewsSource, news: number): NewsSource {
+function toPublic(source: StoredNewsSource, news: number, duplicates = 0): NewsSource {
   return {
     id: source.id,
     kind: source.kind,
@@ -155,5 +167,6 @@ function toPublic(source: StoredNewsSource, news: number): NewsSource {
     lastError: source.lastError,
     failures: source.failures,
     news,
+    duplicates,
   };
 }

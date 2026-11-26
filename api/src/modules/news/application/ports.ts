@@ -1,6 +1,7 @@
 import type { NewsCategory, NewsSentiment } from '@simulador/shared';
 import type { AuditEntry } from '../../audit/application/audit.js';
 import type { CatalogTicker, LinkOrigin, LinkRelevance } from '../domain/asset-links.js';
+import type { DuplicateCandidate, DuplicateReason } from '../domain/duplicates.js';
 
 /** Fonte como fica guardada (SPEC-027 §6). */
 export interface StoredNewsSource {
@@ -44,6 +45,25 @@ export interface NewsRepository {
   parentSource(): Promise<StoredNewsSource | null>;
   /** Quantas notícias cada fonte tem, pelo id da fonte. */
   newsCounts(): Promise<Map<string, number>>;
+  /** SPEC-047: quantas repetidas cada fonte trouxe, pelo id da fonte. */
+  duplicateCounts(): Promise<Map<string, number>>;
+  /**
+   * SPEC-047: notícias ainda não conferidas, na ordem em que valem como original (a primeira
+   * coletada; no empate, a fonte pai e depois a maior confiabilidade).
+   */
+  newsToCheck(limit: number): Promise<DuplicateCandidate[]>;
+  /** SPEC-047: as já conferidas que não são repetidas, publicadas em [`from`, `to`], na mesma ordem. */
+  originalsAround(from: Date, to: Date): Promise<DuplicateCandidate[]>;
+  /**
+   * SPEC-047: marca a notícia como conferida e, se é repetida, liga à original numa transação: a
+   * repetida perde o vínculo e o sentimento, e o rótulo da equipe passa para a original se ela não
+   * tem um.
+   */
+  markChecked(
+    newsId: string,
+    duplicateOf: { originalId: string; reason: DuplicateReason } | null,
+    at: Date,
+  ): Promise<void>;
   /** Endereço → data de atualização guardada, das notícias da fonte. */
   storedUrls(sourceId: string): Promise<Map<string, Date | null>>;
   /**
@@ -126,6 +146,8 @@ export interface AssetNewsRow {
   publishedAt: Date;
   relevance: LinkRelevance;
   classification: StoredClassification | null;
+  /** SPEC-047: a mesma matéria em outras fontes. */
+  alsoIn: Array<{ source: string; url: string }>;
 }
 
 export interface AssetNewsDate {

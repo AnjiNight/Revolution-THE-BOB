@@ -27,6 +27,8 @@ import { PortfolioCash } from './PortfolioCash';
 import { PortfolioPerformance } from './PortfolioPerformance';
 import { PortfolioPositions } from './PortfolioPositions';
 import { ReportButton } from './PortfolioReport';
+import { PremiumLock } from './PremiumLock';
+import { usePremium } from '../plan';
 import type { TradeAsset } from './TradeForm';
 import { TextField } from './TextField';
 
@@ -71,6 +73,8 @@ export function Portfolios({
   const [selecting, setSelecting] = useState(false);
   const [chosen, setChosen] = useState<string[]>([]);
   const compareButton = useRef<HTMLButtonElement>(null);
+  // SPEC-025: comparar é do plano Assinante; sem ele, o botão leva à tela Plano.
+  const premium = usePremium();
   const limitId = useId();
 
   const load = useCallback(() => {
@@ -148,7 +152,12 @@ export function Portfolios({
                 <Plus weight="bold" />
               </span>
             </button>
-            {canCompare && (
+            {canCompare && premium === false && (
+              <PremiumLock feature="portfolio_comparison">
+                {t('portfolios.compare.start')}
+              </PremiumLock>
+            )}
+            {canCompare && premium !== false && (
               <button
                 ref={compareButton}
                 type="button"
@@ -811,6 +820,8 @@ export function PortfolioPage({
   const copyButton = useRef<HTMLButtonElement>(null);
   // SPEC-038: o relatório em PDF usa o período escolhido na Rentabilidade.
   const [reportQuery, setReportQuery] = useState<PerformanceQuery>({ period: 'all' });
+  // SPEC-025: comparar e o relatório são do plano Assinante.
+  const premium = usePremium();
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'ready'; portfolio: Portfolio }
@@ -919,6 +930,7 @@ export function PortfolioPage({
                   </span>
                 </button>
                 <ReportButton
+                  premium={premium}
                   portfolio={state.portfolio}
                   query={reportQuery}
                   version={version}
@@ -936,15 +948,24 @@ export function PortfolioPage({
                   trades: justCopied.trades,
                 })}
               </span>
-              <button
-                type="button"
-                className="pill pill-ghost pill-small"
-                onClick={() =>
-                  onCompare([(state.portfolio.copiedFrom as { id: string }).id, state.portfolio.id])
-                }
-              >
-                {t('portfolios.copy.compareBoth')}
-              </button>
+              {premium === false ? (
+                <PremiumLock feature="portfolio_comparison" small>
+                  {t('portfolios.copy.compareBoth')}
+                </PremiumLock>
+              ) : (
+                <button
+                  type="button"
+                  className="pill pill-ghost pill-small"
+                  onClick={() =>
+                    onCompare([
+                      (state.portfolio.copiedFrom as { id: string }).id,
+                      state.portfolio.id,
+                    ])
+                  }
+                >
+                  {t('portfolios.copy.compareBoth')}
+                </button>
+              )}
             </p>
           )}
           {copying && (

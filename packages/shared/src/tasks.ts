@@ -18,6 +18,10 @@ export const INGESTION_TASKS = [
   'noticias_novas',
   'noticias_arquivo',
   'noticias_feeds',
+  // SPEC-048: o Ibovespa e o dólar do dia pela Yahoo Finance.
+  'mercado_yahoo',
+  // SPEC-025: renova as assinaturas que vencem (pagamento simulado).
+  'renovacao_assinaturas',
 ] as const;
 export type IngestionTaskCode = (typeof INGESTION_TASKS)[number];
 
@@ -26,7 +30,15 @@ export function isIngestionTask(value: unknown): value is IngestionTaskCode {
 }
 
 /** De onde cada tarefa traz os dados (`feeds`: os RSS das fontes curadas, SPEC-027). */
-export type TaskSource = 'b3' | 'brapi' | 'bcb' | 'investidor10' | 'feeds';
+export type TaskSource =
+  | 'b3'
+  | 'brapi'
+  | 'bcb'
+  | 'investidor10'
+  | 'feeds'
+  | 'yahoo'
+  /** SPEC-025: o próprio app (as assinaturas, sem fonte externa). */
+  | 'app';
 
 /**
  * Quando a tarefa roda, no horário de Brasília. `daily`: todo dia, nos horários (o Investidor10
@@ -37,7 +49,9 @@ export type TaskSchedule =
   | { kind: 'daily'; times: string[]; sundaysAll?: true }
   | { kind: 'weekly'; times: string[] }
   | { kind: 'every'; minutes: number }
-  | { kind: 'session'; minutes: number };
+  | { kind: 'session'; minutes: number }
+  /** SPEC-048: o Ibovespa durante o pregão e o dólar nos dias úteis, cada um no seu intervalo. */
+  | { kind: 'market'; indexMinutes: number; dollarMinutes: number };
 
 /** Situação de uma execução terminada (SPEC-008 e 009). A interrompida é uma falha (SPEC-011). */
 export type TaskRunStatus =

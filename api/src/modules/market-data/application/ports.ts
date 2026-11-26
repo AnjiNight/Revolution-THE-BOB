@@ -5,6 +5,7 @@ import type {
   IndicatorCode,
   IngestionTaskCode,
   IsoDate,
+  MarketTodaySymbol,
   NonTradingDay,
   SectorCode,
 } from '@simulador/shared';
@@ -671,4 +672,44 @@ export interface ClassificationRepository {
 export interface CorporateEventRepository {
   /** Substitui os eventos do ativo, de uma vez. */
   replace(assetId: string, events: CorporateEvent[], at: Date): Promise<void>;
+}
+
+/** SPEC-048: uma leitura do Ibovespa ou do dólar, como a fonte informou. */
+export interface MarketQuote {
+  /** Horário da leitura que a fonte informou. */
+  at: Date;
+  value: string;
+  previousClose: string | null;
+}
+
+/** SPEC-048: a leitura guardada, com quando ela foi coletada pela última vez. */
+export interface StoredMarketQuote extends MarketQuote {
+  symbol: MarketTodaySymbol;
+  collectedAt: Date;
+}
+
+/** SPEC-048: a fonte do "Mercado hoje" (Yahoo Finance). */
+export interface MarketQuoteSource {
+  quote(symbol: MarketTodaySymbol): Promise<MarketQuote>;
+}
+
+export type MarketQuoteSourceErrorKind = 'unavailable' | 'no_data' | 'bad_response';
+
+export class MarketQuoteSourceError extends Error {
+  constructor(
+    readonly kind: MarketQuoteSourceErrorKind,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'MarketQuoteSourceError';
+  }
+}
+
+/** SPEC-048: as leituras do "Mercado hoje", guardadas por 30 dias. */
+export interface MarketQuoteRepository {
+  /** Grava; a leitura já guardada (mesmo horário) só tem o `collectedAt` renovado. */
+  save(quote: StoredMarketQuote): Promise<void>;
+  latest(symbol: MarketTodaySymbol): Promise<StoredMarketQuote | null>;
+  /** Apaga as leituras de antes do instante (pelo horário da leitura). */
+  deleteBefore(before: Date): Promise<number>;
 }

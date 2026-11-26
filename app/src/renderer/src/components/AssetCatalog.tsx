@@ -349,7 +349,7 @@ export function AssetCatalog({
                               {t(`assets.class.${asset.class}`)}
                             </span>
                             <span className="narrow-only quote-narrow">
-                              <QuoteText quote={asset.quote} />
+                              <QuoteText quote={asset.quote} lastClose={asset.lastClose} />
                             </span>
                           </div>
                         </div>
@@ -361,7 +361,7 @@ export function AssetCatalog({
                       </td>
                       <td>{sectorName(asset.class, asset.sector)}</td>
                       <td className="wide-only">
-                        <QuoteText quote={asset.quote} />
+                        <QuoteText quote={asset.quote} lastClose={asset.lastClose} />
                       </td>
                       <td>
                         <span

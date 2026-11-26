@@ -2,6 +2,7 @@ import type {
   Asset,
   AssetClass,
   AssetOrigin,
+  AssetClose,
   AssetQuote,
   CatalogAsset,
   SectorCode,
@@ -40,6 +41,7 @@ export function toPublicAsset(
   asset: StoredAsset,
   quote: AssetQuote | null = null,
   hasLogo = false,
+  lastClose: AssetClose | null = null,
 ): Asset {
   return {
     id: asset.id,
@@ -48,6 +50,7 @@ export function toPublicAsset(
     class: asset.assetClass,
     sector: asset.sector,
     quote,
+    lastClose,
     hasLogo,
   };
 }
@@ -57,9 +60,10 @@ export function toCatalogAsset(
   asset: StoredAsset,
   quote: AssetQuote | null = null,
   hasLogo = false,
+  lastClose: AssetClose | null = null,
 ): CatalogAsset {
   return {
-    ...toPublicAsset(asset, quote, hasLogo),
+    ...toPublicAsset(asset, quote, hasLogo, lastClose),
     active: isActive(asset),
     createdAt: asset.createdAt.toISOString(),
     updatedAt: asset.updatedAt.toISOString(),

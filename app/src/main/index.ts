@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isPaidPlanCode } from '@simulador/shared';
 import type {
   AccountDeletionConfirmInput,
   AccountDeletionRequestInput,
@@ -39,6 +40,7 @@ import {
   CONNECTION_CHANNELS,
   FUNDAMENTALS_CHANNELS,
   INDEX_CHANNELS,
+  SUBSCRIPTION_CHANNELS,
   isAppLanguage,
   NEWS_CHANNELS,
   NOTIFY_CHANNELS,
@@ -163,7 +165,12 @@ app.whenReady().then(() => {
     serverUrl,
     allowInsecureLocalhost,
     store: new EncryptedFileSecretStore(join(app.getPath('userData'), 'sessao.bin'), osEncryption),
-    cache: new EncryptedFileOfflineCache(join(app.getPath('userData'), 'cache'), osEncryption),
+    // Pasta só da cópia local: no Windows, "cache" é a mesma pasta que o "Cache" do Chromium, que
+    // fica aberta enquanto o app roda; apagá-la na troca de conta falhava com EBUSY.
+    cache: new EncryptedFileOfflineCache(
+      join(app.getPath('userData'), 'copia-local'),
+      osEncryption,
+    ),
     onConnectionChange: (event) => {
       monitor?.setOffline(event.status === 'offline');
       broadcast(event);
@@ -374,6 +381,18 @@ app.whenReady().then(() => {
   ipcMain.handle(INDEX_CHANNELS.cdi, () => auth.cdiStatus());
   // Ibovespa e IFIX (SPEC-020): também só colaborador.
   ipcMain.handle(INDEX_CHANNELS.marketIndexes, () => auth.marketIndexStatus());
+  // SPEC-048: o painel "Mercado hoje", para qualquer pessoa conectada.
+  ipcMain.handle(INDEX_CHANNELS.marketToday, () => auth.marketToday());
+  // SPEC-025: planos e assinatura (pagamento simulado); o plano vem da interface e é conferido.
+  ipcMain.handle(SUBSCRIPTION_CHANNELS.plans, () => auth.plans());
+  ipcMain.handle(SUBSCRIPTION_CHANNELS.mine, () => auth.mySubscription());
+  ipcMain.handle(SUBSCRIPTION_CHANNELS.subscribe, (_event, plan: unknown) =>
+    isPaidPlanCode(plan)
+      ? auth.subscribe(plan)
+      : Promise.resolve({ ok: false as const, error: 'plan_not_found' as const }),
+  );
+  ipcMain.handle(SUBSCRIPTION_CHANNELS.cancel, () => auth.cancelSubscription());
+  ipcMain.handle(SUBSCRIPTION_CHANNELS.resume, () => auth.resumeSubscription());
 
   // Indicadores e proventos (SPECs 041 e 042); o cliente confere o período antes do servidor.
   ipcMain.handle(FUNDAMENTALS_CHANNELS.fundamentals, (_event, id: string) =>

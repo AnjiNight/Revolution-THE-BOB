@@ -24,11 +24,13 @@ interface AppShellProps {
   connection?: ShellConnection;
   user: PublicUser;
   /** SPEC-011: a tela Tarefas não tem item no menu (abre pelo Início). */
-  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'tasks' | 'news';
+  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'tasks' | 'news' | 'plan';
   onHome: () => void;
   /** SPEC-012: só para o usuário. */
   onPortfolios: () => void;
   onProfile: () => void;
+  /** SPEC-025: a tela Plano, só no menu do usuário. */
+  onPlan: () => void;
   /** SPEC-005: só na Área do colaborador. */
   onCalendar: () => void;
   /** SPEC-006: busca (usuário) ou catálogo (colaborador). */
@@ -58,6 +60,7 @@ export function AppShell({
   onHome,
   onPortfolios,
   onProfile,
+  onPlan,
   onCalendar,
   onAssets,
   onNews,
@@ -134,6 +137,13 @@ export function AppShell({
                     <Eye weight="bold" />
                   </span>
                   <span className="user-view-text">{t('shell.userView')}</span>
+                </button>
+              </li>
+            )}
+            {role === 'user' && (
+              <li>
+                <button type="button" aria-current={ariaCurrent('plan')} onClick={onPlan}>
+                  {t('shell.plan')}
                 </button>
               </li>
             )}

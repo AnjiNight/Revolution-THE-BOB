@@ -29,6 +29,7 @@ import { formatShare } from './PortfolioAllocation';
 import { formatAxisPercent, pathOf, signed, useChartCursor } from './PortfolioPerformance';
 import { changeDirection } from './QuoteText';
 import { TextField } from './TextField';
+import { useOpenPlan } from '../plan';
 
 type Period = { period: ComparisonPeriod } | { from: IsoDate; to: IsoDate };
 
@@ -53,6 +54,7 @@ export function PortfolioComparison({
   onOpen: (id: string) => void;
   onSessionExpired: () => void;
 }) {
+  const openPlan = useOpenPlan();
   const { t, i18n } = useTranslation();
   const language = i18n.language;
   const heading = useRef<HTMLHeadingElement>(null);
@@ -232,6 +234,19 @@ export function PortfolioComparison({
             {failure.fields?.ids
               ? t(`fieldErrors.${failure.fields.ids}`)
               : t(`authErrors.${failure.error}`)}
+            {/* SPEC-025: sem assinatura (ou ela venceu com a tela aberta), o caminho para assinar. */}
+            {failure.error === 'premium_required' && (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  className="pill pill-ghost pill-small"
+                  onClick={() => openPlan('portfolio_comparison')}
+                >
+                  {t('plan.seePlans')}
+                </button>
+              </>
+            )}
           </p>
         )}
 

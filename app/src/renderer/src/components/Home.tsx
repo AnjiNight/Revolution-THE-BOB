@@ -27,6 +27,8 @@ import { useTranslation } from 'react-i18next';
 import { useNeedsConnection } from '../connection';
 import { formatCalendarDay, formatDate } from '../format';
 import { whenText } from '../tasks';
+import { MarketTodayPanel } from './MarketToday';
+import { SubscriptionEnding } from './SubscriptionEnding';
 import { isTermsOutdated, TermsUpdateNotice } from './Profile';
 
 interface HomeProps {
@@ -139,6 +141,10 @@ export function Home({
           </span>
         </button>
       </header>
+
+      {/* SPEC-048: o Ibovespa e o dólar do dia, abaixo das boas-vindas (também na Visão do usuário). */}
+      {user.role === 'user' && <SubscriptionEnding />}
+      {user.role === 'user' && <MarketTodayPanel />}
 
       <section className="upcoming available" aria-labelledby="available-title">
         <h2 id="available-title" className="section-label">

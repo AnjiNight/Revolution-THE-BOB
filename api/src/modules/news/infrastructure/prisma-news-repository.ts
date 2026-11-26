@@ -15,6 +15,7 @@ import type {
   StoredNewsSource,
 } from '../application/ports.js';
 import type { CatalogTicker, LinkRelevance } from '../domain/asset-links.js';
+import type { DuplicateCandidate, DuplicateReason } from '../domain/duplicates.js';
 import { NewsSourceExistsError, NewsSourceNotFoundError } from '../domain/errors.js';
 import { storedClassification } from './prisma-sentiment-repository.js';
 
@@ -41,20 +42,40 @@ function toStored(row: FonteNoticia): StoredNewsSource {
 }
 
 /** SPEC-029: os vínculos do ativo com as relevâncias pedidas, pela data de publicação. */
+interface CandidateRow {
+  id: string;
+  fonte_id: string;
+  url: string;
+  titulo: string;
+  publicada_em: Date;
+}
+
+function toCandidate(row: CandidateRow): DuplicateCandidate {
+  return {
+    id: row.id,
+    sourceId: row.fonte_id,
+    url: row.url,
+    title: row.titulo,
+    publishedAt: row.publicada_em,
+  };
+}
+
 function linkWhere(assetId: string, filter: AssetNewsFilter): Prisma.NoticiaAtivoWhereInput {
   return {
     ativoId: assetId,
     relevancia: { in: [...filter.relevances] },
-    ...(filter.from || filter.to
-      ? {
-          noticia: {
+    // SPEC-047: a repetida não tem vínculo, mas a condição deixa a regra explícita.
+    noticia: {
+      repetidaDeId: null,
+      ...(filter.from || filter.to
+        ? {
             publicadaEm: {
               ...(filter.from ? { gte: filter.from } : {}),
               ...(filter.to ? { lt: filter.to } : {}),
             },
-          },
-        }
-      : {}),
+          }
+        : {}),
+    },
   };
 }
 
@@ -86,6 +107,87 @@ export class PrismaNewsRepository implements NewsRepository {
   async newsCounts(): Promise<Map<string, number>> {
     const groups = await this.prisma.noticia.groupBy({ by: ['fonteId'], _count: { _all: true } });
     return new Map(groups.map((group) => [group.fonteId, group._count._all]));
+  }
+
+  async duplicateCounts(): Promise<Map<string, number>> {
+    const groups = await this.prisma.noticia.groupBy({
+      by: ['fonteId'],
+      where: { repetidaDeId: { not: null } },
+      _count: { _all: true },
+    });
+    return new Map(groups.map((group) => [group.fonteId, group._count._all]));
+  }
+
+  /**
+   * SPEC-047: a ordem em que valem como original: a primeira coletada; no empate, a fonte pai e
+   * depois a maior confiabilidade.
+   */
+  async newsToCheck(limit: number): Promise<DuplicateCandidate[]> {
+    const rows = await this.prisma.$queryRaw<CandidateRow[]>`
+      SELECT n.id, n.fonte_id, n.url, n.titulo, n.publicada_em
+      FROM noticia n JOIN fonte_noticia f ON f.id = n.fonte_id
+      WHERE n.repeticao_conferida_em IS NULL
+      ORDER BY n.coletada_em, (f.tipo = 'pai') DESC, f.confiabilidade DESC NULLS LAST, n.id
+      LIMIT ${limit}`;
+    return rows.map(toCandidate);
+  }
+
+  async originalsAround(from: Date, to: Date): Promise<DuplicateCandidate[]> {
+    const rows = await this.prisma.$queryRaw<CandidateRow[]>`
+      SELECT n.id, n.fonte_id, n.url, n.titulo, n.publicada_em
+      FROM noticia n JOIN fonte_noticia f ON f.id = n.fonte_id
+      WHERE n.repeticao_conferida_em IS NOT NULL AND n.repetida_de_id IS NULL
+        AND n.publicada_em BETWEEN ${from} AND ${to}
+      ORDER BY n.coletada_em, (f.tipo = 'pai') DESC, f.confiabilidade DESC NULLS LAST, n.id`;
+    return rows.map(toCandidate);
+  }
+
+  async markChecked(
+    newsId: string,
+    duplicateOf: { originalId: string; reason: DuplicateReason } | null,
+    at: Date,
+  ): Promise<void> {
+    if (!duplicateOf) {
+      await this.prisma.noticia.update({
+        where: { id: newsId },
+        data: { repeticaoConferidaEm: at },
+      });
+      return;
+    }
+    await this.prisma.$transaction(async (tx) => {
+      // O rótulo da equipe passa para a original, se ela ainda não tem um.
+      const label = await tx.rotuloNoticia.findUnique({ where: { noticiaId: newsId } });
+      if (label) {
+        await tx.rotuloNoticia.delete({ where: { noticiaId: newsId } });
+        const taken = await tx.rotuloNoticia.findUnique({
+          where: { noticiaId: duplicateOf.originalId },
+        });
+        if (!taken) {
+          await tx.rotuloNoticia.create({
+            data: {
+              noticiaId: duplicateOf.originalId,
+              sentimento: label.sentimento,
+              rotuladoEm: label.rotuladoEm,
+            },
+          });
+        }
+      }
+      await tx.noticiaAtivo.deleteMany({ where: { noticiaId: newsId } });
+      await tx.noticia.update({
+        where: { id: newsId },
+        data: {
+          repeticaoConferidaEm: at,
+          repetidaDeId: duplicateOf.originalId,
+          repetidaPor: duplicateOf.reason,
+          vinculadaEm: null,
+          versaoVinculo: null,
+          sentimento: null,
+          sentimentoPontuacao: null,
+          classificadaEm: null,
+          versaoModeloId: null,
+        },
+      });
+    });
   }
 
   async storedUrls(sourceId: string): Promise<Map<string, Date | null>> {
@@ -244,7 +346,10 @@ export class PrismaNewsRepository implements NewsRepository {
 
   async newsToLink(version: number, limit: number): Promise<NewsToLink[]> {
     const rows = await this.prisma.noticia.findMany({
-      where: { OR: [{ versaoVinculo: null }, { versaoVinculo: { not: version } }] },
+      where: {
+        repetidaDeId: null,
+        OR: [{ versaoVinculo: null }, { versaoVinculo: { not: version } }],
+      },
       select: { id: true, titulo: true, resumo: true, texto: true, empresasMarcadas: true },
       orderBy: { publicadaEm: 'desc' },
       take: limit,
@@ -295,6 +400,7 @@ export class PrismaNewsRepository implements NewsRepository {
 
   async latestNews(limit: number): Promise<LatestNewsRow[]> {
     const rows = await this.prisma.noticia.findMany({
+      where: { repetidaDeId: null },
       orderBy: [{ publicadaEm: 'desc' }, { id: 'asc' }],
       take: limit,
       select: {
@@ -323,7 +429,7 @@ export class PrismaNewsRepository implements NewsRepository {
 
   async linkCounts(): Promise<{ total: number; linked: number }> {
     const [total, linked] = await Promise.all([
-      this.prisma.noticia.count(),
+      this.prisma.noticia.count({ where: { repetidaDeId: null } }),
       this.prisma.noticia.count({ where: { ativos: { some: {} } } }),
     ]);
     return { total, linked };
@@ -360,6 +466,10 @@ export class PrismaNewsRepository implements NewsRepository {
                   sentimento: true,
                   versaoModeloId: true,
                   fonte: { select: { nome: true } },
+                  repetidas: {
+                    orderBy: [{ coletadaEm: 'asc' }, { id: 'asc' }],
+                    select: { url: true, fonte: { select: { nome: true } } },
+                  },
                 },
               },
             },
@@ -376,6 +486,7 @@ export class PrismaNewsRepository implements NewsRepository {
         publishedAt: noticia.publicadaEm,
         relevance: relevancia,
         classification: storedClassification(noticia),
+        alsoIn: noticia.repetidas.map((copy) => ({ source: copy.fonte.nome, url: copy.url })),
       })),
     };
   }

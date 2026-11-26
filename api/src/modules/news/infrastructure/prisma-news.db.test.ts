@@ -311,6 +311,90 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
     await prisma.ativo.delete({ where: { id: asset.id } });
   });
 
+  it('SPEC-047: ordem de conferência, repetida ligada à original, "também em" e original apagada', async () => {
+    const parent = (await repo.parentSource())?.id as string;
+    const agency = (await repo.sources())[1]?.id as string;
+    const later = new Date(at.getTime() + 60_000);
+    // A da Agência Brasil foi coletada antes; a do Investidor10 depois, com o mesmo título.
+    await repo.saveNews(agency, [item(1, { url: 'https://agenciabrasil.ebc.com.br/n/1' })], at);
+    await repo.saveNews(parent, [item(2, { title: 'Notícia 1' })], later);
+
+    const pending = await repo.newsToCheck(10);
+    expect(pending.map((n) => n.sourceId)).toEqual([agency, parent]);
+    const [first, second] = pending as [(typeof pending)[0], (typeof pending)[0]];
+    await repo.markChecked(first.id, null, later);
+    expect(
+      (
+        await repo.originalsAround(
+          new Date('2026-11-11T13:00:00Z'),
+          new Date('2026-11-13T13:00:00Z'),
+        )
+      ).map((n) => n.id),
+    ).toEqual([first.id]);
+
+    // A repetida perde o vínculo, e o rótulo da equipe passa para a original.
+    const asset = await prisma.ativo.create({
+      data: {
+        ticker: `R${randomUUID().replace(/\D/g, '').slice(0, 3)}3`.slice(0, 5),
+        nome: 'EMPRESA REPETIDA S.A.',
+        classe: 'acao',
+        setor: 'bens_industriais',
+        atualizadoEm: at,
+      },
+    });
+    await repo.saveLinks(
+      second.id,
+      [{ assetId: asset.id, relevance: 'principal', origin: 'ticker_titulo' }],
+      1,
+      at,
+    );
+    await prisma.rotuloNoticia.create({
+      data: { noticiaId: second.id, sentimento: 'positivo', rotuladoEm: at },
+    });
+    await repo.markChecked(second.id, { originalId: first.id, reason: 'titulo' }, later);
+
+    expect(await repo.newsToCheck(10)).toEqual([]);
+    expect(await prisma.noticiaAtivo.count({ where: { noticiaId: second.id } })).toBe(0);
+    expect(await prisma.rotuloNoticia.findUnique({ where: { noticiaId: first.id } })).toMatchObject(
+      { sentimento: 'positivo' },
+    );
+    expect((await repo.duplicateCounts()).get(parent)).toBe(1);
+    expect((await repo.latestNews(10)).map((n) => n.id)).toEqual([first.id]);
+    expect((await repo.newsToLink(1, 10)).map((n) => n.id)).toEqual([first.id]);
+
+    await repo.saveLinks(
+      first.id,
+      [{ assetId: asset.id, relevance: 'principal', origin: 'ticker_titulo' }],
+      1,
+      at,
+    );
+    const { rows } = await repo.assetNews(
+      asset.id,
+      { relevances: ['principal'] },
+      { offset: 0, limit: 10 },
+    );
+    expect(rows.map((row) => row.alsoIn)).toEqual([
+      [{ source: 'Investidor10', url: 'https://investidor10.com.br/noticias/noticia-2/' }],
+    ]);
+
+    // O banco recusa a notícia repetida dela mesma.
+    await expect(
+      prisma.noticia.update({
+        where: { id: first.id },
+        data: { repetidaDeId: first.id, repetidaPor: 'titulo' },
+      }),
+    ).rejects.toThrow();
+
+    // Apagar a original libera a repetida (ON DELETE SET NULL).
+    await prisma.noticia.delete({ where: { id: first.id } });
+    expect(
+      await prisma.noticia.findUnique({
+        where: { id: second.id },
+        select: { repetidaDeId: true, repetidaPor: true, repeticaoConferidaEm: true },
+      }),
+    ).toEqual({ repetidaDeId: null, repetidaPor: null, repeticaoConferidaEm: null });
+  });
+
   it('andamento do arquivo e a limpeza do fim da autorização (CA07)', async () => {
     const parent = (await repo.parentSource())?.id as string;
     const agency = (await repo.sources())[1]?.id as string;

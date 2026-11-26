@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { NAME_MAX, NAME_MIN, validate, type FieldErrors, type ValidationResult } from './auth.js';
+import { isoDateInBrasilia, type IsoDate } from './calendar.js';
 
 /**
  * Rotas do catálogo de ativos (SPECs 006, 010 e 040, §5.2). `:id` vira o id do ativo com
@@ -139,6 +140,37 @@ export interface AssetQuote {
  */
 export const FREE_QUOTE_DELAY_MINUTES = 45;
 
+/**
+ * SPEC-046: o último fechamento da B3 de um ativo (SPEC-008), como a B3 publicou, com a variação
+ * sobre o fechamento anterior guardado.
+ */
+export interface AssetClose {
+  /** AAAA-MM-DD: o pregão. */
+  date: IsoDate;
+  /** Decimal em texto (RNF12). */
+  price: string;
+  /** Em %, com 2 casas; `null` sem fechamento anterior. */
+  change: string | null;
+}
+
+/** SPEC-046: o preço que a lista mostra, e de onde veio. */
+export type ShownPrice =
+  { kind: 'quote'; quote: AssetQuote } | { kind: 'close'; close: AssetClose };
+
+/**
+ * SPEC-046 §4.1, decisão 1: o mais recente entre a cotação do pregão e o último fechamento (a regra
+ * da ficha, SPEC-010). No mesmo dia, vale o fechamento, que é o valor final do pregão.
+ */
+export function latestPrice(
+  quote: AssetQuote | null,
+  lastClose: AssetClose | null,
+): ShownPrice | null {
+  if (quote && (!lastClose || isoDateInBrasilia(new Date(quote.at)) > lastClose.date)) {
+    return { kind: 'quote', quote };
+  }
+  return lastClose ? { kind: 'close', close: lastClose } : null;
+}
+
 /** Ativo como o usuário vê na busca. */
 export interface Asset {
   id: string;
@@ -148,6 +180,8 @@ export interface Asset {
   sector: SectorCode;
   /** SPEC-009: última cotação do pregão; `null` enquanto não houver nenhuma. */
   quote: AssetQuote | null;
+  /** SPEC-046: o último fechamento da B3; `null` sem histórico. */
+  lastClose: AssetClose | null;
   /** SPEC-040: há logo (em `/api/assets/:id/logo`); sem ele, o app mostra as letras do ticker. */
   hasLogo: boolean;
 }

@@ -58,6 +58,8 @@ model Usuario {
   carteiras       Carteira[]
   /// SPEC-011: execuções que o colaborador pediu.
   pedidosExecucao PedidoExecucao[]
+  /// SPEC-025: assinaturas com pagamento simulado.
+  assinaturas     Assinatura[]
 
   @@map("usuario")
 }
@@ -410,6 +412,10 @@ enum TarefaIngestao {
   noticias_novas
   noticias_arquivo
   noticias_feeds
+  /// SPEC-048: o Ibovespa e o dólar do dia pela Yahoo Finance.
+  mercado_yahoo
+  /// SPEC-025: renovação das assinaturas (pagamento simulado).
+  renovacao_assinaturas
 
   @@map("tarefa_ingestao")
 }
@@ -631,6 +637,28 @@ model CotacaoPregao {
   @@id([ativoId, momento, nivel])
   @@index([momento])
   @@map("cotacao_pregao")
+}
+
+/// SPEC-048: o que o painel "Mercado hoje" mostra.
+enum SimboloMercado {
+  ibovespa
+  dolar
+
+  @@map("simbolo_mercado")
+}
+
+/// SPEC-048: leitura do Ibovespa ou do dólar pela Yahoo Finance, no horário que ela informa.
+/// Guardada por 30 dias, como as cotações do pregão (valores positivos: CHECK na migração).
+model CotacaoMercado {
+  simbolo            SimboloMercado
+  momento            DateTime       @db.Timestamptz(3)
+  valor              Decimal        @db.Decimal(18, 6)
+  fechamentoAnterior Decimal?       @map("fechamento_anterior") @db.Decimal(18, 6)
+  coletadaEm         DateTime       @default(now()) @map("coletada_em") @db.Timestamptz(3)
+
+  @@id([simbolo, momento])
+  @@index([coletadaEm])
+  @@map("cotacao_mercado")
 }
 
 /// O que a equipe fez (SPEC-006, RNF15).
@@ -894,28 +922,34 @@ model FonteNoticia {
 
 /// SPEC-027: notícia coletada. Texto completo só da fonte pai, para a classificação (SPEC-028).
 model Noticia {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  fonteId             String    @map("fonte_id") @db.Uuid
-  url                 String    @db.VarChar(500)
-  titulo              String    @db.VarChar(500)
-  resumo              String?
-  texto               String?
-  autor               String?   @db.VarChar(150)
-  temas               String[]  @default([])
-  empresasMarcadas    String[]  @default([]) @map("empresas_marcadas")
-  publicadaEm         DateTime  @map("publicada_em") @db.Timestamptz(3)
-  atualizadaNaFonteEm DateTime? @map("atualizada_na_fonte_em") @db.Timestamptz(3)
-  coletadaEm          DateTime  @map("coletada_em") @db.Timestamptz(3)
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fonteId              String             @map("fonte_id") @db.Uuid
+  url                  String             @db.VarChar(500)
+  titulo               String             @db.VarChar(500)
+  resumo               String?
+  texto                String?
+  autor                String?            @db.VarChar(150)
+  temas                String[]           @default([])
+  empresasMarcadas     String[]           @default([]) @map("empresas_marcadas")
+  publicadaEm          DateTime           @map("publicada_em") @db.Timestamptz(3)
+  atualizadaNaFonteEm  DateTime?          @map("atualizada_na_fonte_em") @db.Timestamptz(3)
+  coletadaEm           DateTime           @map("coletada_em") @db.Timestamptz(3)
   /// SPEC-028: quando e com qual versão da regra a notícia foi vinculada aos ativos.
-  vinculadaEm         DateTime? @map("vinculada_em") @db.Timestamptz(3)
-  versaoVinculo       Int?      @map("versao_vinculo") @db.SmallInt
+  vinculadaEm          DateTime?          @map("vinculada_em") @db.Timestamptz(3)
+  versaoVinculo        Int?               @map("versao_vinculo") @db.SmallInt
   /// SPEC-044: o tom da notícia, a pontuação (−1 a 1), quando e por qual versão; vazios = pendente.
-  sentimento          SentimentoNoticia?
-  sentimentoPontuacao Decimal?           @map("sentimento_pontuacao") @db.Decimal(4, 3)
-  classificadaEm      DateTime?          @map("classificada_em") @db.Timestamptz(3)
-  versaoModeloId      Int?               @map("versao_modelo_id")
+  sentimento           SentimentoNoticia?
+  sentimentoPontuacao  Decimal?           @map("sentimento_pontuacao") @db.Decimal(4, 3)
+  classificadaEm       DateTime?          @map("classificada_em") @db.Timestamptz(3)
+  versaoModeloId       Int?               @map("versao_modelo_id")
+  /// SPEC-047: a original, quando esta é repetida de outra fonte, e por quê; e quando foi conferida.
+  repetidaDeId         String?            @map("repetida_de_id") @db.Uuid
+  repetidaPor          MotivoRepeticao?   @map("repetida_por")
+  repeticaoConferidaEm DateTime?          @map("repeticao_conferida_em") @db.Timestamptz(3)
 
   fonte        FonteNoticia   @relation(fields: [fonteId], references: [id], onDelete: Restrict)
+  repetidaDe   Noticia?       @relation("RepeticaoNoticia", fields: [repetidaDeId], references: [id], onDelete: SetNull)
+  repetidas    Noticia[]      @relation("RepeticaoNoticia")
   ativos       NoticiaAtivo[]
   versaoModelo VersaoModelo?  @relation(fields: [versaoModeloId], references: [id], onDelete: Restrict)
   rotulo       RotuloNoticia?
@@ -924,7 +958,17 @@ model Noticia {
   @@index([publicadaEm])
   @@index([versaoVinculo], map: "noticia_vinculo_idx")
   @@index([versaoModeloId], map: "noticia_versao_modelo_idx")
+  @@index([repetidaDeId], map: "noticia_repetida_de_idx")
+  @@index([repeticaoConferidaEm], map: "noticia_repeticao_conferida_idx")
   @@map("noticia")
+}
+
+/// SPEC-047: por que a notícia é repetida de outra (o mesmo endereço ou o título quase igual).
+enum MotivoRepeticao {
+  endereco
+  titulo
+
+  @@map("motivo_repeticao")
 }
 
 /// SPEC-044: positivo, neutro ou negativo, do modelo ou do rótulo da equipe.
@@ -1017,4 +1061,69 @@ model ColetaNoticiaArquivo {
   fonte FonteNoticia @relation(fields: [fonteId], references: [id], onDelete: Cascade)
 
   @@map("coleta_noticia_arquivo")
+}
+
+/// SPEC-025: os planos; "gratuito" é a ausência de assinatura.
+enum CodigoPlano {
+  gratuito
+  assinante_mensal
+  assinante_anual
+
+  @@map("codigo_plano")
+}
+
+/// SPEC-025: o pagamento é simulado e sempre aprovado; nenhum dado de pagamento é guardado.
+enum SituacaoPagamento {
+  aprovado
+
+  @@map("situacao_pagamento")
+}
+
+/// SPEC-025: preço (centavos) e duração (dias) de cada plano; ficam aqui, não no código.
+model Plano {
+  codigo        CodigoPlano @id
+  precoCentavos Int         @map("preco_centavos")
+  duracaoDias   Int?        @map("duracao_dias")
+  ativo         Boolean     @default(true)
+
+  assinaturas Assinatura[]
+
+  @@map("plano")
+}
+
+/// SPEC-025: "assinante" é calculado pela validade, nunca guardado no perfil.
+model Assinatura {
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId           String      @map("usuario_id") @db.Uuid
+  plano               CodigoPlano
+  inicio              DateTime    @db.Timestamptz(3)
+  fim                 DateTime    @db.Timestamptz(3)
+  renovacaoAutomatica Boolean     @default(true) @map("renovacao_automatica")
+  canceladaEm         DateTime?   @map("cancelada_em") @db.Timestamptz(3)
+  criadaEm            DateTime    @default(now()) @map("criada_em") @db.Timestamptz(3)
+
+  usuario    Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  planoRef   Plano               @relation(fields: [plano], references: [codigo], onDelete: Restrict)
+  pagamentos PagamentoSimulado[]
+
+  @@index([usuarioId, fim])
+  @@index([fim])
+  @@map("assinatura")
+}
+
+/// SPEC-025: um por período "pago" (a assinatura e cada renovação); não muda depois de gravado (DA09).
+model PagamentoSimulado {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assinaturaId  String            @map("assinatura_id") @db.Uuid
+  plano         CodigoPlano
+  valorCentavos Int               @map("valor_centavos")
+  periodoInicio DateTime          @map("periodo_inicio") @db.Timestamptz(3)
+  periodoFim    DateTime          @map("periodo_fim") @db.Timestamptz(3)
+  situacao      SituacaoPagamento @default(aprovado)
+  registradoEm  DateTime          @default(now()) @map("registrado_em") @db.Timestamptz(3)
+
+  assinatura Assinatura @relation(fields: [assinaturaId], references: [id], onDelete: Cascade)
+
+  @@unique([assinaturaId, periodoInicio])
+  @@map("pagamento_simulado")
 }

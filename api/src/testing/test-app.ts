@@ -1,5 +1,5 @@
 import { Writable } from 'node:stream';
-import { AUTH_PATHS, type AuthSession } from '@simulador/shared';
+import { AUTH_PATHS, SUBSCRIPTION_PATHS, type AuthSession } from '@simulador/shared';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app.js';
 import { AssetCatalogService } from '../modules/asset-catalog/application/asset-catalog-service.js';
@@ -11,12 +11,15 @@ import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
 import { AssetNewsService } from '../modules/news/application/asset-news-service.js';
 import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
+import { MarketTodayCollection } from '../modules/market-data/application/market-today.js';
 import { SentimentService } from '../modules/news/application/sentiment-service.js';
 import {
   FakeFeedFetcher,
   InMemoryNewsRepository,
   InMemorySentimentRepository,
 } from '../modules/news/testing/fakes.js';
+import { SubscriptionService } from '../modules/subscriptions/application/subscription-service.js';
+import { InMemorySubscriptions } from '../modules/subscriptions/testing/fakes.js';
 import { JwtAccessTokenService } from '../modules/identity/infrastructure/jwt-access-token-service.js';
 import {
   BackgroundTasks,
@@ -52,6 +55,8 @@ import {
   InMemoryFundamentals,
   InMemoryIndexRates,
   InMemoryMarketIndexes,
+  InMemoryMarketQuotes,
+  FakeMarketQuoteSource,
   InMemoryIntradayQuoteRepository,
   InMemoryLogoRepository,
   InMemoryQuoteRepository,
@@ -114,8 +119,15 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     market,
     ...(options.clock ? { clock: options.clock } : {}),
   });
+  // SPEC-025: assinaturas em memória, com os planos da migração.
+  const subscriptionRepo = new InMemorySubscriptions(options.clock);
+  const subscriptions = new SubscriptionService({
+    subscriptions: subscriptionRepo,
+    ...(options.clock ? { clock: options.clock } : {}),
+  });
   const services = createIdentityServices({
     portfolios,
+    subscriptions: subscriptionRepo,
     users,
     refreshTokens,
     emailCodes,
@@ -249,6 +261,16 @@ export async function buildTestApp(options: TestAppOptions = {}) {
   // SPEC-044: o sentimento sobre as mesmas notícias em memória.
   const sentimentRepo = new InMemorySentimentRepository(newsRepo);
   const sentiment = new SentimentService({ sentiment: sentimentRepo, clock });
+  // SPEC-048: o "Mercado hoje" com a Yahoo falsa.
+  const marketQuotes = new InMemoryMarketQuotes();
+  const marketSource = new FakeMarketQuoteSource();
+  const marketToday = new MarketTodayCollection({
+    source: marketSource,
+    quotes: marketQuotes,
+    runs,
+    calendars,
+    clock,
+  });
   const logs = new LogCapture();
   const app: FastifyInstance = await buildApp({
     config: {
@@ -270,10 +292,12 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     fundamentals,
     portfolios,
     trading,
+    subscriptions,
     tasks,
     newsSources,
     assetNews: new AssetNewsService({ news: newsRepo, sentiment, clock }),
     sentiment,
+    marketToday,
     logStream: logs,
   });
 
@@ -306,8 +330,25 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     return confirmed.json<AuthSession>();
   };
 
+  /** SPEC-025: assina o plano mensal pela API (pagamento simulado), para os recursos premium. */
+  const subscribe = async (session: AuthSession): Promise<void> => {
+    const response = await app.inject({
+      method: 'POST',
+      url: SUBSCRIPTION_PATHS.mine,
+      headers: { authorization: `Bearer ${session.accessToken}` },
+      payload: { plan: 'assinante_mensal' },
+    });
+    if (response.statusCode !== 201) throw new Error(`assinatura falhou: ${response.body}`);
+  };
+
   return {
     app,
+    subscribe,
+    subscriptionRepo,
+    subscriptions,
+    marketQuotes,
+    marketSource,
+    marketToday,
     logs,
     newsRepo,
     sentimentRepo,

@@ -27,6 +27,9 @@ import { Investidor10Collection } from './modules/market-data/application/invest
 import { CdiStatusService } from './modules/market-data/application/cdi-status-service.js';
 import { MarketIndexIngestion } from './modules/market-data/application/market-index-ingestion.js';
 import { MarketIndexStatusService } from './modules/market-data/application/market-index-status-service.js';
+import { MarketTodayCollection } from './modules/market-data/application/market-today.js';
+import { PrismaMarketQuoteRepository } from './modules/market-data/infrastructure/prisma-market-quote-repository.js';
+import { YahooChartSource } from './modules/market-data/infrastructure/yahoo-chart-source.js';
 import { HistoryIngestion } from './modules/market-data/application/history-ingestion.js';
 import { IntradayCollection } from './modules/market-data/application/intraday-collection.js';
 import { HistoryStatusService } from './modules/market-data/application/history-status-service.js';
@@ -44,6 +47,7 @@ import { Investidor10HttpSource } from './modules/market-data/infrastructure/inv
 import { PrismaEventRepository } from './modules/market-data/infrastructure/prisma-event-repository.js';
 import { AssetNewsService } from './modules/news/application/asset-news-service.js';
 import { NewsCollection, type RunSummary } from './modules/news/application/news-collection.js';
+import { NewsDeduplicator } from './modules/news/application/news-deduplicator.js';
 import { NewsLinker } from './modules/news/application/news-linker.js';
 import { NewsSentimentClassifier } from './modules/news/application/news-sentiment-classifier.js';
 import { SentimentService } from './modules/news/application/sentiment-service.js';
@@ -72,6 +76,9 @@ import { PortfolioService } from './modules/portfolios/application/portfolio-ser
 import { TradingService } from './modules/portfolios/application/trading-service.js';
 import { PrismaLedgerRepository } from './modules/portfolios/infrastructure/prisma-ledger-repository.js';
 import { PrismaPortfolioRepository } from './modules/portfolios/infrastructure/prisma-portfolio-repository.js';
+import { SubscriptionRenewal } from './modules/subscriptions/application/subscription-renewal.js';
+import { SubscriptionService } from './modules/subscriptions/application/subscription-service.js';
+import { PrismaSubscriptionRepository } from './modules/subscriptions/infrastructure/prisma-subscription-repository.js';
 import { createPrismaClient } from './shared/infrastructure/database.js';
 import { loggerOptions } from './shared/infrastructure/logger.js';
 import { readVersion } from './version.js';
@@ -151,6 +158,13 @@ async function main(): Promise<void> {
     runs,
     calendars,
   });
+  // SPEC-048: o Ibovespa e o dólar do dia pela Yahoo Finance (uso autorizado para este projeto).
+  const marketToday = new MarketTodayCollection({
+    source: new YahooChartSource(),
+    quotes: new PrismaMarketQuoteRepository(prisma),
+    runs,
+    calendars,
+  });
   // SPECs 041 e 042: Investidor10 (com autorização, só ligado com INVESTIDOR10_ENABLED) e eventos
   // corporativos da B3.
   const fundamentalsRepo = new PrismaFundamentalsRepository(prisma);
@@ -182,26 +196,33 @@ async function main(): Promise<void> {
   // SPEC-027: notícias da fonte pai (Investidor10, com o interruptor) e das fontes curadas (RSS).
   const newsRepo = new PrismaNewsRepository(prisma);
   const feedFetcher = new HttpFeedFetcher();
+  // SPEC-047: notícias repetidas entre fontes, antes do vínculo e do sentimento.
+  const newsDeduplicator = new NewsDeduplicator({ news: newsRepo });
   // SPEC-028: vínculo notícia–ativo, depois de cada coleta e a cada 30 minutos.
   const newsLinker = new NewsLinker({ news: newsRepo });
   // SPEC-044: sentimento das notícias, logo depois do vínculo e a cada 30 minutos.
   const sentimentRepo = new PrismaSentimentRepository(prisma);
   const newsSentiment = new NewsSentimentClassifier({ sentiment: sentimentRepo });
+  /** SPEC-047: repetidas, vínculo e sentimento, nessa ordem; uma falha não derruba a seguinte. */
+  const afterNews = async (): Promise<number> => {
+    await newsDeduplicator.run().catch(() => undefined);
+    const linked = await newsLinker.run();
+    // Falha na classificação não derruba o vínculo nem a coleta (RNF13).
+    await newsSentiment.run().catch(() => 0);
+    return linked;
+  };
   const news = new NewsCollection({
     parentEnabled: config.investidor10.enabled,
     parent: new Investidor10NewsHttpSource({ baseUrl: config.investidor10.baseUrl }),
     feeds: feedFetcher,
     news: newsRepo,
     runs,
-    linker: {
-      run: async () => {
-        const linked = await newsLinker.run();
-        // Falha na classificação não derruba o vínculo nem a coleta (RNF13).
-        await newsSentiment.run().catch(() => 0);
-        return linked;
-      },
-    },
+    linker: { run: afterNews },
   });
+
+  // SPEC-025: planos e assinatura com pagamento simulado; a renovação roda no processador.
+  const subscriptionRepo = new PrismaSubscriptionRepository(prisma);
+  const subscriptions = new SubscriptionService({ subscriptions: subscriptionRepo });
 
   // SPEC-011: o registro das execuções, os pedidos de "Executar agora" e o sinal de vida.
   const taskMonitor = new PrismaTaskMonitorRepository(prisma);
@@ -251,6 +272,7 @@ async function main(): Promise<void> {
     const sentiment = new SentimentService({ sentiment: sentimentRepo });
     const { auth, profile, passwordReset, accountData } = createIdentityServices({
       portfolios,
+      subscriptions: subscriptionRepo,
       users: new PrismaUserRepository(prisma),
       refreshTokens: new PrismaRefreshTokenRepository(prisma),
       emailCodes: new PrismaEmailCodeRepository(prisma),
@@ -275,6 +297,7 @@ async function main(): Promise<void> {
       calendar,
       portfolios,
       trading,
+      subscriptions,
       catalog: new AssetCatalogService({
         assets: assetRepository,
         history: new HistoryStatusService({ quotes, calendars }),
@@ -303,6 +326,7 @@ async function main(): Promise<void> {
       }),
       assetNews: new AssetNewsService({ news: newsRepo, sentiment }),
       sentiment,
+      marketToday,
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -319,6 +343,7 @@ async function main(): Promise<void> {
 
     // O número que vai para o log do processador: os registros; nas notícias, as que chegaram.
     const records = async (run: Promise<RunResult | null>) => (await run)?.records ?? 0;
+    const renewal = new SubscriptionRenewal({ subscriptions, runs });
     const collected = async (run: Promise<RunSummary | null>) => (await run)?.collected ?? 0;
 
     // Cada tarefa de ingestão: o que roda no horário e o que o "Executar agora" faz (SPEC-011 §4.2).
@@ -372,6 +397,18 @@ async function main(): Promise<void> {
         run: () => collected(news.archive()),
       },
       noticias_feeds: { name: 'notícias das fontes curadas', run: () => collected(news.feeds()) },
+      // SPEC-048: confere a cada 5 minutos se chegou a vez do Ibovespa ou do dólar. "Executar
+      // agora": os dois, a qualquer hora.
+      mercado_yahoo: {
+        name: 'mercado do dia (Yahoo)',
+        run: () => records(marketToday.collect()),
+        runNow: () => records(marketToday.collect({ force: true })),
+      },
+      // SPEC-025: às 00:15, as assinaturas vencidas com a renovação ligada (pagamento simulado).
+      renovacao_assinaturas: {
+        name: 'renovação das assinaturas',
+        run: () => records(renewal.run()),
+      },
     };
     const worker = startWorker({
       logger,
@@ -388,6 +425,8 @@ async function main(): Promise<void> {
         },
         // SPEC-009 (OPEN-40): cotações do pregão ficam 30 dias.
         { name: 'limpeza das cotações do pregão', run: () => intraday.cleanup() },
+        // SPEC-048: as leituras do "Mercado hoje" também ficam 30 dias.
+        { name: 'limpeza do mercado do dia', run: () => marketToday.cleanup() },
         // SPEC-011 (OPEN-40): execuções por 90 dias, sempre com a última de cada tarefa.
         {
           name: 'limpeza das execuções antigas',
@@ -410,7 +449,8 @@ async function main(): Promise<void> {
         }),
         // SPEC-028: as notícias sem vínculo (o arquivo, as atualizadas, outra versão da regra). Não
         // é tarefa de ingestão: não grava execução nem aparece na tela Tarefas.
-        { name: 'vínculo notícia–ativo', run: () => newsLinker.run(), everyMinutes: 30 },
+        // SPEC-047: as repetidas (na primeira vez, todas as já guardadas) e, em seguida, o vínculo.
+        { name: 'notícias repetidas e vínculo', run: afterNews, everyMinutes: 30 },
         // SPEC-044: as pendentes e, quando a versão do modelo muda, todas. Também não é ingestão.
         { name: 'sentimento das notícias', run: () => newsSentiment.run(), everyMinutes: 30 },
       ],

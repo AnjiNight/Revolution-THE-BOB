@@ -23,6 +23,10 @@ import type {
   CatalogListResult,
   CdiStatus,
   MarketIndexStatus,
+  MarketToday,
+  MySubscription,
+  PaidPlanCode,
+  PlanList,
   ConsentList,
   DividendPeriod,
   Investidor10Status,
@@ -143,9 +147,19 @@ export interface DesktopApi {
    * Indexadores (SPEC-007) e índices da B3 (SPEC-020): situação das séries, só colaborador (403
    * para usuário).
    */
+  /** SPEC-025: planos e assinatura com pagamento simulado (assinar, cancelar e reativar: só o usuário). */
+  subscription: {
+    plans(): Promise<ClientResult<PlanList>>;
+    mine(): Promise<ClientResult<MySubscription>>;
+    subscribe(plan: PaidPlanCode): Promise<ClientResult<MySubscription>>;
+    cancel(): Promise<ClientResult<MySubscription>>;
+    resume(): Promise<ClientResult<MySubscription>>;
+  };
   indexes: {
     cdi(): Promise<ClientResult<CdiStatus>>;
     market(): Promise<ClientResult<MarketIndexStatus>>;
+    /** SPEC-048: o Ibovespa e o dólar do dia (Yahoo Finance), para qualquer pessoa conectada. */
+    today(): Promise<ClientResult<MarketToday>>;
   };
   /** Carteiras (SPEC-012): só a conta de usuário; carteira de outra pessoa é `portfolio_not_found`. */
   portfolios: {

@@ -2,6 +2,7 @@ import {
   CALENDAR_TIME_ZONE,
   NEWS_CATEGORIES,
   NEWS_SOURCE_PROBLEM_AFTER,
+  SUGGESTED_NEWS_SOURCES,
   validateNewNewsSource,
   type FieldErrors,
   type LatestNews,
@@ -189,6 +190,12 @@ export function NewsSources({ onSessionExpired }: { onSessionExpired: () => void
                     </td>
                     <td data-label={t('news.columns.news')} className="cash-number">
                       {number(source.news)}
+                      {/* SPEC-047: as repetidas de outra fonte ficam guardadas, fora das contagens. */}
+                      {source.duplicates > 0 && (
+                        <span className="position-name">
+                          {t('news.duplicates', { count: source.duplicates })}
+                        </span>
+                      )}
                     </td>
                     <td data-label="" className="position-actions">
                       {source.kind === 'curated' && (
@@ -232,6 +239,7 @@ export function NewsSources({ onSessionExpired }: { onSessionExpired: () => void
           )}
           {creating && (
             <NewSourceForm
+              registered={state.status === 'ready' ? state.data.sources.map((s) => s.url) : []}
               onCreated={(name, items) => {
                 setNotice(t('news.created', { name, count: items }));
                 setVersion((v) => v + 1);
@@ -352,10 +360,13 @@ function LatestNewsList({ onSessionExpired }: { onSessionExpired: () => void }) 
 }
 
 function NewSourceForm({
+  registered,
   onCreated,
   onCancel,
   onSessionExpired,
 }: {
+  /** SPEC-047: os endereços já cadastrados, que saem das sugestões. */
+  registered: readonly string[];
   onCreated: (name: string, items: number) => void;
   onCancel: () => void;
   onSessionExpired: () => void;
@@ -371,6 +382,7 @@ function NewSourceForm({
   const [fields, setFields] = useState<FieldErrors>({});
   const [error, setError] = useState<ClientAuthError | null>(null);
   const [saving, setSaving] = useState(false);
+  const suggestions = SUGGESTED_NEWS_SOURCES.filter((s) => !registered.includes(s.url));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -404,6 +416,30 @@ function NewSourceForm({
       noValidate
     >
       <h2 id={formId}>{t('news.newTitle')}</h2>
+      {/* SPEC-047: feeds testados; o clique preenche, e a licença continua com o colaborador. */}
+      {suggestions.length > 0 && (
+        <div className="news-suggestions">
+          <p className="field-hint">{t('news.suggestions')}</p>
+          <ul>
+            {suggestions.map((suggestion) => (
+              <li key={suggestion.url}>
+                <button
+                  type="button"
+                  className="pill pill-ghost pill-small"
+                  aria-pressed={url === suggestion.url}
+                  onClick={() => {
+                    setName(suggestion.name);
+                    setUrl(suggestion.url);
+                    setCategory(suggestion.category);
+                  }}
+                >
+                  {suggestion.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <TextField
         label={t('news.fields.name')}
         type="text"

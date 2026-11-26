@@ -88,8 +88,8 @@ describe('exportação (SPEC-034 CA01, CA02)', () => {
       format: PERSONAL_DATA_FORMAT,
       // 2: SPEC-012 acrescentou as carteiras; 3: SPEC-013, os aportes e retiradas; 4: SPEC-014,
       // as compras e vendas; 5: SPEC-015, os estornos; 6: SPEC-016, a histórica; 7: SPEC-023, de
-      // qual carteira cada uma foi copiada.
-      version: 7,
+      // qual carteira cada uma foi copiada; 8: SPEC-025, as assinaturas.
+      version: 8,
       exportedAt: '2026-10-13T16:00:00.000Z',
       account: {
         id: user.id,
@@ -117,6 +117,7 @@ describe('exportação (SPEC-034 CA01, CA02)', () => {
         },
       ],
       portfolios: [],
+      subscriptions: [],
     });
   });
 

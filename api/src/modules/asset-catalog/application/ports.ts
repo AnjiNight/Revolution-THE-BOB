@@ -74,6 +74,18 @@ export interface AssetPriceReader {
   sessions(assetId: string, count: number): Promise<StoredSession[]>;
   /** Fechamentos desde `from` (Tudo: desde o primeiro), em ordem de data. */
   closes(assetId: string, from: IsoDate | null): Promise<PricePoint[]>;
+  /**
+   * SPEC-046: o último fechamento da B3 de cada ativo com histórico e o anterior a ele (para a
+   * variação), numa consulta só.
+   */
+  lastCloses(): Promise<Map<string, LastCloses>>;
+}
+
+/** SPEC-046: o último fechamento guardado e o anterior, em decimal como texto (RNF12). */
+export interface LastCloses {
+  date: IsoDate;
+  close: string;
+  previousClose: string | null;
 }
 
 /** SPEC-042: eventos corporativos de um ativo (B3), que o módulo Dados de Mercado fornece. */

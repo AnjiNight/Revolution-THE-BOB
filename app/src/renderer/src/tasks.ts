@@ -24,6 +24,11 @@ export function scheduleText(schedule: TaskSchedule, t: Translate, language: str
       return t('tasks.schedule.every', { minutes: schedule.minutes });
     case 'session':
       return t('tasks.schedule.session', { minutes: schedule.minutes });
+    case 'market':
+      return t('tasks.schedule.market', {
+        indexMinutes: schedule.indexMinutes,
+        dollarMinutes: schedule.dollarMinutes,
+      });
     case 'weekly':
       return t('tasks.schedule.weekly', { times: list(schedule.times, language) });
     case 'daily': {

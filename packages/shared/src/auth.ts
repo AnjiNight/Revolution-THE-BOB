@@ -102,9 +102,9 @@ export const PERSONAL_DATA_FORMAT = 'simulador-investimentos/dados-pessoais';
  * 2: SPEC-012, carteiras. 3: SPEC-013, aportes e retiradas de cada carteira. 4: SPEC-014, compras e
  * vendas de cada carteira. 5: SPEC-015, o momento do estorno de cada lançamento. 6: SPEC-016,
  * compras e vendas da carteira histórica (sem horário de cotação, com a fonte). 7: SPEC-023, de qual
- * carteira cada uma foi copiada (`copiedFrom`).
+ * carteira cada uma foi copiada (`copiedFrom`). 8: SPEC-025, assinaturas e pagamentos simulados.
  */
-export const PERSONAL_DATA_VERSION = 7;
+export const PERSONAL_DATA_VERSION = 8;
 
 /**
  * Arquivo "Baixar meus dados" (SPEC-034, LGPD). Tudo o que o app guarda sobre a pessoa, sem
@@ -167,6 +167,21 @@ export interface PersonalDataExport {
       source: 'brapi' | 'b3';
       /** SPEC-015: ISO 8601 do estorno, ou `null`. */
       reversedAt: string | null;
+    }>;
+  }>;
+  /** SPEC-025: as assinaturas (a mais recente primeiro), cada uma com os pagamentos simulados. */
+  subscriptions: Array<{
+    plan: 'assinante_mensal' | 'assinante_anual';
+    startedAt: string;
+    endsAt: string;
+    autoRenew: boolean;
+    cancelledAt: string | null;
+    payments: Array<{
+      /** Centavos de real; pagamento simulado, sem cobrança. */
+      amountCents: number;
+      periodStart: string;
+      periodEnd: string;
+      recordedAt: string;
     }>;
   }>;
 }

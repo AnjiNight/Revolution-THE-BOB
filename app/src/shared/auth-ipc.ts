@@ -23,6 +23,7 @@ import type {
   NewsErrorCode,
   PortfolioErrorCode,
   RenamePortfolioInput,
+  SubscriptionErrorCode,
   TaskErrorCode,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
@@ -91,6 +92,8 @@ export const INDEX_CHANNELS = {
   cdi: 'indexes:cdi',
   /** SPEC-020: Ibovespa e IFIX. */
   marketIndexes: 'indexes:market',
+  /** SPEC-048: o Ibovespa e o dólar do dia (qualquer pessoa conectada). */
+  marketToday: 'indexes:today',
 } as const;
 
 /** Canais IPC dos indicadores e proventos (SPECs 041 e 042); a situação da coleta é do colaborador. */
@@ -113,6 +116,15 @@ export const NEWS_CHANNELS = {
   label: 'news:label',
   unlabel: 'news:unlabel',
   evaluate: 'news:evaluate-sentiment',
+} as const;
+
+/** SPEC-025: planos e a assinatura da pessoa conectada (pagamento simulado). */
+export const SUBSCRIPTION_CHANNELS = {
+  plans: 'subscription:plans',
+  mine: 'subscription:mine',
+  subscribe: 'subscription:subscribe',
+  cancel: 'subscription:cancel',
+  resume: 'subscription:resume',
 } as const;
 
 /** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */
@@ -232,6 +244,7 @@ export type ClientAuthError =
   | FundamentalsErrorCode
   | NewsErrorCode
   | PortfolioErrorCode
+  | SubscriptionErrorCode
   | TaskErrorCode
   | 'server_unavailable'
   | 'invalid_url'
