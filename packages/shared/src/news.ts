@@ -257,11 +257,16 @@ export function validateAssetNewsQuery(input: unknown): ValidationResult<AssetNe
   if (typeof group !== 'string' || !(ASSET_NEWS_GROUPS as readonly string[]).includes(group)) {
     fields.group = 'invalid_option';
   }
-  // Da query string vem texto; múltiplo de 10 (a página).
+  // Da query string (servidor) vem texto; da tela (o cliente do app confere antes), número. Múltiplo
+  // de 10 (a página).
   const offsetText = record.offset ?? '0';
   const offset =
-    typeof offsetText === 'string' && /^\d{1,6}$/.test(offsetText) ? Number(offsetText) : NaN;
-  if (!Number.isInteger(offset) || offset % ASSET_NEWS_PAGE_SIZE !== 0) {
+    typeof offsetText === 'number'
+      ? offsetText
+      : typeof offsetText === 'string' && /^\d{1,6}$/.test(offsetText)
+        ? Number(offsetText)
+        : NaN;
+  if (!Number.isInteger(offset) || offset < 0 || offset % ASSET_NEWS_PAGE_SIZE !== 0) {
     fields.offset = 'invalid_option';
   }
   const { after, until } = record;

@@ -823,6 +823,14 @@ describe('notícias na ficha (SPEC-029)', () => {
     expect(server.calls.at(-1)?.search).toBe('?group=list&offset=10');
     await client.assetNews(ASSET.id, { after: '2026-11-10', until: '2026-11-11' });
     expect(server.calls.at(-1)?.search).toBe('?after=2026-11-10&until=2026-11-11');
+    // Como a tela manda (AssetNews.tsx): a página como número. Antes, o cliente recusava sem chamar
+    // o servidor, e a ficha mostrava "Algo deu errado".
+    await expect(client.assetNews(ASSET.id, { group: 'main', offset: 0 })).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(server.calls.at(-1)?.search || '').toBe('');
+    await client.assetNews(ASSET.id, { group: 'main', offset: 10 });
+    expect(server.calls.at(-1)?.search).toBe('?offset=10');
     await expect(client.assetNewsDays(ASSET.id, 'max')).resolves.toEqual({
       ok: true,
       data: { period: 'max', days: [] },
@@ -830,7 +838,12 @@ describe('notícias na ficha (SPEC-029)', () => {
     expect(server.calls.at(-1)?.search).toBe('?period=max');
 
     const before = server.calls.length;
-    for (const query of [{ group: 'outro' }, { offset: '3' }, { after: '2026-11-10' }]) {
+    for (const query of [
+      { group: 'outro' },
+      { offset: '3' },
+      { offset: -10 },
+      { after: '2026-11-10' },
+    ]) {
       await expect(client.assetNews(ASSET.id, query)).resolves.toEqual({
         ok: false,
         error: 'unexpected',
