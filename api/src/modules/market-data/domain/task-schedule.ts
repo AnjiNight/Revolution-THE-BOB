@@ -40,6 +40,8 @@ export const INGESTION_SCHEDULE: Record<
   noticias_novas: { sources: ['investidor10'], schedule: { kind: 'every', minutes: 30 } },
   noticias_arquivo: { sources: ['investidor10'], schedule: { kind: 'every', minutes: 35 } },
   noticias_feeds: { sources: ['feeds'], schedule: { kind: 'every', minutes: 30 } },
+  // SPEC-030: os feeds próprios dos usuários a cada 60 minutos.
+  noticias_feeds_usuario: { sources: ['user_feeds'], schedule: { kind: 'every', minutes: 60 } },
 };
 
 /**

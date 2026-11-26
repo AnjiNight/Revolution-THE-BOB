@@ -32,10 +32,16 @@ export interface PortfolioExportReader {
   exportForUser(userId: string): Promise<PersonalDataExport['portfolios']>;
 }
 
+/** SPEC-030: as fontes de notícias da pessoa, que o módulo Notícias fornece. */
+export interface NewsSourcesExportReader {
+  exportForUser(userId: string): Promise<PersonalDataExport['newsSources']>;
+}
+
 export interface AccountDataServiceDeps {
   users: UserRepository;
   refreshTokens: RefreshTokenRepository;
   portfolios?: PortfolioExportReader;
+  newsSources?: NewsSourcesExportReader;
   codes: EmailCodes;
   /** Ausente sem SMTP (só fora de produção): a exclusão fica desligada; a exportação, não. */
   mailer?: EmailSender;
@@ -62,10 +68,11 @@ export class AccountDataService {
    */
   async exportData(userId: string): Promise<PersonalDataExport> {
     const user = await this.load(userId);
-    const [consents, sessions, portfolios] = await Promise.all([
+    const [consents, sessions, portfolios, newsSources] = await Promise.all([
       this.deps.users.listConsents(userId),
       this.deps.refreshTokens.listSessions(userId),
       this.deps.portfolios?.exportForUser(userId) ?? Promise.resolve([]),
+      this.deps.newsSources?.exportForUser(userId) ?? Promise.resolve([]),
     ]);
     return {
       format: PERSONAL_DATA_FORMAT,
@@ -96,6 +103,7 @@ export class AccountDataService {
         ended: session.ended,
       })),
       portfolios,
+      newsSources,
     };
   }
 

@@ -30,6 +30,7 @@ import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfo
 import type { AssetNewsService } from './modules/news/application/asset-news-service.js';
 import type { NewsSourcesService } from './modules/news/application/news-sources-service.js';
 import type { SentimentService } from './modules/news/application/sentiment-service.js';
+import type { UserNewsService } from './modules/news/application/user-news-service.js';
 import { registerNewsRoutes } from './modules/news/controllers/news-routes.js';
 import { registerErrorHandling } from './shared/http/error-handler.js';
 import { registerEtag } from './shared/http/etag.js';
@@ -67,6 +68,8 @@ export interface AppDependencies {
   assetNews?: AssetNewsService;
   /** SPEC-044: amostra rotulada e avaliação do sentimento; vem junto com `newsSources`. */
   sentiment?: SentimentService;
+  /** SPEC-030: fontes do usuário e a tela Notícias; vem junto com `newsSources`. */
+  userNews?: UserNewsService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -126,11 +129,12 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     accessTokens: deps.accessTokens,
   });
   registerTaskRoutes(app, { tasks: deps.tasks, accessTokens: deps.accessTokens });
-  if (deps.newsSources && deps.assetNews && deps.sentiment) {
+  if (deps.newsSources && deps.assetNews && deps.sentiment && deps.userNews) {
     registerNewsRoutes(app, {
       sources: deps.newsSources,
       assetNews: deps.assetNews,
       sentiment: deps.sentiment,
+      userNews: deps.userNews,
       accessTokens: deps.accessTokens,
     });
   }

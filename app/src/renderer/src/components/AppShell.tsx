@@ -24,7 +24,8 @@ interface AppShellProps {
   connection?: ShellConnection;
   user: PublicUser;
   /** SPEC-011: a tela Tarefas não tem item no menu (abre pelo Início). */
-  current: 'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'tasks' | 'news';
+  current:
+    'home' | 'profile' | 'calendar' | 'assets' | 'portfolios' | 'tasks' | 'news' | 'user-news';
   onHome: () => void;
   /** SPEC-012: só para o usuário. */
   onPortfolios: () => void;
@@ -35,6 +36,8 @@ interface AppShellProps {
   onAssets: () => void;
   /** SPEC-027: fontes de notícias, só na Área do colaborador. */
   onNews: () => void;
+  /** SPEC-030: a tela Notícias do usuário (também na Visão do usuário). */
+  onUserNews: () => void;
   onLogout: () => void;
   /**
    * SPEC-045: o colaborador está na Visão do usuário (as telas e o menu do usuário, com as
@@ -61,6 +64,7 @@ export function AppShell({
   onCalendar,
   onAssets,
   onNews,
+  onUserNews,
   onLogout,
   userView = false,
   onToggleUserView,
@@ -115,6 +119,13 @@ export function AppShell({
                 {t('shell.assets')}
               </button>
             </li>
+            {role === 'user' && (
+              <li>
+                <button type="button" aria-current={ariaCurrent('user-news')} onClick={onUserNews}>
+                  {t('shell.news')}
+                </button>
+              </li>
+            )}
             {role === 'collaborator' && (
               <li>
                 <button type="button" aria-current={ariaCurrent('news')} onClick={onNews}>

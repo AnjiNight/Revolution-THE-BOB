@@ -211,6 +211,59 @@ describe('coleta de notícias (SPEC-027)', () => {
     expect(await collection().feeds()).toBeNull();
   });
 
+  describe('feeds dos usuários (SPEC-030)', () => {
+    const FEED = 'https://blog.exemplo/feed';
+    const add = (userId: string) =>
+      repo.addOwnSource(userId, { url: FEED, title: 'Blog', name: null }, 10, new Date(now));
+
+    it('lê uma vez por endereço, só com alguém que tem o feed ligado (CA05)', async () => {
+      expect(await collection().userFeeds()).toBeNull();
+      const { source } = await add('ana');
+      await add('bruno');
+      feeds.feeds.set(FEED, rss(['Uma', 'Duas']));
+      expect(await collection().userFeeds()).toEqual({ collected: 2, failed: 0 });
+      expect(runs.runs.map((r) => r.task)).toEqual(['noticias_feeds_usuario']);
+      expect(repo.news.filter((n) => n.sourceId === source.id)).toHaveLength(2);
+
+      await repo.savePreference('ana', source.id, { active: false }, new Date(now));
+      await repo.savePreference('bruno', source.id, { active: false }, new Date(now));
+      expect(await collection().userFeeds()).toBeNull();
+    });
+
+    it('sem novas tentativas; 24 falhas seguidas param o feed, sem o endereço no registro (CA10, CA12)', async () => {
+      const { source } = await add('ana');
+      feeds.feeds.set(FEED, new NewsSourceError('retryable', 'nome não encontrado: blog.exemplo'));
+      const stored = repo.list.find((s) => s.id === source.id);
+      if (!stored) throw new Error('sem fonte');
+      stored.failures = 22;
+      expect(await collection().userFeeds()).toEqual({ collected: 0, failed: 1 });
+      expect(sleeps).toEqual([]);
+      expect(stored.stoppedAt).toBeNull();
+      const errors = runs.runs[0]?.result?.errors ?? [];
+      expect(errors).toEqual([{ message: `fonte ${source.id}: o feed não respondeu` }]);
+      expect(JSON.stringify(runs.runs)).not.toContain('blog.exemplo');
+
+      expect(await collection().userFeeds()).toEqual({ collected: 0, failed: 1 });
+      expect(stored.failures).toBe(24);
+      expect(stored.stoppedAt).toEqual(new Date(now));
+      // Parado: não é mais lido.
+      expect(await collection().userFeeds()).toBeNull();
+    });
+
+    it('as notícias com mais de 12 meses saem; as das fontes do app ficam (CA11)', async () => {
+      const { source } = await add('ana');
+      const old = { ...newsItem(1), publishedAt: new Date('2025-11-01T12:00:00Z') };
+      const recent = { ...newsItem(2), publishedAt: new Date('2026-11-01T12:00:00Z') };
+      await repo.saveNews(source.id, [old, recent], new Date(now));
+      await repo.saveNews(repo.parent.id, [old], new Date(now));
+      expect(await repo.deleteUserNewsBefore(new Date('2025-11-26T21:00:00Z'))).toBe(1);
+      expect(repo.news.map((n) => [n.sourceId === source.id, n.title])).toEqual([
+        [true, 'Notícia 2'],
+        [false, 'Notícia 1'],
+      ]);
+    });
+  });
+
   function newsItem(id: number) {
     return {
       url: url(id),

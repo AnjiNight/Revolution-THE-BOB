@@ -113,6 +113,13 @@ export const NEWS_CHANNELS = {
   label: 'news:label',
   unlabel: 'news:unlabel',
   evaluate: 'news:evaluate-sentiment',
+  // SPEC-030: as fontes do usuário e a tela Notícias.
+  mySources: 'news:my-sources',
+  addFeed: 'news:add-feed',
+  updateMySource: 'news:update-my-source',
+  retryFeed: 'news:retry-feed',
+  removeFeed: 'news:remove-feed',
+  feed: 'news:feed',
 } as const;
 
 /** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */

@@ -1,5 +1,9 @@
 import { existsSync } from 'node:fs';
-import { INGESTION_TASKS, type IngestionTaskCode } from '@simulador/shared';
+import {
+  INGESTION_TASKS,
+  USER_NEWS_RETENTION_DAYS,
+  type IngestionTaskCode,
+} from '@simulador/shared';
 import { pino } from 'pino';
 import { buildApp } from './app.js';
 import { AssetCatalogService } from './modules/asset-catalog/application/asset-catalog-service.js';
@@ -52,6 +56,8 @@ import { NewsSourcesService } from './modules/news/application/news-sources-serv
 import { HttpFeedFetcher } from './modules/news/infrastructure/http-feed-fetcher.js';
 import { Investidor10NewsHttpSource } from './modules/news/infrastructure/investidor10-news-source.js';
 import { PrismaNewsRepository } from './modules/news/infrastructure/prisma-news-repository.js';
+import { PrismaNewsSourcesExport } from './modules/news/infrastructure/prisma-news-export.js';
+import { UserNewsService } from './modules/news/application/user-news-service.js';
 import { PrismaFundamentalsRepository } from './modules/market-data/infrastructure/prisma-fundamentals-repository.js';
 import { BrapiLogoSource } from './modules/market-data/infrastructure/brapi-logo-source.js';
 import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
@@ -251,6 +257,8 @@ async function main(): Promise<void> {
     const sentiment = new SentimentService({ sentiment: sentimentRepo });
     const { auth, profile, passwordReset, accountData } = createIdentityServices({
       portfolios,
+      // SPEC-030: os feeds e as escolhas de fontes no "Baixar meus dados".
+      newsSources: new PrismaNewsSourcesExport(prisma),
       users: new PrismaUserRepository(prisma),
       refreshTokens: new PrismaRefreshTokenRepository(prisma),
       emailCodes: new PrismaEmailCodeRepository(prisma),
@@ -303,6 +311,16 @@ async function main(): Promise<void> {
       }),
       assetNews: new AssetNewsService({ news: newsRepo, sentiment }),
       sentiment,
+      // SPEC-030: o feed recém-adicionado já sai vinculado e classificado, sem esperar o processador.
+      userNews: new UserNewsService({
+        news: newsRepo,
+        feeds: feedFetcher,
+        sentiment,
+        afterCollect: async () => {
+          await newsLinker.run();
+          await newsSentiment.run();
+        },
+      }),
     });
     await app.listen({ host: config.host, port: config.port });
     shutdown = async () => {
@@ -372,6 +390,11 @@ async function main(): Promise<void> {
         run: () => collected(news.archive()),
       },
       noticias_feeds: { name: 'notícias das fontes curadas', run: () => collected(news.feeds()) },
+      // SPEC-030: os feeds próprios dos usuários, a cada 60 minutos.
+      noticias_feeds_usuario: {
+        name: 'notícias dos feeds dos usuários',
+        run: () => collected(news.userFeeds()),
+      },
     };
     const worker = startWorker({
       logger,
@@ -388,6 +411,14 @@ async function main(): Promise<void> {
         },
         // SPEC-009 (OPEN-40): cotações do pregão ficam 30 dias.
         { name: 'limpeza das cotações do pregão', run: () => intraday.cleanup() },
+        // SPEC-030: as notícias dos feeds dos usuários ficam 12 meses.
+        {
+          name: 'limpeza das notícias dos feeds dos usuários',
+          run: () =>
+            newsRepo.deleteUserNewsBefore(
+              new Date(Date.now() - USER_NEWS_RETENTION_DAYS * 24 * 60 * 60 * 1000),
+            ),
+        },
         // SPEC-011 (OPEN-40): execuções por 90 dias, sempre com a última de cada tarefa.
         {
           name: 'limpeza das execuções antigas',

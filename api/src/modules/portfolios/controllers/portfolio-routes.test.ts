@@ -232,7 +232,7 @@ describe('rotas das carteiras (SPEC-012)', () => {
     await create({ name: 'Dividendos', type: 'live' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 7,
+      version: 8,
       portfolios: [
         { name: 'Dividendos', type: 'live', startDate: '2026-11-05', cashEntries: [], trades: [] },
       ],
@@ -459,7 +459,7 @@ describe('caixa das carteiras (SPEC-013)', () => {
     await add(id, { type: 'withdrawal', amount: '100', date: '2019-04-01' });
     const res = await call('GET', PROFILE_PATHS.export, ana);
     expect(res.json()).toMatchObject({
-      version: 7,
+      version: 8,
       portfolios: [
         {
           id,

@@ -1,0 +1,249 @@
+/* SPEC-030: a tela Notícias do usuário e as Minhas fontes. */
+
+.user-news-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.user-news-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: end;
+  gap: 0.25rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.user-news-filters .field {
+  min-width: 0;
+}
+
+.user-news-clear {
+  justify-self: start;
+  margin-bottom: 1rem;
+}
+
+.user-news-asset {
+  position: relative;
+}
+
+.user-news-asset-results {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  right: 0;
+  left: 0;
+  display: grid;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  list-style: none;
+}
+
+.user-news-asset-results button {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 4px);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-news-asset-results button span {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-news-asset-results button:hover,
+.user-news-asset-results button:focus-visible {
+  background: var(--accent-soft);
+}
+
+.user-news-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+
+.user-news-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  padding: 0 0.4rem 0 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.user-news-chip-remove {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.user-news-chip-remove:hover,
+.user-news-chip-remove:focus-visible {
+  background: var(--accent-soft);
+}
+
+.user-news-tone {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+}
+
+.user-news-tone h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.user-news-tone p {
+  margin: 0.25rem 0 0;
+}
+
+.user-news-tone-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* "Sua fonte": texto, não só cor (RNF04). */
+.user-news-own {
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.user-news-assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* O ticker que abre a ficha: um botão discreto, do tamanho de uma etiqueta. */
+.user-news-assets .user-news-ticker {
+  min-height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.user-sources {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.5rem 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.user-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  min-width: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  overflow-wrap: anywhere;
+}
+
+.user-source.is-off .user-source-name {
+  color: var(--muted);
+}
+
+.user-source-name {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.user-source-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-source-priority {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.user-source-priority select {
+  min-height: 2.25rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.user-source-inline {
+  flex: 1 0 100%;
+}
+
+.user-source-inline p {
+  margin: 0 0 0.5rem;
+}
+
+.user-source-add {
+  display: grid;
+  gap: 0.25rem;
+  max-width: 36rem;
+  margin-top: 0.5rem;
+}
+
+.user-source-add h2 {
+  margin-bottom: 0;
+}
+
+.user-source-add > button {
+  justify-self: start;
+}
+
+.user-source-add .assets-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.user-source-priority label {
+  white-space: nowrap;
+}
+
+.user-news-page .profile-panel > .form-success,
+.user-news-page .profile-panel > .form-error {
+  margin: 0 0 1rem;
+}

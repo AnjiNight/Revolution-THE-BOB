@@ -1,6 +1,11 @@
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
-import { FeedAddressError, NewsSourceError, type FeedFetcher } from '../application/ports.js';
+import {
+  FEED_TOO_LARGE,
+  FeedAddressError,
+  NewsSourceError,
+  type FeedFetcher,
+} from '../application/ports.js';
 import { isLocalHostname, isPrivateAddress } from '../domain/address.js';
 
 /** Limites do §4.2: 2 MB, 20 segundos e até 3 redirecionamentos (cada um conferido de novo). */
@@ -90,7 +95,7 @@ export class HttpFeedFetcher implements FeedFetcher {
 /** Lê o corpo até o limite; passou, para e recusa. */
 async function readLimited(response: Response): Promise<string> {
   const declared = Number(response.headers.get('content-length') ?? 0);
-  if (declared > FEED_MAX_BYTES) throw new NewsSourceError('invalid', 'feed maior que 2 MB');
+  if (declared > FEED_MAX_BYTES) throw new NewsSourceError('invalid', FEED_TOO_LARGE);
   if (!response.body) return '';
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -101,7 +106,7 @@ async function readLimited(response: Response): Promise<string> {
     size += value.byteLength;
     if (size > FEED_MAX_BYTES) {
       await reader.cancel();
-      throw new NewsSourceError('invalid', 'feed maior que 2 MB');
+      throw new NewsSourceError('invalid', FEED_TOO_LARGE);
     }
     chunks.push(value);
   }
