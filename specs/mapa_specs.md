@@ -81,6 +81,7 @@
 | 1.71 | SPEC-044 aprovada (Nicoly, 19/11/2026, "Aprovar e fazer") e implementada: dicionário de termos (`lexico` v1) no processador, logo depois do vínculo e a cada 30 minutos; versões do modelo no banco, com a nota; na tela Notícias do colaborador, rotular (teclas 1, 2, 3 e 0), trocar e apagar rótulos e "Avaliar agora" com a tabela de erros; na ficha, o tom em cada notícia, as contagens do pregão e a nota de caráter educacional, só com a versão aprovada. As 261 notícias reais classificadas em 0,3 s (79 positivas, 101 neutras, 81 negativas). OPEN-30 resolvida; OPEN-31 em parte; DA20 e `decisoes_tecnicas.md` atualizados |
 | 1.72 | Junção de 21/11/2026: tiradas as marcas de conflito que tinham ficado no histórico; as linhas da SPEC-044, que repetiam 1.68 e 1.69, passam a 1.70 e 1.71 |
 | 1.73 | SPEC-045 detalhada ([SPEC-045.md](SPEC-045.md)) a pedido da Nicoly, aprovada por ela em 21/11/2026, como escrita ("Aprovo, implemente"), e implementada: botão Visão do usuário no menu do colaborador, com as telas do usuário, a faixa de aviso e carteiras de teste da própria conta (as rotas de carteira aceitam o colaborador; a verificação de dono não muda). Novo RF44 (requisitos v1.14); muda a regra "Quem tem carteira" da SPEC-012 |
+| 1.74 | SPEC-030 detalhada ([SPEC-030.md](SPEC-030.md)) a pedido do Luís, com as escolhas dele (tela Notícias com filtros, prioridade Alta, Média e Baixa com pesos 3, 2 e 1 e a fonte pai com 4, até 10 feeds próprios), aprovada por ele em 26/11/2026, como escrita ("Aprovo, implemente"), e implementada: Minhas fontes, coleta dos feeds dos usuários a cada 60 minutos, tela Notícias com o tom ponderado, a ficha seguindo as preferências; RF45 a RF47, RB29 e RB30 (requisitos 1.15). OPEN-32 resolvida; a SPEC-030 sai das bloqueadas |
 ---
 
 ## 0. Como ler este documento
@@ -293,7 +294,7 @@ Nenhuma delas foi resolvida neste mapa. Cada uma aponta para uma decisão em abe
 | INC-07 | "Simulação" tem três sentidos: SIMULACAO no modelo (projeção), "salvar simulações" em RF20 e "criar uma nova simulação" nas personas (equivalente a uma carteira) | Modelo × RF20 × P02 | OPEN-22 |
 | INC-08 | A **Visão** põe a carteira real no MVP; os **requisitos** não têm nenhum RF de carteira real | Visão §9, §24 × Requisitos | OPEN-42 |
 | INC-09 | O diagrama liga "Buscar ativo" e "Consultar cotação" diretamente à API de mercado; DA07 diz que as telas só leem banco e cache. DA16 limita o catálogo a ~40–50 ativos | Casos de uso × DA07, DA16 | OPEN-41 |
-| INC-10 | Fontes do usuário (DA19) e cotações por plano (DA16) não têm RFs em `requisições.md` | ADRs × Requisitos | OPEN-09, OPEN-32 |
+| INC-10 | Fontes do usuário (DA19) e cotações por plano (DA16) não têm RFs em `requisições.md` (as fontes do usuário ganharam RF45 a RF47 na SPEC-030) | ADRs × Requisitos | OPEN-09, OPEN-32 |
 | INC-11 | RNF17 exige migrações reversíveis; o ORM definido não gera reversão automaticamente | Requisitos × Decisões técnicas | OPEN-39 ✅ |
 | INC-12 | RF04 (biometria) é multiplataforma nos requisitos, mas só é simples no macOS | Requisitos × Decisões técnicas | OPEN-36 |
 | INC-13 | ⏸ *(adiada com a renda fixa — DA22)* RB16 aplica IR a todo resgate, sem tratar produtos que podem ter tratamento fiscal diferente (LCI/LCA) | Requisitos | OPEN-17 |
@@ -341,7 +342,7 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-29 | ⏳ **Em parte resolvida na [SPEC-027](SPEC-027.md):** fontes curadas por RSS ou Atom, cadastradas pelo colaborador com categoria, confiabilidade de 1 a 5 (critério da equipe) e licença conferida; a primeira é a Agência Brasil – Economia. As outras fontes ficam com a equipe. Original: lista de fontes curadas e critério de confiabilidade | Decisões técnicas §3 | 027 |
 | OPEN-30 | ✅ **Resolvida na [SPEC-044](SPEC-044.md) (19/11/2026):** v1 por regras com dicionário, no processador; nota mínima F1 macro 0,60 com 60 notícias de teste da amostra rotulada pela equipe; versão nova só se medir melhor na mesma amostra; retreino não se aplica à v1. Original: implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 044 |
 | OPEN-31 | ⏳ Em parte: a v1 (SPEC-044) não treina; o histórico disponível é o arquivo do Investidor10, desde 22/09/2023. A janela de treino fica para o modelo treinado. Original: fonte do histórico de notícias e janela de treino | PE09, PE11 | 044, 031 |
-| OPEN-32 | RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
+| OPEN-32 | ✅ **Resolvida na [SPEC-030](SPEC-030.md) (26/11/2026):** RF45 a RF47 e RB29 e RB30; até 10 feeds próprios por usuário; prioridade Alta, Média e Baixa com pesos 3, 2 e 1, e a fonte pai com 4. Original: RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
 | OPEN-33 | Aprovação de DA21 (**Proposta**); horizontes, limite de estabilidade, n mínimo; cenário com sentimento personalizado | DA21, PE12 | 031 |
 | OPEN-34 | Cenário por ativo ou por carteira; reescrita de RF30/RF31 | INC-06 | 031 |
 | OPEN-35 | ✅ **Resolvida para o RF35 na [SPEC-033](SPEC-033.md) (17/11/2026):** 5% no dia (3% ou 10% à escolha em Meu perfil, ou desligado) e nenhum aviso com o app fechado; a antecedência do aviso de vencimento (RF34) fica com a renda fixa (DA22). Original: limiar de "variação relevante", antecedência do aviso de vencimento, notificação com o app fechado | RF34, RF35 | 033 |
@@ -1066,23 +1067,23 @@ Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
 | Em aberto | — |
 | Prioridade derivada | Could (RF29); destacado como núcleo do MVP na Visão §24 (ver OPEN-42 e drivers §8) |
 
-#### SPEC-030 — Fontes de notícias do usuário e preferências
+#### SPEC-030 — Fontes de notícias do usuário e tela Notícias
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | O usuário ativa/desativa fontes curadas, define a prioridade de cada fonte e adiciona feeds próprios (com validações de segurança); a fonte pai não pode ser desativada; as notícias e o sentimento personalizado seguem a prioridade |
+| Objetivo | O usuário ativa/desativa fontes curadas, define a prioridade de cada fonte e adiciona feeds próprios (com validações de segurança); a fonte pai não pode ser desativada; a tela Notícias, com filtros por ativo, setor, período, sentimento e fonte, e a ficha seguem as preferências, e o tom das notícias é ponderado pela prioridade |
 | Valor | **Usuário:** personaliza o que acompanha (Visão §18) |
-| RF | Nenhum em `requisições.md` (OPEN-32) |
-| RB | — (regras vêm de DA19) |
-| RNF | RNF09, RNF11 |
+| RF | RF45, RF46, RF47 (requisitos 1.15) |
+| RB | RB29, RB30 (de DA19) |
+| RNF | RNF09, RNF11, RNF13, RNF18, RNF20 |
 | Caso de uso / fluxo | — (ver OPEN-43); Visão §18 |
 | Entidades | FONTE_NOTICIA†, PREFERENCIA_FONTE†, NOTICIA |
 | Drivers | OBJ02, QA08, RES05 |
 | ADRs | DA13, DA19 |
-| Depende de | SPEC-027, SPEC-028, SPEC-029 |
+| Depende de | SPEC-027, SPEC-028, SPEC-029, SPEC-034, SPEC-044 |
 | Posição | Estende a coleta e a exibição já existentes |
-| Em aberto | **OPEN-32 (bloqueante: faltam RFs)** |
-| Prioridade derivada | Sem MoSCoW (decisão DA19) |
+| Em aberto | OPEN-43; junção com a SPEC-047 (notícias repetidas) |
+| Prioridade derivada | Could (RF45 a RF47) |
 
 #### SPEC-031 — Cenários por sentimento
 
@@ -1318,8 +1319,9 @@ Estas Specs **não fazem parte do escopo atual** e não devem ser geradas agora.
 | RF08 | 010 | RF18 | 021 | RF28 | 044 | RF38 | 035 |
 | RF09 | 008, 009, 026 | RF19 | 022 | RF29 | 029 | RF39 | 006, 040 |
 | RF10 | 007 | RF20 | 023 | RF30 | 031 | RF40 | 011 |
+| | | | | | | RF45–RF47 | 030 |
 
-Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002; RF43, da versão 1.7, pela SPEC-039). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016, 026 e 030 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09, OPEN-32). A carteira real da Visão não gerou Spec (OPEN-42).
+Os 38 RFs do escopo atual estão cobertos (RF41 e RF42, criados na versão 1.6 dos requisitos, pela SPEC-002; RF43, da versão 1.7, pela SPEC-039; RF44, da versão 1.14, pela SPEC-045; RF45 a RF47, da versão 1.15, pela SPEC-030). RF23, RF24, RF25 e RF34 foram adiados com a renda fixa (DA22) e ficam com as Specs da fase futura (017, 018, 024 e uma extensão da 033). As Specs 001 e 005 são técnicas; 016 e 026 vêm de ADRs aceitas que ainda não têm RF próprio (OPEN-09). A carteira real da Visão não gerou Spec (OPEN-42).
 
 ### 3.2 Caminho mínimo (requisitos Must)
 
@@ -1342,7 +1344,6 @@ Estas Specs **não devem ser detalhadas** antes de a equipe decidir os itens ind
 | Spec | Decisão bloqueante |
 |---|---|
 | SPEC-027 | OPEN-28 — autorização da fonte pai |
-| SPEC-030 | OPEN-32 — RFs das fontes do usuário |
 | SPEC-031 | OPEN-33, OPEN-34 — aprovar DA21 e escopo do cenário |
 | SPEC-037 | OPEN-37 — formato do arquivo |
 | SPEC-038 | OPEN-38 — conteúdo do relatório |
