@@ -82,6 +82,7 @@
 | 1.72 | Junção de 21/11/2026: tiradas as marcas de conflito que tinham ficado no histórico; as linhas da SPEC-044, que repetiam 1.68 e 1.69, passam a 1.70 e 1.71 |
 | 1.73 | SPEC-045 detalhada ([SPEC-045.md](SPEC-045.md)) a pedido da Nicoly, aprovada por ela em 21/11/2026, como escrita ("Aprovo, implemente"), e implementada: botão Visão do usuário no menu do colaborador, com as telas do usuário, a faixa de aviso e carteiras de teste da própria conta (as rotas de carteira aceitam o colaborador; a verificação de dono não muda). Novo RF44 (requisitos v1.14); muda a regra "Quem tem carteira" da SPEC-012 |
 | 1.74 | SPEC-030 detalhada ([SPEC-030.md](SPEC-030.md)) a pedido do Luís, com as escolhas dele (tela Notícias com filtros, prioridade Alta, Média e Baixa com pesos 3, 2 e 1 e a fonte pai com 4, até 10 feeds próprios), aprovada por ele em 26/11/2026, como escrita ("Aprovo, implemente"), e implementada: Minhas fontes, coleta dos feeds dos usuários a cada 60 minutos, tela Notícias com o tom ponderado, a ficha seguindo as preferências; RF45 a RF47, RB29 e RB30 (requisitos 1.15). OPEN-32 resolvida; a SPEC-030 sai das bloqueadas |
+| 1.75 | SPEC-049 detalhada ([SPEC-049.md](SPEC-049.md)) a pedido do Luís, aprovada por ele em 26/11/2026, como escrita: demonstração para o professor no Render (plano gratuito), com o `render.yaml`, a cópia só dos dados de mercado do banco local, o instalador sem as credenciais do Google e uma release de pré-lançamento no GitHub. Fora das fases do mapa; sem mudança no código |
 ---
 
 ## 0. Como ler este documento
