@@ -24,6 +24,8 @@ import type {
   NewsFeedFilter,
   NewsFeedRow,
   NewsRepository,
+  ScenarioNewsRow,
+  ScenarioRecord,
   NewsRunLog,
   NewsTask,
   NewsToClassify,
@@ -92,6 +94,8 @@ export class InMemoryNewsRepository implements NewsRepository {
   /** SPEC-030: as escolhas dos usuários e o setor de cada ativo, para o filtro. */
   readonly preferences: MemoryPreference[] = [];
   readonly sectors = new Map<string, { class: AssetClass; code: SectorCode }>();
+  /** SPEC-031: os cenários registrados. */
+  readonly scenarioRecords: ScenarioRecord[] = [];
 
   constructor() {
     const base = {
@@ -649,6 +653,48 @@ export class InMemoryNewsRepository implements NewsRepository {
           : [],
       ),
     );
+  }
+
+  // --- SPEC-031: cenários por sentimento ---
+
+  private officialClassified(modelVersionId: number): StoredNews[] {
+    return this.official().filter((item) => item.classification?.modelVersionId === modelVersionId);
+  }
+
+  scenarioNews(assetId: string, modelVersionId: number): Promise<ScenarioNewsRow[]> {
+    return Promise.resolve(
+      this.officialClassified(modelVersionId)
+        .filter((item) =>
+          item.links.some(
+            (l) =>
+              l.assetId === assetId && (l.relevance === 'principal' || l.relevance === 'citado'),
+          ),
+        )
+        .sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime())
+        .map((item) => ({
+          publishedAt: item.publishedAt,
+          score: item.classification?.score ?? 0,
+        })),
+    );
+  }
+
+  firstClassifiedNewsAt(modelVersionId: number): Promise<Date | null> {
+    const dates = this.officialClassified(modelVersionId).map((item) => item.publishedAt.getTime());
+    return Promise.resolve(dates.length > 0 ? new Date(Math.min(...dates)) : null);
+  }
+
+  recordScenarios(rows: readonly ScenarioRecord[]): Promise<void> {
+    for (const row of rows) {
+      const exists = this.scenarioRecords.some(
+        (r) =>
+          r.assetId === row.assetId &&
+          r.day === row.day &&
+          r.horizon === row.horizon &&
+          r.modelVersionId === row.modelVersionId,
+      );
+      if (!exists) this.scenarioRecords.push({ ...row });
+    }
+    return Promise.resolve();
   }
 
   clearParent(): Promise<number> {

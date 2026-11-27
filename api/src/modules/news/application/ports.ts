@@ -44,6 +44,29 @@ export interface UserSourceRow {
   news: number;
 }
 
+/** SPEC-031: uma notícia para o sentimento do pregão. */
+export interface ScenarioNewsRow {
+  publishedAt: Date;
+  score: number;
+}
+
+/** SPEC-031: o cenário de hoje de um horizonte, como fica registrado (porcentagens de 0 a 100). */
+export interface ScenarioRecord {
+  assetId: string;
+  day: string;
+  band: NewsSentiment;
+  horizon: number;
+  modelVersionId: number;
+  occurrences: number;
+  down: number | null;
+  flat: number | null;
+  up: number | null;
+  baseOccurrences: number;
+  baseDown: number | null;
+  baseFlat: number | null;
+  baseUp: number | null;
+}
+
 /** SPEC-030: o que filtra a tela Notícias; sempre só as notícias que o usuário vê. */
 export interface NewsFeedFilter {
   from: Date;
@@ -181,6 +204,16 @@ export interface NewsRepository {
     filter: NewsFeedFilter,
     modelVersionId: number,
   ): Promise<Array<{ sentiment: NewsSentiment; weight: number }>>;
+  // --- SPEC-031: cenários por sentimento ---
+  /**
+   * As notícias oficiais (fonte pai e curadas, RB30) em que o ativo é principal ou citado,
+   * classificadas pela versão, com a pontuação.
+   */
+  scenarioNews(assetId: string, modelVersionId: number): Promise<ScenarioNewsRow[]>;
+  /** A publicação da primeira notícia oficial classificada pela versão, ou `null`. */
+  firstClassifiedNewsAt(modelVersionId: number): Promise<Date | null>;
+  /** Grava o cenário do dia; o que já foi gravado (ativo, dia, horizonte, versão) fica como está. */
+  recordScenarios(rows: readonly ScenarioRecord[]): Promise<void>;
   /** SPEC-029: o ativo está no catálogo (ativo ou desativado). */
   assetExists(assetId: string): Promise<boolean>;
   /**

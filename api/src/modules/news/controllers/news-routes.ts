@@ -1,5 +1,6 @@
 import {
   ASSET_NEWS_PATHS,
+  ASSET_SCENARIO_PATH,
   MY_NEWS_PATHS,
   NEWS_PATHS,
   SENTIMENT_PATHS,
@@ -24,6 +25,7 @@ import {
   requireCollaborator,
 } from '../../identity/controllers/authenticate.js';
 import type { AssetNewsService } from '../application/asset-news-service.js';
+import type { AssetScenariosService } from '../application/asset-scenarios-service.js';
 import type { NewsSourcesService } from '../application/news-sources-service.js';
 import type { SentimentService } from '../application/sentiment-service.js';
 import type { UserNewsService } from '../application/user-news-service.js';
@@ -34,6 +36,8 @@ export interface NewsRoutesOptions {
   sentiment: SentimentService;
   /** SPEC-030: as fontes do usuário e a tela Notícias. */
   userNews: UserNewsService;
+  /** SPEC-031: os cenários por sentimento na ficha. */
+  assetScenarios: AssetScenariosService;
   accessTokens: AccessTokenService;
 }
 
@@ -111,6 +115,13 @@ export function registerNewsRoutes(app: FastifyInstance, options: NewsRoutesOpti
     const { period } = ensureValid(validateAssetNewsDaysQuery(request.query));
     const viewer = requireAuth(request).userId;
     return reply.send(await run(() => assetNews.days(id, period, viewer)));
+  });
+
+  // SPEC-031: os cenários por sentimento do ativo, para qualquer pessoa conectada, como a ficha.
+  const { assetScenarios } = options;
+  app.get<{ Params: IdParams }>(ASSET_SCENARIO_PATH, authenticated, async (request, reply) => {
+    const id = assetId(request.params);
+    return reply.send(await run(() => assetScenarios.scenarios(id)));
   });
 
   // SPEC-044: a amostra rotulada e a avaliação do modelo de sentimento.

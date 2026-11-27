@@ -26,6 +26,8 @@ import type {
   NewsFeedFilter,
   NewsFeedRow,
   NewsRepository,
+  ScenarioNewsRow,
+  ScenarioRecord,
   NewsToLink,
   NewsToSave,
   StoredLink,
@@ -665,6 +667,62 @@ export class PrismaNewsRepository implements NewsRepository {
       WHERE ${feedWhere(filter)} AND n.versao_modelo_id = ${modelVersionId}
         AND n.sentimento IS NOT NULL`;
     return rows.map((row) => ({ sentiment: sentimentFromDb(row.sentimento), weight: row.peso }));
+  }
+
+  // --- SPEC-031: cenários por sentimento ---
+
+  async scenarioNews(assetId: string, modelVersionId: number): Promise<ScenarioNewsRow[]> {
+    const rows = await this.prisma.noticia.findMany({
+      where: {
+        versaoModeloId: modelVersionId,
+        sentimentoPontuacao: { not: null },
+        // RB30: só a fonte pai e as curadas.
+        fonte: { tipo: { in: ['pai', 'curada'] } },
+        ativos: { some: { ativoId: assetId, relevancia: { in: ['principal', 'citado'] } } },
+      },
+      select: { publicadaEm: true, sentimentoPontuacao: true },
+      orderBy: [{ publicadaEm: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map((row) => ({
+      publishedAt: row.publicadaEm,
+      score: Number(row.sentimentoPontuacao),
+    }));
+  }
+
+  async firstClassifiedNewsAt(modelVersionId: number): Promise<Date | null> {
+    const row = await this.prisma.noticia.findFirst({
+      where: {
+        versaoModeloId: modelVersionId,
+        sentimentoPontuacao: { not: null },
+        fonte: { tipo: { in: ['pai', 'curada'] } },
+      },
+      select: { publicadaEm: true },
+      orderBy: { publicadaEm: 'asc' },
+    });
+    return row?.publicadaEm ?? null;
+  }
+
+  async recordScenarios(rows: readonly ScenarioRecord[]): Promise<void> {
+    if (rows.length === 0) return;
+    await this.prisma.cenarioRegistrado.createMany({
+      data: rows.map((row) => ({
+        ativoId: row.assetId,
+        dia: new Date(`${row.day}T00:00:00Z`),
+        faixa: sentimentToDb(row.band),
+        horizonte: row.horizon,
+        versaoModeloId: row.modelVersionId,
+        ocorrencias: row.occurrences,
+        queda: row.down,
+        estavel: row.flat,
+        alta: row.up,
+        baseOcorrencias: row.baseOccurrences,
+        baseQueda: row.baseDown,
+        baseEstavel: row.baseFlat,
+        baseAlta: row.baseUp,
+      })),
+      // Uma linha por ativo, dia, horizonte e versão: a primeira abertura do dia grava.
+      skipDuplicates: true,
+    });
   }
 
   async assetExists(assetId: string): Promise<boolean> {

@@ -31,6 +31,7 @@ import { newsSessions } from '../news-chart';
 import { useSectorName } from './AssetFields';
 import { AssetLogo } from './AssetLogo';
 import { AssetNewsSection, NewsSessionPanel, useNewsDays } from './AssetNews';
+import { AssetScenarios } from './AssetScenarios';
 import { DividendsPanel, FundamentalsPanel } from './FundamentalsPanels';
 import { PriceChart } from './PriceChart';
 import type { TradeAsset } from './TradeForm';
@@ -174,6 +175,12 @@ export function AssetDetailPage({
       />
       <HistoryPanel asset={asset} onSessionExpired={onSessionExpired} />
       <AssetNewsSection
+        assetId={asset.id}
+        ticker={asset.ticker}
+        onSessionExpired={onSessionExpired}
+      />
+      {/* SPEC-031: o que o preço fez depois de pregões com notícia parecida. */}
+      <AssetScenarios
         assetId={asset.id}
         ticker={asset.ticker}
         onSessionExpired={onSessionExpired}

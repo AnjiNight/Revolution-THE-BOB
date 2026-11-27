@@ -706,6 +706,57 @@
         if (options.failNews) return fail('server_unavailable');
         return ok({ period, days: newsDays(), model });
       },
+      // SPEC-031: cenários por sentimento. Sem `sentiment: 'visible'`, o sentimento não foi validado.
+      scenarios: () => {
+        calls.push(['assetScenarios']);
+        if (options.failNews) return fail('server_unavailable');
+        if (!sentimentVisible) {
+          return ok({
+            visible: false,
+            model: null,
+            today: null,
+            period: null,
+            bands: null,
+            base: null,
+            newsSessions: 0,
+            minOccurrences: 30,
+          });
+        }
+        const cell = (horizon, occurrences, down, flat, up) =>
+          occurrences < 30
+            ? { horizon, occurrences, insufficient: true, down: null, flat: null, up: null }
+            : { horizon, occurrences, insufficient: false, down, flat, up };
+        return ok({
+          visible: true,
+          model,
+          today: { band: 'negative', news: 3, score: -0.45 },
+          period: { from: '2023-09-22', to: '2026-11-16', sessions: 790 },
+          bands: {
+            positive: [
+              cell(0, 61, 0.2, 0.41, 0.39),
+              cell(5, 58, 0.31, 0.24, 0.45),
+              cell(20, 52, 0.33, 0.21, 0.46),
+            ],
+            neutral: [
+              cell(0, 44, 0.27, 0.45, 0.28),
+              cell(5, 42, 0.36, 0.26, 0.38),
+              cell(20, 12, 0, 0, 0),
+            ],
+            negative: [
+              cell(0, 40, 0.5, 0.3, 0.2),
+              cell(5, 38, 0.58, 0.12, 0.3),
+              cell(20, 21, 0, 0, 0),
+            ],
+          },
+          base: [
+            cell(0, 789, 0.3, 0.4, 0.3),
+            cell(5, 785, 0.45, 0.12, 0.43),
+            cell(20, 770, 0.4, 0.2, 0.4),
+          ],
+          newsSessions: 145,
+          minOccurrences: 30,
+        });
+      },
     }),
     // SPEC-027: fontes de notícias, com as mesmas recusas do servidor.
     news: group({

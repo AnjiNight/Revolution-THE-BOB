@@ -1,5 +1,6 @@
 import {
   ASSET_NEWS_PATHS,
+  ASSET_SCENARIO_PATH,
   ASSET_PATHS,
   assetPath,
   AUTH_PATHS,
@@ -39,6 +40,7 @@ import {
   type AssetDetail,
   type AssetNewsDays,
   type AssetNewsPage,
+  type AssetScenarios,
   type AssetDividends,
   type AssetFundamentals,
   type AssetSearchQuery,
@@ -744,6 +746,11 @@ export class AuthClient {
       if (!isPriceHistoryPeriod(period)) throw new RequestFailed('unexpected');
       return `${assetUrl(ASSET_NEWS_PATHS.days, id)}?period=${period}`;
     });
+  }
+
+  /** SPEC-031: cenários por sentimento do ativo; entra na cópia local, como as notícias da ficha. */
+  assetScenarios(id: string): Promise<ClientResult<AssetScenarios>> {
+    return this.read<AssetScenarios>(() => assetUrl(ASSET_SCENARIO_PATH, id));
   }
 
   // --- Tarefas de ingestão (SPEC-011), só colaborador ---

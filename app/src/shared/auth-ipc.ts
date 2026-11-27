@@ -78,6 +78,8 @@ export const ASSET_CHANNELS = {
   /** SPEC-029: notícias do ativo e os marcadores do gráfico. */
   news: 'assets:news',
   newsDays: 'assets:news-days',
+  // SPEC-031: cenários por sentimento.
+  scenarios: 'assets:scenarios',
   catalog: 'assets:catalog',
   create: 'assets:create',
   update: 'assets:update',

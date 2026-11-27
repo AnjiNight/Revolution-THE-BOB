@@ -32,7 +32,7 @@ describe.skipIf(!url)('sentimento das notícias no PostgreSQL (SPEC-044)', () =>
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE rotulo_noticia, noticia_ativo, noticia, versao_modelo RESTART IDENTITY',
+      'TRUNCATE TABLE cenario_registrado, rotulo_noticia, noticia_ativo, noticia, versao_modelo RESTART IDENTITY',
     );
   });
 

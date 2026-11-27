@@ -32,7 +32,7 @@ describe.skipIf(!url)('fontes e notícias no PostgreSQL (SPEC-027)', () => {
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE rotulo_noticia, noticia_ativo, noticia, versao_modelo, coleta_noticia_arquivo RESTART IDENTITY',
+      'TRUNCATE TABLE cenario_registrado, rotulo_noticia, noticia_ativo, noticia, versao_modelo, coleta_noticia_arquivo RESTART IDENTITY',
     );
     await prisma.fonteNoticia.deleteMany({ where: { url: { notIn: SEEDED } } });
     await prisma.fonteNoticia.updateMany({
