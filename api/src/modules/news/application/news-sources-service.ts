@@ -1,5 +1,6 @@
 import {
   LATEST_NEWS_LIMIT,
+  NEWS_SOURCE_PROBLEM_AFTER,
   type LatestNews,
   type NewNewsSourceInput,
   type NewsSource,
@@ -47,9 +48,11 @@ export class NewsSourcesService {
   }
 
   async status(): Promise<NewsSourcesStatus> {
-    const [sources, counts] = await Promise.all([
+    const [sources, counts, userSources] = await Promise.all([
       this.deps.news.sources(),
       this.deps.news.newsCounts(),
+      // SPEC-030: só os totais dos feeds dos usuários, sem os endereços (DA13).
+      this.deps.news.userSourceTotals(NEWS_SOURCE_PROBLEM_AFTER),
     ]);
     const parent = sources.find((source) => source.kind === 'parent');
     const archive = parent ? await this.deps.news.archive(parent.id) : null;
@@ -68,6 +71,7 @@ export class NewsSourcesService {
           }
         : null,
       parentEnabled: this.deps.parentEnabled,
+      userSources,
     };
   }
 
@@ -115,7 +119,8 @@ export class NewsSourcesService {
     input: UpdateNewsSourceInput,
   ): Promise<NewsSource> {
     const current = await this.deps.news.source(id);
-    if (!current) throw new NewsSourceNotFoundError();
+    // SPEC-030: o feed de um usuário não aparece nem muda pela tela do colaborador.
+    if (!current || current.kind === 'user') throw new NewsSourceNotFoundError();
     if (current.kind === 'parent') throw new ParentSourceError();
     const before: Record<string, string | number | boolean> = {};
     const after: Record<string, string | number | boolean> = {};
@@ -141,10 +146,11 @@ export class NewsSourcesService {
   }
 }
 
+/** As fontes do colaborador: a pai e as curadas (`sources()` não traz os feeds dos usuários). */
 function toPublic(source: StoredNewsSource, news: number): NewsSource {
   return {
     id: source.id,
-    kind: source.kind,
+    kind: source.kind === 'parent' ? 'parent' : 'curated',
     name: source.name,
     url: source.url,
     category: source.category,

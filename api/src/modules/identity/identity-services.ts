@@ -1,5 +1,6 @@
 import {
   AccountDataService,
+  type NewsSourcesExportReader,
   type PortfolioExportReader,
 } from './application/account-data-service.js';
 import { AuthService } from './application/auth-service.js';
@@ -37,6 +38,8 @@ export interface IdentityInfrastructure {
   generateCode?: (() => string) | undefined;
   /** SPEC-012: carteiras na exportação de dados pessoais. */
   portfolios?: PortfolioExportReader | undefined;
+  /** SPEC-030: fontes de notícias na exportação de dados pessoais. */
+  newsSources?: NewsSourcesExportReader | undefined;
 }
 
 /** Monta os serviços do módulo de identidade com a mesma ligação no servidor e nos testes. */
@@ -89,6 +92,7 @@ export function createIdentityServices(infra: IdentityInfrastructure) {
     refreshTokens: infra.refreshTokens,
     codes,
     ...(infra.portfolios ? { portfolios: infra.portfolios } : {}),
+    ...(infra.newsSources ? { newsSources: infra.newsSources } : {}),
     ...mailer,
     ...optional,
   });

@@ -78,7 +78,7 @@ describe.skipIf(!url)('monitoramento das tarefas no PostgreSQL (SPEC-011)', () =
     });
     await runs.start('cdi_diario', new Date('2026-11-16T21:00:00Z'));
     const latest = await monitor.latestRuns();
-    expect(latest.size).toBe(INGESTION_TASKS.length); // 12, com as 3 de notícias (SPEC-027)
+    expect(latest.size).toBe(INGESTION_TASKS.length); // 13, com as 4 de notícias (SPECs 027 e 030)
     expect(latest.get('cdi_diario')).toEqual({
       finished: {
         id: last,

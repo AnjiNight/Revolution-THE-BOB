@@ -102,9 +102,9 @@ export const PERSONAL_DATA_FORMAT = 'simulador-investimentos/dados-pessoais';
  * 2: SPEC-012, carteiras. 3: SPEC-013, aportes e retiradas de cada carteira. 4: SPEC-014, compras e
  * vendas de cada carteira. 5: SPEC-015, o momento do estorno de cada lançamento. 6: SPEC-016,
  * compras e vendas da carteira histórica (sem horário de cotação, com a fonte). 7: SPEC-023, de qual
- * carteira cada uma foi copiada (`copiedFrom`).
+ * carteira cada uma foi copiada (`copiedFrom`). 8: SPEC-030, as fontes de notícias (`newsSources`).
  */
-export const PERSONAL_DATA_VERSION = 7;
+export const PERSONAL_DATA_VERSION = 8;
 
 /**
  * Arquivo "Baixar meus dados" (SPEC-034, LGPD). Tudo o que o app guarda sobre a pessoa, sem
@@ -169,6 +169,19 @@ export interface PersonalDataExport {
       reversedAt: string | null;
     }>;
   }>;
+  /**
+   * SPEC-030: os feeds próprios (`own`) e as escolhas sobre as fontes do app (`curated`, só as que
+   * a pessoa mudou), na ordem em que foram feitas.
+   */
+  newsSources: Array<{
+    kind: 'own' | 'curated';
+    name: string;
+    url: string;
+    active: boolean;
+    priority: 'high' | 'medium' | 'low';
+    /** ISO 8601 de quando o feed foi adicionado ou a escolha feita. */
+    createdAt: string;
+  }>;
 }
 
 export interface TokenPair {
@@ -221,7 +234,10 @@ export type FieldErrorCode =
   | 'not_https'
   | 'private_address'
   | 'not_a_feed'
-  | 'invalid_url';
+  | 'invalid_url'
+  // SPEC-030: feed próprio do usuário grande demais ou que não respondeu.
+  | 'too_large'
+  | 'unreachable';
 
 export type FieldErrors = Partial<Record<string, FieldErrorCode>>;
 

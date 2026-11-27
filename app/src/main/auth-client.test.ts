@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import {
   ASSET_NEWS_PATHS,
+  ASSET_SCENARIO_PATH,
+  MY_NEWS_PATHS,
   ASSET_PATHS,
   assetPath,
   AUTH_PATHS,
@@ -40,6 +42,18 @@ const ASSET = {
   name: 'Petrobras PN',
   class: 'stock' as const,
   sector: 'petroleo_gas_biocombustiveis' as const,
+};
+
+/** SPEC-031: cenários com o sentimento ainda escondido. */
+const SCENARIOS = {
+  visible: false,
+  model: null,
+  today: null,
+  period: null,
+  bands: null,
+  base: null,
+  newsSessions: 0,
+  minOccurrences: 30,
 };
 
 /** SPEC-029 e SPEC-044: uma notícia da ficha, já com o tom e o modelo visível. */
@@ -263,6 +277,9 @@ class FakeServer {
         return json(200, { period: url.searchParams.get('period'), points: [] });
       case assetPath(ASSET_NEWS_PATHS.list, ASSET.id):
         return json(200, NEWS_PAGE);
+      // SPEC-030: a tela Notícias.
+      case MY_NEWS_PATHS.feed:
+        return json(200, { total: 0, news: [], model: null, tone: null, toneHidden: 'no_model' });
       // SPEC-044: as rotas do colaborador para o sentimento.
       case SENTIMENT_PATHS.summary:
         return json(200, { total: 1 });
@@ -272,6 +289,9 @@ class FakeServer {
         return json(409, { error: 'not_enough_labels', message: 'x' });
       case newsLabelPath(NEWS_ID):
         return new Response(null, { status: 204 });
+      // SPEC-031: os cenários por sentimento.
+      case assetPath(ASSET_SCENARIO_PATH, ASSET.id):
+        return json(200, SCENARIOS);
       case assetPath(ASSET_NEWS_PATHS.days, ASSET.id):
         return json(200, { period: url.searchParams.get('period'), days: [] });
       case assetPath(ASSET_PATHS.logo, NO_LOGO_ID):
@@ -819,6 +839,14 @@ describe('notícias na ficha (SPEC-029)', () => {
     expect(server.calls.at(-1)?.search).toBe('?group=list&offset=10');
     await client.assetNews(ASSET.id, { after: '2026-11-10', until: '2026-11-11' });
     expect(server.calls.at(-1)?.search).toBe('?after=2026-11-10&until=2026-11-11');
+    // Como a tela manda (AssetNews.tsx): a página como número. Antes, o cliente recusava sem chamar
+    // o servidor, e a ficha mostrava "Algo deu errado".
+    await expect(client.assetNews(ASSET.id, { group: 'main', offset: 0 })).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(server.calls.at(-1)?.search || '').toBe('');
+    await client.assetNews(ASSET.id, { group: 'main', offset: 10 });
+    expect(server.calls.at(-1)?.search).toBe('?offset=10');
     await expect(client.assetNewsDays(ASSET.id, 'max')).resolves.toEqual({
       ok: true,
       data: { period: 'max', days: [] },
@@ -826,7 +854,12 @@ describe('notícias na ficha (SPEC-029)', () => {
     expect(server.calls.at(-1)?.search).toBe('?period=max');
 
     const before = server.calls.length;
-    for (const query of [{ group: 'outro' }, { offset: '3' }, { after: '2026-11-10' }]) {
+    for (const query of [
+      { group: 'outro' },
+      { offset: '3' },
+      { offset: -10 },
+      { after: '2026-11-10' },
+    ]) {
       await expect(client.assetNews(ASSET.id, query)).resolves.toEqual({
         ok: false,
         error: 'unexpected',
@@ -837,6 +870,20 @@ describe('notícias na ficha (SPEC-029)', () => {
       error: 'unexpected',
     });
     await expect(client.assetNewsDays(ASSET.id, '1y&x=1' as PriceHistoryPeriod)).resolves.toEqual({
+      ok: false,
+      error: 'unexpected',
+    });
+    expect(server.calls).toHaveLength(before);
+  });
+});
+
+describe('cenários por sentimento (SPEC-031)', () => {
+  it('busca os cenários do ativo e recusa um id que não seja o do ativo', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.assetScenarios(ASSET.id)).resolves.toEqual({ ok: true, data: SCENARIOS });
+    expect(server.calls.at(-1)?.path).toBe(assetPath(ASSET_SCENARIO_PATH, ASSET.id));
+    const before = server.calls.length;
+    await expect(client.assetScenarios('../../me')).resolves.toEqual({
       ok: false,
       error: 'unexpected',
     });
@@ -1166,5 +1213,36 @@ describe('consulta sem conexão (SPEC-032)', () => {
     // O servidor falso não conhece a rota da carteira (500): nada é guardado para ela.
     await expect(cache.get(`GET ${portfolioPath(P1)}`)).resolves.toBeNull();
     await expect(cache.get(LIST_KEY)).resolves.not.toBeNull();
+  });
+});
+
+describe('tela Notícias (SPEC-030)', () => {
+  it('aceita a consulta como a tela manda (número e setor como objeto) e monta a URL', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    const result = await client.newsFeed({ period: '30d', offset: 0 });
+    expect(result).toMatchObject({ ok: true, data: { total: 0 } });
+    expect(server.calls.at(-1)?.path).toBe(MY_NEWS_PATHS.feed);
+    expect(server.calls.at(-1)?.search || '').toBe('');
+
+    await client.newsFeed({
+      period: '12m',
+      offset: 20,
+      asset: ASSET.id,
+      sector: { class: 'stock', code: 'financeiro' },
+      sentiment: 'negative',
+    });
+    expect(server.calls.at(-1)?.search).toBe(
+      `?period=12m&offset=20&asset=${ASSET.id}&sector=stock%3Afinanceiro&sentiment=negative`,
+    );
+
+    const before = server.calls.length;
+    for (const query of [
+      { offset: 5 },
+      { period: '1d' },
+      { sector: { class: 'stock', code: 'x' } },
+    ]) {
+      await expect(client.newsFeed(query)).resolves.toEqual({ ok: false, error: 'unexpected' });
+    }
+    expect(server.calls).toHaveLength(before);
   });
 });

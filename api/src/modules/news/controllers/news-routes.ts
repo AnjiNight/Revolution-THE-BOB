@@ -1,12 +1,17 @@
 import {
   ASSET_NEWS_PATHS,
+  ASSET_SCENARIO_PATH,
+  MY_NEWS_PATHS,
   NEWS_PATHS,
   SENTIMENT_PATHS,
   validateAssetNewsDaysQuery,
   validateAssetNewsQuery,
   validateNewNewsSource,
+  validateNewOwnFeed,
+  validateNewsFeedQuery,
   validateNewsLabel,
   validateSentimentNextQuery,
+  validateUpdateMySource,
   validateUpdateNewsSource,
 } from '@simulador/shared';
 import type { FastifyInstance } from 'fastify';
@@ -20,13 +25,19 @@ import {
   requireCollaborator,
 } from '../../identity/controllers/authenticate.js';
 import type { AssetNewsService } from '../application/asset-news-service.js';
+import type { AssetScenariosService } from '../application/asset-scenarios-service.js';
 import type { NewsSourcesService } from '../application/news-sources-service.js';
 import type { SentimentService } from '../application/sentiment-service.js';
+import type { UserNewsService } from '../application/user-news-service.js';
 
 export interface NewsRoutesOptions {
   sources: NewsSourcesService;
   assetNews: AssetNewsService;
   sentiment: SentimentService;
+  /** SPEC-030: as fontes do usuário e a tela Notícias. */
+  userNews: UserNewsService;
+  /** SPEC-031: os cenários por sentimento na ficha. */
+  assetScenarios: AssetScenariosService;
   accessTokens: AccessTokenService;
 }
 
@@ -41,6 +52,12 @@ const run = domainErrorRunner({
   no_model: { status: 409, message: 'O processador ainda não classificou nenhuma notícia.' },
   not_enough_labels: { status: 409, message: 'Poucas notícias rotuladas para avaliar.' },
   validation_error: { status: 400, message: 'Dados inválidos.' },
+  // SPEC-030
+  source_limit_reached: { status: 409, message: 'Você já tem 10 feeds próprios.' },
+  already_added: { status: 409, message: 'Você já adicionou este feed.' },
+  already_in_app: { status: 409, message: 'Esta fonte já está no app.' },
+  not_stopped: { status: 409, message: 'O feed não está parado.' },
+  not_own_source: { status: 409, message: 'Só os feeds próprios podem ser removidos.' },
 });
 
 interface IdParams {
@@ -88,13 +105,23 @@ export function registerNewsRoutes(app: FastifyInstance, options: NewsRoutesOpti
   app.get<{ Params: IdParams }>(ASSET_NEWS_PATHS.list, authenticated, async (request, reply) => {
     const id = assetId(request.params);
     const query = ensureValid(validateAssetNewsQuery(request.query));
-    return reply.send(await run(() => assetNews.page(id, query)));
+    // SPEC-030: só as notícias das fontes ligadas para quem vê.
+    const viewer = requireAuth(request).userId;
+    return reply.send(await run(() => assetNews.page(id, query, viewer)));
   });
 
   app.get<{ Params: IdParams }>(ASSET_NEWS_PATHS.days, authenticated, async (request, reply) => {
     const id = assetId(request.params);
     const { period } = ensureValid(validateAssetNewsDaysQuery(request.query));
-    return reply.send(await run(() => assetNews.days(id, period)));
+    const viewer = requireAuth(request).userId;
+    return reply.send(await run(() => assetNews.days(id, period, viewer)));
+  });
+
+  // SPEC-031: os cenários por sentimento do ativo, para qualquer pessoa conectada, como a ficha.
+  const { assetScenarios } = options;
+  app.get<{ Params: IdParams }>(ASSET_SCENARIO_PATH, authenticated, async (request, reply) => {
+    const id = assetId(request.params);
+    return reply.send(await run(() => assetScenarios.scenarios(id)));
   });
 
   // SPEC-044: a amostra rotulada e a avaliação do modelo de sentimento.
@@ -144,5 +171,48 @@ export function registerNewsRoutes(app: FastifyInstance, options: NewsRoutesOpti
     const input = ensureValid(validateUpdateNewsSource(request.body));
     const source = await run(() => sources.update(requireAuth(request).userId, id, input));
     return reply.send({ source });
+  });
+
+  // SPEC-030: as fontes de cada pessoa e a tela Notícias. O usuário e o colaborador (na Visão do
+  // usuário, SPEC-045), cada um com as próprias escolhas.
+  const { userNews } = options;
+  const sourceId = (params: IdParams): string => {
+    if (!UUID_PATTERN.test(params.id)) {
+      throw new HttpError(404, 'news_source_not_found', 'Fonte de notícias não encontrada.');
+    }
+    return params.id;
+  };
+
+  app.get(MY_NEWS_PATHS.sources, authenticated, async (request, reply) => {
+    return reply.send(await userNews.sources(requireAuth(request).userId));
+  });
+
+  app.post(MY_NEWS_PATHS.sources, authenticated, async (request, reply) => {
+    const input = ensureValid(validateNewOwnFeed(request.body));
+    const created = await run(() => userNews.addFeed(requireAuth(request).userId, input));
+    return reply.status(201).send(created);
+  });
+
+  app.patch<{ Params: IdParams }>(MY_NEWS_PATHS.source, authenticated, async (request, reply) => {
+    const id = sourceId(request.params);
+    const input = ensureValid(validateUpdateMySource(request.body));
+    const source = await run(() => userNews.update(requireAuth(request).userId, id, input));
+    return reply.send({ source });
+  });
+
+  app.post<{ Params: IdParams }>(MY_NEWS_PATHS.retry, authenticated, async (request, reply) => {
+    const id = sourceId(request.params);
+    return reply.send(await run(() => userNews.retry(requireAuth(request).userId, id)));
+  });
+
+  app.delete<{ Params: IdParams }>(MY_NEWS_PATHS.source, authenticated, async (request, reply) => {
+    const id = sourceId(request.params);
+    await run(() => userNews.remove(requireAuth(request).userId, id));
+    return reply.status(204).send();
+  });
+
+  app.get(MY_NEWS_PATHS.feed, authenticated, async (request, reply) => {
+    const query = ensureValid(validateNewsFeedQuery(request.query));
+    return reply.send(await run(() => userNews.feed(requireAuth(request).userId, query)));
   });
 }

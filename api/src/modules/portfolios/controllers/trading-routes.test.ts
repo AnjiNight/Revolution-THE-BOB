@@ -314,7 +314,7 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
     expect((await tradeNow('sell', 10)).json<TradeResult>().position).toBeNull();
   });
 
-  it('ativo que não existe: 404; carteira de outro: 404 com aviso; colaborador: 403 (CA09)', async () => {
+  it('ativo que não existe: 404; carteira de outro: 404 com aviso; colaborador: 404 (CA09, SPEC-045)', async () => {
     const unknown = await call(
       'GET',
       `${portfolioSubPath(PORTFOLIO_PATHS.tradeQuote, live)}?assetId=${UNKNOWN}`,
@@ -361,7 +361,7 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
     expect(
       (await call('GET', portfolioSubPath(PORTFOLIO_PATHS.positions, live), collaborator))
         .statusCode,
-    ).toBe(403);
+    ).toBe(404);
     expect(
       (await call('GET', portfolioSubPath(PORTFOLIO_PATHS.positions, live), null)).statusCode,
     ).toBe(401);
@@ -430,7 +430,7 @@ describe('compra e venda na carteira ao vivo (SPEC-014)', () => {
       version: number;
       portfolios: Array<{ trades: unknown[] }>;
     }>();
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(exported.portfolios[0]?.trades).toEqual([
       {
         type: 'buy',

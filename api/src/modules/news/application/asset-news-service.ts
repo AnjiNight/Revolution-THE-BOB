@@ -49,9 +49,11 @@ export class AssetNewsService {
     this.clock = deps.clock ?? (() => new Date());
   }
 
-  async page(assetId: string, query: AssetNewsQuery): Promise<AssetNewsPage> {
+  /** SPEC-030: `viewerId` vê só as notícias das fontes ligadas para ele, na ordem do peso. */
+  async page(assetId: string, query: AssetNewsQuery, viewerId: string): Promise<AssetNewsPage> {
     await this.ensureAsset(assetId);
     const filter: AssetNewsFilter = {
+      viewerId,
       relevances: query.group === 'list' ? LIST : MAIN,
       // O painel de um pregão: os dias de referência depois de `after` até `until`.
       ...(query.after && query.until
@@ -66,7 +68,11 @@ export class AssetNewsService {
       this.deps.news.assetNews(assetId, filter, page),
       query.group === 'list'
         ? null
-        : this.deps.news.assetNews(assetId, { relevances: LIST }, { offset: 0, limit: 0 }),
+        : this.deps.news.assetNews(
+            assetId,
+            { viewerId, relevances: LIST },
+            { offset: 0, limit: 0 },
+          ),
       this.visibleModel(),
     ]);
     return {
@@ -85,11 +91,16 @@ export class AssetNewsService {
    * Quantas notícias principal e citado por dia de referência, desde o começo do período contado a
    * partir de hoje. O app liga cada dia ao pregão do gráfico e ignora o que fica antes dele.
    */
-  async days(assetId: string, period: PriceHistoryPeriod): Promise<AssetNewsDays> {
+  async days(
+    assetId: string,
+    period: PriceHistoryPeriod,
+    viewerId: string,
+  ): Promise<AssetNewsDays> {
     await this.ensureAsset(assetId);
     const start = periodStart(isoDateInBrasilia(this.clock()), period);
     const [dates, model] = await Promise.all([
       this.deps.news.assetNewsDates(assetId, {
+        viewerId,
         relevances: MAIN,
         ...(start ? { from: newsReferenceDayStart(start) } : {}),
       }),

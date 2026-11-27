@@ -34,12 +34,29 @@ export async function requireCollaborator(
 }
 
 /**
- * preHandler das rotas do usuário (SPEC-012: carteiras), depois de `authenticate`: 403 para o
- * colaborador, que não tem carteiras (DA12).
+ * preHandler das rotas só da conta de usuário (SPEC-033: avisos de variação), depois de
+ * `authenticate`: 403 para o colaborador (DA12).
  */
 export async function requireUser(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
   if (requireAuth(request).role !== 'user') {
     throw new HttpError(403, 'forbidden', 'Esta área é só das contas de usuário.');
+  }
+}
+
+/** Contas que têm carteiras: o usuário e, desde a SPEC-045, o colaborador (carteiras de teste). */
+const PORTFOLIO_ROLES: ReadonlySet<AccessTokenClaims['role']> = new Set(['user', 'collaborator']);
+
+/**
+ * preHandler das rotas de carteira (SPEC-012), depois de `authenticate`. Desde a SPEC-045, o
+ * colaborador também tem carteiras, as de teste da Visão do usuário; quem protege os dados é a
+ * verificação de dono de cada carteira (DA12, RB03), que não muda.
+ */
+export async function requirePortfolioAccount(
+  request: FastifyRequest,
+  _reply: FastifyReply,
+): Promise<void> {
+  if (!PORTFOLIO_ROLES.has(requireAuth(request).role)) {
+    throw new HttpError(403, 'forbidden', 'Esta conta não tem carteiras.');
   }
 }
 

@@ -38,6 +38,11 @@ interface HomeProps {
   onOpenAssets: () => void;
   /** SPEC-012: carteiras do usuário; `creating` abre já com o formulário de nova. */
   onOpenPortfolios: (creating?: boolean) => void;
+  /**
+   * SPEC-045: o colaborador na Visão do usuário (`user.role` já chega como `user`). O aceite dos
+   * termos é da conta de usuário: o colaborador não tem um a renovar.
+   */
+  userView?: boolean;
   /** SPEC-011: as tarefas de dados (colaborador). */
   onOpenTasks: () => void;
 }
@@ -85,6 +90,7 @@ export function Home({
   onOpenAssets,
   onOpenPortfolios,
   onOpenTasks,
+  userView = false,
 }: HomeProps) {
   const { t } = useTranslation();
   const [consents, setConsents] = useState<ConsentList | null>(null);
@@ -92,9 +98,9 @@ export function Home({
 
   // SPEC-003: se os termos mudaram desde o último aceite, pede um novo aceite ao entrar.
   useEffect(() => {
-    if (user.role !== 'user') return;
+    if (user.role !== 'user' || userView) return;
     void window.api.profile.listConsents().then((result) => result.ok && setConsents(result.data));
-  }, [user.role]);
+  }, [user.role, userView]);
 
   const accept = async () => {
     setAccepting(true);

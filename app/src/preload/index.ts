@@ -4,6 +4,7 @@ import type {
   AssetFundamentals,
   AssetNewsDays,
   AssetNewsPage,
+  AssetScenarios,
   AssetSearchResult,
   CalendarSuggestion,
   CashEntryResult,
@@ -23,6 +24,10 @@ import type {
   ConsentList,
   Investidor10Status,
   LatestNews,
+  MyNewsSource,
+  MyNewsSources,
+  NewsFeedPage,
+  OwnFeedCreated,
   NewsSource,
   NewsSourceCreated,
   NewsSourcesStatus,
@@ -202,6 +207,13 @@ const api: DesktopApi = {
     unlabel: (id) => invoke<ClientResult<null>>(NEWS_CHANNELS.unlabel, id),
     evaluate: () =>
       invoke<ClientResult<{ version: SentimentModelVersion }>>(NEWS_CHANNELS.evaluate),
+    mySources: () => invoke<ClientResult<MyNewsSources>>(NEWS_CHANNELS.mySources),
+    addFeed: (input) => invoke<ClientResult<OwnFeedCreated>>(NEWS_CHANNELS.addFeed, input),
+    updateMySource: (id, input) =>
+      invoke<ClientResult<{ source: MyNewsSource }>>(NEWS_CHANNELS.updateMySource, id, input),
+    retryFeed: (id) => invoke<ClientResult<OwnFeedCreated>>(NEWS_CHANNELS.retryFeed, id),
+    removeFeed: (id) => invoke<ClientResult<null>>(NEWS_CHANNELS.removeFeed, id),
+    feed: (query) => invoke<ClientResult<NewsFeedPage>>(NEWS_CHANNELS.feed, query),
   },
   assets: {
     search: (query) => invoke<ClientResult<AssetSearchResult>>(ASSET_CHANNELS.search, query),
@@ -218,6 +230,7 @@ const api: DesktopApi = {
     logo: (id) => read<string | null>(ASSET_CHANNELS.logo, id),
     news: (id, query) => read<AssetNewsPage>(ASSET_CHANNELS.news, id, query),
     newsDays: (id, period) => read<AssetNewsDays>(ASSET_CHANNELS.newsDays, id, period),
+    scenarios: (id) => read<AssetScenarios>(ASSET_CHANNELS.scenarios, id),
   },
 };
 

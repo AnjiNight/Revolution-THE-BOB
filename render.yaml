@@ -1,0 +1,62 @@
+# SPEC-049: demonstração para o professor no Render (plano gratuito). O servidor e o banco ficam
+# no Render; o processador não (o plano gratuito não roda processos em segundo plano), e os dados
+# de mercado são copiados do banco local (README, "Demonstração no Render").
+#
+# Limites do plano gratuito: o serviço dorme depois de 15 minutos sem uso (o primeiro acesso leva
+# até 1 minuto) e o banco é apagado 30 dias depois de criado, mais 14 de carência.
+
+services:
+  - type: web
+    name: simulador-api
+    runtime: node
+    plan: free
+    region: oregon
+    # Só o compartilhado e o servidor (sem o Electron). `--include=dev`: com NODE_ENV=production o
+    # npm deixaria de fora o TypeScript e o Prisma, que a compilação e as migrações usam.
+    buildCommand: >-
+      npm ci --include=dev --workspace packages/shared --workspace api --include-workspace-root &&
+      npm run build --workspace packages/shared &&
+      npm run build --workspace api
+    # As migrações rodam a cada início (o plano gratuito não tem comando de pré-deploy); o que já
+    # foi aplicado não é refeito.
+    startCommand: npm run db:migrate --workspace api && npm run start --workspace api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      # O Render manda a porta em PORT; o servidor precisa ouvir em todas as interfaces.
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: simulador-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      # Indicadores, proventos e notícias do Investidor10: autorizados só para este projeto
+      # acadêmico, até a apresentação (SPEC-041, SPEC-027).
+      - key: INVESTIDOR10_ENABLED
+        value: 'true'
+      # E-mail da confirmação do cadastro (SPEC-039) pelo Gmail, com senha de app. Os três
+      # últimos são preenchidos à mão no painel do Render e nunca vão para o Git.
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: '465'
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+
+databases:
+  - name: simulador-db
+    plan: free
+    region: oregon
+    databaseName: simulador
+    user: simulador
+    # A mesma versão do banco local (docker-compose.yml), de onde os dados são copiados.
+    postgresMajorVersion: '16'

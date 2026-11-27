@@ -620,3 +620,56 @@ button.asset-news-close {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* SPEC-031: cenários por sentimento na ficha. */
+.scenario-today {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.75rem;
+  font-weight: 600;
+}
+
+.scenario-horizons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.scenario-horizons .field-hint {
+  margin: 0;
+}
+
+.scenario-horizon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.scenario-sentence {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  line-height: 1.45;
+}
+
+/* A linha de hoje em negrito, sem a cor de destaque (o verde sugeriria alta numa linha de queda). */
+.scenario-table tr.is-today th {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.scenario-insufficient {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* O aviso de "sentimento ainda não validado" com o mesmo respiro dos outros parágrafos da seção. */
+.asset-scenarios .assets-note {
+  margin: 0.5rem 0 1rem;
+}

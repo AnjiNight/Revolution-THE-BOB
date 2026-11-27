@@ -5,8 +5,11 @@ import {
   parseNewsSitemap,
   type ArchiveEntry,
 } from '../domain/investidor10-news.js';
+import { OWN_FEED_STOP_AFTER } from '@simulador/shared';
 import { parseFeed } from '../domain/feed.js';
 import {
+  FEED_TOO_LARGE,
+  FeedAddressError,
   NewsSourceError,
   type FeedFetcher,
   type NewsRepository,
@@ -178,6 +181,60 @@ export class NewsCollection {
     });
   }
 
+  /**
+   * SPEC-030: a cada 60 minutos, cada feed próprio não parado e com alguém que o tem ligado, uma
+   * leitura por endereço para todos. Sem novas tentativas (a próxima hora é a nova tentativa); 24
+   * falhas seguidas param o feed até o usuário pedir de novo. O endereço é dado pessoal (DA13): a
+   * execução guarda só o id da fonte e o motivo.
+   */
+  userFeeds(): Promise<RunSummary | null> {
+    return this.once('noticias_feeds_usuario', async () => {
+      const sources = await this.deps.news.collectableUserSources();
+      if (sources.length === 0) return null;
+      const runId = await this.deps.runs.start('noticias_feeds_usuario', this.clock());
+      const log = new CollectionLog();
+      for (const source of sources) {
+        try {
+          const items = parseFeed(await this.deps.feeds.fetch(source.url), this.clock());
+          log.collected += await this.deps.news.saveNews(
+            source.id,
+            items.map((item) => ({
+              ...item,
+              body: null,
+              author: null,
+              themes: [],
+              companies: [],
+              updatedAt: null,
+            })),
+            this.clock(),
+          );
+          log.totals.items = (log.totals.items ?? 0) + items.length;
+          await this.deps.news.recordRun(
+            source.id,
+            { status: 'success', error: null },
+            this.clock(),
+          );
+        } catch (error) {
+          const reason = safeFeedError(error);
+          log.error(`fonte ${source.id}: ${reason}`);
+          log.failed += 1;
+          await this.deps.news.recordRun(
+            source.id,
+            { status: 'failure', error: reason },
+            this.clock(),
+          );
+          if (source.failures + 1 >= OWN_FEED_STOP_AFTER) {
+            await this.deps.news.setStopped(source.id, this.clock());
+            log.totals.stoppedFeeds = (log.totals.stoppedFeeds ?? 0) + 1;
+          }
+        }
+      }
+      const result = log.result(sources.length - log.failed === 0);
+      await this.deps.runs.finish(runId, result, this.clock());
+      return { collected: log.collected, failed: log.failed };
+    });
+  }
+
   private async activeParent(): Promise<StoredNewsSource | null> {
     if (!this.deps.parentEnabled) return null;
     return this.deps.news.parentSource();
@@ -306,6 +363,17 @@ export interface RunSummary {
 
 function changedSince(entry: ArchiveEntry, stored: Date | null | undefined): boolean {
   return entry.lastModified !== null && (!stored || entry.lastModified > stored);
+}
+
+/** SPEC-030: o motivo da falha sem o endereço nem o nome do servidor do feed (DA13). */
+function safeFeedError(error: unknown): string {
+  if (error instanceof FeedAddressError) return error.reason;
+  if (error instanceof NewsLayoutError) return 'não é um feed RSS nem Atom';
+  if (error instanceof NewsSourceError) {
+    if (error.message === FEED_TOO_LARGE) return FEED_TOO_LARGE;
+    return error.kind === 'invalid' ? 'resposta inválida do feed' : 'o feed não respondeu';
+  }
+  return 'o feed não respondeu';
 }
 
 function errorMessage(error: unknown): string {

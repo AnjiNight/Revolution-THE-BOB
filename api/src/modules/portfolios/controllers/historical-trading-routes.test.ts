@@ -260,7 +260,7 @@ describe('compra e venda na carteira histórica (SPEC-016)', () => {
       version: number;
       portfolios: Array<{ trades: unknown[] }>;
     }>();
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(exported.portfolios[0]?.trades).toEqual([
       expect.objectContaining({
         date: '2019-03-15',

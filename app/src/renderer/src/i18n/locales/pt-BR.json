@@ -229,7 +229,9 @@
     "not_https": "Use um endereço que comece com https://.",
     "private_address": "Use um endereço https público (não da rede interna).",
     "not_a_feed": "Não foi possível ler um feed RSS ou Atom neste endereço.",
-    "invalid_url": "Endereço inválido."
+    "invalid_url": "Endereço inválido.",
+    "too_large": "O feed passa de 2 MB.",
+    "unreachable": "O endereço não respondeu. Confira e tente de novo."
   },
   "authErrors": {
     "validation_error": "Confira os campos destacados.",
@@ -289,7 +291,12 @@
     "parent_source": "A fonte pai não pode ser alterada pela tela.",
     "news_not_found": "Notícia não encontrada.",
     "no_model": "O processador ainda não classificou nenhuma notícia.",
-    "not_enough_labels": "Rotule mais notícias: para avaliar, é preciso ter pelo menos 10 de teste."
+    "not_enough_labels": "Rotule mais notícias: para avaliar, é preciso ter pelo menos 10 de teste.",
+    "source_limit_reached": "Você já tem 10 feeds próprios. Remova um para adicionar outro.",
+    "already_added": "Você já adicionou este feed.",
+    "already_in_app": "Esta fonte já está no app.",
+    "not_stopped": "O feed não está parado.",
+    "not_own_source": "Só os seus feeds podem ser removidos."
   },
   "landing": {
     "skip": "Pular para o acesso",
@@ -426,7 +433,11 @@
     "assets": "Ativos",
     "logoutLabel": "Sair da conta",
     "portfolios": "Carteiras",
-    "news": "Notícias"
+    "news": "Notícias",
+    "userView": "Visão do usuário",
+    "userViewBannerTitle": "Visão do usuário.",
+    "userViewBannerText": "Você está vendo o app como um usuário, com as suas carteiras de teste.",
+    "backToCollaborator": "Voltar à Área do colaborador"
   },
   "offline": {
     "title": "Sem conexão com o servidor.",
@@ -671,7 +682,58 @@
     "buyTitle": "Comprar em qual carteira?",
     "buyLoading": "Carregando as carteiras…",
     "noLivePortfolio": "Crie uma carteira para comprar.",
-    "buyCancel": "Cancelar"
+    "buyCancel": "Cancelar",
+    "scenarios": {
+      "title": "Cenários pelo sentimento",
+      "lead": "O que o preço fez depois dos pregões em que as notícias sobre o ativo foram positivas, neutras ou negativas, comparado com todos os pregões.",
+      "loading": "Calculando os cenários…",
+      "retry": "Tentar de novo",
+      "hidden": "Os cenários aparecem quando a equipe validar o sentimento das notícias.",
+      "noNews": "Ainda não há notícias classificadas para montar cenários.",
+      "notForecast": "Mostra o que aconteceu depois de pregões parecidos no passado, não uma previsão.",
+      "notAdvice": "Não é recomendação de compra ou venda.",
+      "today_one": "Sentimento de hoje ({{count}} notícia):",
+      "today_other": "Sentimento de hoje ({{count}} notícias):",
+      "noNewsToday": "Sem notícias hoje.",
+      "todayBand": "A faixa de hoje",
+      "horizon": "Horizonte:",
+      "horizons": {
+        "0": "No pregão",
+        "5": "5 pregões depois",
+        "20": "20 pregões depois"
+      },
+      "bands": {
+        "positive": "Positivo",
+        "neutral": "Neutro",
+        "negative": "Negativo"
+      },
+      "bandWord": {
+        "positive": "positivo",
+        "neutral": "neutro",
+        "negative": "negativo"
+      },
+      "base": "Sem olhar as notícias",
+      "band": "Sentimento",
+      "down": "Queda",
+      "flat": "Estável",
+      "up": "Alta",
+      "occurrences": "Ocorrências",
+      "insufficient": "Dados insuficientes (mínimo de {{min}})",
+      "caption": "Cenários pelo sentimento, {{horizon}}",
+      "stable": "Estável: variação de até ±{{limit}}% ({{horizon}}), sobre o fechamento anterior.",
+      "period": "Desde {{from}}: {{sessions}} pregões, {{news}} com notícia.",
+      "sentence": {
+        "0": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, no próprio pregão ela caiu em {{down}}, ficou estável em {{flat}} e subiu em {{up}} das vezes.",
+        "5": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, 5 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "20": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, 20 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "0_one": "Na {{count}} vez em que o sentimento sobre a {{ticker}} foi {{band}}, no próprio pregão ela caiu em {{down}}, ficou estável em {{flat}} e subiu em {{up}} das vezes.",
+        "0_other": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, no próprio pregão ela caiu em {{down}}, ficou estável em {{flat}} e subiu em {{up}} das vezes.",
+        "5_one": "Na {{count}} vez em que o sentimento sobre a {{ticker}} foi {{band}}, 5 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "5_other": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, 5 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "20_one": "Na {{count}} vez em que o sentimento sobre a {{ticker}} foi {{band}}, 20 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "20_other": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, 20 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes."
+      }
+    }
   },
   "portfolios": {
     "title": "Carteiras",
@@ -1383,14 +1445,16 @@
       "cotacao_pregao": "Cotações do pregão",
       "noticias_novas": "Notícias novas (Investidor10)",
       "noticias_arquivo": "Arquivo de notícias (Investidor10)",
-      "noticias_feeds": "Notícias das fontes curadas"
+      "noticias_feeds": "Notícias das fontes curadas",
+      "noticias_feeds_usuario": "Notícias dos feeds dos usuários"
     },
     "sources": {
       "b3": "B3",
       "brapi": "brapi",
       "bcb": "Banco Central",
       "investidor10": "Investidor10",
-      "feeds": "feeds RSS das fontes curadas"
+      "feeds": "feeds RSS das fontes curadas",
+      "user_feeds": "feeds RSS dos usuários"
     },
     "source_one": "Fonte: {{sources}}",
     "source_other": "Fontes: {{sources}}",
@@ -1451,7 +1515,8 @@
       "cotacao_pregao": "Fora do horário do pregão, ou sem cota.",
       "noticias_novas": "Nada a buscar agora.",
       "noticias_arquivo": "Nada a buscar agora.",
-      "noticias_feeds": "Nenhuma fonte curada ativa."
+      "noticias_feeds": "Nenhuma fonte curada ativa.",
+      "noticias_feeds_usuario": "Nenhum feed de usuário para ler."
     },
     "processor": {
       "title": "Processador",
@@ -1579,7 +1644,119 @@
         "citado": "Citado",
         "lista": "Lista"
       }
-    }
+    },
+    "userSources": "Fontes de usuários: {{total}} endereços, {{failing}} com problema, {{stopped}} parados (os endereços não aparecem aqui)."
+  },
+  "userNews": {
+    "title": "Notícias",
+    "subtitle": "As notícias das suas fontes, das mais novas para as mais antigas. No mesmo dia, as das fontes de maior prioridade vêm antes.",
+    "offline": "Sem conexão: as notícias voltam quando o app se reconectar.",
+    "mySources": "Minhas fontes",
+    "filters": "Filtros das notícias",
+    "asset": "Ativo",
+    "assetPlaceholder": "Ticker ou nome",
+    "assetResults": "Ativos encontrados",
+    "removeAsset": "Tirar o filtro {{ticker}}",
+    "sector": "Setor",
+    "allSectors": "Todos os setores",
+    "classes": {
+      "stock": "Ações",
+      "fii": "FIIs"
+    },
+    "period": "Período",
+    "periods": {
+      "7d": "7 dias",
+      "30d": "30 dias",
+      "90d": "90 dias",
+      "12m": "12 meses"
+    },
+    "sentiment": "Sentimento",
+    "allSentiments": "Todos",
+    "sentiments": {
+      "positive": "Positivas",
+      "neutral": "Neutras",
+      "negative": "Negativas"
+    },
+    "source": "Fonte",
+    "allSources": "Todas as suas fontes",
+    "clearFilters": "Limpar filtros",
+    "loading": "Carregando as notícias…",
+    "total_one": "{{count}} notícia",
+    "total_other": "{{count}} notícias",
+    "empty": "Nenhuma notícia das suas fontes neste filtro.",
+    "more_one": "Ver mais ({{count}} notícia)",
+    "more_other": "Ver mais ({{count}} notícias)",
+    "ownSource": "Sua fonte",
+    "assets": "Ativos da notícia:",
+    "openAsset": "Abrir a ficha da {{ticker}}",
+    "read": "Ler em {{source}}",
+    "toneTitle": "Tom das notícias",
+    "toneValue": {
+      "positive": "{{value}} positivas",
+      "neutral": "{{value}} neutras",
+      "negative": "{{value}} negativas"
+    },
+    "toneCount_one": "Ponderado pela prioridade das fontes, em {{count}} notícia classificada.",
+    "toneCount_other": "Ponderado pela prioridade das fontes, em {{count}} notícias classificadas.",
+    "toneFew": "Poucas notícias para resumir o tom.",
+    "tonePersonal": "Personalizado pelas suas fontes e prioridades; não é o sentimento oficial do app.",
+    "toneEducational": "Resume o tom das manchetes; não é recomendação de investimento.",
+    "backToNews": "Voltar para as notícias",
+    "sourcesTitle": "Minhas fontes",
+    "sourcesSubtitle": "Escolha quais fontes acompanhar e a prioridade de cada uma. A prioridade decide a ordem das notícias no mesmo dia e o peso de cada fonte no tom das notícias.",
+    "sourcesLoading": "Carregando as suas fontes…",
+    "parentGroup": "Fonte principal do app",
+    "parentNote": "Sempre ligada e com a maior prioridade.",
+    "curatedGroup": "Fontes do app",
+    "ownGroup": "Seus feeds ({{count}} de {{limit}})",
+    "noOwn": "Você ainda não adicionou nenhum feed.",
+    "on": "Ligada",
+    "off": "Desligada",
+    "turnOnLabel": "Ligar {{name}}",
+    "turnOffLabel": "Desligar {{name}}",
+    "turnedOn": "{{name}} ligada.",
+    "turnedOff": "{{name}} desligada.",
+    "turnedOnInApp": "Fonte do app ligada.",
+    "priority": "Prioridade",
+    "priorityLabel": "Prioridade de {{name}}",
+    "priorities": {
+      "high": "Alta",
+      "medium": "Média",
+      "low": "Baixa"
+    },
+    "prioritySaved": "{{name}}: prioridade {{priority}}.",
+    "status": {
+      "ok": "Última leitura {{date}} · {{count}} notícias",
+      "pending": "Aguardando a primeira leitura",
+      "failing": "Com problema: o endereço não respondeu nas últimas leituras",
+      "stopped": "Parado: o endereço não responde há um dia"
+    },
+    "retry": "Tentar de novo",
+    "retried": "{{name}} respondeu e volta a ser lido de hora em hora.",
+    "rename": "Renomear",
+    "renameLabel": "Renomear {{name}}",
+    "newName": "Novo nome",
+    "renamed": "Feed renomeado para {{name}}.",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "remove": "Remover",
+    "removeLabel": "Remover {{name}}",
+    "removeTitle": "Remover o feed",
+    "removeConfirm": "Remover {{name}}? As notícias dele saem da sua tela Notícias.",
+    "removeYes": "Remover feed",
+    "removed": "{{name}} removido.",
+    "addTitle": "Adicionar feed",
+    "addHint": "Use o endereço de um feed RSS ou Atom (https). As notícias dos seus feeds só aparecem para você e não entram nas análises oficiais do app.",
+    "feedUrl": "Endereço do feed",
+    "feedName": "Nome (opcional)",
+    "feedNameHint": "Sem nome, usamos o título do feed.",
+    "add": "Adicionar feed",
+    "adding": "Lendo o feed…",
+    "added_one": "Feed adicionado: {{name}}, {{count}} notícia encontrada.",
+    "added_other": "Feed adicionado: {{name}}, {{count}} notícias encontradas.",
+    "alreadyInApp": "Esta fonte já está no app.",
+    "turnOn": "Ligar",
+    "limitReached": "Você já tem {{limit}} feeds próprios. Remova um para adicionar outro."
   },
   "sentiment": {
     "title": "Sentimento das notícias",

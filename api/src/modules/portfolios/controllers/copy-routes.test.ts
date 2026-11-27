@@ -339,7 +339,7 @@ describe('nova carteira a partir de outra (SPEC-023)', () => {
     expect(alone.portfolio.copiedFrom).toEqual({ id: historical, name: null });
 
     const exported = (await call('GET', PROFILE_PATHS.export)).json<PersonalDataExport>();
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(exported.portfolios.map((p) => [p.name, p.copiedFrom])).toEqual([
       ['Cenário B', { id: historical, name: null }],
     ]);
@@ -370,7 +370,7 @@ describe('nova carteira a partir de outra (SPEC-023)', () => {
     });
   });
 
-  it('original de outro usuário ou inexistente: 404 e a tentativa no log; colaborador 403; sem sessão 401 (CA05)', async () => {
+  it('original de outro usuário ou inexistente: 404 e a tentativa no log; colaborador também 404 (SPEC-045); sem sessão 401 (CA05)', async () => {
     const bia = await t.registerConfirmed({
       name: 'Bia Lima',
       email: 'bia@exemplo.com',
@@ -398,7 +398,7 @@ describe('nova carteira a partir de outra (SPEC-023)', () => {
       payload: { email: 'colab@exemplo.com', password: 'senha-do-colaborador' },
     });
     const colab = login.json<AuthSession>();
-    expect((await copy(historical, { name: 'Colab', scope: 'all' }, colab)).statusCode).toBe(403);
+    expect((await copy(historical, { name: 'Colab', scope: 'all' }, colab)).statusCode).toBe(404);
     expect((await copy(historical, { name: 'Anônimo', scope: 'all' }, null)).statusCode).toBe(401);
   });
 });

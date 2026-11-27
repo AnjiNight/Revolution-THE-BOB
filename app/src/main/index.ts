@@ -17,11 +17,13 @@ import type {
   NewAssetInput,
   NewCashEntryInput,
   NewNewsSourceInput,
+  NewOwnFeedInput,
   NewsSentiment,
   NewPortfolioCopyInput,
   NewPortfolioInput,
   NewTradeInput,
   UpdateNewsSourceInput,
+  UpdateMySourceInput,
   PasswordResetConfirmInput,
   PasswordResetRequestInput,
   PriceHistoryPeriod,
@@ -402,6 +404,15 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(NEWS_CHANNELS.unlabel, (_event, id: string) => auth.unlabelNews(id));
   ipcMain.handle(NEWS_CHANNELS.evaluate, () => auth.evaluateSentiment());
+  // SPEC-030: as fontes da pessoa e a tela Notícias (usuário e colaborador na Visão do usuário).
+  ipcMain.handle(NEWS_CHANNELS.mySources, () => auth.myNewsSources());
+  ipcMain.handle(NEWS_CHANNELS.addFeed, (_event, input: NewOwnFeedInput) => auth.addOwnFeed(input));
+  ipcMain.handle(NEWS_CHANNELS.updateMySource, (_event, id: string, input: UpdateMySourceInput) =>
+    auth.updateMyNewsSource(id, input),
+  );
+  ipcMain.handle(NEWS_CHANNELS.retryFeed, (_event, id: string) => auth.retryOwnFeed(id));
+  ipcMain.handle(NEWS_CHANNELS.removeFeed, (_event, id: string) => auth.removeOwnFeed(id));
+  ipcMain.handle(NEWS_CHANNELS.feed, (_event, query: unknown) => auth.newsFeed(query));
 
   // Catálogo de ativos (SPEC-006): o servidor confere se a conta é de colaborador.
   ipcMain.handle(ASSET_CHANNELS.search, (_event, query: AssetSearchQuery) =>
@@ -432,6 +443,8 @@ app.whenReady().then(() => {
   ipcMain.handle(ASSET_CHANNELS.newsDays, (_event, id: string, period: PriceHistoryPeriod) =>
     auth.assetNewsDays(id, period),
   );
+  // SPEC-031: cenários por sentimento na ficha.
+  ipcMain.handle(ASSET_CHANNELS.scenarios, (_event, id: string) => auth.assetScenarios(id));
 
   createWindow();
   app.on('activate', () => {

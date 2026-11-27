@@ -18,6 +18,7 @@ import { formatCalendarDay, formatChange } from '../format';
 import { priceReaction, REACTION_SESSIONS, sessionRange } from '../news-chart';
 import { SentimentTag } from './NewsSentiment';
 import { changeDirection } from './QuoteText';
+import '../user-news.css';
 
 type ListQuery = Omit<AssetNewsQuery, 'offset'>;
 
@@ -148,7 +149,15 @@ function NewsItem({ item, ticker }: { item: AssetNewsItem; ticker: string }) {
         {item.title}
       </a>
       <p className="position-name">
-        {item.source} · {when} ·{' '}
+        {item.source}
+        {/* SPEC-030: a notícia veio de um feed próprio. */}
+        {item.ownSource && (
+          <>
+            {' '}
+            <span className="user-news-own">{t('userNews.ownSource')}</span>
+          </>
+        )}{' '}
+        · {when} ·{' '}
         <span className={`news-link is-${item.relevance}`}>
           {t(`detail.news.relevance.${item.relevance}`, { ticker })}
         </span>

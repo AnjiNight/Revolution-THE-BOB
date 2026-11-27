@@ -66,6 +66,9 @@ function toVersion(row: VersaoModelo): StoredModelVersion {
   };
 }
 
+/** SPEC-030 (RB30): as notícias da fonte pai e das curadas; os feeds dos usuários ficam de fora. */
+const OFFICIAL = { fonte: { tipo: { not: 'usuario' as const } } };
+
 /** Sentimento das notícias no PostgreSQL (SPEC-044 §6). */
 export class PrismaSentimentRepository implements SentimentRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -138,16 +141,17 @@ export class PrismaSentimentRepository implements SentimentRepository {
 
   async classifiedCounts(versionId: number | null): Promise<{ total: number; classified: number }> {
     const [total, classified] = await Promise.all([
-      this.prisma.noticia.count(),
+      this.prisma.noticia.count({ where: OFFICIAL }),
       versionId === null
         ? Promise.resolve(0)
-        : this.prisma.noticia.count({ where: { versaoModeloId: versionId } }),
+        : this.prisma.noticia.count({ where: { ...OFFICIAL, versaoModeloId: versionId } }),
     ]);
     return { total, classified };
   }
 
   async labels(versionId: number | null): Promise<LabelRow[]> {
     const rows = await this.prisma.rotuloNoticia.findMany({
+      where: { noticia: OFFICIAL },
       select: {
         sentimento: true,
         noticia: { select: { publicadaEm: true, sentimento: true, versaoModeloId: true } },
@@ -190,8 +194,9 @@ export class PrismaSentimentRepository implements SentimentRepository {
         ? Prisma.sql`AND n.id NOT IN (${Prisma.join(skip.map((id) => Prisma.sql`${id}::uuid`))})`
         : Prisma.empty;
     const [picked] = await this.prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT n.id FROM noticia n
-      WHERE NOT EXISTS (SELECT 1 FROM rotulo_noticia r WHERE r.noticia_id = n.id) ${skipped}
+      SELECT n.id FROM noticia n JOIN fonte_noticia f ON f.id = n.fonte_id
+      WHERE f.tipo::text <> 'usuario'
+        AND NOT EXISTS (SELECT 1 FROM rotulo_noticia r WHERE r.noticia_id = n.id) ${skipped}
       ORDER BY EXISTS (
         SELECT 1 FROM noticia_ativo a WHERE a.noticia_id = n.id AND a.relevancia = 'principal'
       ) DESC, random()
@@ -225,6 +230,12 @@ export class PrismaSentimentRepository implements SentimentRepository {
   }
 
   async saveLabel(newsId: string, sentiment: NewsSentiment, at: Date): Promise<void> {
+    // SPEC-030 (RB30): a notícia de um feed de usuário nunca entra na amostra.
+    if (
+      (await this.prisma.noticia.count({ where: { id: newsId, fonte: { tipo: 'usuario' } } })) > 0
+    ) {
+      throw new NewsNotFoundError();
+    }
     try {
       await this.prisma.rotuloNoticia.upsert({
         where: { noticiaId: newsId },

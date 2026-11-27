@@ -49,6 +49,19 @@ export function parseFeed(xml: string, now: Date): FeedItem[] {
   return items;
 }
 
+/**
+ * SPEC-030: o título do próprio feed (o `<title>` antes do primeiro item), para o nome do feed
+ * próprio quando o usuário não dá um. `null` se não há.
+ */
+export function parseFeedTitle(xml: string): string | null {
+  const head = xml.split(/<(?:item|entry)\b/i)[0] ?? '';
+  const title = field(head, 'title');
+  return title ? clip(title, FEED_TITLE_MAX) : null;
+}
+
+/** O nome da fonte tem até 80 caracteres (SPEC-027 §6). */
+const FEED_TITLE_MAX = 80;
+
 function field(block: string, tag: string): string | null {
   const match = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'i').exec(block);
   if (!match) return null;

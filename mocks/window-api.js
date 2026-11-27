@@ -10,7 +10,8 @@
  *   ficha sem notícias). `role: 'user'` entra como usuária, para a ficha do ativo (SPEC-029).
  *   `failNews: true` faz as leituras de notícias da ficha falharem (servidor fora do ar).
  *   `sentiment: 'visible'` mostra o tom das notícias na ficha (SPEC-044); `evaluation` força a
- *   nota do "Avaliar agora" na tela do colaborador.
+ *   nota do "Avaliar agora" na tela do colaborador. SPEC-030: com `role: 'user'`, a tela Notícias
+ *   e a Minhas fontes (o tom ponderado aparece com `sentiment: 'visible'`).
  * - As chamadas ficam em `window.__MOCK_CALLS__` (ex.: para conferir o clique duplo).
  */
 (() => {
@@ -98,6 +99,11 @@
         ? null
         : { done: 8000, total: 22491, status: 'running', updatedAt: minutesAgo(30) },
     parentEnabled: scenario !== 'vazio',
+    // SPEC-030: só os totais dos feeds dos usuários.
+    userSources:
+      scenario === 'vazio'
+        ? { total: 0, failing: 0, stopped: 0 }
+        : { total: 3, failing: 1, stopped: 0 },
   };
 
   // SPEC-028: últimas notícias fictícias, com os vínculos.
@@ -194,6 +200,7 @@
     relevance,
     // Uma em cada cinco fica pendente (sem tom).
     sentiment: sentimentVisible ? tones[toneIndex++ % tones.length] : null,
+    ownSource: false,
   });
   const mainNews =
     scenario === 'vazio'
@@ -308,6 +315,241 @@
       }));
   };
 
+  // SPEC-030: as fontes da usuária (a pai, as curadas ligadas e os feeds dela) e a tela Notícias.
+  const weightOf = (source) =>
+    source.kind === 'parent' ? 4 : { high: 3, medium: 2, low: 1 }[source.priority];
+  const mySources = [
+    {
+      id: parent.id,
+      kind: 'parent',
+      name: 'Investidor10',
+      url: parent.url,
+      active: true,
+      priority: null,
+      weight: 4,
+      category: null,
+      status: null,
+      lastRunAt: null,
+      news: null,
+    },
+    ...(scenario === 'vazio' ? [] : curated).map((source) => ({
+      id: source.id,
+      kind: 'curated',
+      name: source.name,
+      url: source.url,
+      active: true,
+      priority: 'medium',
+      weight: 2,
+      category: source.category,
+      status: null,
+      lastRunAt: null,
+      news: null,
+    })),
+  ];
+  const feedItems = [];
+  const feedItem = (id, title, publishedAt, sourceId, sentiment, assets = []) => ({
+    id: `00000000-0000-4000-8000-0000000006${String(id).padStart(2, '0')}`,
+    title,
+    summary: `Resumo fictício: ${title.toLowerCase()}.`,
+    url: `https://noticias.exemplo/ficticia-${id}`,
+    sourceId,
+    publishedAt,
+    sentiment,
+    assets,
+  });
+  if (scenario !== 'vazio') {
+    const petr4 = [{ id: asset.id, ticker: 'PETR4' }];
+    const agency = curated[0]?.id ?? parent.id;
+    feedItems.push(
+      feedItem(
+        1,
+        'Petróleo Fictício (PETR4) anuncia dividendos',
+        '2026-11-16T13:00:00Z',
+        parent.id,
+        'positive',
+        petr4,
+      ),
+      feedItem(
+        2,
+        'Agência fictícia: inflação desacelera em outubro',
+        '2026-11-16T12:00:00Z',
+        agency,
+        'neutral',
+      ),
+      feedItem(
+        3,
+        'Banco Fictício tem lucro abaixo do esperado',
+        '2026-11-15T15:00:00Z',
+        agency,
+        'negative',
+      ),
+      feedItem(
+        4,
+        'Petróleo Fictício (PETR4) amplia produção',
+        '2026-11-14T15:00:00Z',
+        parent.id,
+        'positive',
+        petr4,
+      ),
+    );
+    for (let i = 5; i <= 26; i += 1) {
+      feedItems.push(
+        feedItem(
+          i,
+          `Notícia fictícia de mercado nº ${i}`,
+          new Date(Date.UTC(2026, 10, 13, 20 - (i % 12))).toISOString(),
+          parent.id,
+          i % 3 === 0 ? 'negative' : 'neutral',
+        ),
+      );
+    }
+  }
+  let nextOwn = 1;
+  const visibleSource = (sourceId) => mySources.find((s) => s.id === sourceId && s.active);
+  const feedPage = (query = {}) => {
+    const offset = Number(query.offset ?? 0);
+    const base = feedItems.filter(
+      (item) =>
+        visibleSource(item.sourceId) &&
+        (!query.asset || item.assets.some((a) => a.id === query.asset)) &&
+        (!query.source || item.sourceId === query.source),
+    );
+    const day = (iso) => iso.slice(0, 10);
+    const sorted = base
+      .filter((item) => !query.sentiment || item.sentiment === query.sentiment)
+      .sort(
+        (a, b) =>
+          day(b.publishedAt).localeCompare(day(a.publishedAt)) ||
+          weightOf(visibleSource(b.sourceId)) - weightOf(visibleSource(a.sourceId)) ||
+          b.publishedAt.localeCompare(a.publishedAt),
+      );
+    let tone = null;
+    if (sentimentVisible && base.length >= 10) {
+      const sums = { positive: 0, neutral: 0, negative: 0 };
+      let total = 0;
+      for (const item of base) {
+        const weight = weightOf(visibleSource(item.sourceId));
+        sums[item.sentiment] += weight;
+        total += weight;
+      }
+      tone = {
+        shares: {
+          positive: sums.positive / total,
+          neutral: sums.neutral / total,
+          negative: sums.negative / total,
+        },
+        classified: base.length,
+      };
+    }
+    return {
+      total: sorted.length,
+      news: sorted.slice(offset, offset + 20).map((item) => {
+        const source = visibleSource(item.sourceId);
+        return {
+          id: item.id,
+          title: item.title,
+          summary: item.summary,
+          url: item.url,
+          source: source.name,
+          ownSource: source.kind === 'own',
+          publishedAt: item.publishedAt,
+          sentiment: sentimentVisible ? item.sentiment : null,
+          assets: item.assets,
+        };
+      }),
+      model,
+      tone,
+      toneHidden: !sentimentVisible ? 'no_model' : tone ? null : 'few_news',
+    };
+  };
+  const ownCount = () => mySources.filter((s) => s.kind === 'own').length;
+  const myNews = {
+    mySources: () => {
+      calls.push(['mySources']);
+      return ok({ sources: structuredClone(mySources), ownLimit: 10, ownCount: ownCount() });
+    },
+    addFeed: (input) => {
+      calls.push(['addFeed', input]);
+      if (!/^https:\/\//.test(input.url)) return fail('validation_error', { url: 'not_https' });
+      if (/interno|localhost|192\.168\./.test(input.url)) {
+        return fail('validation_error', { url: 'private_address' });
+      }
+      if (/pagina/.test(input.url)) return fail('validation_error', { url: 'not_a_feed' });
+      const inApp = mySources.find((s) => s.kind !== 'own' && s.url === input.url);
+      if (inApp) {
+        return wait().then(() => ({
+          ok: false,
+          error: 'already_in_app',
+          details: { sourceId: inApp.id },
+        }));
+      }
+      if (mySources.some((s) => s.kind === 'own' && s.url === input.url)) {
+        return fail('already_added');
+      }
+      if (ownCount() >= 10) return fail('source_limit_reached');
+      const id = `00000000-0000-4000-8000-0000000007${String(nextOwn++).padStart(2, '0')}`;
+      const source = {
+        id,
+        kind: 'own',
+        name: input.name ?? 'Blog Fictício de FIIs',
+        url: input.url,
+        active: true,
+        priority: 'medium',
+        weight: 2,
+        category: null,
+        status: 'ok',
+        lastRunAt: new Date().toISOString(),
+        news: 2,
+      };
+      mySources.push(source);
+      feedItems.push(
+        feedItem(
+          50 + nextOwn,
+          'Post fictício do blog sobre FIIs de logística',
+          '2026-11-16T18:00:00Z',
+          id,
+          'positive',
+        ),
+        feedItem(
+          70 + nextOwn,
+          'Post fictício: agenda de rendimentos',
+          '2026-11-15T18:00:00Z',
+          id,
+          'neutral',
+        ),
+      );
+      return ok({ source: structuredClone(source), items: 2 });
+    },
+    updateMySource: (id, input) => {
+      calls.push(['updateMySource', id, input]);
+      const source = mySources.find((s) => s.id === id);
+      if (!source) return fail('news_source_not_found');
+      if (source.kind === 'parent') return fail('parent_source');
+      Object.assign(source, input);
+      source.weight = weightOf(source);
+      return ok({ source: structuredClone(source) });
+    },
+    retryFeed: (id) => {
+      calls.push(['retryFeed', id]);
+      const source = mySources.find((s) => s.id === id);
+      if (!source || source.status !== 'stopped') return fail('not_stopped');
+      source.status = 'ok';
+      return ok({ source: structuredClone(source), items: 2 });
+    },
+    removeFeed: (id) => {
+      calls.push(['removeFeed', id]);
+      const index = mySources.findIndex((s) => s.id === id && s.kind === 'own');
+      if (index < 0) return fail('not_own_source');
+      mySources.splice(index, 1);
+      return ok(null);
+    },
+    feed: (query = {}) => {
+      calls.push(['feed', query]);
+      if (options.failNews) return fail('server_unavailable');
+      return ok(feedPage(query));
+    },
+  };
+
   // SPEC-044: a amostra rotulada pela colaboradora. `scenario: 'vazio'` não tem versão do modelo.
   const toLabel = [
     ['Petróleo Fictício (PETR4) lucra mais no trimestre', ['PETR4']],
@@ -393,7 +635,26 @@
     calendar: group({}),
     indexes: group({}),
     fundamentals: group({}),
-    portfolios: group({}),
+    // SPEC-045: a lista de carteiras (uma de teste); o resto responde como servidor fora do ar.
+    portfolios: group({
+      list: () => {
+        calls.push(['portfolios']);
+        return ok({
+          portfolios: [
+            {
+              id: '00000000-0000-4000-8000-0000000000c1',
+              name: 'Teste do calendário',
+              type: 'live',
+              startDate: '2026-11-21',
+              createdAt: '2026-11-21T13:00:00.000Z',
+              updatedAt: '2026-11-21T13:00:00.000Z',
+              copiedFrom: null,
+            },
+          ],
+          limit: 20,
+        });
+      },
+    }),
     // SPEC-033: nenhum aviso de variação nestes testes (a variação do dia é lida das carteiras,
     // que aqui respondem como servidor fora do ar).
     notifications: {
@@ -405,7 +666,10 @@
     assets: group({
       logo: () => Promise.resolve({ ok: true, data: null }),
       // SPEC-029: a busca, a ficha e o histórico do ativo fictício.
-      search: () => ok({ assets: [asset], hasMore: false, total: 1 }),
+      search: (query = {}) => {
+        calls.push(['search', query]);
+        return ok({ assets: [asset], hasMore: false, total: 1 });
+      },
       detail: () => ok(structuredClone(detail)),
       history: (_id, period, adjusted) =>
         ok({
@@ -442,9 +706,61 @@
         if (options.failNews) return fail('server_unavailable');
         return ok({ period, days: newsDays(), model });
       },
+      // SPEC-031: cenários por sentimento. Sem `sentiment: 'visible'`, o sentimento não foi validado.
+      scenarios: () => {
+        calls.push(['assetScenarios']);
+        if (options.failNews) return fail('server_unavailable');
+        if (!sentimentVisible) {
+          return ok({
+            visible: false,
+            model: null,
+            today: null,
+            period: null,
+            bands: null,
+            base: null,
+            newsSessions: 0,
+            minOccurrences: 30,
+          });
+        }
+        const cell = (horizon, occurrences, down, flat, up) =>
+          occurrences < 30
+            ? { horizon, occurrences, insufficient: true, down: null, flat: null, up: null }
+            : { horizon, occurrences, insufficient: false, down, flat, up };
+        return ok({
+          visible: true,
+          model,
+          today: { band: 'negative', news: 3, score: -0.45 },
+          period: { from: '2023-09-22', to: '2026-11-16', sessions: 790 },
+          bands: {
+            positive: [
+              cell(0, 61, 0.2, 0.41, 0.39),
+              cell(5, 58, 0.31, 0.24, 0.45),
+              cell(20, 52, 0.33, 0.21, 0.46),
+            ],
+            neutral: [
+              cell(0, 44, 0.27, 0.45, 0.28),
+              cell(5, 42, 0.36, 0.26, 0.38),
+              cell(20, 12, 0, 0, 0),
+            ],
+            negative: [
+              cell(0, 40, 0.5, 0.3, 0.2),
+              cell(5, 38, 0.58, 0.12, 0.3),
+              cell(20, 21, 0, 0, 0),
+            ],
+          },
+          base: [
+            cell(0, 789, 0.3, 0.4, 0.3),
+            cell(5, 785, 0.45, 0.12, 0.43),
+            cell(20, 770, 0.4, 0.2, 0.4),
+          ],
+          newsSessions: 145,
+          minOccurrences: 30,
+        });
+      },
     }),
     // SPEC-027: fontes de notícias, com as mesmas recusas do servidor.
     news: group({
+      ...myNews,
       sources: () => {
         calls.push(['sources']);
         return ok(structuredClone(status));

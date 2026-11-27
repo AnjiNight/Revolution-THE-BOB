@@ -10,6 +10,9 @@ import { EmailCodeHasher } from '../modules/identity/application/email-code.js';
 import type { Clock } from '../modules/identity/application/ports.js';
 import { createIdentityServices } from '../modules/identity/identity-services.js';
 import { AssetNewsService } from '../modules/news/application/asset-news-service.js';
+import { UserNewsService } from '../modules/news/application/user-news-service.js';
+import { AssetScenariosService } from '../modules/news/application/asset-scenarios-service.js';
+import { adjustPrices } from '../modules/financial-calculation/price-adjustment.js';
 import { NewsSourcesService } from '../modules/news/application/news-sources-service.js';
 import { SentimentService } from '../modules/news/application/sentiment-service.js';
 import {
@@ -274,6 +277,17 @@ export async function buildTestApp(options: TestAppOptions = {}) {
     newsSources,
     assetNews: new AssetNewsService({ news: newsRepo, sentiment, clock }),
     sentiment,
+    userNews: new UserNewsService({ news: newsRepo, feeds: feedFetcher, sentiment, clock }),
+    // SPEC-031: a mesma série ajustada do gráfico, sobre as cotações e os eventos em memória.
+    assetScenarios: new AssetScenariosService({
+      news: newsRepo,
+      sentiment,
+      clock,
+      prices: {
+        adjustedCloses: async (assetId, from) =>
+          adjustPrices(await quotes.closes(assetId, from), await events.forAsset(assetId)),
+      },
+    }),
     logStream: logs,
   });
 

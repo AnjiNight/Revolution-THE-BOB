@@ -1,4 +1,5 @@
 import { isPriceHistoryPeriod, type PriceHistoryPeriod } from './asset-detail.js';
+import { isAssetClass, isSectorOf, type AssetClass, type SectorCode } from './assets.js';
 import type { FieldErrors, ValidationResult } from './auth.js';
 import { addDays, isIsoDate, isoDateInBrasilia, type IsoDate } from './calendar.js';
 
@@ -69,6 +70,8 @@ export interface AssetNewsItem {
   relevance: NewsLinkRelevance;
   /** SPEC-044: `null` se a notícia está pendente ou se o modelo não passou na avaliação. */
   sentiment: NewsSentiment | null;
+  /** SPEC-030: a notícia veio de um feed próprio do usuário ("Sua fonte"). */
+  ownSource: boolean;
 }
 
 /** Corpo de `GET /api/assets/:id/news`. */
@@ -254,11 +257,16 @@ export function validateAssetNewsQuery(input: unknown): ValidationResult<AssetNe
   if (typeof group !== 'string' || !(ASSET_NEWS_GROUPS as readonly string[]).includes(group)) {
     fields.group = 'invalid_option';
   }
-  // Da query string vem texto; múltiplo de 10 (a página).
+  // Da query string (servidor) vem texto; da tela (o cliente do app confere antes), número. Múltiplo
+  // de 10 (a página).
   const offsetText = record.offset ?? '0';
   const offset =
-    typeof offsetText === 'string' && /^\d{1,6}$/.test(offsetText) ? Number(offsetText) : NaN;
-  if (!Number.isInteger(offset) || offset % ASSET_NEWS_PAGE_SIZE !== 0) {
+    typeof offsetText === 'number'
+      ? offsetText
+      : typeof offsetText === 'string' && /^\d{1,6}$/.test(offsetText)
+        ? Number(offsetText)
+        : NaN;
+  if (!Number.isInteger(offset) || offset < 0 || offset % ASSET_NEWS_PAGE_SIZE !== 0) {
     fields.offset = 'invalid_option';
   }
   const { after, until } = record;
@@ -302,7 +310,13 @@ export type NewsErrorCode =
   // SPEC-044
   | 'news_not_found'
   | 'no_model'
-  | 'not_enough_labels';
+  | 'not_enough_labels'
+  // SPEC-030
+  | 'source_limit_reached'
+  | 'already_added'
+  | 'already_in_app'
+  | 'not_stopped'
+  | 'not_own_source';
 
 /** Fonte pai (o Investidor10, fixa) ou curada (RSS ou Atom, pelo colaborador), DA19. */
 export type NewsSourceKind = 'parent' | 'curated';
@@ -349,6 +363,16 @@ export interface NewsSourcesStatus {
   archive: NewsArchiveProgress | null;
   /** O interruptor `INVESTIDOR10_ENABLED`: desligado, a fonte pai não é coletada. */
   parentEnabled: boolean;
+  /** SPEC-030: só os totais dos feeds dos usuários, sem os endereços (DA13). */
+  userSources: UserSourcesTotals;
+}
+
+/** SPEC-030: os feeds adicionados pelos usuários, para o colaborador. */
+export interface UserSourcesTotals {
+  total: number;
+  /** Com mais de `NEWS_SOURCE_PROBLEM_AFTER` falhas seguidas, ainda não parados. */
+  failing: number;
+  stopped: number;
 }
 
 export interface NewNewsSourceInput {
@@ -478,4 +502,362 @@ export function validateUpdateNewsSource(input: unknown): ValidationResult<Updat
   if (Object.keys(fields).length > 0) return { success: false, fields };
   if (Object.keys(data).length === 0) return { success: false, fields: { name: 'required' } };
   return { success: true, data };
+}
+
+// --- SPEC-030: fontes do usuário e tela Notícias ---
+
+/** Rotas do usuário (e do colaborador na Visão do usuário, SPEC-045). */
+export const MY_NEWS_PATHS = {
+  sources: '/api/news/my-sources',
+  source: '/api/news/my-sources/:id',
+  retry: '/api/news/my-sources/:id/retry',
+  feed: '/api/news/feed',
+} as const;
+
+export function myNewsSourcePath(id: string): string {
+  return MY_NEWS_PATHS.source.replace(':id', encodeURIComponent(id));
+}
+
+export function myNewsSourceRetryPath(id: string): string {
+  return MY_NEWS_PATHS.retry.replace(':id', encodeURIComponent(id));
+}
+
+/** Prioridade que o usuário dá a cada fonte (§4.1, decisão 2). */
+export const SOURCE_PRIORITIES = ['high', 'medium', 'low'] as const;
+export type SourcePriority = (typeof SOURCE_PRIORITIES)[number];
+
+export function isSourcePriority(value: unknown): value is SourcePriority {
+  return typeof value === 'string' && (SOURCE_PRIORITIES as readonly string[]).includes(value);
+}
+
+/** O peso de cada prioridade na ordem e no tom; a fonte pai fica sempre acima (DA19). */
+export const SOURCE_PRIORITY_WEIGHT: Readonly<Record<SourcePriority, number>> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+export const PARENT_SOURCE_WEIGHT = 4;
+/** Sem escolha do usuário, a curada e o feed próprio valem Média (§4.2). */
+export const DEFAULT_SOURCE_PRIORITY: SourcePriority = 'medium';
+
+/** Feeds próprios por usuário (§4.1, decisão 3). */
+export const OWN_FEEDS_LIMIT = 10;
+/** Falhas seguidas que param o feed próprio: um dia de leituras de hora em hora (§4.2). */
+export const OWN_FEED_STOP_AFTER = 24;
+/** As notícias dos feeds dos usuários ficam 12 meses (§4.2). */
+export const USER_NEWS_RETENTION_DAYS = 365;
+
+/** Notícias por página na tela Notícias (§4.2). */
+export const NEWS_FEED_PAGE_SIZE = 20;
+/** Classificadas no filtro para o resumo do tom aparecer (§4.2). */
+export const NEWS_TONE_MIN = 10;
+
+export const NEWS_FEED_PERIODS = ['7d', '30d', '90d', '12m'] as const;
+export type NewsFeedPeriod = (typeof NEWS_FEED_PERIODS)[number];
+export const NEWS_FEED_PERIOD_DAYS: Readonly<Record<NewsFeedPeriod, number>> = {
+  '7d': 7,
+  '30d': 30,
+  '90d': 90,
+  '12m': 365,
+};
+
+/** Fonte pai (fixa), curada (do app) ou um feed próprio do usuário. */
+export type MySourceKind = 'parent' | 'curated' | 'own';
+
+/**
+ * Situação do feed próprio: `pending` antes da primeira leitura do processador, `failing` com
+ * mais de `NEWS_SOURCE_PROBLEM_AFTER` falhas seguidas, `stopped` depois de `OWN_FEED_STOP_AFTER`.
+ */
+export type OwnFeedStatus = 'ok' | 'pending' | 'failing' | 'stopped';
+
+export interface MyNewsSource {
+  id: string;
+  kind: MySourceKind;
+  /** No feed próprio, o nome que o usuário deu (ou o título do feed). */
+  name: string;
+  url: string;
+  /** Sempre `true` na fonte pai. */
+  active: boolean;
+  /** `null` na fonte pai, que tem sempre o peso maior. */
+  priority: SourcePriority | null;
+  weight: number;
+  /** Só nas curadas. */
+  category: NewsCategory | null;
+  /** Só nos feeds próprios; `null` nas outras. */
+  status: OwnFeedStatus | null;
+  /** ISO 8601 da última leitura do feed próprio. */
+  lastRunAt: string | null;
+  /** Notícias guardadas do feed próprio. */
+  news: number | null;
+}
+
+/** Corpo de `GET /api/news/my-sources`: a pai, as curadas ligadas pelo colaborador e os feeds. */
+export interface MyNewsSources {
+  sources: MyNewsSource[];
+  ownLimit: number;
+  ownCount: number;
+}
+
+export interface NewOwnFeedInput {
+  url: string;
+  /** Vazio: o título do feed. */
+  name?: string;
+}
+
+/** Corpo de `POST /api/news/my-sources`. */
+export interface OwnFeedCreated {
+  source: MyNewsSource;
+  /** Itens que a leitura na hora achou. */
+  items: number;
+}
+
+export interface UpdateMySourceInput {
+  active?: boolean;
+  priority?: SourcePriority;
+  /** Só no feed próprio. */
+  name?: string;
+}
+
+export function validateNewOwnFeed(input: unknown): ValidationResult<NewOwnFeedInput> {
+  const record = asRecord(input);
+  const fields: FieldErrors = {};
+  const url = checkFeedUrl(record.url);
+  if ('error' in url && url.error) fields.url = url.error;
+  let name: string | undefined;
+  if (record.name !== undefined && record.name !== null && record.name !== '') {
+    if (typeof record.name !== 'string') fields.name = 'invalid_option';
+    else {
+      name = record.name.trim().replace(/\s+/g, ' ');
+      if (name.length > NEWS_SOURCE_NAME_MAX) fields.name = 'too_long';
+      if (name === '') name = undefined;
+    }
+  }
+  if (Object.keys(fields).length > 0) return { success: false, fields };
+  return {
+    success: true,
+    data: { url: (url as { url: string }).url, ...(name ? { name } : {}) },
+  };
+}
+
+export function validateUpdateMySource(input: unknown): ValidationResult<UpdateMySourceInput> {
+  const record = asRecord(input);
+  const fields: FieldErrors = {};
+  const data: UpdateMySourceInput = {};
+  if (record.url !== undefined) fields.url = 'immutable';
+  if (record.active !== undefined) {
+    if (typeof record.active !== 'boolean') fields.active = 'invalid_option';
+    else data.active = record.active;
+  }
+  if (record.priority !== undefined) {
+    if (!isSourcePriority(record.priority)) fields.priority = 'invalid_option';
+    else data.priority = record.priority;
+  }
+  if (record.name !== undefined) {
+    const name = checkName(record.name, fields);
+    if (name !== undefined && !fields.name) data.name = name;
+  }
+  if (Object.keys(fields).length > 0) return { success: false, fields };
+  if (Object.keys(data).length === 0) return { success: false, fields: { active: 'required' } };
+  return { success: true, data };
+}
+
+/** O setor do filtro: a classe junto, porque "outros" existe nas duas (SPEC-006). */
+export interface NewsFeedSector {
+  class: AssetClass;
+  code: SectorCode;
+}
+
+export interface NewsFeedQuery {
+  period: NewsFeedPeriod;
+  offset: number;
+  /** Id do ativo: as notícias em que ele é principal ou citado. */
+  asset?: string;
+  sector?: NewsFeedSector;
+  sentiment?: NewsSentiment;
+  /** Id de uma das fontes do usuário. */
+  source?: string;
+}
+
+/** O setor na query string: `stock:bancos`. */
+export function newsFeedSectorParam(sector: NewsFeedSector): string {
+  return `${sector.class}:${sector.code}`;
+}
+
+export function validateNewsFeedQuery(input: unknown): ValidationResult<NewsFeedQuery> {
+  const record = asRecord(input);
+  const fields: FieldErrors = {};
+  const period = record.period ?? '30d';
+  if (typeof period !== 'string' || !(NEWS_FEED_PERIODS as readonly string[]).includes(period)) {
+    fields.period = 'invalid_option';
+  }
+  // Da query string (servidor) vem texto; da tela (o cliente do app confere antes), número.
+  const offsetText = record.offset ?? '0';
+  const offset =
+    typeof offsetText === 'number'
+      ? offsetText
+      : typeof offsetText === 'string' && /^\d{1,6}$/.test(offsetText)
+        ? Number(offsetText)
+        : NaN;
+  if (!Number.isInteger(offset) || offset < 0 || offset % NEWS_FEED_PAGE_SIZE !== 0) {
+    fields.offset = 'invalid_option';
+  }
+  const query: Partial<NewsFeedQuery> = {};
+  for (const key of ['asset', 'source'] as const) {
+    const value = record[key];
+    if (value === undefined || value === '') continue;
+    if (typeof value !== 'string' || !UUID.test(value)) fields[key] = 'invalid_option';
+    else query[key] = value.toLowerCase();
+  }
+  if (record.sector !== undefined && record.sector !== '') {
+    // Na query string, `stock:financeiro`; na tela, o objeto `{ class, code }`.
+    const sector = asRecord(record.sector);
+    const [assetClass = '', code = ''] =
+      typeof record.sector === 'string'
+        ? record.sector.split(':')
+        : [String(sector.class ?? ''), String(sector.code ?? '')];
+    if (isAssetClass(assetClass) && isSectorOf(assetClass, code)) {
+      query.sector = { class: assetClass, code };
+    } else fields.sector = 'invalid_option';
+  }
+  if (record.sentiment !== undefined && record.sentiment !== '') {
+    if (!isNewsSentiment(record.sentiment)) fields.sentiment = 'invalid_option';
+    else query.sentiment = record.sentiment;
+  }
+  if (Object.keys(fields).length > 0) return { success: false, fields };
+  return { success: true, data: { ...query, period: period as NewsFeedPeriod, offset } };
+}
+
+export interface NewsFeedAsset {
+  id: string;
+  ticker: string;
+}
+
+export interface NewsFeedItem {
+  id: string;
+  title: string;
+  summary: string | null;
+  url: string;
+  source: string;
+  /** "Sua fonte": veio de um feed próprio. */
+  ownSource: boolean;
+  /** ISO 8601. */
+  publishedAt: string;
+  /** `null` se pendente ou sem modelo visível (SPEC-044). */
+  sentiment: NewsSentiment | null;
+  /** Os ativos em que a notícia é principal ou citada, principais primeiro. */
+  assets: NewsFeedAsset[];
+}
+
+/** Por que o resumo do tom não aparece. */
+export type NewsToneHiddenReason = 'no_model' | 'few_news';
+
+/** O tom ponderado das notícias do filtro (§4.2): cada parte de 0 a 1, somando 1. */
+export interface NewsTone {
+  shares: Record<NewsSentiment, number>;
+  /** Notícias classificadas que entraram na conta. */
+  classified: number;
+}
+
+/** Corpo de `GET /api/news/feed`. */
+export interface NewsFeedPage {
+  total: number;
+  news: NewsFeedItem[];
+  /** O modelo cujo sentimento aparece, ou `null`. */
+  model: SentimentModelName | null;
+  /** `null` quando não aparece; o motivo em `toneHidden`. */
+  tone: NewsTone | null;
+  toneHidden: NewsToneHiddenReason | null;
+}
+
+/**
+ * O tom ponderado (§4.2): a soma dos pesos de cada tom sobre a soma dos pesos das notícias
+ * classificadas. `null` sem nenhuma classificada.
+ */
+export function weightedTone(
+  items: ReadonlyArray<{ sentiment: NewsSentiment; weight: number }>,
+): NewsTone | null {
+  const sums: Record<NewsSentiment, number> = { positive: 0, neutral: 0, negative: 0 };
+  let total = 0;
+  for (const item of items) {
+    sums[item.sentiment] += item.weight;
+    total += item.weight;
+  }
+  if (items.length === 0 || total === 0) return null;
+  return {
+    shares: {
+      positive: sums.positive / total,
+      neutral: sums.neutral / total,
+      negative: sums.negative / total,
+    },
+    classified: items.length,
+  };
+}
+
+// --- SPEC-031: cenários por sentimento na ficha do ativo ---
+
+/** Rota dos cenários do ativo. `:id` vira o id do ativo com `assetPath`. */
+export const ASSET_SCENARIO_PATH = '/api/assets/:id/scenarios';
+
+/**
+ * Horizontes, em pregões depois do pregão da notícia (§4.1, decisão 3): 0 é o próprio pregão ("No
+ * pregão"), como o painel do pregão da SPEC-029; o retorno é sempre sobre o fechamento anterior.
+ */
+export const SCENARIO_HORIZONS = [0, 5, 20] as const;
+export type ScenarioHorizon = (typeof SCENARIO_HORIZONS)[number];
+
+/** Faixa de "estável" de cada horizonte, em % para cima e para baixo (§4.1, decisão 3). */
+export const SCENARIO_STABLE_LIMIT: Readonly<Record<ScenarioHorizon, number>> = {
+  0: 1,
+  5: 2,
+  20: 4,
+};
+
+/** Abaixo disso, "dados insuficientes" (RB31). */
+export const SCENARIO_MIN_OCCURRENCES = 30;
+
+/** O mesmo limite das notícias (SPEC-044): acima de 0,2, positivo; abaixo de −0,2, negativo. */
+export const SENTIMENT_BAND_LIMIT = 0.2;
+
+/** A faixa de uma pontuação de −1 a 1. */
+export function sentimentBand(score: number): NewsSentiment {
+  if (score > SENTIMENT_BAND_LIMIT) return 'positive';
+  if (score < -SENTIMENT_BAND_LIMIT) return 'negative';
+  return 'neutral';
+}
+
+/** Um horizonte de uma faixa (ou da taxa-base): as partes de 0 a 1, ou nada abaixo do mínimo. */
+export interface ScenarioCell {
+  horizon: ScenarioHorizon;
+  occurrences: number;
+  /** `true` abaixo de `SCENARIO_MIN_OCCURRENCES`: sem as partes (RB31). */
+  insufficient: boolean;
+  down: number | null;
+  flat: number | null;
+  up: number | null;
+}
+
+/** O pregão de hoje (o primeiro depois do último fechamento guardado), se teve notícia. */
+export interface ScenarioToday {
+  band: NewsSentiment;
+  /** Quantas notícias oficiais classificadas sobre o ativo. */
+  news: number;
+  /** Média das pontuações, de −1 a 1. */
+  score: number;
+}
+
+/** Corpo de `GET /api/assets/:id/scenarios`. */
+export interface AssetScenarios {
+  /** `false` enquanto o sentimento não passou na avaliação (SPEC-044): sem números. */
+  visible: boolean;
+  model: SentimentModelName | null;
+  today: ScenarioToday | null;
+  /** Os pregões usados: desde o primeiro com notícia oficial classificada no banco. */
+  period: { from: IsoDate; to: IsoDate; sessions: number } | null;
+  /** As três faixas, cada uma com os três horizontes na ordem de `SCENARIO_HORIZONS`. */
+  bands: Record<NewsSentiment, ScenarioCell[]> | null;
+  /** A taxa-base: todos os pregões do período, com ou sem notícia. */
+  base: ScenarioCell[] | null;
+  /** Pregões com notícia no período (de qualquer faixa). */
+  newsSessions: number;
+  minOccurrences: number;
 }

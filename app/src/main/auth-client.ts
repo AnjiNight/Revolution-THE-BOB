@@ -1,5 +1,6 @@
 import {
   ASSET_NEWS_PATHS,
+  ASSET_SCENARIO_PATH,
   ASSET_PATHS,
   assetPath,
   AUTH_PATHS,
@@ -7,7 +8,14 @@ import {
   calendarPath,
   FUNDAMENTALS_PATHS,
   INDEX_PATHS,
+  MY_NEWS_PATHS,
   NEWS_PATHS,
+  myNewsSourcePath,
+  myNewsSourceRetryPath,
+  newsFeedSectorParam,
+  validateNewOwnFeed,
+  validateNewsFeedQuery,
+  validateUpdateMySource,
   newsLabelPath,
   newsSourcePath,
   SENTIMENT_PATHS,
@@ -32,6 +40,7 @@ import {
   type AssetDetail,
   type AssetNewsDays,
   type AssetNewsPage,
+  type AssetScenarios,
   type AssetDividends,
   type AssetFundamentals,
   type AssetSearchQuery,
@@ -72,6 +81,12 @@ import {
   type SentimentModelVersion,
   type SentimentSummary,
   type UpdateNewsSourceInput,
+  type MyNewsSource,
+  type MyNewsSources,
+  type NewOwnFeedInput,
+  type NewsFeedPage,
+  type OwnFeedCreated,
+  type UpdateMySourceInput,
   type CashEntryResult,
   type CashStatement,
   type NewCashEntryInput,
@@ -733,6 +748,11 @@ export class AuthClient {
     });
   }
 
+  /** SPEC-031: cenários por sentimento do ativo; entra na cópia local, como as notícias da ficha. */
+  assetScenarios(id: string): Promise<ClientResult<AssetScenarios>> {
+    return this.read<AssetScenarios>(() => assetUrl(ASSET_SCENARIO_PATH, id));
+  }
+
   // --- Tarefas de ingestão (SPEC-011), só colaborador ---
 
   /** As 9 tarefas e o estado do processador. */
@@ -831,6 +851,77 @@ export class AuthClient {
     return this.call(() =>
       this.authorizedRequest<{ version: SentimentModelVersion }>('POST', SENTIMENT_PATHS.evaluate),
     );
+  }
+
+  /** SPEC-030: a fonte pai, as curadas ligadas e os feeds próprios, com as escolhas da pessoa. */
+  myNewsSources(): Promise<ClientResult<MyNewsSources>> {
+    return this.call(() => this.authorizedRequest<MyNewsSources>('GET', MY_NEWS_PATHS.sources));
+  }
+
+  /** SPEC-030: adiciona um feed próprio; o servidor lê o feed antes de gravar. */
+  addOwnFeed(input: NewOwnFeedInput): Promise<ClientResult<OwnFeedCreated>> {
+    return this.call(() => {
+      const checked = validateNewOwnFeed(input);
+      if (!checked.success) throw new RequestFailed('unexpected');
+      return this.authorizedRequest<OwnFeedCreated>('POST', MY_NEWS_PATHS.sources, checked.data);
+    });
+  }
+
+  /** SPEC-030: liga, desliga, muda a prioridade ou renomeia (só o feed próprio). */
+  updateMyNewsSource(
+    id: string,
+    input: UpdateMySourceInput,
+  ): Promise<ClientResult<{ source: MyNewsSource }>> {
+    return this.call(() => {
+      const checked = validateUpdateMySource(input);
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id) || !checked.success) {
+        throw new RequestFailed('unexpected');
+      }
+      return this.authorizedRequest<{ source: MyNewsSource }>(
+        'PATCH',
+        myNewsSourcePath(id),
+        checked.data,
+      );
+    });
+  }
+
+  /** SPEC-030: "Tentar de novo" no feed parado. */
+  retryOwnFeed(id: string): Promise<ClientResult<OwnFeedCreated>> {
+    return this.call(() => {
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+      return this.authorizedRequest<OwnFeedCreated>('POST', myNewsSourceRetryPath(id));
+    });
+  }
+
+  /** SPEC-030: remove o feed próprio. */
+  removeOwnFeed(id: string): Promise<ClientResult<null>> {
+    return this.call(async () => {
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id)) throw new RequestFailed('unexpected');
+      await this.authorizedRequest<undefined>('DELETE', myNewsSourcePath(id));
+      return null;
+    });
+  }
+
+  /** SPEC-030: a tela Notícias, 20 por vez, com os filtros. Pede conexão (não vai para a cópia local). */
+  newsFeed(query: unknown): Promise<ClientResult<NewsFeedPage>> {
+    return this.call(() => {
+      // A consulta vem da interface: só o que passa na validação entra na query string.
+      const checked = validateNewsFeedQuery(query);
+      if (!checked.success) throw new RequestFailed('unexpected');
+      const { period, offset, asset, sector, sentiment, source } = checked.data;
+      const params = new URLSearchParams();
+      if (period !== '30d') params.set('period', period);
+      if (offset > 0) params.set('offset', String(offset));
+      if (asset) params.set('asset', asset);
+      if (sector) params.set('sector', newsFeedSectorParam(sector));
+      if (sentiment) params.set('sentiment', sentiment);
+      if (source) params.set('source', source);
+      const search = params.toString();
+      return this.authorizedRequest<NewsFeedPage>(
+        'GET',
+        `${MY_NEWS_PATHS.feed}${search ? `?${search}` : ''}`,
+      );
+    });
   }
 
   /** Colaborador (SPEC-027): nova fonte curada; o servidor testa o feed antes de gravar. */

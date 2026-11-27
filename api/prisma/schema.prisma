@@ -52,12 +52,14 @@ model Usuario {
   emailConfirmadoEm DateTime?    @map("email_confirmado_em") @db.Timestamptz(3)
   emailPendente     String?      @map("email_pendente") @db.VarChar(254)
 
-  consentimentos  Consentimento[]
-  tokensRenovacao TokenRenovacao[]
-  codigosEmail    CodigoEmail[]
-  carteiras       Carteira[]
+  consentimentos    Consentimento[]
+  tokensRenovacao   TokenRenovacao[]
+  codigosEmail      CodigoEmail[]
+  carteiras         Carteira[]
   /// SPEC-011: execuções que o colaborador pediu.
-  pedidosExecucao PedidoExecucao[]
+  pedidosExecucao   PedidoExecucao[]
+  /// SPEC-030: as escolhas sobre as fontes de notícias e os feeds próprios.
+  preferenciasFonte PreferenciaFonte[]
 
   @@map("usuario")
 }
@@ -344,6 +346,8 @@ model Ativo {
   transacoes      Transacao[]
   /// SPEC-028: notícias que falam do ativo.
   noticias        NoticiaAtivo[]
+  /// SPEC-031: os cenários por sentimento registrados.
+  cenarios        CenarioRegistrado[]
 
   @@index([classe, setor])
   @@map("ativo")
@@ -410,6 +414,8 @@ enum TarefaIngestao {
   noticias_novas
   noticias_arquivo
   noticias_feeds
+  /// SPEC-030: os feeds próprios dos usuários.
+  noticias_feeds_usuario
 
   @@map("tarefa_ingestao")
 }
@@ -844,9 +850,11 @@ model ClassificacaoB3 {
 }
 
 /// SPEC-027: fonte pai (única, o Investidor10) ou curada (RSS ou Atom, pelo colaborador), DA19.
+/// SPEC-030: ou o feed próprio de um ou mais usuários.
 enum TipoFonteNoticia {
   pai
   curada
+  usuario
 
   @@map("tipo_fonte_noticia")
 }
@@ -883,32 +891,63 @@ model FonteNoticia {
   ultimaSituacao     String?           @map("ultima_situacao") @db.VarChar(10)
   ultimoErro         String?           @map("ultimo_erro") @db.VarChar(300)
   falhasSeguidas     Int               @default(0) @map("falhas_seguidas")
+  /// SPEC-030: o feed próprio parado depois de 24 falhas seguidas, até o usuário pedir de novo.
+  paradaEm           DateTime?         @map("parada_em") @db.Timestamptz(3)
   criadaEm           DateTime          @default(now()) @map("criada_em") @db.Timestamptz(3)
   atualizadaEm       DateTime          @default(now()) @map("atualizada_em") @db.Timestamptz(3)
 
-  noticias Noticia[]
-  arquivo  ColetaNoticiaArquivo?
+  noticias     Noticia[]
+  arquivo      ColetaNoticiaArquivo?
+  preferencias PreferenciaFonte[]
 
   @@map("fonte_noticia")
 }
 
+/// SPEC-030: alta, média ou baixa (pesos 3, 2 e 1; a fonte pai vale 4).
+enum PrioridadeFonte {
+  alta
+  media
+  baixa
+
+  @@map("prioridade_fonte")
+}
+
+/// SPEC-030: a escolha do usuário sobre uma fonte. Nas curadas, só existe quando ele muda algo; no
+/// feed próprio, liga o usuário à fonte, com o nome que ele deu. Nunca para a fonte pai (RB29).
+model PreferenciaFonte {
+  usuarioId    String          @map("usuario_id") @db.Uuid
+  fonteId      String          @map("fonte_id") @db.Uuid
+  ativa        Boolean         @default(true)
+  prioridade   PrioridadeFonte @default(media)
+  nome         String?         @db.VarChar(80)
+  criadaEm     DateTime        @default(now()) @map("criada_em") @db.Timestamptz(3)
+  atualizadaEm DateTime        @default(now()) @map("atualizada_em") @db.Timestamptz(3)
+
+  usuario Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  fonte   FonteNoticia @relation(fields: [fonteId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, fonteId])
+  @@index([fonteId], map: "preferencia_fonte_fonte_idx")
+  @@map("preferencia_fonte")
+}
+
 /// SPEC-027: notícia coletada. Texto completo só da fonte pai, para a classificação (SPEC-028).
 model Noticia {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  fonteId             String    @map("fonte_id") @db.Uuid
-  url                 String    @db.VarChar(500)
-  titulo              String    @db.VarChar(500)
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fonteId             String             @map("fonte_id") @db.Uuid
+  url                 String             @db.VarChar(500)
+  titulo              String             @db.VarChar(500)
   resumo              String?
   texto               String?
-  autor               String?   @db.VarChar(150)
-  temas               String[]  @default([])
-  empresasMarcadas    String[]  @default([]) @map("empresas_marcadas")
-  publicadaEm         DateTime  @map("publicada_em") @db.Timestamptz(3)
-  atualizadaNaFonteEm DateTime? @map("atualizada_na_fonte_em") @db.Timestamptz(3)
-  coletadaEm          DateTime  @map("coletada_em") @db.Timestamptz(3)
+  autor               String?            @db.VarChar(150)
+  temas               String[]           @default([])
+  empresasMarcadas    String[]           @default([]) @map("empresas_marcadas")
+  publicadaEm         DateTime           @map("publicada_em") @db.Timestamptz(3)
+  atualizadaNaFonteEm DateTime?          @map("atualizada_na_fonte_em") @db.Timestamptz(3)
+  coletadaEm          DateTime           @map("coletada_em") @db.Timestamptz(3)
   /// SPEC-028: quando e com qual versão da regra a notícia foi vinculada aos ativos.
-  vinculadaEm         DateTime? @map("vinculada_em") @db.Timestamptz(3)
-  versaoVinculo       Int?      @map("versao_vinculo") @db.SmallInt
+  vinculadaEm         DateTime?          @map("vinculada_em") @db.Timestamptz(3)
+  versaoVinculo       Int?               @map("versao_vinculo") @db.SmallInt
   /// SPEC-044: o tom da notícia, a pontuação (−1 a 1), quando e por qual versão; vazios = pendente.
   sentimento          SentimentoNoticia?
   sentimentoPontuacao Decimal?           @map("sentimento_pontuacao") @db.Decimal(4, 3)
@@ -922,6 +961,7 @@ model Noticia {
 
   @@unique([fonteId, url])
   @@index([publicadaEm])
+  @@index([fonteId, publicadaEm], map: "noticia_fonte_publicada_idx")
   @@index([versaoVinculo], map: "noticia_vinculo_idx")
   @@index([versaoModeloId], map: "noticia_versao_modelo_idx")
   @@map("noticia")
@@ -958,6 +998,7 @@ model VersaoModelo {
   matriz       Json?
 
   noticias Noticia[]
+  cenarios CenarioRegistrado[]
 
   @@unique([nome, numero])
   @@map("versao_modelo")
@@ -1017,4 +1058,30 @@ model ColetaNoticiaArquivo {
   fonte FonteNoticia @relation(fields: [fonteId], references: [id], onDelete: Cascade)
 
   @@map("coleta_noticia_arquivo")
+}
+
+/// SPEC-031: o cenário de hoje de um ativo, por horizonte (0, 5 ou 20 pregões depois) e versão do
+/// modelo (DA21, ponto 8). Porcentagens de 0 a 100, vazias abaixo do mínimo (RB31). Sem dado pessoal.
+model CenarioRegistrado {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativoId         String            @map("ativo_id") @db.Uuid
+  dia             DateTime          @db.Date
+  faixa           SentimentoNoticia
+  horizonte       Int               @db.SmallInt
+  versaoModeloId  Int               @map("versao_modelo_id")
+  ocorrencias     Int
+  queda           Decimal?          @db.Decimal(5, 2)
+  estavel         Decimal?          @db.Decimal(5, 2)
+  alta            Decimal?          @db.Decimal(5, 2)
+  baseOcorrencias Int               @map("base_ocorrencias")
+  baseQueda       Decimal?          @map("base_queda") @db.Decimal(5, 2)
+  baseEstavel     Decimal?          @map("base_estavel") @db.Decimal(5, 2)
+  baseAlta        Decimal?          @map("base_alta") @db.Decimal(5, 2)
+  criadoEm        DateTime          @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  ativo        Ativo        @relation(fields: [ativoId], references: [id], onDelete: Cascade)
+  versaoModelo VersaoModelo @relation(fields: [versaoModeloId], references: [id], onDelete: Cascade)
+
+  @@unique([ativoId, dia, horizonte, versaoModeloId], map: "cenario_registrado_unico")
+  @@map("cenario_registrado")
 }

@@ -78,6 +78,8 @@ export const ASSET_CHANNELS = {
   /** SPEC-029: notícias do ativo e os marcadores do gráfico. */
   news: 'assets:news',
   newsDays: 'assets:news-days',
+  // SPEC-031: cenários por sentimento.
+  scenarios: 'assets:scenarios',
   catalog: 'assets:catalog',
   create: 'assets:create',
   update: 'assets:update',
@@ -113,6 +115,13 @@ export const NEWS_CHANNELS = {
   label: 'news:label',
   unlabel: 'news:unlabel',
   evaluate: 'news:evaluate-sentiment',
+  // SPEC-030: as fontes do usuário e a tela Notícias.
+  mySources: 'news:my-sources',
+  addFeed: 'news:add-feed',
+  updateMySource: 'news:update-my-source',
+  retryFeed: 'news:retry-feed',
+  removeFeed: 'news:remove-feed',
+  feed: 'news:feed',
 } as const;
 
 /** Canais IPC das carteiras (SPEC-012), só da conta de usuário. */
