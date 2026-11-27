@@ -83,6 +83,7 @@
 | 1.73 | SPEC-045 detalhada ([SPEC-045.md](SPEC-045.md)) a pedido da Nicoly, aprovada por ela em 21/11/2026, como escrita ("Aprovo, implemente"), e implementada: botão Visão do usuário no menu do colaborador, com as telas do usuário, a faixa de aviso e carteiras de teste da própria conta (as rotas de carteira aceitam o colaborador; a verificação de dono não muda). Novo RF44 (requisitos v1.14); muda a regra "Quem tem carteira" da SPEC-012 |
 | 1.74 | SPEC-030 detalhada ([SPEC-030.md](SPEC-030.md)) a pedido do Luís, com as escolhas dele (tela Notícias com filtros, prioridade Alta, Média e Baixa com pesos 3, 2 e 1 e a fonte pai com 4, até 10 feeds próprios), aprovada por ele em 26/11/2026, como escrita ("Aprovo, implemente"), e implementada: Minhas fontes, coleta dos feeds dos usuários a cada 60 minutos, tela Notícias com o tom ponderado, a ficha seguindo as preferências; RF45 a RF47, RB29 e RB30 (requisitos 1.15). OPEN-32 resolvida; a SPEC-030 sai das bloqueadas |
 | 1.75 | SPEC-049 detalhada ([SPEC-049.md](SPEC-049.md)) a pedido do Luís, aprovada por ele em 26/11/2026, como escrita: demonstração para o professor no Render (plano gratuito), com o `render.yaml`, a cópia só dos dados de mercado do banco local, o instalador sem as credenciais do Google e uma release de pré-lançamento no GitHub. Fora das fases do mapa; sem mudança no código |
+| 1.76 | SPEC-031 detalhada ([SPEC-031.md](SPEC-031.md)) a pedido do Luís, com as escolhas dele (por ativo, para todos por enquanto, horizontes no pregão, 5 e 20 pregões com estável em ±1%, ±2% e ±4%, mínimo de 30 ocorrências), aprovada por ele em 27/11/2026, como escrita ("Aprovo, implemente"), e implementada: seção Cenários pelo sentimento na ficha, com a taxa-base e o registro do cenário do dia. DA21 aceita; OPEN-33 e OPEN-34 resolvidas (INC-06); RF30 e RF31 reescritos e nova RB31 (requisitos 1.16) |
 ---
 
 ## 0. Como ler este documento
@@ -344,8 +345,8 @@ Os itens `PExx` são os pontos em aberto já listados na [arquitetura §13](../a
 | OPEN-30 | ✅ **Resolvida na [SPEC-044](SPEC-044.md) (19/11/2026):** v1 por regras com dicionário, no processador; nota mínima F1 macro 0,60 com 60 notícias de teste da amostra rotulada pela equipe; versão nova só se medir melhor na mesma amostra; retreino não se aplica à v1. Original: implementação do modelo de IA, onde roda, métrica mínima e frequência de retreino | PE10, DA20 | 044 |
 | OPEN-31 | ⏳ Em parte: a v1 (SPEC-044) não treina; o histórico disponível é o arquivo do Investidor10, desde 22/09/2023. A janela de treino fica para o modelo treinado. Original: fonte do histórico de notícias e janela de treino | PE09, PE11 | 044, 031 |
 | OPEN-32 | ✅ **Resolvida na [SPEC-030](SPEC-030.md) (26/11/2026):** RF45 a RF47 e RB29 e RB30; até 10 feeds próprios por usuário; prioridade Alta, Média e Baixa com pesos 3, 2 e 1, e a fonte pai com 4. Original: RFs para fontes do usuário; limite de fontes; conversão da prioridade em peso | DA19, PE08 | 030 |
-| OPEN-33 | Aprovação de DA21 (**Proposta**); horizontes, limite de estabilidade, n mínimo; cenário com sentimento personalizado | DA21, PE12 | 031 |
-| OPEN-34 | Cenário por ativo ou por carteira; reescrita de RF30/RF31 | INC-06 | 031 |
+| OPEN-33 | ✅ **Resolvida na [SPEC-031](SPEC-031.md) (27/11/2026):** DA21 aceita; horizontes no pregão, 5 e 20 pregões depois, estável em ±1%, ±2% e ±4%; mínimo de 30 ocorrências (RB31); só o sentimento oficial. Original: aprovação de DA21 (Proposta); horizontes, limite de estabilidade, n mínimo; cenário com sentimento personalizado | DA21, PE12 | 031 |
+| OPEN-34 | ✅ **Resolvida na [SPEC-031](SPEC-031.md) (27/11/2026):** por ativo, na ficha; RF30 e RF31 reescritos. Original: cenário por ativo ou por carteira; reescrita de RF30/RF31 | INC-06 | 031 |
 | OPEN-35 | ✅ **Resolvida para o RF35 na [SPEC-033](SPEC-033.md) (17/11/2026):** 5% no dia (3% ou 10% à escolha em Meu perfil, ou desligado) e nenhum aviso com o app fechado; a antecedência do aviso de vencimento (RF34) fica com a renda fixa (DA22). Original: limiar de "variação relevante", antecedência do aviso de vencimento, notificação com o app fechado | RF34, RF35 | 033 |
 | OPEN-36 | Escopo de RF04 por sistema operacional | INC-12 | 036 |
 | OPEN-37 | Formato e conteúdo do arquivo de importação (RF21) | Lacuna | 037 |
@@ -1090,18 +1091,18 @@ Detalhada em [SPEC-027.md](SPEC-027.md), aprovada e implementada.
 
 | Campo | Conteúdo |
 |---|---|
-| Objetivo | Para o assinante, calcular cenários de queda, estabilidade e alta a partir dos dias históricos com sentimento semelhante, exibindo taxa-base, número de ocorrências e aviso educacional, e registrar cada cenário exibido |
+| Objetivo | Na ficha do ativo, calcular cenários de queda, estabilidade e alta a partir dos pregões passados com sentimento semelhante, exibindo taxa-base, número de ocorrências e aviso educacional, e registrar o cenário do dia |
 | Valor | **Usuário:** cenários explicáveis. **Sistema:** mede a hipótese de pesquisa (OBJ03) |
 | RF | RF30, RF31 |
 | RB | RB18, RB19 |
 | RNF | — |
 | Caso de uso / fluxo | UC: Gerar simulação da carteira (inclui Analisar sentimento das notícias); fluxo 7.5 |
-| Entidades | SIMULACAO, CENARIO†, SENTIMENTO_DIARIO† |
+| Entidades | CENARIO† (`cenario_registrado`); o sentimento do pregão é calculado na hora |
 | Drivers | OBJ03, OBJ07, FAS11, RES04 |
-| ADRs | DA12, DA15, DA19, DA20, DA21 (Proposta) |
-| Depende de | SPEC-005, SPEC-008, SPEC-025, SPEC-044 (sentimento) |
-| Posição | Exige plano (025), histórico de preços (008) e notícias classificadas (028) |
-| Em aberto | **OPEN-33 e OPEN-34 (bloqueantes)**, OPEN-31 |
+| ADRs | DA15, DA19, DA20, DA21 (Aceita) |
+| Depende de | SPEC-005, SPEC-008, SPEC-028, SPEC-029, SPEC-042, SPEC-044 (sentimento) |
+| Posição | Exige histórico de preços (008) e notícias classificadas (044); sem plano por enquanto |
+| Em aberto | OPEN-31; assinatura quando a SPEC-025 entrar na `main` |
 | Prioridade derivada | Could |
 
 ---
@@ -1345,7 +1346,6 @@ Estas Specs **não devem ser detalhadas** antes de a equipe decidir os itens ind
 | Spec | Decisão bloqueante |
 |---|---|
 | SPEC-027 | OPEN-28 — autorização da fonte pai |
-| SPEC-031 | OPEN-33, OPEN-34 — aprovar DA21 e escopo do cenário |
 | SPEC-037 | OPEN-37 — formato do arquivo |
 | SPEC-038 | OPEN-38 — conteúdo do relatório |
 
