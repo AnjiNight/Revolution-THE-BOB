@@ -682,7 +682,58 @@
     "buyTitle": "Comprar em qual carteira?",
     "buyLoading": "Carregando as carteiras…",
     "noLivePortfolio": "Crie uma carteira para comprar.",
-    "buyCancel": "Cancelar"
+    "buyCancel": "Cancelar",
+    "scenarios": {
+      "title": "Cenários pelo sentimento",
+      "lead": "O que o preço fez depois dos pregões em que as notícias sobre o ativo foram positivas, neutras ou negativas, comparado com todos os pregões.",
+      "loading": "Calculando os cenários…",
+      "retry": "Tentar de novo",
+      "hidden": "Os cenários aparecem quando a equipe validar o sentimento das notícias.",
+      "noNews": "Ainda não há notícias classificadas para montar cenários.",
+      "notForecast": "Mostra o que aconteceu depois de pregões parecidos no passado, não uma previsão.",
+      "notAdvice": "Não é recomendação de compra ou venda.",
+      "today_one": "Sentimento de hoje ({{count}} notícia):",
+      "today_other": "Sentimento de hoje ({{count}} notícias):",
+      "noNewsToday": "Sem notícias hoje.",
+      "todayBand": "A faixa de hoje",
+      "horizon": "Horizonte:",
+      "horizons": {
+        "0": "No pregão",
+        "5": "5 pregões depois",
+        "20": "20 pregões depois"
+      },
+      "bands": {
+        "positive": "Positivo",
+        "neutral": "Neutro",
+        "negative": "Negativo"
+      },
+      "bandWord": {
+        "positive": "positivo",
+        "neutral": "neutro",
+        "negative": "negativo"
+      },
+      "base": "Sem olhar as notícias",
+      "band": "Sentimento",
+      "down": "Queda",
+      "flat": "Estável",
+      "up": "Alta",
+      "occurrences": "Ocorrências",
+      "insufficient": "Dados insuficientes (mínimo de {{min}})",
+      "caption": "Cenários pelo sentimento, {{horizon}}",
+      "stable": "Estável: variação de até ±{{limit}}% ({{horizon}}), sobre o fechamento anterior.",
+      "period": "Desde {{from}}: {{sessions}} pregões, {{news}} com notícia.",
+      "sentence": {
+        "0": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, no próprio pregão ela caiu em {{down}}, ficou estável em {{flat}} e subiu em {{up}} das vezes.",
+        "5": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, 5 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "20": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, 20 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "0_one": "Na {{count}} vez em que o sentimento sobre a {{ticker}} foi {{band}}, no próprio pregão ela caiu em {{down}}, ficou estável em {{flat}} e subiu em {{up}} das vezes.",
+        "0_other": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, no próprio pregão ela caiu em {{down}}, ficou estável em {{flat}} e subiu em {{up}} das vezes.",
+        "5_one": "Na {{count}} vez em que o sentimento sobre a {{ticker}} foi {{band}}, 5 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "5_other": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, 5 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "20_one": "Na {{count}} vez em que o sentimento sobre a {{ticker}} foi {{band}}, 20 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes.",
+        "20_other": "Nas {{count}} vezes em que o sentimento sobre a {{ticker}} foi {{band}}, 20 pregões depois ela tinha caído em {{down}}, ficado estável em {{flat}} e subido em {{up}} das vezes."
+      }
+    }
   },
   "portfolios": {
     "title": "Carteiras",

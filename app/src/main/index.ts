@@ -443,6 +443,8 @@ app.whenReady().then(() => {
   ipcMain.handle(ASSET_CHANNELS.newsDays, (_event, id: string, period: PriceHistoryPeriod) =>
     auth.assetNewsDays(id, period),
   );
+  // SPEC-031: cenários por sentimento na ficha.
+  ipcMain.handle(ASSET_CHANNELS.scenarios, (_event, id: string) => auth.assetScenarios(id));
 
   createWindow();
   app.on('activate', () => {

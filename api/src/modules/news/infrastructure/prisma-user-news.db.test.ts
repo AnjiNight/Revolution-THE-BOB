@@ -61,7 +61,7 @@ describe.skipIf(!url)('fontes do usuário no PostgreSQL (SPEC-030)', () => {
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE rotulo_noticia, noticia_ativo, noticia, versao_modelo, coleta_noticia_arquivo RESTART IDENTITY',
+      'TRUNCATE TABLE cenario_registrado, rotulo_noticia, noticia_ativo, noticia, versao_modelo, coleta_noticia_arquivo RESTART IDENTITY',
     );
     await prisma.preferenciaFonte.deleteMany({});
     await prisma.fonteNoticia.deleteMany({ where: { url: { notIn: SEEDED } } });

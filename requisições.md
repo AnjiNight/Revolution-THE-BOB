@@ -3,7 +3,7 @@
 **Projeto:** Simulador de Investimentos
 **Disciplina:** Modelagem de Dados — Universidade Presbiteriana Mackenzie
 **Integrantes:** Luís Gustavo Sampaio Coêlho, Nicoly Araujo de Paschoa
-**Versão:** 1.15
+**Versão:** 1.16
 
 | Versão | Alteração |
 |---|---|
@@ -23,6 +23,7 @@
 | 1.13 | RF37 reescrito: sem conexão, o app é só para consulta (RNF14, [DA08](adr/DA08-cache-dois-niveis-offline-leitura.md)); ao reconectar, atualiza os dados guardados trazendo só o que mudou, e não há lançamento pendente a sincronizar ([SPEC-032](specs/SPEC-032.md)) |
 | 1.14 | Novo RF44: o colaborador vê o app como um usuário (Visão do usuário), com carteiras de teste da própria conta e sem acesso às carteiras de outras contas ([SPEC-045](specs/SPEC-045.md)) |
 | 1.15 | Fontes de notícias do usuário ([SPEC-030](specs/SPEC-030.md), [DA19](adr/DA19-fontes-de-noticias.md)): novos RF45 (escolher as fontes e a prioridade de cada uma), RF46 (feeds próprios, até 10) e RF47 (tela Notícias com filtros); novas RB29 (a fonte pai está sempre ligada) e RB30 (as fontes dos usuários ficam fora dos números oficiais) |
+| 1.16 | RF30 e RF31 reescritos com o método da [DA21](adr/DA21-cenarios-por-sentimento.md): cenários por ativo, na ficha, a partir dos pregões passados com sentimento semelhante, com a taxa-base e o número de ocorrências; RF30 passa a ser do usuário (sem exigir assinatura por enquanto). Nova RB31 (menos de 30 ocorrências: "dados insuficientes") ([SPEC-031](specs/SPEC-031.md)) |
 
 ---
 
@@ -117,8 +118,8 @@ Adiada para fase futura. RF23, RF24 e RF25 estão preservados na seção 9.
 
 | ID | Requisito | Ator | Prioridade |
 |---|---|---|---|
-| RF30 | Gerar projeções de cenários futuros para a carteira | Assinante | Could |
-| RF31 | Ajustar projeção considerando sentimento das notícias | Sistema | Could |
+| RF30 | Exibir, na ficha do ativo, cenários de queda, estabilidade e alta a partir dos pregões passados com sentimento semelhante, com a taxa-base e o número de ocorrências | Usuário | Could |
+| RF31 | Calcular o sentimento de cada pregão do ativo a partir das notícias classificadas e as probabilidades condicionais dos cenários | Sistema | Could |
 | RF32 | Gerenciar planos e assinaturas do usuário | Usuário | Should |
 | RF33 | Bloquear recursos premium para usuários sem assinatura ativa | Sistema | Should |
 
@@ -228,6 +229,7 @@ Adiada para fase futura. RB14 a RB17 estão preservadas na seção 9.
 |---|---|
 | RB29 | A fonte pai de notícias está sempre ligada, com a maior prioridade, e não pode ser desativada, removida nem trocada pelo usuário |
 | RB30 | As notícias das fontes adicionadas pelos usuários nunca entram no treino nem na avaliação do modelo de sentimento, nem nos números oficiais do app |
+| RB31 | Cenário com menos de 30 ocorrências exibe "dados insuficientes" em vez das porcentagens |
 
 ---
 
@@ -252,7 +254,8 @@ Ligação entre regra de negócio e a estrutura de dados que a implementa.
 | RB13 | Colunas monetárias em tipo `Decimal(15,2)` |
 | RB22 | `Ativo.classe` com domínio fechado (Ação, FII), preenchido no cadastro e sem operação de alteração |
 | RB29 | `FonteNoticia` do tipo pai é única e sempre ativa (restrições no banco); `PreferenciaFonte` nunca aponta para ela (gatilho) |
-| RB30 | `FonteNoticia.tipo` = usuário fica fora da amostra rotulada, da avaliação e das contagens do colaborador (consultas do módulo Notícias) |
+| RB30 | `FonteNoticia.tipo` = usuário fica fora da amostra rotulada, da avaliação e das contagens do colaborador (consultas do módulo Notícias) e dos cenários |
+| RB31 | Cálculo dos cenários no servidor: a célula com menos de 30 ocorrências volta sem porcentagens (`insufficient`) |
 
 ---
 

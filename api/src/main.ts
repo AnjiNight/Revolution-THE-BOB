@@ -58,6 +58,8 @@ import { Investidor10NewsHttpSource } from './modules/news/infrastructure/invest
 import { PrismaNewsRepository } from './modules/news/infrastructure/prisma-news-repository.js';
 import { PrismaNewsSourcesExport } from './modules/news/infrastructure/prisma-news-export.js';
 import { UserNewsService } from './modules/news/application/user-news-service.js';
+import { AssetScenariosService } from './modules/news/application/asset-scenarios-service.js';
+import { adjustPrices } from './modules/financial-calculation/price-adjustment.js';
 import { PrismaFundamentalsRepository } from './modules/market-data/infrastructure/prisma-fundamentals-repository.js';
 import { BrapiLogoSource } from './modules/market-data/infrastructure/brapi-logo-source.js';
 import { BrapiQuoteSource } from './modules/market-data/infrastructure/brapi-quote-source.js';
@@ -311,6 +313,20 @@ async function main(): Promise<void> {
       }),
       assetNews: new AssetNewsService({ news: newsRepo, sentiment }),
       sentiment,
+      // SPEC-031: cenários por sentimento, sobre a mesma série ajustada do gráfico da ficha.
+      assetScenarios: new AssetScenariosService({
+        news: newsRepo,
+        sentiment,
+        prices: {
+          adjustedCloses: async (assetId, from) => {
+            const [stored, assetEvents] = await Promise.all([
+              quotes.closes(assetId, from),
+              events.forAsset(assetId),
+            ]);
+            return adjustPrices(stored, assetEvents);
+          },
+        },
+      }),
       // SPEC-030: o feed recém-adicionado já sai vinculado e classificado, sem esperar o processador.
       userNews: new UserNewsService({
         news: newsRepo,

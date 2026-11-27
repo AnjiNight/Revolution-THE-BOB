@@ -4,6 +4,7 @@ import type {
   AssetFundamentals,
   AssetNewsDays,
   AssetNewsPage,
+  AssetScenarios,
   AssetSearchResult,
   CalendarSuggestion,
   CashEntryResult,
@@ -229,6 +230,7 @@ const api: DesktopApi = {
     logo: (id) => read<string | null>(ASSET_CHANNELS.logo, id),
     news: (id, query) => read<AssetNewsPage>(ASSET_CHANNELS.news, id, query),
     newsDays: (id, period) => read<AssetNewsDays>(ASSET_CHANNELS.newsDays, id, period),
+    scenarios: (id) => read<AssetScenarios>(ASSET_CHANNELS.scenarios, id),
   },
 };
 

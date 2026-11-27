@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Proposta |
+| Status | Aceita em 27/11/2026, com os pontos em aberto decididos na [SPEC-031](../specs/SPEC-031.md) |
 | Data | 01/10/2026 |
 | Drivers | FAS11, OBJ03, OBJ07, RF30, RF31, Visão §5, §15 |
 | Relacionadas | [DA15](DA15-carater-educacional.md), [DA18](DA18-historico-cotacoes-arquivos-b3.md), [DA19](DA19-fontes-de-noticias.md), [DA20](DA20-modelo-ia-noticias.md) |
@@ -45,10 +45,14 @@ Exemplo de saída:
 
 ## Pontos em aberto
 
-1. Horizontes definitivos e limite de "estabilidade".
-2. Número mínimo de ocorrências.
-3. Se o recurso é exclusivo do assinante (RF30 diz que sim).
-4. Se o usuário pode ver também o cenário calculado com o sentimento personalizado (DA19).
+Decididos na [SPEC-031](../specs/SPEC-031.md) (27/11/2026):
+
+1. Horizontes: no pregão, 5 e 20 pregões depois, a partir do fechamento anterior (como o painel do pregão da SPEC-029); estável dentro de ±1%, ±2% e ±4%.
+2. Mínimo de 30 ocorrências (RB31).
+3. Todos os usuários veem, por enquanto; com a SPEC-025 na `main`, pode virar recurso de assinante.
+4. Não: o cenário usa só a fonte pai e as curadas (DA19), igual para todos.
+
+O cenário é por ativo, na ficha (OPEN-34).
 
 ## Impacto nos outros documentos
 

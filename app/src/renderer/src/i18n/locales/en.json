@@ -682,7 +682,58 @@
     "buyTitle": "Buy in which portfolio?",
     "buyLoading": "Loading the portfolios…",
     "noLivePortfolio": "Create a portfolio to buy.",
-    "buyCancel": "Cancel"
+    "buyCancel": "Cancel",
+    "scenarios": {
+      "title": "Scenarios by sentiment",
+      "lead": "What the price did after the sessions in which news about the asset was positive, neutral or negative, compared with all sessions.",
+      "loading": "Calculating the scenarios…",
+      "retry": "Try again",
+      "hidden": "Scenarios appear once the team validates the news sentiment.",
+      "noNews": "There are no classified news items to build scenarios yet.",
+      "notForecast": "Shows what happened after similar sessions in the past, not a forecast.",
+      "notAdvice": "It isn't a recommendation to buy or sell.",
+      "today_one": "Today's sentiment ({{count}} news item):",
+      "today_other": "Today's sentiment ({{count}} news items):",
+      "noNewsToday": "No news today.",
+      "todayBand": "Today's band",
+      "horizon": "Horizon:",
+      "horizons": {
+        "0": "Same session",
+        "5": "5 sessions later",
+        "20": "20 sessions later"
+      },
+      "bands": {
+        "positive": "Positive",
+        "neutral": "Neutral",
+        "negative": "Negative"
+      },
+      "bandWord": {
+        "positive": "positive",
+        "neutral": "neutral",
+        "negative": "negative"
+      },
+      "base": "Ignoring the news",
+      "band": "Sentiment",
+      "down": "Down",
+      "flat": "Stable",
+      "up": "Up",
+      "occurrences": "Occurrences",
+      "insufficient": "Not enough data (minimum {{min}})",
+      "caption": "Scenarios by sentiment, {{horizon}}",
+      "stable": "Stable: change of up to ±{{limit}}% ({{horizon}}), from the previous close.",
+      "period": "Since {{from}}: {{sessions}} sessions, {{news}} with news.",
+      "sentence": {
+        "0": "Of the {{count}} times the sentiment about {{ticker}} was {{band}}, in the same session it fell {{down}}, stayed stable {{flat}} and rose {{up}} of the time.",
+        "5": "Of the {{count}} times the sentiment about {{ticker}} was {{band}}, 5 sessions later it had fallen {{down}}, stayed stable {{flat}} and risen {{up}} of the time.",
+        "20": "Of the {{count}} times the sentiment about {{ticker}} was {{band}}, 20 sessions later it had fallen {{down}}, stayed stable {{flat}} and risen {{up}} of the time.",
+        "0_one": "The {{count}} time the sentiment about {{ticker}} was {{band}}, in the same session it fell {{down}}, stayed stable {{flat}} and rose {{up}} of the time.",
+        "0_other": "Of the {{count}} times the sentiment about {{ticker}} was {{band}}, in the same session it fell {{down}}, stayed stable {{flat}} and rose {{up}} of the time.",
+        "5_one": "The {{count}} time the sentiment about {{ticker}} was {{band}}, 5 sessions later it had fallen {{down}}, stayed stable {{flat}} and risen {{up}} of the time.",
+        "5_other": "Of the {{count}} times the sentiment about {{ticker}} was {{band}}, 5 sessions later it had fallen {{down}}, stayed stable {{flat}} and risen {{up}} of the time.",
+        "20_one": "The {{count}} time the sentiment about {{ticker}} was {{band}}, 20 sessions later it had fallen {{down}}, stayed stable {{flat}} and risen {{up}} of the time.",
+        "20_other": "Of the {{count}} times the sentiment about {{ticker}} was {{band}}, 20 sessions later it had fallen {{down}}, stayed stable {{flat}} and risen {{up}} of the time."
+      }
+    }
   },
   "portfolios": {
     "title": "Portfolios",

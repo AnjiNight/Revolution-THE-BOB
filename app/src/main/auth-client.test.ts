@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   ASSET_NEWS_PATHS,
+  ASSET_SCENARIO_PATH,
   MY_NEWS_PATHS,
   ASSET_PATHS,
   assetPath,
@@ -41,6 +42,18 @@ const ASSET = {
   name: 'Petrobras PN',
   class: 'stock' as const,
   sector: 'petroleo_gas_biocombustiveis' as const,
+};
+
+/** SPEC-031: cenários com o sentimento ainda escondido. */
+const SCENARIOS = {
+  visible: false,
+  model: null,
+  today: null,
+  period: null,
+  bands: null,
+  base: null,
+  newsSessions: 0,
+  minOccurrences: 30,
 };
 
 /** SPEC-029 e SPEC-044: uma notícia da ficha, já com o tom e o modelo visível. */
@@ -276,6 +289,9 @@ class FakeServer {
         return json(409, { error: 'not_enough_labels', message: 'x' });
       case newsLabelPath(NEWS_ID):
         return new Response(null, { status: 204 });
+      // SPEC-031: os cenários por sentimento.
+      case assetPath(ASSET_SCENARIO_PATH, ASSET.id):
+        return json(200, SCENARIOS);
       case assetPath(ASSET_NEWS_PATHS.days, ASSET.id):
         return json(200, { period: url.searchParams.get('period'), days: [] });
       case assetPath(ASSET_PATHS.logo, NO_LOGO_ID):
@@ -854,6 +870,20 @@ describe('notícias na ficha (SPEC-029)', () => {
       error: 'unexpected',
     });
     await expect(client.assetNewsDays(ASSET.id, '1y&x=1' as PriceHistoryPeriod)).resolves.toEqual({
+      ok: false,
+      error: 'unexpected',
+    });
+    expect(server.calls).toHaveLength(before);
+  });
+});
+
+describe('cenários por sentimento (SPEC-031)', () => {
+  it('busca os cenários do ativo e recusa um id que não seja o do ativo', async () => {
+    await client.login({ email: 'ana@exemplo.com', password: 'certa' });
+    await expect(client.assetScenarios(ASSET.id)).resolves.toEqual({ ok: true, data: SCENARIOS });
+    expect(server.calls.at(-1)?.path).toBe(assetPath(ASSET_SCENARIO_PATH, ASSET.id));
+    const before = server.calls.length;
+    await expect(client.assetScenarios('../../me')).resolves.toEqual({
       ok: false,
       error: 'unexpected',
     });

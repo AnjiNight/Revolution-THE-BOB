@@ -792,3 +792,72 @@ export function weightedTone(
     classified: items.length,
   };
 }
+
+// --- SPEC-031: cenários por sentimento na ficha do ativo ---
+
+/** Rota dos cenários do ativo. `:id` vira o id do ativo com `assetPath`. */
+export const ASSET_SCENARIO_PATH = '/api/assets/:id/scenarios';
+
+/**
+ * Horizontes, em pregões depois do pregão da notícia (§4.1, decisão 3): 0 é o próprio pregão ("No
+ * pregão"), como o painel do pregão da SPEC-029; o retorno é sempre sobre o fechamento anterior.
+ */
+export const SCENARIO_HORIZONS = [0, 5, 20] as const;
+export type ScenarioHorizon = (typeof SCENARIO_HORIZONS)[number];
+
+/** Faixa de "estável" de cada horizonte, em % para cima e para baixo (§4.1, decisão 3). */
+export const SCENARIO_STABLE_LIMIT: Readonly<Record<ScenarioHorizon, number>> = {
+  0: 1,
+  5: 2,
+  20: 4,
+};
+
+/** Abaixo disso, "dados insuficientes" (RB31). */
+export const SCENARIO_MIN_OCCURRENCES = 30;
+
+/** O mesmo limite das notícias (SPEC-044): acima de 0,2, positivo; abaixo de −0,2, negativo. */
+export const SENTIMENT_BAND_LIMIT = 0.2;
+
+/** A faixa de uma pontuação de −1 a 1. */
+export function sentimentBand(score: number): NewsSentiment {
+  if (score > SENTIMENT_BAND_LIMIT) return 'positive';
+  if (score < -SENTIMENT_BAND_LIMIT) return 'negative';
+  return 'neutral';
+}
+
+/** Um horizonte de uma faixa (ou da taxa-base): as partes de 0 a 1, ou nada abaixo do mínimo. */
+export interface ScenarioCell {
+  horizon: ScenarioHorizon;
+  occurrences: number;
+  /** `true` abaixo de `SCENARIO_MIN_OCCURRENCES`: sem as partes (RB31). */
+  insufficient: boolean;
+  down: number | null;
+  flat: number | null;
+  up: number | null;
+}
+
+/** O pregão de hoje (o primeiro depois do último fechamento guardado), se teve notícia. */
+export interface ScenarioToday {
+  band: NewsSentiment;
+  /** Quantas notícias oficiais classificadas sobre o ativo. */
+  news: number;
+  /** Média das pontuações, de −1 a 1. */
+  score: number;
+}
+
+/** Corpo de `GET /api/assets/:id/scenarios`. */
+export interface AssetScenarios {
+  /** `false` enquanto o sentimento não passou na avaliação (SPEC-044): sem números. */
+  visible: boolean;
+  model: SentimentModelName | null;
+  today: ScenarioToday | null;
+  /** Os pregões usados: desde o primeiro com notícia oficial classificada no banco. */
+  period: { from: IsoDate; to: IsoDate; sessions: number } | null;
+  /** As três faixas, cada uma com os três horizontes na ordem de `SCENARIO_HORIZONS`. */
+  bands: Record<NewsSentiment, ScenarioCell[]> | null;
+  /** A taxa-base: todos os pregões do período, com ou sem notícia. */
+  base: ScenarioCell[] | null;
+  /** Pregões com notícia no período (de qualquer faixa). */
+  newsSessions: number;
+  minOccurrences: number;
+}

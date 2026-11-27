@@ -28,6 +28,7 @@ import type { PortfolioService } from './modules/portfolios/application/portfoli
 import type { TradingService } from './modules/portfolios/application/trading-service.js';
 import { registerPortfolioRoutes } from './modules/portfolios/controllers/portfolio-routes.js';
 import type { AssetNewsService } from './modules/news/application/asset-news-service.js';
+import type { AssetScenariosService } from './modules/news/application/asset-scenarios-service.js';
 import type { NewsSourcesService } from './modules/news/application/news-sources-service.js';
 import type { SentimentService } from './modules/news/application/sentiment-service.js';
 import type { UserNewsService } from './modules/news/application/user-news-service.js';
@@ -70,6 +71,8 @@ export interface AppDependencies {
   sentiment?: SentimentService;
   /** SPEC-030: fontes do usuário e a tela Notícias; vem junto com `newsSources`. */
   userNews?: UserNewsService;
+  /** SPEC-031: cenários por sentimento na ficha; vem junto com `newsSources`. */
+  assetScenarios?: AssetScenariosService;
   /** Destino alternativo dos logs (usado nos testes). */
   logStream?: DestinationStream;
 }
@@ -129,12 +132,19 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     accessTokens: deps.accessTokens,
   });
   registerTaskRoutes(app, { tasks: deps.tasks, accessTokens: deps.accessTokens });
-  if (deps.newsSources && deps.assetNews && deps.sentiment && deps.userNews) {
+  if (
+    deps.newsSources &&
+    deps.assetNews &&
+    deps.sentiment &&
+    deps.userNews &&
+    deps.assetScenarios
+  ) {
     registerNewsRoutes(app, {
       sources: deps.newsSources,
       assetNews: deps.assetNews,
       sentiment: deps.sentiment,
       userNews: deps.userNews,
+      assetScenarios: deps.assetScenarios,
       accessTokens: deps.accessTokens,
     });
   }

@@ -4,6 +4,7 @@ import type {
   AssetFundamentals,
   AssetNewsDays,
   AssetNewsPage,
+  AssetScenarios,
   AssetNewsQuery,
   AssetSearchResult,
   CalendarSuggestion,
@@ -283,6 +284,8 @@ export interface DesktopApi {
     news(id: string, query: Partial<AssetNewsQuery>): Promise<ClientResult<AssetNewsPage>>;
     /** SPEC-029: notícias por dia de referência, no período do gráfico (os marcadores). */
     newsDays(id: string, period: PriceHistoryPeriod): Promise<ClientResult<AssetNewsDays>>;
+    /** SPEC-031: cenários por sentimento (`visible` falso enquanto o sentimento não foi validado). */
+    scenarios(id: string): Promise<ClientResult<AssetScenarios>>;
   };
 }
 

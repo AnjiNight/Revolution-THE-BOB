@@ -346,6 +346,8 @@ model Ativo {
   transacoes      Transacao[]
   /// SPEC-028: notícias que falam do ativo.
   noticias        NoticiaAtivo[]
+  /// SPEC-031: os cenários por sentimento registrados.
+  cenarios        CenarioRegistrado[]
 
   @@index([classe, setor])
   @@map("ativo")
@@ -996,6 +998,7 @@ model VersaoModelo {
   matriz       Json?
 
   noticias Noticia[]
+  cenarios CenarioRegistrado[]
 
   @@unique([nome, numero])
   @@map("versao_modelo")
@@ -1055,4 +1058,30 @@ model ColetaNoticiaArquivo {
   fonte FonteNoticia @relation(fields: [fonteId], references: [id], onDelete: Cascade)
 
   @@map("coleta_noticia_arquivo")
+}
+
+/// SPEC-031: o cenário de hoje de um ativo, por horizonte (0, 5 ou 20 pregões depois) e versão do
+/// modelo (DA21, ponto 8). Porcentagens de 0 a 100, vazias abaixo do mínimo (RB31). Sem dado pessoal.
+model CenarioRegistrado {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativoId         String            @map("ativo_id") @db.Uuid
+  dia             DateTime          @db.Date
+  faixa           SentimentoNoticia
+  horizonte       Int               @db.SmallInt
+  versaoModeloId  Int               @map("versao_modelo_id")
+  ocorrencias     Int
+  queda           Decimal?          @db.Decimal(5, 2)
+  estavel         Decimal?          @db.Decimal(5, 2)
+  alta            Decimal?          @db.Decimal(5, 2)
+  baseOcorrencias Int               @map("base_ocorrencias")
+  baseQueda       Decimal?          @map("base_queda") @db.Decimal(5, 2)
+  baseEstavel     Decimal?          @map("base_estavel") @db.Decimal(5, 2)
+  baseAlta        Decimal?          @map("base_alta") @db.Decimal(5, 2)
+  criadoEm        DateTime          @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  ativo        Ativo        @relation(fields: [ativoId], references: [id], onDelete: Cascade)
+  versaoModelo VersaoModelo @relation(fields: [versaoModeloId], references: [id], onDelete: Cascade)
+
+  @@unique([ativoId, dia, horizonte, versaoModeloId], map: "cenario_registrado_unico")
+  @@map("cenario_registrado")
 }
